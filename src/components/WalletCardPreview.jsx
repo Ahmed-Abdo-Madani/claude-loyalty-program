@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import WalletPassGenerator from '../utils/walletPassGenerator'
+import { endpoints } from '../config/api'
 
 function WalletCardPreview({ customerData, offerData, progressData, onAddToWallet }) {
   const [walletPreview, setWalletPreview] = useState(null)
@@ -25,7 +26,7 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
     setIsGenerating(true)
     try {
       // Call backend API to generate real .pkpass file
-      const response = await fetch('http://localhost:3011/api/wallet/apple/generate', {
+      const response = await fetch(endpoints.appleWallet, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerData, offerData, progressData })
@@ -74,7 +75,7 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
       console.log('🚀 Starting Google Wallet pass generation...')
 
       // Call backend API to generate Google Wallet link
-      const response = await fetch('http://localhost:3011/api/wallet/google/generate', {
+      const response = await fetch(endpoints.googleWallet, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerData, offerData, progressData })

@@ -290,21 +290,22 @@ class RealGoogleWalletController {
   }
 
   generateSaveToWalletJWT(loyaltyObject) {
-    // Create claims for the JWT
+    // Create claims for the JWT with explicit timing
+    const now = Math.floor(Date.now() / 1000)
     const claims = {
       iss: this.credentials.client_email,
       aud: 'google',
       typ: 'savetowallet',
-      iat: Math.floor(Date.now() / 1000),
+      iat: now,
+      exp: now + 3600, // Explicit 1 hour expiration
       payload: {
         loyaltyObjects: [loyaltyObject]
       }
     }
 
-    // Sign the JWT with the service account private key
+    // Sign the JWT (don't use expiresIn since we set exp manually)
     return jwt.sign(claims, this.credentials.private_key, {
-      algorithm: 'RS256',
-      expiresIn: '1h'
+      algorithm: 'RS256'
     })
   }
 
