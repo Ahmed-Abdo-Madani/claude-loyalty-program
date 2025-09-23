@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import QRCodeGenerator from '../utils/qrCodeGenerator'
 import WalletCardPreview from '../components/WalletCardPreview'
 import WalletPassGenerator from '../utils/walletPassGenerator'
+import ApiService from '../utils/api'
 
 function CustomerSignup() {
   const { offerId } = useParams()
@@ -17,17 +18,15 @@ function CustomerSignup() {
   const [qrSource, setQrSource] = useState(null)
   const [customerData, setCustomerData] = useState(null)
   const [walletAdded, setWalletAdded] = useState(false)
-
-  // Mock offer data - in real app, this would be fetched based on offerId
-  const offer = {
-    businessName: "John's Pizza",
-    branchName: "Downtown Branch",
-    title: "Buy 10 Pizzas, Get 1 FREE",
-    description: "Collect 10 stamps and get your 11th pizza absolutely free!",
-    stampsRequired: 10
-  }
+  const [offer, setOffer] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
+    if (offerId) {
+      loadOffer()
+    }
+
     // Extract QR code parameters
     const source = searchParams.get('source')
     const branch = searchParams.get('branch')
@@ -51,6 +50,31 @@ function CustomerSignup() {
       })
     }
   }, [offerId, searchParams])
+
+  const loadOffer = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await ApiService.getPublicOffer(offerId)
+      setOffer(response.data)
+    } catch (err) {
+      setError(err.message || 'Failed to load offer details')
+      console.error('Error loading offer:', err)
+      // Use fallback data
+      setOffer({
+        id: offerId,
+        title: "Special Loyalty Offer",
+        description: "Join our loyalty program and start earning rewards!",
+        businessName: "Local Business",
+        branchName: "Main Branch",
+        stampsRequired: 10,
+        type: "stamps",
+        status: "active"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleInputChange = (e) => {
     setFormData({
@@ -112,7 +136,36 @@ function CustomerSignup() {
     }
   }
 
-  if (isSubmitted && customerData) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading offer details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !offer) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Offer Not Found</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.history.back()}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (isSubmitted && customerData && offer) {
     const progressData = {
       stampsEarned: 0, // New customer starts with 0 stamps
       totalStamps: offer.stampsRequired
@@ -208,6 +261,18 @@ function CustomerSignup() {
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!offer) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🤔</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">No Offer Selected</h1>
+          <p className="text-gray-600">Please select a valid offer to continue.</p>
         </div>
       </div>
     )

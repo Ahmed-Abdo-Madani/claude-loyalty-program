@@ -34,10 +34,10 @@ function Header() {
               Sign In
             </Link>
             <Link
-              to="/auth?mode=signup"
+              to="/business/register"
               className="btn-primary"
             >
-              Sign Up - Free
+              Register Business
             </Link>
           </div>
 

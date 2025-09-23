@@ -3,6 +3,8 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import walletRoutes from './routes/wallet.js'
 import passRoutes from './routes/passes.js'
+import adminRoutes from './routes/admin.js'
+import businessRoutes from './routes/business.js'
 
 dotenv.config()
 
@@ -33,6 +35,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/wallet', walletRoutes)
 app.use('/api/passes', passRoutes)
+app.use('/api/admin', adminRoutes)
+app.use('/api/business', businessRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -55,5 +59,8 @@ app.listen(PORT, () => {
   console.log(`🚀 Loyalty Platform Backend running on port ${PORT}`)
   console.log(`📱 Wallet API endpoints available at http://localhost:${PORT}/api/wallet`)
   console.log(`🎫 Pass endpoints available at http://localhost:${PORT}/api/passes`)
+  console.log(`👑 Admin API endpoints available at http://localhost:${PORT}/api/admin`)
+  console.log(`🏢 Business API endpoints available at http://localhost:${PORT}/api/business`)
   console.log(`❤️ Health check: http://localhost:${PORT}/health`)
+  console.log(`🔑 Admin login: POST http://localhost:${PORT}/api/admin/auth/login`)
 })

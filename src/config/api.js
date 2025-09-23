@@ -1,9 +1,32 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
 
 export const endpoints = {
+  baseURL: API_BASE_URL,
   appleWallet: `${API_BASE_URL}/api/wallet/apple/generate`,
   googleWallet: `${API_BASE_URL}/api/wallet/google/generate`,
-  health: `${API_BASE_URL}/health`
+  health: `${API_BASE_URL}/health`,
+
+  // Business Authentication APIs
+  businessLogin: `${API_BASE_URL}/api/business/login`,
+  businessRegister: `${API_BASE_URL}/api/business/register`,
+  businessCategories: `${API_BASE_URL}/api/business/categories`,
+
+  // Business Dashboard APIs
+  offers: `${API_BASE_URL}/api/business/offers`,
+  branches: `${API_BASE_URL}/api/business/branches`,
+
+  // Dashboard Analytics APIs (generic)
+  dashboardAnalytics: `${API_BASE_URL}/api/business/analytics/dashboard`,
+  recentActivity: `${API_BASE_URL}/api/business/analytics/activity`,
+
+  // Business-specific authenticated APIs
+  myOffers: `${API_BASE_URL}/api/business/my/offers`,
+  myBranches: `${API_BASE_URL}/api/business/my/branches`,
+  myAnalytics: `${API_BASE_URL}/api/business/my/analytics`,
+  myActivity: `${API_BASE_URL}/api/business/my/activity`,
+
+  // Public Customer APIs
+  publicOffer: `${API_BASE_URL}/api/business/public/offer`
 }
 
 export default {

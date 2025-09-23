@@ -1,74 +1,52 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import QRCodeModal from './QRCodeModal'
+import ApiService from '../utils/api'
 
 function OffersTab() {
-  const [offers, setOffers] = useState([
-    {
-      id: 1,
-      title: "🍕 Buy 10 Pizzas, Get 1 FREE",
-      description: "Collect 10 stamps and get your 11th pizza absolutely free!",
-      branch: "Downtown Branch",
-      type: "stamps",
-      stampsRequired: 10,
-      status: "active",
-      customers: 23,
-      redeemed: 5,
-      createdAt: "2 weeks ago",
-      startDate: "2024-01-01",
-      endDate: null,
-      isTimeLimited: false
-    },
-    {
-      id: 2,
-      title: "☕ Free Coffee After 5 Visits",
-      description: "Visit us 5 times and get your 6th coffee for free!",
-      branch: "All Branches",
-      type: "stamps",
-      stampsRequired: 5,
-      status: "active",
-      customers: 67,
-      redeemed: 12,
-      createdAt: "1 month ago",
-      startDate: "2024-01-01",
-      endDate: null,
-      isTimeLimited: false
-    },
-    {
-      id: 3,
-      title: "🎂 Birthday Special - 20% Off",
-      description: "Special birthday discount for loyal customers",
-      branch: "Westside Branch",
-      type: "discount",
-      stampsRequired: 1,
-      status: "paused",
-      customers: 2,
-      redeemed: 0,
-      createdAt: "3 days ago",
-      startDate: "2024-01-15",
-      endDate: "2024-02-14",
-      isTimeLimited: true
-    },
-    {
-      id: 4,
-      title: "🏃 Happy Hour - Double Points",
-      description: "Earn double stamps during happy hour (3-6 PM)",
-      branch: "Downtown Branch",
-      type: "stamps",
-      stampsRequired: 5,
-      status: "scheduled",
-      customers: 8,
-      redeemed: 1,
-      createdAt: "1 day ago",
-      startDate: "2024-02-01",
-      endDate: "2024-02-29",
-      isTimeLimited: true
-    }
-  ])
+  const [offers, setOffers] = useState([])
+  const [branches, setBranches] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [showEditModal, setShowEditModal] = useState(null)
   const [showQRModal, setShowQRModal] = useState(null)
+
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [branchFilter, setBranchFilter] = useState('All Branches')
+  const [typeFilter, setTypeFilter] = useState('All Types')
+
+  // Load offers and branches on component mount
+  useEffect(() => {
+    loadOffers()
+    loadBranches()
+  }, [])
+
+  const loadOffers = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await ApiService.getMyOffers()
+      setOffers(response.data || [])
+    } catch (err) {
+      setError(err.message || 'Failed to load offers')
+      console.error('Error loading offers:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadBranches = async () => {
+    try {
+      const response = await ApiService.getMyBranches()
+      setBranches(response.data || [])
+    } catch (err) {
+      console.error('Error loading branches:', err)
+      // Don't set error here as it's secondary data
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -90,40 +68,71 @@ function OffersTab() {
     }
   }
 
-  const toggleOfferStatus = (offerId) => {
-    setOffers(offers.map(offer => {
-      if (offer.id === offerId) {
-        const newStatus = offer.status === 'active' ? 'paused' : 'active'
-        return { ...offer, status: newStatus }
-      }
-      return offer
-    }))
+  const toggleOfferStatus = async (offerId) => {
+    try {
+      await ApiService.toggleMyOfferStatus(offerId)
+      await loadOffers() // Reload to get updated data
+    } catch (err) {
+      setError(err.message || 'Failed to update offer status')
+      console.error('Error toggling offer status:', err)
+    }
   }
 
-  const deleteOffer = (offerId) => {
-    setOffers(offers.filter(offer => offer.id !== offerId))
-    setShowDeleteConfirm(null)
+  const deleteOffer = async (offerId) => {
+    try {
+      await ApiService.deleteMyOffer(offerId)
+      setShowDeleteConfirm(null)
+      await loadOffers() // Reload to get updated data
+    } catch (err) {
+      setError(err.message || 'Failed to delete offer')
+      console.error('Error deleting offer:', err)
+      setShowDeleteConfirm(null)
+    }
   }
 
-  const duplicateOffer = (offerId) => {
-    const offer = offers.find(o => o.id === offerId)
-    if (offer) {
-      const newOffer = {
-        ...offer,
-        id: Math.max(...offers.map(o => o.id)) + 1,
-        title: `${offer.title} (Copy)`,
-        customers: 0,
-        redeemed: 0,
-        createdAt: 'just now',
-        status: 'paused'
+  const duplicateOffer = async (offerId) => {
+    try {
+      const offer = offers.find(o => o.id === offerId)
+      if (offer) {
+        const newOffer = {
+          ...offer,
+          title: `${offer.title} (Copy)`,
+          status: 'paused'
+        }
+        delete newOffer.id // Remove ID so API creates a new one
+        await ApiService.createMyOffer(newOffer)
+        await loadOffers() // Reload to get updated data
       }
-      setOffers([newOffer, ...offers])
+    } catch (err) {
+      setError(err.message || 'Failed to duplicate offer')
+      console.error('Error duplicating offer:', err)
     }
   }
 
   const formatDate = (dateString) => {
     if (!dateString) return 'No end date'
     return new Date(dateString).toLocaleDateString()
+  }
+
+  // Filter offers based on selected filters
+  const filteredOffers = offers.filter(offer => {
+    const statusMatch = statusFilter === 'All Status' || offer.status === statusFilter.toLowerCase()
+    const branchMatch = branchFilter === 'All Branches' || offer.branch === branchFilter
+    const typeMatch = typeFilter === 'All Types' ||
+      (typeFilter === 'Stamp Cards' && offer.type === 'stamps') ||
+      (typeFilter === 'Discounts' && offer.type === 'discount') ||
+      (typeFilter === 'Points' && offer.type === 'points')
+
+    return statusMatch && branchMatch && typeMatch
+  })
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading offers...</p>
+      </div>
+    )
   }
 
   return (
@@ -141,21 +150,52 @@ function OffersTab() {
         </button>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <span className="text-red-600 mr-2">⚠️</span>
+            <span className="text-red-800">{error}</span>
+            <button
+              onClick={() => setError('')}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex space-x-4 mb-6">
-        <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
           <option>All Status</option>
           <option>Active</option>
           <option>Paused</option>
           <option>Scheduled</option>
           <option>Expired</option>
         </select>
-        <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        <select
+          value={branchFilter}
+          onChange={(e) => setBranchFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
           <option>All Branches</option>
-          <option>Downtown Branch</option>
-          <option>Westside Branch</option>
+          {branches?.map((branch) => (
+            <option key={branch.id} value={branch.name}>
+              {branch.name}
+            </option>
+          ))}
         </select>
-        <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
           <option>All Types</option>
           <option>Stamp Cards</option>
           <option>Discounts</option>
@@ -165,8 +205,14 @@ function OffersTab() {
 
       {/* Offers List */}
       <div className="space-y-4">
-        {offers.map((offer) => (
-          <div key={offer.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
+        {filteredOffers.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <div className="text-lg mb-2">🔍 No offers found</div>
+            <div>Try adjusting your filters or create a new offer.</div>
+          </div>
+        ) : (
+          filteredOffers.map((offer) => (
+            <div key={offer.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -270,7 +316,8 @@ function OffersTab() {
               </div>
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -304,28 +351,27 @@ function OffersTab() {
       {(showCreateModal || showEditModal) && (
         <CreateOfferModal
           offer={showEditModal}
+          branches={branches}
           onClose={() => {
             setShowCreateModal(false)
             setShowEditModal(null)
           }}
-          onSave={(offerData) => {
-            if (showEditModal) {
-              // Update existing offer
-              setOffers(offers.map(o => o.id === showEditModal.id ? {...o, ...offerData} : o))
-            } else {
-              // Create new offer
-              const newOffer = {
-                ...offerData,
-                id: Math.max(...offers.map(o => o.id)) + 1,
-                customers: 0,
-                redeemed: 0,
-                createdAt: 'just now',
-                status: 'paused'
+          onSave={async (offerData) => {
+            try {
+              if (showEditModal) {
+                // Update existing offer
+                await ApiService.updateMyOffer(showEditModal.id, offerData)
+              } else {
+                // Create new offer
+                await ApiService.createMyOffer(offerData)
               }
-              setOffers([newOffer, ...offers])
+              await loadOffers() // Reload to get updated data
+              setShowCreateModal(false)
+              setShowEditModal(null)
+            } catch (err) {
+              setError(err.message || 'Failed to save offer')
+              console.error('Error saving offer:', err)
             }
-            setShowCreateModal(false)
-            setShowEditModal(null)
           }}
         />
       )}
@@ -341,7 +387,7 @@ function OffersTab() {
   )
 }
 
-function CreateOfferModal({ offer, onClose, onSave }) {
+function CreateOfferModal({ offer, branches, onClose, onSave }) {
   const [formData, setFormData] = useState({
     title: offer?.title || '',
     description: offer?.description || '',
@@ -403,10 +449,12 @@ function CreateOfferModal({ offer, onClose, onSave }) {
                 onChange={(e) => setFormData({...formData, branch: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option>All Branches</option>
-                <option>Downtown Branch</option>
-                <option>Westside Branch</option>
-                <option>Northside Branch</option>
+                <option value="All Branches">All Branches</option>
+                {branches?.map((branch) => (
+                  <option key={branch.id} value={branch.name}>
+                    {branch.name}
+                  </option>
+                ))}
               </select>
             </div>
 

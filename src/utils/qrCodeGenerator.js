@@ -221,11 +221,13 @@ class QRCodeGenerator {
       ...metadata
     }
 
-    // Store in localStorage for demo purposes
+    // Store in business-specific localStorage for demo purposes
     // In production, this would send to analytics service
-    const events = JSON.parse(localStorage.getItem('qr_analytics') || '[]')
+    const businessId = localStorage.getItem('businessId') || 'default'
+    const storageKey = `qr_analytics_${businessId}`
+    const events = JSON.parse(localStorage.getItem(storageKey) || '[]')
     events.push(event)
-    localStorage.setItem('qr_analytics', JSON.stringify(events))
+    localStorage.setItem(storageKey, JSON.stringify(events))
 
     console.log('QR Event Tracked:', event)
   }

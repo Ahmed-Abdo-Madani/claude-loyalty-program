@@ -55,8 +55,10 @@ function QRCodeModal({ offer, onClose }) {
   }
 
   const loadAnalytics = () => {
-    // Load analytics from localStorage (demo purposes)
-    const events = JSON.parse(localStorage.getItem('qr_analytics') || '[]')
+    // Load analytics from business-specific localStorage
+    const businessId = localStorage.getItem('businessId') || 'default'
+    const storageKey = `qr_analytics_${businessId}`
+    const events = JSON.parse(localStorage.getItem(storageKey) || '[]')
     const offerEvents = events.filter(e => e.offerId === offer.qrCodeId)
 
     setAnalytics({

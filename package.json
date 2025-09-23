@@ -4,14 +4,17 @@
   "description": "A cost-effective and scalable loyalty program management platform for businesses",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "set VITE_PORT=3000 && vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
-    "full-dev": "concurrently \"npm run backend:dev\" \"npm run dev\"",
-    "start": "concurrently \"npm run backend\" \"npm run preview\""
+    "clean-ports": "node scripts/clean-ports.js",
+    "dev:full": "npm run clean-ports && npx concurrently --kill-others-on-fail \"npm run backend\" \"npm run dev\"",
+    "dev:windows": "start-dev.bat",
+    "start": "concurrently \"npm run backend\" \"npm run preview\"",
+    "start:clean": "npm run clean-ports && npm run start"
   },
   "dependencies": {
     "react": "^18.2.0",

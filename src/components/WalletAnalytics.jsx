@@ -9,8 +9,10 @@ function WalletAnalytics() {
   }, [])
 
   const loadWalletAnalytics = () => {
-    // Load analytics from localStorage (demo purposes)
-    const events = JSON.parse(localStorage.getItem('qr_analytics') || '[]')
+    // Load analytics from business-specific localStorage
+    const businessId = localStorage.getItem('businessId') || 'default'
+    const storageKey = `qr_analytics_${businessId}`
+    const events = JSON.parse(localStorage.getItem(storageKey) || '[]')
     const walletEvents = events.filter(e => e.eventType === 'wallet_added')
     const conversionEvents = events.filter(e => e.eventType === 'converted')
 

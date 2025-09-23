@@ -1,91 +1,39 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import ApiService from '../utils/api'
 
 function BranchesTab() {
-  const [branches, setBranches] = useState([
-    {
-      id: 1,
-      name: "Downtown Branch",
-      address: "123 Main Street, Downtown",
-      city: "New York",
-      state: "NY",
-      zipCode: "10001",
-      phone: "(555) 123-4567",
-      email: "downtown@johnspizza.com",
-      manager: "Sarah Johnson",
-      status: "active",
-      isMain: true,
-      customers: 247,
-      activeOffers: 3,
-      monthlyRevenue: 25000,
-      openingHours: {
-        monday: "9:00 AM - 10:00 PM",
-        tuesday: "9:00 AM - 10:00 PM",
-        wednesday: "9:00 AM - 10:00 PM",
-        thursday: "9:00 AM - 10:00 PM",
-        friday: "9:00 AM - 11:00 PM",
-        saturday: "10:00 AM - 11:00 PM",
-        sunday: "10:00 AM - 9:00 PM"
-      },
-      createdAt: "2023-06-01"
-    },
-    {
-      id: 2,
-      name: "Westside Branch",
-      address: "456 Oak Avenue, Westside",
-      city: "New York",
-      state: "NY",
-      zipCode: "10002",
-      phone: "(555) 987-6543",
-      email: "westside@johnspizza.com",
-      manager: "Mike Rodriguez",
-      status: "active",
-      isMain: false,
-      customers: 89,
-      activeOffers: 2,
-      monthlyRevenue: 12000,
-      openingHours: {
-        monday: "10:00 AM - 9:00 PM",
-        tuesday: "10:00 AM - 9:00 PM",
-        wednesday: "10:00 AM - 9:00 PM",
-        thursday: "10:00 AM - 9:00 PM",
-        friday: "10:00 AM - 10:00 PM",
-        saturday: "11:00 AM - 10:00 PM",
-        sunday: "11:00 AM - 8:00 PM"
-      },
-      createdAt: "2023-08-15"
-    },
-    {
-      id: 3,
-      name: "Northside Branch",
-      address: "789 Pine Street, Northside",
-      city: "New York",
-      state: "NY",
-      zipCode: "10003",
-      phone: "(555) 456-7890",
-      email: "northside@johnspizza.com",
-      manager: "Lisa Chen",
-      status: "inactive",
-      isMain: false,
-      customers: 45,
-      activeOffers: 0,
-      monthlyRevenue: 0,
-      openingHours: {
-        monday: "Closed",
-        tuesday: "Closed",
-        wednesday: "Closed",
-        thursday: "Closed",
-        friday: "Closed",
-        saturday: "Closed",
-        sunday: "Closed"
-      },
-      createdAt: "2023-12-01"
-    }
-  ])
+  const [branches, setBranches] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [viewMode, setViewMode] = useState('cards') // 'cards' or 'table'
+
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [cityFilter, setCityFilter] = useState('All Cities')
+  const [searchFilter, setSearchFilter] = useState('')
+
+  // Load branches on component mount
+  useEffect(() => {
+    loadBranches()
+  }, [])
+
+  const loadBranches = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const response = await ApiService.getMyBranches()
+      setBranches(response.data || [])
+    } catch (err) {
+      setError(err.message || 'Failed to load branches')
+      console.error('Error loading branches:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -105,57 +53,50 @@ function BranchesTab() {
     }
   }
 
-  const toggleBranchStatus = (branchId) => {
-    setBranches(branches.map(branch => {
-      if (branch.id === branchId) {
-        const newStatus = branch.status === 'active' ? 'inactive' : 'active'
-        return { ...branch, status: newStatus }
-      }
-      return branch
-    }))
+  const toggleBranchStatus = async (branchId) => {
+    try {
+      await ApiService.toggleMyBranchStatus(branchId)
+      await loadBranches() // Reload to get updated data
+    } catch (err) {
+      setError(err.message || 'Failed to update branch status')
+      console.error('Error toggling branch status:', err)
+    }
   }
 
-  const deleteBranch = (branchId) => {
-    const branch = branches.find(b => b.id === branchId)
-
-    // Safety checks
-    if (branch.isMain) {
-      alert("Cannot delete the main branch!")
+  const deleteBranch = async (branchId) => {
+    try {
+      const response = await ApiService.deleteMyBranch(branchId)
       setShowDeleteConfirm(null)
-      return
-    }
+      await loadBranches() // Reload to get updated data
 
-    if (branches.filter(b => b.status === 'active').length <= 1) {
-      alert("Cannot delete the last active branch!")
+      // If offers were deleted with the branch, show success message
+      if (response.data && response.data.deletedOffers > 0) {
+        console.log(`Branch deleted successfully. ${response.data.deletedOffers} associated offer(s) were also removed.`)
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete branch')
+      console.error('Error deleting branch:', err)
       setShowDeleteConfirm(null)
-      return
     }
-
-    if (branch.activeOffers > 0) {
-      alert("Cannot delete branch with active offers! Please reassign or pause offers first.")
-      setShowDeleteConfirm(null)
-      return
-    }
-
-    setBranches(branches.filter(branch => branch.id !== branchId))
-    setShowDeleteConfirm(null)
   }
 
-  const duplicateBranch = (branchId) => {
-    const branch = branches.find(b => b.id === branchId)
-    if (branch) {
-      const newBranch = {
-        ...branch,
-        id: Math.max(...branches.map(b => b.id)) + 1,
-        name: `${branch.name} (Copy)`,
-        isMain: false,
-        customers: 0,
-        activeOffers: 0,
-        monthlyRevenue: 0,
-        status: 'inactive',
-        createdAt: new Date().toISOString().split('T')[0]
+  const duplicateBranch = async (branchId) => {
+    try {
+      const branch = branches.find(b => b.id === branchId)
+      if (branch) {
+        const newBranch = {
+          ...branch,
+          name: `${branch.name} (Copy)`,
+          isMain: false,
+          status: 'inactive'
+        }
+        delete newBranch.id // Remove ID so API creates a new one
+        await ApiService.createMyBranch(newBranch)
+        await loadBranches() // Reload to get updated data
       }
-      setBranches([newBranch, ...branches])
+    } catch (err) {
+      setError(err.message || 'Failed to duplicate branch')
+      console.error('Error duplicating branch:', err)
     }
   }
 
@@ -168,6 +109,27 @@ function BranchesTab() {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString()
+  }
+
+  // Filter branches based on selected filters
+  const filteredBranches = branches.filter(branch => {
+    const statusMatch = statusFilter === 'All Status' || branch.status === statusFilter.toLowerCase()
+    const cityMatch = cityFilter === 'All Cities' || branch.city === cityFilter
+    const searchMatch = searchFilter === '' ||
+      branch.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      branch.manager?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      branch.address.toLowerCase().includes(searchFilter.toLowerCase())
+
+    return statusMatch && cityMatch && searchMatch
+  })
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading branches...</p>
+      </div>
+    )
   }
 
   return (
@@ -207,6 +169,22 @@ function BranchesTab() {
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <span className="text-red-600 mr-2">⚠️</span>
+            <span className="text-red-800">{error}</span>
+            <button
+              onClick={() => setError('')}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow border">
@@ -235,20 +213,32 @@ function BranchesTab() {
 
       {/* Filters */}
       <div className="flex space-x-4 mb-6">
-        <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
           <option>All Status</option>
           <option>Active</option>
           <option>Inactive</option>
           <option>Maintenance</option>
         </select>
-        <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+        <select
+          value={cityFilter}
+          onChange={(e) => setCityFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
           <option>All Cities</option>
-          <option>New York</option>
-          <option>Brooklyn</option>
-          <option>Queens</option>
+          {[...new Set(branches?.map(branch => branch.city))].map((city) => (
+            <option key={city} value={city}>
+              {city}
+            </option>
+          ))}
         </select>
         <input
           type="text"
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
           placeholder="Search branches..."
           className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -257,8 +247,14 @@ function BranchesTab() {
       {/* Branches List */}
       {viewMode === 'cards' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {branches.map((branch) => (
-            <div key={branch.id} className="bg-white rounded-lg shadow border hover:shadow-lg transition-shadow">
+          {filteredBranches.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              <div className="text-lg mb-2">🔍 No branches found</div>
+              <div>Try adjusting your filters or add a new branch.</div>
+            </div>
+          ) : (
+            filteredBranches.map((branch) => (
+              <div key={branch.id} className="bg-white rounded-lg shadow border hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -361,7 +357,8 @@ function BranchesTab() {
                 </div>
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       ) : (
         /* Table View */
@@ -387,8 +384,16 @@ function BranchesTab() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {branches.map((branch) => (
-                <tr key={branch.id} className="hover:bg-gray-50">
+              {filteredBranches.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                    <div className="text-lg mb-2">🔍 No branches found</div>
+                    <div>Try adjusting your filters or add a new branch.</div>
+                  </td>
+                </tr>
+              ) : (
+                filteredBranches.map((branch) => (
+                  <tr key={branch.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="flex items-center">
@@ -437,7 +442,8 @@ function BranchesTab() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -478,23 +484,22 @@ function BranchesTab() {
             setShowCreateModal(false)
             setShowEditModal(null)
           }}
-          onSave={(branchData) => {
-            if (showEditModal) {
-              setBranches(branches.map(b => b.id === showEditModal.id ? {...b, ...branchData} : b))
-            } else {
-              const newBranch = {
-                ...branchData,
-                id: Math.max(...branches.map(b => b.id)) + 1,
-                customers: 0,
-                activeOffers: 0,
-                monthlyRevenue: 0,
-                status: 'inactive',
-                createdAt: new Date().toISOString().split('T')[0]
+          onSave={async (branchData) => {
+            try {
+              if (showEditModal) {
+                // Update existing branch
+                await ApiService.updateMyBranch(showEditModal.id, branchData)
+              } else {
+                // Create new branch
+                await ApiService.createMyBranch(branchData)
               }
-              setBranches([newBranch, ...branches])
+              await loadBranches() // Reload to get updated data
+              setShowCreateModal(false)
+              setShowEditModal(null)
+            } catch (err) {
+              setError(err.message || 'Failed to save branch')
+              console.error('Error saving branch:', err)
             }
-            setShowCreateModal(false)
-            setShowEditModal(null)
           }}
         />
       )}

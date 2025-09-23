@@ -330,10 +330,12 @@ class WalletPassGenerator {
         timestamp: new Date().toISOString()
       }
 
-      // Store update for push notification service
-      const updates = JSON.parse(localStorage.getItem('wallet_updates') || '[]')
+      // Store update for push notification service (business-specific)
+      const businessId = localStorage.getItem('businessId') || 'default'
+      const storageKey = `wallet_updates_${businessId}`
+      const updates = JSON.parse(localStorage.getItem(storageKey) || '[]')
       updates.push(updateData)
-      localStorage.setItem('wallet_updates', JSON.stringify(updates))
+      localStorage.setItem(storageKey, JSON.stringify(updates))
 
       return {
         success: true,

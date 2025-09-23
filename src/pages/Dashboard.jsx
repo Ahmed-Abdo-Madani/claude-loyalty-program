@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import OffersTab from '../components/OffersTab'
 import BranchesTab from '../components/BranchesTab'
 import WalletAnalytics from '../components/WalletAnalytics'
+import ApiService from '../utils/api'
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [user, setUser] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
+  const [recentActivity, setRecentActivity] = useState([])
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -21,16 +25,46 @@ function Dashboard() {
     const businessName = localStorage.getItem('businessName')
     const userEmail = localStorage.getItem('userEmail')
     setUser({ businessName, userEmail })
+
+    // Load dashboard data
+    loadDashboardData()
   }, [navigate])
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      const [analyticsResponse, activityResponse] = await Promise.all([
+        ApiService.getMyAnalytics(),
+        ApiService.getMyActivity()
+      ])
+
+      setAnalytics(analyticsResponse.data)
+      setRecentActivity(activityResponse.data)
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+      // Use fallback data if API fails
+      setAnalytics({
+        totalCustomers: 0,
+        cardsIssued: 0,
+        rewardsRedeemed: 0,
+        growthPercentage: '+0%'
+      })
+      setRecentActivity([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSignOut = () => {
     localStorage.removeItem('isAuthenticated')
     localStorage.removeItem('businessName')
     localStorage.removeItem('userEmail')
+    localStorage.removeItem('businessId')
+    localStorage.removeItem('sessionToken')
     navigate('/')
   }
 
-  if (!user) {
+  if (!user || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -97,20 +131,20 @@ function Dashboard() {
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-2xl font-bold text-primary">247</div>
+            <div className="text-2xl font-bold text-primary">{analytics?.totalCustomers || 0}</div>
             <div className="text-gray-600">Active Customers</div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-2xl font-bold text-secondary">156</div>
+            <div className="text-2xl font-bold text-secondary">{analytics?.cardsIssued || 0}</div>
             <div className="text-gray-600">Cards Issued</div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-2xl font-bold text-accent">23</div>
+            <div className="text-2xl font-bold text-accent">{analytics?.rewardsRedeemed || 0}</div>
             <div className="text-gray-600">Rewards Redeemed</div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-2xl font-bold text-green-600">+34%</div>
-            <div className="text-gray-600">This Month</div>
+            <div className="text-2xl font-bold text-green-600">{analytics?.growthPercentage || '+0%'}</div>
+            <div className="text-gray-600">Redemption Rate</div>
           </div>
         </div>
 
@@ -149,18 +183,19 @@ function Dashboard() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <span>Sarah M. redeemed "Free Coffee" at Downtown Branch</span>
-                    <span className="text-sm text-gray-500">2 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <span>New customer joined "Buy 10 Get 1 Free" program</span>
-                    <span className="text-sm text-gray-500">4 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <span>Mike L. earned stamp #8 for "Pizza Loyalty"</span>
-                    <span className="text-sm text-gray-500">6 hours ago</span>
-                  </div>
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((activity) => (
+                      <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <span>{activity.message}</span>
+                        <span className="text-sm text-gray-500">{activity.timeAgo}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-lg mb-2">👋 Welcome to your dashboard!</div>
+                      <div>Start creating offers and managing branches to see activity here.</div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

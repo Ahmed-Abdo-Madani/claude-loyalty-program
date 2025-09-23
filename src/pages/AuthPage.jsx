@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { endpoints } from '../config/api'
 
 function AuthPage() {
   const [searchParams] = useSearchParams()
@@ -9,16 +10,11 @@ function AuthPage() {
     email: '',
     password: '',
     businessName: '',
+    phoneNumber: '',
     confirmPassword: ''
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // Test credentials
-  const testCredentials = {
-    email: 'demo@business.com',
-    password: 'demo123'
-  }
 
   const handleInputChange = (e) => {
     setFormData({
@@ -28,46 +24,48 @@ function AuthPage() {
     setError('') // Clear error when user types
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    // Simulate authentication
-    setTimeout(() => {
+    try {
       if (mode === 'signin') {
-        // Check test credentials
-        if (formData.email === testCredentials.email && formData.password === testCredentials.password) {
+        // Use real business login API
+        const response = await fetch(endpoints.businessLogin, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          // Store business authentication data
           localStorage.setItem('isAuthenticated', 'true')
-          localStorage.setItem('businessName', "John's Pizza")
-          localStorage.setItem('userEmail', formData.email)
+          localStorage.setItem('businessId', data.data.business.id)
+          localStorage.setItem('businessName', data.data.business.business_name)
+          localStorage.setItem('userEmail', data.data.business.email)
+          localStorage.setItem('sessionToken', data.data.session_token)
           navigate('/dashboard')
         } else {
-          setError('Invalid credentials. Use demo@business.com / demo123')
+          setError(data.message || 'Login failed')
         }
       } else {
-        // Signup flow
-        if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match')
-        } else if (formData.password.length < 6) {
-          setError('Password must be at least 6 characters')
-        } else {
-          localStorage.setItem('isAuthenticated', 'true')
-          localStorage.setItem('businessName', formData.businessName)
-          localStorage.setItem('userEmail', formData.email)
-          navigate('/dashboard')
-        }
+        // Signup flow - redirect to new registration page
+        navigate('/business/register')
       }
+    } catch (error) {
+      console.error('Authentication error:', error)
+      setError('Network error. Please try again.')
+    } finally {
       setLoading(false)
-    }, 1000)
-  }
-
-  const fillTestCredentials = () => {
-    setFormData({
-      ...formData,
-      email: testCredentials.email,
-      password: testCredentials.password
-    })
+    }
   }
 
   return (
@@ -102,28 +100,6 @@ function AuthPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {/* Test Credentials Banner */}
-          {mode === 'signin' && (
-            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-blue-800">Demo Credentials</h3>
-                  <p className="text-sm text-blue-600">Use these credentials to test the platform</p>
-                  <div className="mt-2 text-xs text-blue-600">
-                    <div>📧 Email: <code className="bg-blue-100 px-1 rounded">demo@business.com</code></div>
-                    <div>🔒 Password: <code className="bg-blue-100 px-1 rounded">demo123</code></div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={fillTestCredentials}
-                  className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                >
-                  Auto Fill
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Error Display */}
           {error && (
@@ -134,23 +110,43 @@ function AuthPage() {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             {mode === 'signup' && (
-              <div>
-                <label htmlFor="businessName" className="block text-sm font-medium text-gray-700">
-                  Business Name
-                </label>
-                <div className="mt-1">
-                  <input
-                    id="businessName"
-                    name="businessName"
-                    type="text"
-                    required
-                    value={formData.businessName}
-                    onChange={handleInputChange}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    placeholder="Your Business Name"
-                  />
+              <>
+                <div>
+                  <label htmlFor="businessName" className="block text-sm font-medium text-gray-700">
+                    Business Name
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      id="businessName"
+                      name="businessName"
+                      type="text"
+                      required
+                      value={formData.businessName}
+                      onChange={handleInputChange}
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      placeholder="Your Business Name"
+                    />
+                  </div>
                 </div>
-              </div>
+
+                <div>
+                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                    Phone Number
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      type="tel"
+                      required
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
             <div>
