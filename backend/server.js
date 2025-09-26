@@ -13,8 +13,19 @@ const PORT = process.env.PORT || 3001
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'], // Frontend URLs
-  credentials: true
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://192.168.8.114:3000',           // Network access
+    'http://192.168.8.114:5173',           // Network access for Vite dev
+    'https://f139ff85db6a.ngrok-free.app', // Your ngrok HTTPS tunnel
+    /^https:\/\/.*\.ngrok-free\.app$/,     // Allow any ngrok-free subdomain
+    /^https:\/\/.*\.ngrok\.io$/,           // Allow ngrok.io domains
+    /^https:\/\/.*\.ngrok\.app$/           // Allow ngrok.app domains
+  ],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'x-session-token', 'x-business-id'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }))
 app.use(express.json())
 app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' }))
@@ -55,12 +66,14 @@ app.use('*', (req, res) => {
   })
 })
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Loyalty Platform Backend running on port ${PORT}`)
-  console.log(`📱 Wallet API endpoints available at http://localhost:${PORT}/api/wallet`)
-  console.log(`🎫 Pass endpoints available at http://localhost:${PORT}/api/passes`)
-  console.log(`👑 Admin API endpoints available at http://localhost:${PORT}/api/admin`)
-  console.log(`🏢 Business API endpoints available at http://localhost:${PORT}/api/business`)
-  console.log(`❤️ Health check: http://localhost:${PORT}/health`)
-  console.log(`🔑 Admin login: POST http://localhost:${PORT}/api/admin/auth/login`)
+  console.log(`📍 Local access: http://localhost:${PORT}`)
+  console.log(`🌐 Network access: http://192.168.8.114:${PORT}`)
+  console.log(`📱 Wallet API endpoints available at http://192.168.8.114:${PORT}/api/wallet`)
+  console.log(`🎫 Pass endpoints available at http://192.168.8.114:${PORT}/api/passes`)
+  console.log(`👑 Admin API endpoints available at http://192.168.8.114:${PORT}/api/admin`)
+  console.log(`🏢 Business API endpoints available at http://192.168.8.114:${PORT}/api/business`)
+  console.log(`❤️ Health check: http://192.168.8.114:${PORT}/health`)
+  console.log(`🔑 Business login: POST http://192.168.8.114:${PORT}/api/business/login`)
 })

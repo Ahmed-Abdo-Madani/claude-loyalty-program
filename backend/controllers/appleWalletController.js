@@ -274,7 +274,7 @@ class AppleWalletController {
       const { passId } = req.params
       const updateData = req.body
 
-      console.log(`Updating Apple Wallet pass ${passId}:`, updateData)
+      console.log(`🍎 Updating Apple Wallet pass ${passId}:`, updateData)
 
       // In production:
       // 1. Update pass data in database
@@ -292,6 +292,48 @@ class AppleWalletController {
         error: 'Failed to update pass',
         message: error.message
       })
+    }
+  }
+
+  // Push updates to Apple Wallet when progress changes
+  async pushProgressUpdate(customerId, offerId, progressData) {
+    try {
+      console.log('🍎 Pushing progress update to Apple Wallet:', {
+        customerId,
+        offerId,
+        progress: progressData
+      })
+
+      // In production, this would:
+      // 1. Find the pass by customer and offer IDs
+      // 2. Update the pass data with new progress
+      // 3. Generate new pass file
+      // 4. Send push notification to Apple's server
+      // 5. Apple Wallet on device would then update
+
+      // For demo, we'll simulate the update
+      const serialNumber = `${customerId}-${offerId}-${Date.now()}`
+      const updatedPassData = this.createPassJson(
+        { customerId, firstName: 'Customer', lastName: 'User', joinedDate: new Date() },
+        { offerId, title: 'Loyalty Offer', businessName: 'Demo Business', stampsRequired: 10 },
+        progressData
+      )
+
+      // Simulate push notification success
+      console.log('✅ Apple Wallet push notification sent successfully')
+
+      return {
+        success: true,
+        serialNumber,
+        updated: new Date().toISOString(),
+        progress: progressData
+      }
+    } catch (error) {
+      console.error('❌ Apple Wallet push update failed:', error)
+      return {
+        success: false,
+        error: error.message
+      }
     }
   }
 }

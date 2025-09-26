@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import OffersTab from '../components/OffersTab'
 import BranchesTab from '../components/BranchesTab'
 import WalletAnalytics from '../components/WalletAnalytics'
+import ScannerTab from '../components/ScannerTab'
 import ApiService from '../utils/api'
 
 function Dashboard() {
@@ -156,6 +157,7 @@ function Dashboard() {
               {[
                 { id: 'overview', label: 'Overview', icon: '📊' },
                 { id: 'offers', label: 'My Offers', icon: '🎯' },
+                { id: 'scanner', label: 'QR Scanner', icon: '📱' },
                 { id: 'branches', label: 'Branches', icon: '🏪' },
                 { id: 'customers', label: 'Customers', icon: '👥' },
                 { id: 'wallet', label: 'Mobile Wallets', icon: '📱' },
@@ -202,6 +204,10 @@ function Dashboard() {
 
             {activeTab === 'offers' && (
               <OffersTab />
+            )}
+
+            {activeTab === 'scanner' && (
+              <ScannerTab />
             )}
 
             {activeTab === 'branches' && (

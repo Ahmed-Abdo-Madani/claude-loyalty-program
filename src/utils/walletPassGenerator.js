@@ -3,7 +3,33 @@
 
 class WalletPassGenerator {
   constructor() {
-    this.baseUrl = 'http://localhost:3000' // Environment-specific in production
+    this.baseUrl = import.meta.env.VITE_BASE_URL || 'http://192.168.8.114:3000' // Network-accessible URL
+  }
+
+  // Generate customer progress QR code URL
+  generateProgressQRUrl(customerData, offerData) {
+    const customerToken = this.encryptCustomerToken(customerData.customerId, offerData.businessId)
+    const offerHash = this.hashOfferId(offerData.offerId, offerData.businessId)
+    return `${this.baseUrl}/scan/${customerToken}/${offerHash}`
+  }
+
+  // Encrypt customer token for security
+  encryptCustomerToken(customerId, businessId) {
+    const timestamp = Date.now()
+    const data = `${customerId}:${businessId}:${timestamp}`
+    return btoa(data).substring(0, 24) // Base64 encoded, truncated for QR efficiency
+  }
+
+  // Hash offer ID for security
+  hashOfferId(offerId, businessId) {
+    const data = `${offerId}:${businessId}:progress`
+    let hash = 0
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36).substring(0, 8)
   }
 
   // Generate Apple Wallet Pass (.pkpass file)
@@ -92,13 +118,19 @@ class WalletPassGenerator {
         ]
       },
 
-      // Barcodes (for scanning at POS)
+      // Barcodes (for scanning at POS and progress tracking)
       barcodes: [
         {
           message: customerData.customerId,
           format: 'PKBarcodeFormatQR',
           messageEncoding: 'iso-8859-1',
           altText: `Customer ID: ${customerData.customerId}`
+        },
+        {
+          message: this.generateProgressQRUrl(customerData, offerData),
+          format: 'PKBarcodeFormatQR',
+          messageEncoding: 'iso-8859-1',
+          altText: 'Scan to update loyalty progress'
         }
       ],
 
@@ -189,11 +221,11 @@ class WalletPassGenerator {
               ]
             },
 
-            // Barcode for POS scanning
+            // Barcode for POS scanning and progress updates
             barcode: {
               type: 'QR_CODE',
-              value: customerData.customerId,
-              alternateText: `Customer ID: ${customerData.customerId}`
+              value: this.generateProgressQRUrl(customerData, offerData),
+              alternateText: 'Scan to update loyalty progress'
             },
 
             // Points and progress

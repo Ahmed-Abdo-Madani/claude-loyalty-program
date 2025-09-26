@@ -210,6 +210,35 @@ class ApiService {
   static async getPublicOffer(id) {
     return this.request(`${endpoints.publicOffer}/${id}`)
   }
+
+  // Progress Scanning API methods
+  static async scanProgress(customerToken, offerHash) {
+    return this.authenticatedRequest(`${endpoints.scanProgress}/${customerToken}/${offerHash}`, {
+      method: 'POST'
+    })
+  }
+
+  static async verifyScan(customerToken, offerHash) {
+    return this.authenticatedRequest(`${endpoints.scanVerify}/${customerToken}/${offerHash}`)
+  }
+
+  static async getScanHistory(limit = 50) {
+    return this.authenticatedRequest(`${endpoints.scanHistory}?limit=${limit}`)
+  }
+
+  static async getScanAnalytics(offerId = null) {
+    const url = offerId
+      ? `${endpoints.scanAnalytics}?offerId=${offerId}`
+      : endpoints.scanAnalytics
+    return this.authenticatedRequest(url)
+  }
+
+  // Test API methods
+  static async testDualQRFlow() {
+    return this.authenticatedRequest(endpoints.testDualQR, {
+      method: 'POST'
+    })
+  }
 }
 
 export default ApiService

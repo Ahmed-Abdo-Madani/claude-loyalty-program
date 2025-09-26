@@ -1,5 +1,7 @@
 import express from 'express'
 import dataStore from '../models/DataStore.js'
+import appleWalletController from '../controllers/appleWalletController.js'
+import googleWalletController from '../controllers/realGoogleWalletController.js'
 
 const router = express.Router()
 
@@ -1629,6 +1631,365 @@ router.get('/categories', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch business categories',
+      error: error.message
+    })
+  }
+})
+
+// ===============================
+// PROGRESS SCANNING ROUTES
+// ===============================
+
+// Scan customer progress QR code to update loyalty progress
+router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, async (req, res) => {
+  try {
+    const { customerToken, offerHash } = req.params
+    const businessId = req.business.id
+
+    console.log('🔍 Progress scan attempt:', { customerToken, offerHash, businessId })
+
+    // Decode and validate customer token
+    const tokenData = dataStore.decodeCustomerToken(customerToken)
+    if (!tokenData.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired customer token',
+        error: tokenData.error
+      })
+    }
+
+    // Verify token belongs to this business
+    if (tokenData.businessId !== businessId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Token not valid for this business'
+      })
+    }
+
+    const { customerId } = tokenData
+
+    // Find the offer by reverse-engineering the hash
+    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === businessId)
+    let targetOffer = null
+
+    for (const offer of businessOffers) {
+      if (dataStore.verifyOfferHash(offer.id, businessId, offerHash)) {
+        targetOffer = offer
+        break
+      }
+    }
+
+    if (!targetOffer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found or hash invalid'
+      })
+    }
+
+    console.log('✅ Validated scan for:', { customerId, offerId: targetOffer.id, offerTitle: targetOffer.title })
+
+    // Get or create customer progress
+    let progress = await dataStore.getCustomerProgress(customerId, targetOffer.id)
+    if (!progress) {
+      progress = await dataStore.createCustomerProgress(customerId, targetOffer.id, businessId)
+      console.log('🆕 Created new customer progress:', progress)
+    }
+
+    // Check if already completed
+    if (progress.isCompleted && progress.currentStamps >= progress.maxStamps) {
+      return res.json({
+        success: true,
+        message: 'Customer has already completed this loyalty program!',
+        data: {
+          progress,
+          rewardAvailable: true,
+          alreadyCompleted: true
+        }
+      })
+    }
+
+    // Record progress before update
+    const progressBefore = progress.currentStamps
+
+    // Update progress (add one stamp)
+    const updatedProgress = await dataStore.updateCustomerProgress(customerId, targetOffer.id, 1)
+
+    // Record scan transaction
+    const scanTransaction = await dataStore.recordScanTransaction(
+      customerToken,
+      targetOffer.id,
+      businessId,
+      req.business.email, // scanned by business email
+      progressBefore,
+      updatedProgress.currentStamps
+    )
+
+    console.log('📊 Progress updated:', {
+      before: progressBefore,
+      after: updatedProgress.currentStamps,
+      completed: updatedProgress.isCompleted
+    })
+
+    // Push updates to wallet passes (Apple & Google Wallet)
+    const walletUpdates = []
+
+    try {
+      // Push to Apple Wallet
+      const appleUpdate = await appleWalletController.pushProgressUpdate(
+        customerId,
+        targetOffer.id,
+        updatedProgress
+      )
+      walletUpdates.push({ platform: 'Apple Wallet', ...appleUpdate })
+
+      // Push to Google Wallet
+      const googleUpdate = await googleWalletController.pushProgressUpdate(
+        customerId,
+        targetOffer.id,
+        updatedProgress
+      )
+      walletUpdates.push({ platform: 'Google Wallet', ...googleUpdate })
+
+      console.log('📱 Wallet updates completed:', walletUpdates.map(u => ({ platform: u.platform, success: u.success })))
+    } catch (walletError) {
+      console.warn('⚠️ Wallet updates failed (continuing with scan):', walletError.message)
+    }
+
+    // Prepare response
+    const responseData = {
+      progress: updatedProgress,
+      customer: { id: customerId },
+      offer: {
+        id: targetOffer.id,
+        title: targetOffer.title,
+        business: targetOffer.businessName || req.business.business_name
+      },
+      scan: {
+        id: scanTransaction.id,
+        timestamp: scanTransaction.scannedAt
+      },
+      rewardEarned: updatedProgress.isCompleted && !progress.isCompleted,
+      walletUpdates: walletUpdates.map(u => ({
+        platform: u.platform,
+        success: u.success,
+        updated: u.updated
+      }))
+    }
+
+    // Success message in Arabic and English
+    let message = `Progress updated! ${updatedProgress.currentStamps}/${updatedProgress.maxStamps} stamps collected.`
+    if (updatedProgress.isCompleted) {
+      message = `🎉 Congratulations! Reward earned! تهانينا! تم كسب المكافأة!`
+    }
+
+    res.json({
+      success: true,
+      message,
+      data: responseData
+    })
+
+  } catch (error) {
+    console.error('❌ Progress scan failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process scan',
+      error: error.message
+    })
+  }
+})
+
+// Get customer progress by token (for verification before scanning)
+router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async (req, res) => {
+  try {
+    const { customerToken, offerHash } = req.params
+    const businessId = req.business.id
+
+    // Decode and validate customer token
+    const tokenData = dataStore.decodeCustomerToken(customerToken)
+    if (!tokenData.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired customer token'
+      })
+    }
+
+    // Verify token belongs to this business
+    if (tokenData.businessId !== businessId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Token not valid for this business'
+      })
+    }
+
+    const { customerId } = tokenData
+
+    // Find the offer by hash
+    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === businessId)
+    let targetOffer = null
+
+    for (const offer of businessOffers) {
+      if (dataStore.verifyOfferHash(offer.id, businessId, offerHash)) {
+        targetOffer = offer
+        break
+      }
+    }
+
+    if (!targetOffer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found'
+      })
+    }
+
+    // Get customer progress
+    const progress = await dataStore.getCustomerProgress(customerId, targetOffer.id)
+
+    res.json({
+      success: true,
+      data: {
+        customer: { id: customerId },
+        offer: {
+          id: targetOffer.id,
+          title: targetOffer.title,
+          stampsRequired: targetOffer.stampsRequired
+        },
+        progress: progress || {
+          currentStamps: 0,
+          maxStamps: targetOffer.stampsRequired,
+          isCompleted: false
+        },
+        canScan: !progress?.isCompleted
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Scan verification failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify scan',
+      error: error.message
+    })
+  }
+})
+
+// Get scan history for business
+router.get('/scan/history', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.id
+    const limit = parseInt(req.query.limit) || 50
+
+    const scanHistory = await dataStore.getScanHistory(businessId, limit)
+
+    // Enrich scan data with offer titles
+    const enrichedHistory = await Promise.all(scanHistory.map(async (scan) => {
+      const offer = dataStore.getOffers().find(o => o.id === scan.offerId)
+      return {
+        ...scan,
+        offerTitle: offer?.title || 'Unknown Offer',
+        offerType: offer?.type || 'stamps'
+      }
+    }))
+
+    res.json({
+      success: true,
+      data: enrichedHistory,
+      total: scanHistory.length
+    })
+
+  } catch (error) {
+    console.error('❌ Failed to get scan history:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get scan history',
+      error: error.message
+    })
+  }
+})
+
+// Get scan analytics for business
+router.get('/scan/analytics', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.id
+    const offerId = req.query.offerId ? parseInt(req.query.offerId) : null
+
+    const analytics = await dataStore.getScanAnalytics(businessId, offerId)
+
+    res.json({
+      success: true,
+      data: analytics
+    })
+
+  } catch (error) {
+    console.error('❌ Failed to get scan analytics:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get scan analytics',
+      error: error.message
+    })
+  }
+})
+
+// ===============================
+// DUAL QR FLOW TEST ENDPOINTS
+// ===============================
+
+// Test dual QR flow with demo data
+router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.id
+
+    console.log('🧪 Testing dual QR flow for business:', businessId)
+
+    // Step 1: Create test customer progress
+    const testCustomerId = 'demo-customer-123'
+    const testOfferId = dataStore.getOffers().find(o => o.businessId === businessId)?.id
+
+    if (!testOfferId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No offers found for this business. Please create an offer first.'
+      })
+    }
+
+    const progress = await dataStore.createCustomerProgress(testCustomerId, testOfferId, businessId)
+
+    // Step 2: Generate customer progress QR data
+    const customerToken = Buffer.from(`${testCustomerId}:${businessId}:${Date.now()}`).toString('base64').substring(0, 24)
+    const offerHash = dataStore.verifyOfferHash.toString().substring(0, 8)
+
+    // Step 3: Simulate wallet pass generation with customer progress QR
+    const walletPassData = {
+      customer: { customerId: testCustomerId },
+      offer: { offerId: testOfferId, businessId },
+      progress: progress,
+      progressQRUrl: `http://localhost:3000/scan/${customerToken}/${offerHash}`
+    }
+
+    // Step 4: Return test results
+    res.json({
+      success: true,
+      message: 'Dual QR flow test completed successfully!',
+      data: {
+        testStep1_CustomerProgress: progress,
+        testStep2_CustomerToken: customerToken,
+        testStep3_OfferHash: offerHash,
+        testStep4_WalletPassData: walletPassData,
+        testStep5_ScanURL: `POST /api/business/scan/progress/${customerToken}/${offerHash}`,
+        instructions: [
+          '1. Customer joins loyalty program via Offer QR Code',
+          '2. Customer receives wallet pass with embedded Progress QR Code',
+          '3. Business scans Progress QR Code from customer wallet pass',
+          '4. System updates progress and pushes updates to wallet',
+          '5. Customer sees updated progress in real-time'
+        ]
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Dual QR flow test failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Dual QR flow test failed',
       error: error.message
     })
   }

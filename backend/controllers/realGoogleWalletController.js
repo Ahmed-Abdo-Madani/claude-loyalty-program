@@ -30,6 +30,7 @@ class RealGoogleWalletController {
     // Bind methods
     this.generatePass = this.generatePass.bind(this)
     this.savePass = this.savePass.bind(this)
+    this.pushProgressUpdate = this.pushProgressUpdate.bind(this)
   }
 
   async generatePass(req, res) {
@@ -354,6 +355,66 @@ class RealGoogleWalletController {
     } catch (error) {
       console.error('Failed to update loyalty object:', error)
       throw error
+    }
+  }
+
+  // Push updates to Google Wallet when progress changes
+  async pushProgressUpdate(customerId, offerId, progressData) {
+    try {
+      console.log('📱 Pushing progress update to Google Wallet:', {
+        customerId,
+        offerId,
+        progress: progressData
+      })
+
+      // Create object ID using same format as creation - CRITICAL FIX
+      const objectId = `${this.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._]/g, '_')
+
+      // Prepare update data for Google Wallet - MAP FIELD NAMES CORRECTLY
+      const updateData = {
+        loyaltyPoints: {
+          balance: {
+            string: `${progressData.current_stamps}/${progressData.max_stamps}`
+          },
+          label: 'Stamps Collected'
+        },
+        textModulesData: [
+          {
+            id: 'progress',
+            header: 'Progress',
+            body: `${progressData.current_stamps} of ${progressData.max_stamps} stamps`
+          }
+        ]
+      }
+
+      // If reward is earned, update the status
+      if (progressData.is_completed) {
+        updateData.state = 'COMPLETED'
+        updateData.textModulesData.push({
+          id: 'reward_status',
+          header: '🎉 Reward Earned!',
+          body: 'Visit the business to claim your free item'
+        })
+      }
+
+      // Update the loyalty object in Google Wallet
+      const result = await this.updateLoyaltyObject(objectId, updateData)
+
+      console.log('✅ Google Wallet push notification sent successfully')
+
+      return {
+        success: true,
+        objectId,
+        updated: new Date().toISOString(),
+        progress: progressData,
+        result
+      }
+    } catch (error) {
+      console.error('❌ Google Wallet push update failed:', error)
+      return {
+        success: false,
+        error: error.message
+      }
     }
   }
 }

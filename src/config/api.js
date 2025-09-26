@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export const endpoints = {
   baseURL: API_BASE_URL,
@@ -26,7 +26,16 @@ export const endpoints = {
   myActivity: `${API_BASE_URL}/api/business/my/activity`,
 
   // Public Customer APIs
-  publicOffer: `${API_BASE_URL}/api/business/public/offer`
+  publicOffer: `${API_BASE_URL}/api/business/public/offer`,
+
+  // Progress Scanning APIs
+  scanProgress: `${API_BASE_URL}/api/business/scan/progress`,
+  scanVerify: `${API_BASE_URL}/api/business/scan/verify`,
+  scanHistory: `${API_BASE_URL}/api/business/scan/history`,
+  scanAnalytics: `${API_BASE_URL}/api/business/scan/analytics`,
+
+  // Test APIs
+  testDualQR: `${API_BASE_URL}/api/business/test/dual-qr-flow`
 }
 
 export default {
