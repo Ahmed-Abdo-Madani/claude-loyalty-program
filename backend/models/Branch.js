@@ -23,6 +23,23 @@ const Branch = sequelize.define('Branch', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  city: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  state: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  zip_code: {
+    type: DataTypes.STRING(20),
+    allowNull: true
+  },
+  country: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    defaultValue: 'Saudi Arabia'
+  },
   phone: {
     type: DataTypes.STRING(20),
     allowNull: true

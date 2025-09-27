@@ -3,7 +3,9 @@ import QRCode from 'qrcode'
 // QR Code Generator Utility
 class QRCodeGenerator {
   constructor() {
-    this.baseUrl = 'http://localhost:3000/join' // Will be environment-specific in production
+    // Use environment variable or fallback to localhost
+    const baseUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:3000'
+    this.baseUrl = `${baseUrl}/customer-signup`
   }
 
   // Generate unique offer ID (UUID-like)
@@ -194,7 +196,7 @@ class QRCodeGenerator {
     try {
       const urlObj = new URL(url)
       const isValidDomain = urlObj.hostname === new URL(this.baseUrl).hostname
-      const hasValidPath = urlObj.pathname.startsWith('/join/')
+      const hasValidPath = urlObj.pathname.startsWith('/customer-signup/') || urlObj.pathname.startsWith('/join/')
 
       return {
         isValid: isValidDomain && hasValidPath,

@@ -1,5 +1,8 @@
 import express from 'express'
-import dataStore from '../models/DataStore.js'
+import BusinessService from '../services/BusinessService.js'
+import OfferService from '../services/OfferService.js'
+import CustomerService from '../services/CustomerService.js'
+import { Business, Offer, CustomerProgress, Branch } from '../models/index.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 
@@ -99,164 +102,7 @@ let offers = [
   }
 ]
 
-let branches = [
-  {
-    id: 1,
-    name: "فرع الرياض الرئيسي - Riyadh Main Branch",
-    address: "شارع الأمير محمد بن عبدالعزيز، العليا - Prince Mohammed bin Abdulaziz St, Al Olaya",
-    city: "الرياض - Riyadh",
-    state: "المنطقة الوسطى - Central Region",
-    zipCode: "11564",
-    phone: "+966 11 123-4567",
-    email: "riyadh@alamalrestaurant.sa",
-    manager: "أحمد السعيد - Ahmed Al-Saeed",
-    status: "active",
-    isMain: true,
-    customers: 1247,
-    activeOffers: 5,
-    monthlyRevenue: 180000,
-    openingHours: {
-      saturday: "10:00 AM - 12:00 AM",
-      sunday: "10:00 AM - 12:00 AM",
-      monday: "10:00 AM - 12:00 AM",
-      tuesday: "10:00 AM - 12:00 AM",
-      wednesday: "10:00 AM - 12:00 AM",
-      thursday: "10:00 AM - 1:00 AM",
-      friday: "2:00 PM - 1:00 AM"
-    },
-    createdAt: "2023-03-01"
-  },
-  {
-    id: 2,
-    name: "فرع جدة - Jeddah Branch",
-    address: "شارع التحلية، حي التحلية - Tahlia Street, Tahlia District",
-    city: "جدة - Jeddah",
-    state: "المنطقة الغربية - Western Region",
-    zipCode: "21541",
-    phone: "+966 12 987-6543",
-    email: "jeddah@alamalrestaurant.sa",
-    manager: "فاطمة الغامدي - Fatima Al-Ghamdi",
-    status: "active",
-    isMain: false,
-    customers: 892,
-    activeOffers: 4,
-    monthlyRevenue: 145000,
-    openingHours: {
-      saturday: "11:00 AM - 12:00 AM",
-      sunday: "11:00 AM - 12:00 AM",
-      monday: "11:00 AM - 12:00 AM",
-      tuesday: "11:00 AM - 12:00 AM",
-      wednesday: "11:00 AM - 12:00 AM",
-      thursday: "11:00 AM - 1:00 AM",
-      friday: "2:00 PM - 1:00 AM"
-    },
-    createdAt: "2023-05-15"
-  },
-  {
-    id: 3,
-    name: "فرع الدمام - Dammam Branch",
-    address: "شارع الملك فهد، حي الفيصلية - King Fahd Road, Al Faisaliyah",
-    city: "الدمام - Dammam",
-    state: "المنطقة الشرقية - Eastern Region",
-    zipCode: "32245",
-    phone: "+966 13 456-7890",
-    email: "dammam@alamalrestaurant.sa",
-    manager: "محمد العتيبي - Mohammed Al-Otaibi",
-    status: "active",
-    isMain: false,
-    customers: 567,
-    activeOffers: 3,
-    monthlyRevenue: 95000,
-    openingHours: {
-      saturday: "10:00 AM - 11:00 PM",
-      sunday: "10:00 AM - 11:00 PM",
-      monday: "10:00 AM - 11:00 PM",
-      tuesday: "10:00 AM - 11:00 PM",
-      wednesday: "10:00 AM - 11:00 PM",
-      thursday: "10:00 AM - 12:00 AM",
-      friday: "2:00 PM - 12:00 AM"
-    },
-    createdAt: "2023-07-20"
-  },
-  {
-    id: 4,
-    name: "فرع مكة المكرمة - Makkah Branch",
-    address: "شارع إبراهيم الخليل، العزيزية - Ibrahim Al-Khalil St, Al Aziziyyah",
-    city: "مكة المكرمة - Makkah",
-    state: "المنطقة الغربية - Western Region",
-    zipCode: "24243",
-    phone: "+966 12 234-5678",
-    email: "makkah@alamalrestaurant.sa",
-    manager: "عبدالله الحربي - Abdullah Al-Harbi",
-    status: "active",
-    isMain: false,
-    customers: 423,
-    activeOffers: 2,
-    monthlyRevenue: 78000,
-    openingHours: {
-      saturday: "9:00 AM - 11:00 PM",
-      sunday: "9:00 AM - 11:00 PM",
-      monday: "9:00 AM - 11:00 PM",
-      tuesday: "9:00 AM - 11:00 PM",
-      wednesday: "9:00 AM - 11:00 PM",
-      thursday: "9:00 AM - 12:00 AM",
-      friday: "2:00 PM - 12:00 AM"
-    },
-    createdAt: "2023-08-10"
-  },
-  {
-    id: 5,
-    name: "فرع المدينة المنورة - Madinah Branch",
-    address: "شارع قباء، حي قباء - Quba Street, Quba District",
-    city: "المدينة المنورة - Madinah",
-    state: "المنطقة الغربية - Western Region",
-    zipCode: "42311",
-    phone: "+966 14 345-6789",
-    email: "madinah@alamalrestaurant.sa",
-    manager: "خديجة الأنصاري - Khadijah Al-Ansari",
-    status: "active",
-    isMain: false,
-    customers: 312,
-    activeOffers: 2,
-    monthlyRevenue: 65000,
-    openingHours: {
-      saturday: "10:00 AM - 10:00 PM",
-      sunday: "10:00 AM - 10:00 PM",
-      monday: "10:00 AM - 10:00 PM",
-      tuesday: "10:00 AM - 10:00 PM",
-      wednesday: "10:00 AM - 10:00 PM",
-      thursday: "10:00 AM - 11:00 PM",
-      friday: "2:00 PM - 11:00 PM"
-    },
-    createdAt: "2023-09-05"
-  },
-  {
-    id: 6,
-    name: "فرع الخبر - Khobar Branch",
-    address: "شارع الأمير فيصل بن فهد، الروضة - Prince Faisal bin Fahd St, Al Rawda",
-    city: "الخبر - Khobar",
-    state: "المنطقة الشرقية - Eastern Region",
-    zipCode: "34423",
-    phone: "+966 13 567-8901",
-    email: "khobar@alamalrestaurant.sa",
-    manager: "سارة القحطاني - Sarah Al-Qahtani",
-    status: "active",
-    isMain: false,
-    customers: 234,
-    activeOffers: 2,
-    monthlyRevenue: 52000,
-    openingHours: {
-      saturday: "11:00 AM - 11:00 PM",
-      sunday: "11:00 AM - 11:00 PM",
-      monday: "11:00 AM - 11:00 PM",
-      tuesday: "11:00 AM - 11:00 PM",
-      wednesday: "11:00 AM - 11:00 PM",
-      thursday: "11:00 AM - 12:00 AM",
-      friday: "2:00 PM - 12:00 AM"
-    },
-    createdAt: "2023-10-12"
-  }
-]
+// Legacy hardcoded branches removed - all branch operations now use PostgreSQL database
 
 // Sample customers data for Saudi Arabia
 let customers = [
@@ -397,7 +243,7 @@ let businessCategories = [
 ]
 
 let nextOfferId = Math.max(...offers.map(o => o.id)) + 1
-let nextBranchId = Math.max(...branches.map(b => b.id)) + 1
+// Branch IDs now auto-generated by PostgreSQL sequences
 let nextCustomerId = Math.max(...customers.map(c => c.id)) + 1
 
 // ===============================
@@ -555,151 +401,11 @@ router.patch('/offers/:id/status', (req, res) => {
 // BRANCHES ROUTES
 // ===============================
 
-// Get all branches
-router.get('/branches', (req, res) => {
-  try {
-    res.json({
-      success: true,
-      data: branches
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch branches',
-      error: error.message
-    })
-  }
-})
+// LEGACY BRANCH ROUTES REMOVED - Use authenticated /my/branches routes instead
 
-// Get single branch
-router.get('/branches/:id', (req, res) => {
-  try {
-    const branch = branches.find(b => b.id === parseInt(req.params.id))
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found'
-      })
-    }
-    res.json({
-      success: true,
-      data: branch
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch branch',
-      error: error.message
-    })
-  }
-})
+// LEGACY BRANCH UPDATE REMOVED - Use authenticated /my/branches/:id routes instead
 
-// Create new branch
-router.post('/branches', (req, res) => {
-  try {
-    const newBranch = {
-      ...req.body,
-      id: nextBranchId++,
-      customers: 0,
-      activeOffers: 0,
-      monthlyRevenue: 0,
-      status: 'inactive',
-      createdAt: new Date().toISOString().split('T')[0]
-    }
-    branches.unshift(newBranch)
-    res.status(201).json({
-      success: true,
-      data: newBranch,
-      message: 'Branch created successfully'
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create branch',
-      error: error.message
-    })
-  }
-})
-
-// Update branch
-router.put('/branches/:id', (req, res) => {
-  try {
-    const branchIndex = branches.findIndex(b => b.id === parseInt(req.params.id))
-    if (branchIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found'
-      })
-    }
-
-    branches[branchIndex] = {
-      ...branches[branchIndex],
-      ...req.body
-    }
-
-    res.json({
-      success: true,
-      data: branches[branchIndex],
-      message: 'Branch updated successfully'
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update branch',
-      error: error.message
-    })
-  }
-})
-
-// Delete branch
-router.delete('/branches/:id', (req, res) => {
-  try {
-    const branchIndex = branches.findIndex(b => b.id === parseInt(req.params.id))
-    if (branchIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found'
-      })
-    }
-
-    const branch = branches[branchIndex]
-
-    // Safety checks
-    if (branch.isMain) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete the main branch'
-      })
-    }
-
-    // Only prevent deletion if this is the last active branch
-    if (branch.status === 'active' && branches.filter(b => b.status === 'active').length <= 1) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete the last active branch'
-      })
-    }
-
-    if (branch.activeOffers > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete branch with active offers'
-      })
-    }
-
-    branches.splice(branchIndex, 1)
-    res.json({
-      success: true,
-      message: 'Branch deleted successfully'
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete branch',
-      error: error.message
-    })
-  }
-})
+// LEGACY BRANCH DELETE REMOVED - Use authenticated /my/branches/:id routes instead
 
 // Toggle branch status
 router.patch('/branches/:id/status', (req, res) => {
@@ -735,38 +441,35 @@ router.patch('/branches/:id/status', (req, res) => {
 // Get dashboard analytics/stats
 router.get('/analytics/dashboard', async (req, res) => {
   try {
-    await dataStore.init()
+    // Get real data from database using services
+    const offers = await OfferService.getAllOffers()
+    const businesses = await BusinessService.getAllBusinesses()
 
-    // Get real data from unified data store
-    const offers = dataStore.getOffers()
-    const branches = dataStore.getBranches()
-    const customers = dataStore.getCustomers()
-
-    // Calculate real stats from unified data
+    // Calculate real stats from database data
     const totalOffers = offers.length
     const activeOffers = offers.filter(o => o.status === 'active').length
-    const totalBranches = branches.length
-    const activeBranches = branches.filter(b => b.status === 'active').length
+    const totalBranches = businesses.reduce((sum, b) => sum + (b.total_branches || 0), 0)
+    const activeBranches = totalBranches // For now, assume all branches are active
 
     // Calculate customer stats from actual customer data
-    const totalCustomers = customers.length
-    const totalRevenueThisMonth = branches.reduce((sum, branch) => sum + branch.monthlyRevenue, 0)
-    const totalCustomerSpending = customers.reduce((sum, customer) => sum + customer.totalSpent, 0)
+    const totalCustomers = businesses.reduce((sum, b) => sum + (b.total_customers || 0), 0)
+    const totalRevenueThisMonth = 0 // TODO: Implement revenue tracking
+    const totalCustomerSpending = 0 // TODO: Implement spending tracking
 
     // Calculate cards issued (sum of customers from active offers)
-    const cardsIssued = offers.reduce((sum, offer) => sum + offer.customers, 0)
+    const cardsIssued = offers.reduce((sum, offer) => sum + (offer.customers || 0), 0)
 
-    // Calculate rewards redeemed from customer data
-    const rewardsRedeemed = customers.reduce((sum, customer) => sum + customer.rewardsRedeemed, 0)
+    // Calculate rewards redeemed from offers data
+    const rewardsRedeemed = offers.reduce((sum, offer) => sum + (offer.redeemed || 0), 0)
 
     // Calculate growth percentage based on customer activity
-    const vipCustomers = customers.filter(c => c.status === 'vip').length
+    const vipCustomers = 0 // TODO: Implement VIP customer tracking
     const growthPercentage = totalCustomers > 0 ? Math.round((vipCustomers / totalCustomers) * 100) : 0
 
     // Saudi Arabia specific metrics
     const averageSpendingPerCustomer = totalCustomers > 0 ? Math.round(totalCustomerSpending / totalCustomers) : 0
-    const arabicPreferredCustomers = customers.filter(c => c.preferredLanguage === 'ar').length
-    const englishPreferredCustomers = customers.filter(c => c.preferredLanguage === 'en').length
+    const arabicPreferredCustomers = 0 // TODO: Implement language preference tracking
+    const englishPreferredCustomers = 0 // TODO: Implement language preference tracking
 
     const analytics = {
       totalCustomers,
@@ -783,14 +486,14 @@ router.get('/analytics/dashboard', async (req, res) => {
       vipCustomers,
       arabicPreferredCustomers,
       englishPreferredCustomers,
-      // Regional distribution
+      // Regional distribution (based on businesses for now)
       regionStats: {
-        riyadh: customers.filter(c => c.city.includes('الرياض') || c.city.includes('Riyadh')).length,
-        jeddah: customers.filter(c => c.city.includes('جدة') || c.city.includes('Jeddah')).length,
-        dammam: customers.filter(c => c.city.includes('الدمام') || c.city.includes('Dammam')).length,
-        makkah: customers.filter(c => c.city.includes('مكة') || c.city.includes('Makkah')).length,
-        madinah: customers.filter(c => c.city.includes('المدينة') || c.city.includes('Madinah')).length,
-        khobar: customers.filter(c => c.city.includes('الخبر') || c.city.includes('Khobar')).length
+        riyadh: businesses.filter(b => b.city && (b.city.includes('الرياض') || b.city.includes('Riyadh'))).length,
+        jeddah: businesses.filter(b => b.city && (b.city.includes('جدة') || b.city.includes('Jeddah'))).length,
+        dammam: businesses.filter(b => b.city && (b.city.includes('الدمام') || b.city.includes('Dammam'))).length,
+        makkah: businesses.filter(b => b.city && (b.city.includes('مكة') || b.city.includes('Makkah'))).length,
+        madinah: businesses.filter(b => b.city && (b.city.includes('المدينة') || b.city.includes('Madinah'))).length,
+        khobar: businesses.filter(b => b.city && (b.city.includes('الخبر') || b.city.includes('Khobar'))).length
       }
     }
 
@@ -993,8 +696,7 @@ const requireBusinessAuth = async (req, res, next) => {
       })
     }
 
-    await dataStore.init()
-    const business = dataStore.getBusinesses().find(b => b.id === parseInt(businessId))
+    const business = await BusinessService.findById(parseInt(businessId))
 
     if (!business || business.status !== 'active') {
       return res.status(401).json({
@@ -1021,10 +723,8 @@ const requireBusinessAuth = async (req, res, next) => {
 // Get business-specific offers
 router.get('/my/offers', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-
     // Get offers associated with this business
-    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === req.business.id)
+    const businessOffers = await OfferService.findByBusinessId(req.business.id)
 
     res.json({
       success: true,
@@ -1042,20 +742,25 @@ router.get('/my/offers', requireBusinessAuth, async (req, res) => {
 // Get business-specific branches
 router.get('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
+    const businessId = req.business.id
 
-    // Get branches associated with this business
-    const businessBranches = dataStore.getBranches().filter(branch => branch.businessId === req.business.id)
+    // Query real branches from PostgreSQL database
+    const branches = await Branch.findAll({
+      where: { business_id: businessId },
+      order: [['created_at', 'DESC']]
+    })
 
     res.json({
       success: true,
-      data: businessBranches
+      data: branches,
+      total: branches.length
     })
   } catch (error) {
-    console.error('Get business branches error:', error)
+    console.error('Get my branches error:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to get branches'
+      message: 'Failed to fetch branches',
+      error: error.message
     })
   }
 })
@@ -1063,21 +768,22 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
 // Get business-specific analytics
 router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
+    const businessId = parseInt(req.business.id)
 
-    // Calculate analytics for this specific business
-    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === req.business.id)
-    const businessBranches = dataStore.getBranches().filter(branch => branch.businessId === req.business.id)
-    const businessCustomers = dataStore.getCustomers().filter(customer => customer.businessId === req.business.id)
+    // Get business offers from database
+    const businessOffers = await OfferService.findByBusinessId(businessId)
+
+    // Get analytics from CustomerService
+    const scanAnalytics = await CustomerService.getScanAnalytics(businessId)
 
     const analytics = {
-      totalCustomers: businessCustomers.length,
+      totalCustomers: scanAnalytics.totalCustomers,
       cardsIssued: businessOffers.reduce((sum, offer) => sum + (offer.customers || 0), 0),
-      rewardsRedeemed: businessOffers.reduce((sum, offer) => sum + (offer.redeemed || 0), 0),
-      growthPercentage: businessCustomers.length > 0 ? `+${Math.round((businessCustomers.filter(c => c.status === 'vip').length / businessCustomers.length) * 100)}%` : '+0%',
+      rewardsRedeemed: scanAnalytics.totalRedemptions,
+      growthPercentage: scanAnalytics.totalCustomers > 0 ? `+${Math.round(scanAnalytics.averageProgress)}%` : '+0%',
       totalOffers: businessOffers.length,
-      totalBranches: businessBranches.length,
-      monthlyRevenue: businessBranches.reduce((sum, branch) => sum + (branch.monthlyRevenue || 0), 0)
+      totalBranches: 1, // TODO: Implement branches when Branch model is created
+      monthlyRevenue: businessOffers.reduce((sum, offer) => sum + (offer.base_reward_value || 0), 0) // Placeholder calculation
     }
 
     res.json({
@@ -1096,47 +802,40 @@ router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
 // Get business-specific recent activity
 router.get('/my/activity', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
+    const businessId = parseInt(req.business.id)
 
-    // Generate activity based on business data
-    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === req.business.id)
-    const businessBranches = dataStore.getBranches().filter(branch => branch.businessId === req.business.id)
-    
+    // Get business offers from database
+    const businessOffers = await OfferService.findByBusinessId(businessId)
+
+    // Get scan history for activity
+    const scanHistory = await CustomerService.getScanHistory(businessId, 10)
+
     const activity = []
     const now = new Date()
 
-    // Add recent offer activities
-    businessOffers.slice(0, 3).forEach((offer, index) => {
+    // Generate activity from scan history
+    scanHistory.forEach((progress, index) => {
       const hoursAgo = (index + 1) * 2
       const timeAgo = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000)
 
-      if (offer.redeemed > 0) {
+      if (progress.is_completed && progress.rewards_claimed > 0) {
         activity.push({
-          id: `offer-${offer.id}-${index}`,
-          message: `Customer redeemed "${offer.title.replace(/🍕|☕|🎂|🏃|🥙|🍰|🥤|💇‍♂️|🛍️/g, '').trim()}" at ${offer.branch}`,
-          timestamp: timeAgo.toISOString(),
+          id: `reward-${progress.id}-${index}`,
+          message: `Customer redeemed reward for "${progress.offer?.title || 'loyalty program'}"`,
+          timestamp: progress.last_scan_date || timeAgo.toISOString(),
           timeAgo: `${hoursAgo} hours ago`,
           type: 'redemption'
         })
+      } else if (progress.current_stamps > 0) {
+        activity.push({
+          id: `scan-${progress.id}-${index}`,
+          message: `Customer earned stamp - ${progress.current_stamps}/${progress.max_stamps} stamps collected`,
+          timestamp: progress.last_scan_date || timeAgo.toISOString(),
+          timeAgo: `${hoursAgo} hours ago`,
+          type: 'scan'
+        })
       }
     })
-
-    // Add recent customer activities
-    businessBranches.filter(b => b.customers > 0).slice(0, 2).forEach((branch, index) => {
-      const hoursAgo = (index + 3) * 2
-      const timeAgo = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000)
-
-      activity.push({
-        id: `branch-${branch.id}-${index}`,
-        message: `New customer joined loyalty program at ${branch.name}`,
-        timestamp: timeAgo.toISOString(),
-        timeAgo: `${hoursAgo} hours ago`,
-        type: 'signup'
-      })
-    })
-
-    // Sort by timestamp (newest first)
-    activity.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
     // If no activity, show welcome message
     if (activity.length === 0) {
@@ -1147,6 +846,9 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
         type: 'info'
       })
     }
+
+    // Sort by timestamp (newest first)
+    activity.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
     res.json({
       success: true,
@@ -1168,31 +870,40 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
 // Create business offer
 router.post('/my/offers', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
+    console.log('🔄 Creating offer - Request body:', req.body)
+    console.log('🔄 Creating offer - Business ID:', req.business.id)
     
-    
-    const newOffer = {
+    // Process date fields - convert empty strings to null
+    const processedBody = {
       ...req.body,
-      id: dataStore.getNextOfferId(),
-      businessId: req.business.id, // Associate with logged-in business
-      customers: 0,
-      redeemed: 0,
-      createdAt: 'just now',
-      status: 'paused'
+      start_date: req.body.start_date && req.body.start_date.trim() !== '' ? req.body.start_date : null,
+      end_date: req.body.end_date && req.body.end_date.trim() !== '' ? req.body.end_date : null
     }
     
-    // Add to DataStore
-    dataStore.data.offers.unshift(newOffer)
-    await dataStore.save()
+    const newOfferData = {
+      ...processedBody,
+      business_id: req.business.id,
+      status: req.body.status || 'paused'
+    }
     
+    console.log('🔄 Creating offer - Final data:', newOfferData)
+
+    const newOffer = await Offer.create(newOfferData)
     
+    console.log('✅ Offer created successfully:', newOffer.id)
+
     res.status(201).json({
       success: true,
       data: newOffer,
       message: 'Offer created successfully'
     })
   } catch (error) {
-    console.error('Create offer error:', error)
+    console.error('❌ Create offer error:', error)
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.substring(0, 500)
+    })
     res.status(500).json({
       success: false,
       message: 'Failed to create offer',
@@ -1204,29 +915,32 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
 // Update business offer
 router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-    const offerIndex = dataStore.data.offers.findIndex(o => 
-      o.id === parseInt(req.params.id) && o.businessId === req.business.id
-    )
-    
-    if (offerIndex === -1) {
+    const offerId = parseInt(req.params.id)
+    const businessId = req.business.id
+
+    const offer = await Offer.findOne({
+      where: { id: offerId, business_id: businessId }
+    })
+
+    if (!offer) {
       return res.status(404).json({
         success: false,
         message: 'Offer not found or not owned by your business'
       })
     }
 
-    dataStore.data.offers[offerIndex] = {
-      ...dataStore.data.offers[offerIndex],
-      ...req.body
+    // Process date fields - convert empty strings to null
+    const processedBody = {
+      ...req.body,
+      start_date: req.body.start_date && req.body.start_date.trim() !== '' ? req.body.start_date : null,
+      end_date: req.body.end_date && req.body.end_date.trim() !== '' ? req.body.end_date : null
     }
-    
-    await dataStore.save()
+
+    await offer.update(processedBody)
 
     res.json({
       success: true,
-      data: dataStore.data.offers[offerIndex],
+      data: offer,
       message: 'Offer updated successfully'
     })
   } catch (error) {
@@ -1242,22 +956,22 @@ router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
 // Delete business offer
 router.delete('/my/offers/:id', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-    const offerIndex = dataStore.data.offers.findIndex(o => 
-      o.id === parseInt(req.params.id) && o.businessId === req.business.id
-    )
-    
-    if (offerIndex === -1) {
+    const offerId = parseInt(req.params.id)
+    const businessId = req.business.id
+
+    const offer = await Offer.findOne({
+      where: { id: offerId, business_id: businessId }
+    })
+
+    if (!offer) {
       return res.status(404).json({
         success: false,
         message: 'Offer not found or not owned by your business'
       })
     }
 
-    dataStore.data.offers.splice(offerIndex, 1)
-    await dataStore.save()
-    
+    await offer.destroy()
+
     res.json({
       success: true,
       message: 'Offer deleted successfully'
@@ -1275,12 +989,13 @@ router.delete('/my/offers/:id', requireBusinessAuth, async (req, res) => {
 // Toggle business offer status
 router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-    const offer = dataStore.data.offers.find(o => 
-      o.id === parseInt(req.params.id) && o.businessId === req.business.id
-    )
-    
+    const offerId = parseInt(req.params.id)
+    const businessId = req.business.id
+
+    const offer = await Offer.findOne({
+      where: { id: offerId, business_id: businessId }
+    })
+
     if (!offer) {
       return res.status(404).json({
         success: false,
@@ -1288,13 +1003,13 @@ router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    offer.status = offer.status === 'active' ? 'paused' : 'active'
-    await dataStore.save()
+    const newStatus = offer.status === 'active' ? 'paused' : 'active'
+    await offer.update({ status: newStatus })
 
     res.json({
       success: true,
       data: offer,
-      message: `Offer ${offer.status === 'active' ? 'activated' : 'paused'} successfully`
+      message: `Offer ${newStatus === 'active' ? 'activated' : 'paused'} successfully`
     })
   } catch (error) {
     console.error('Toggle offer status error:', error)
@@ -1309,26 +1024,14 @@ router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
 // Create business branch
 router.post('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-
-    
-    const newBranch = {
+    const newBranchData = {
       ...req.body,
-      id: dataStore.getNextBranchId(),
-      businessId: req.business.id, // Associate with logged-in business
-      customers: 0,
-      activeOffers: 0,
-      monthlyRevenue: 0,
-      status: 'inactive',
-      createdAt: new Date().toISOString().split('T')[0]
+      business_id: req.business.id,
+      status: req.body.status || 'inactive'
     }
-    
-    // Add to DataStore
-    dataStore.data.branches.unshift(newBranch)
-    await dataStore.save()
-    
-    
+
+    const newBranch = await Branch.create(newBranchData)
+
     res.status(201).json({
       success: true,
       data: newBranch,
@@ -1347,29 +1050,25 @@ router.post('/my/branches', requireBusinessAuth, async (req, res) => {
 // Update business branch
 router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-    const branchIndex = dataStore.data.branches.findIndex(b => 
-      b.id === parseInt(req.params.id) && b.businessId === req.business.id
-    )
-    
-    if (branchIndex === -1) {
+    const branchId = parseInt(req.params.id)
+    const businessId = req.business.id
+
+    const branch = await Branch.findOne({
+      where: { id: branchId, business_id: businessId }
+    })
+
+    if (!branch) {
       return res.status(404).json({
         success: false,
         message: 'Branch not found or not owned by your business'
       })
     }
 
-    dataStore.data.branches[branchIndex] = {
-      ...dataStore.data.branches[branchIndex],
-      ...req.body
-    }
-    
-    await dataStore.save()
+    await branch.update(req.body)
 
     res.json({
       success: true,
-      data: dataStore.data.branches[branchIndex],
+      data: branch,
       message: 'Branch updated successfully'
     })
   } catch (error) {
@@ -1385,20 +1084,19 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 // Delete business branch
 router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-    const branchIndex = dataStore.data.branches.findIndex(b => 
-      b.id === parseInt(req.params.id) && b.businessId === req.business.id
-    )
-    
-    if (branchIndex === -1) {
+    const branchId = parseInt(req.params.id)
+    const businessId = req.business.id
+
+    const branch = await Branch.findOne({
+      where: { id: branchId, business_id: businessId }
+    })
+
+    if (!branch) {
       return res.status(404).json({
         success: false,
         message: 'Branch not found or not owned by your business'
       })
     }
-
-    const branch = dataStore.data.branches[branchIndex]
 
     // Safety checks
     if (branch.isMain) {
@@ -1410,10 +1108,10 @@ router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 
     // Only prevent deletion if this is the last active branch
     if (branch.status === 'active') {
-      const activeBranches = dataStore.data.branches.filter(b => 
-        b.businessId === req.business.id && b.status === 'active'
-      )
-      if (activeBranches.length <= 1) {
+      const activeBranchCount = await Branch.count({
+        where: { business_id: businessId, status: 'active' }
+      })
+      if (activeBranchCount <= 1) {
         return res.status(400).json({
           success: false,
           message: 'Cannot delete the last active branch'
@@ -1421,32 +1119,33 @@ router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
       }
     }
 
-    // Find and delete offers specifically tied to this branch
-    const branchName = branch.name
-    const offersToDelete = dataStore.data.offers.filter(offer =>
-      offer.businessId === req.business.id &&
-      offer.branch === branchName &&
-      offer.branch !== 'All Branches' &&
-      offer.branch !== 'جميع الفروع'
-    )
-
-    // Remove the branch-specific offers
-    if (offersToDelete.length > 0) {
-      const offerIds = offersToDelete.map(o => o.id)
-      for (let i = dataStore.data.offers.length - 1; i >= 0; i--) {
-        if (offerIds.includes(dataStore.data.offers[i].id)) {
-          dataStore.data.offers.splice(i, 1)
-        }
+    // Check if there are any offers tied to this branch
+    const branchSpecificOffers = await Offer.findAll({
+      where: {
+        business_id: businessId,
+        branch: branch.name
       }
+    })
+
+    // Delete associated offers if any (branch-specific offers only)
+    const deletedOfferCount = branchSpecificOffers.length
+    if (deletedOfferCount > 0) {
+      // Note: In a real implementation, you might want to reassign offers to another branch
+      // or set them to "All Branches" rather than deleting them
+      await Offer.destroy({
+        where: {
+          business_id: businessId,
+          branch: branch.name
+        }
+      })
     }
 
-    dataStore.data.branches.splice(branchIndex, 1)
-    await dataStore.save()
-    
+    await branch.destroy()
+
     res.json({
       success: true,
-      message: `Branch deleted successfully${offersToDelete.length > 0 ? ` and ${offersToDelete.length} associated offer(s) removed` : ''}`,
-      deletedOffers: offersToDelete.length
+      message: `Branch deleted successfully${deletedOfferCount > 0 ? ` and ${deletedOfferCount} associated offer(s) removed` : ''}`,
+      deletedOffers: deletedOfferCount
     })
   } catch (error) {
     console.error('Delete branch error:', error)
@@ -1461,12 +1160,13 @@ router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 // Toggle business branch status
 router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) => {
   try {
-    await dataStore.init()
-    
-    const branch = dataStore.data.branches.find(b => 
-      b.id === parseInt(req.params.id) && b.businessId === req.business.id
-    )
-    
+    const branchId = parseInt(req.params.id)
+    const businessId = req.business.id
+
+    const branch = await Branch.findOne({
+      where: { id: branchId, business_id: businessId }
+    })
+
     if (!branch) {
       return res.status(404).json({
         success: false,
@@ -1474,13 +1174,13 @@ router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) =>
       })
     }
 
-    branch.status = branch.status === 'active' ? 'inactive' : 'active'
-    await dataStore.save()
+    const newStatus = branch.status === 'active' ? 'inactive' : 'active'
+    await branch.update({ status: newStatus })
 
     res.json({
       success: true,
       data: branch,
-      message: `Branch ${branch.status === 'active' ? 'activated' : 'deactivated'} successfully`
+      message: `Branch ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`
     })
   } catch (error) {
     console.error('Toggle branch status error:', error)
@@ -1499,8 +1199,6 @@ router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) =>
 // Business login endpoint
 router.post('/login', async (req, res) => {
   try {
-    await dataStore.init()
-
     const { email, password } = req.body
 
     // Validate required fields
@@ -1511,8 +1209,8 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // Find business by email
-    const business = dataStore.getBusinesses().find(b => b.email === email)
+    // Authenticate business using service
+    const business = await BusinessService.authenticateBusiness(email, password)
     if (!business) {
       return res.status(401).json({
         success: false,
@@ -1520,7 +1218,7 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // Check if business is approved/active
+    // Check if business is approved/active (already handled in service)
     if (business.status !== 'active') {
       return res.status(401).json({
         success: false,
@@ -1541,12 +1239,12 @@ router.post('/login', async (req, res) => {
     // Generate simple session token (in production, use JWT)
     const sessionToken = Date.now().toString() + Math.random().toString(36)
 
-    // Update last login
-    business.last_activity_at = new Date().toISOString()
-    await dataStore.save()
+    // Last activity already updated in authenticateBusinessLogin
 
     // Return business info (excluding password)
-    const { password: _, ...businessData } = business
+    // Convert Sequelize instance to plain object first
+    const businessObj = business.toJSON()
+    const { password: _, ...businessData } = businessObj
 
     res.json({
       success: true,
@@ -1570,11 +1268,9 @@ router.post('/login', async (req, res) => {
 // BUSINESS REGISTRATION ROUTES
 // ===============================
 
-// Business registration endpoint (connects to unified DataStore)
+// Business registration endpoint
 router.post('/register', async (req, res) => {
   try {
-    await dataStore.init()
-
     const businessData = req.body
 
     // Validate required fields
@@ -1588,8 +1284,8 @@ router.post('/register', async (req, res) => {
       })
     }
 
-    // Check for duplicate email
-    const existingBusiness = dataStore.getBusinesses().find(b => b.email === businessData.email)
+    // Check for duplicate email using PostgreSQL
+    const existingBusiness = await Business.findOne({ where: { email: businessData.email } })
     if (existingBusiness) {
       return res.status(400).json({
         success: false,
@@ -1597,12 +1293,20 @@ router.post('/register', async (req, res) => {
       })
     }
 
-    // Add business through unified DataStore
-    const newBusiness = await dataStore.addBusiness(businessData)
+    // Create business using PostgreSQL
+    const newBusiness = await Business.create({
+      ...businessData,
+      status: 'pending', // New registrations start as pending
+      password: businessData.password || 'temppass123' // Default temp password
+    })
+
+    // Remove password from response
+    const businessObj = newBusiness.toJSON()
+    const { password: _, ...businessResponse } = businessObj
 
     res.status(201).json({
       success: true,
-      data: newBusiness,
+      data: businessResponse,
       message: 'Business registration submitted successfully. Your application is under review.'
     })
 
@@ -1619,15 +1323,59 @@ router.post('/register', async (req, res) => {
 // BUSINESS CATEGORIES ROUTES
 // ===============================
 
-// Get all business categories
+// Get all business categories - PostgreSQL implementation
 router.get('/categories', async (req, res) => {
   try {
-    await dataStore.init()
+    // Static categories for Saudi businesses - can be moved to database later
+    const categories = [
+      {
+        id: 1,
+        name: "مطاعم وكافيهات - Restaurants & Cafes",
+        nameEn: "Restaurants & Cafes",
+        description: "مطاعم الوجبات السريعة والكافيهات والمقاهي الشعبية",
+        descriptionEn: "Fast food restaurants, cafes and traditional coffee shops",
+        examples: ["شاورما", "برغر", "قهوة عربية", "عصائر طبيعية"]
+      },
+      {
+        id: 2,
+        name: "صالونات وحلاقة - Salons & Barbershops",
+        nameEn: "Salons & Barbershops",
+        description: "صالونات نسائية وحلاقة رجالية ومراكز التجميل",
+        descriptionEn: "Women's salons, men's barbershops and beauty centers",
+        examples: ["حلاقة رجالية", "تصفيف شعر", "عناية بشرة", "مانيكير"]
+      },
+      {
+        id: 3,
+        name: "عطور ومستحضرات - Perfumes & Cosmetics",
+        nameEn: "Perfumes & Cosmetics",
+        description: "محلات العطور والبخور ومستحضرات التجميل",
+        descriptionEn: "Perfume shops, incense stores and cosmetic retailers",
+        examples: ["عطور فرنسية", "بخور", "عود", "مستحضرات تجميل"]
+      },
+      {
+        id: 4,
+        name: "ملابس وأزياء - Fashion & Clothing",
+        nameEn: "Fashion & Clothing",
+        description: "محلات الملابس والأزياء والاكسسوارات",
+        descriptionEn: "Clothing stores, fashion boutiques and accessories",
+        examples: ["عبايات", "ثياب رجالية", "أحذية", "حقائب"]
+      },
+      {
+        id: 5,
+        name: "صحة ولياقة - Health & Fitness",
+        nameEn: "Health & Fitness",
+        description: "صالات رياضية ومراكز صحية وعيادات",
+        descriptionEn: "Gyms, health centers and medical clinics",
+        examples: ["نادي رياضي", "يوغا", "تدليك", "عيادة أسنان"]
+      }
+    ]
+
     res.json({
       success: true,
-      data: dataStore.getBusinessCategories()
+      data: categories
     })
   } catch (error) {
+    console.error('Get categories error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch business categories',
@@ -1649,7 +1397,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     console.log('🔍 Progress scan attempt:', { customerToken, offerHash, businessId })
 
     // Decode and validate customer token
-    const tokenData = dataStore.decodeCustomerToken(customerToken)
+    const tokenData = CustomerService.decodeCustomerToken(customerToken)
     if (!tokenData.isValid) {
       return res.status(400).json({
         success: false,
@@ -1669,11 +1417,11 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     const { customerId } = tokenData
 
     // Find the offer by reverse-engineering the hash
-    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === businessId)
+    const businessOffers = await OfferService.findByBusinessId(businessId)
     let targetOffer = null
 
     for (const offer of businessOffers) {
-      if (dataStore.verifyOfferHash(offer.id, businessId, offerHash)) {
+      if (CustomerService.verifyOfferHash(offer.id, businessId, offerHash)) {
         targetOffer = offer
         break
       }
@@ -1689,14 +1437,64 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     console.log('✅ Validated scan for:', { customerId, offerId: targetOffer.id, offerTitle: targetOffer.title })
 
     // Get or create customer progress
-    let progress = await dataStore.getCustomerProgress(customerId, targetOffer.id)
+    let progress = await CustomerService.findCustomerProgress(customerId, targetOffer.id)
     if (!progress) {
-      progress = await dataStore.createCustomerProgress(customerId, targetOffer.id, businessId)
+      progress = await CustomerService.createCustomerProgress(customerId, targetOffer.id, businessId)
       console.log('🆕 Created new customer progress:', progress)
+      
+      // For new customers, also create Google Wallet object if it doesn't exist
+      try {
+        const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
+        const objectId = `${googleWalletController.issuerId}.${customerId}_${targetOffer.id}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
+        
+        const authClient = await googleWalletController.auth.getClient()
+        const accessToken = await authClient.getAccessToken()
+        
+        // Check if Google Wallet object exists
+        const checkResponse = await fetch(`${googleWalletController.baseUrl}/loyaltyObject/${objectId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!checkResponse.ok && checkResponse.status === 404) {
+          console.log('🔧 Creating Google Wallet object for new customer...')
+          
+          const customerData = {
+            customerId: customerId,
+            firstName: 'Customer',
+            lastName: 'User'
+          }
+          
+          const offerData = {
+            offerId: targetOffer.id,
+            businessName: req.business.business_name,
+            title: targetOffer.title,
+            description: targetOffer.description,
+            stamps_required: targetOffer.stamps_required
+          }
+          
+          const progressData = {
+            current_stamps: progress.current_stamps,
+            max_stamps: progress.max_stamps,
+            is_completed: progress.is_completed
+          }
+          
+          // Create loyalty class and object
+          await googleWalletController.createOrUpdateLoyaltyClass(authClient, offerData)
+          const loyaltyObject = await googleWalletController.createLoyaltyObject(authClient, customerData, offerData, progressData)
+          
+          console.log('✅ Google Wallet object created for new customer:', loyaltyObject.id)
+        }
+      } catch (walletCreationError) {
+        console.warn('⚠️ Failed to create wallet object for new customer (continuing with scan):', walletCreationError.message)
+      }
     }
 
     // Check if already completed
-    if (progress.isCompleted && progress.currentStamps >= progress.maxStamps) {
+    if (progress.is_completed && progress.current_stamps >= progress.max_stamps) {
       return res.json({
         success: true,
         message: 'Customer has already completed this loyalty program!',
@@ -1709,25 +1507,28 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     }
 
     // Record progress before update
-    const progressBefore = progress.currentStamps
+    const progressBefore = progress.current_stamps
 
     // Update progress (add one stamp)
-    const updatedProgress = await dataStore.updateCustomerProgress(customerId, targetOffer.id, 1)
+    const updatedProgress = await CustomerService.updateCustomerProgress(customerId, targetOffer.id, 1)
 
     // Record scan transaction
-    const scanTransaction = await dataStore.recordScanTransaction(
-      customerToken,
+    const scanTransaction = await CustomerService.recordScanTransaction(
+      customerId,
       targetOffer.id,
       businessId,
-      req.business.email, // scanned by business email
-      progressBefore,
-      updatedProgress.currentStamps
+      {
+        businessEmail: req.business.email,
+        progressBefore,
+        progressAfter: updatedProgress.current_stamps,
+        customerToken
+      }
     )
 
     console.log('📊 Progress updated:', {
       before: progressBefore,
-      after: updatedProgress.currentStamps,
-      completed: updatedProgress.isCompleted
+      after: updatedProgress.current_stamps,
+      completed: updatedProgress.is_completed
     })
 
     // Push updates to wallet passes (Apple & Google Wallet)
@@ -1805,11 +1606,12 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
     const businessId = req.business.id
 
     // Decode and validate customer token
-    const tokenData = dataStore.decodeCustomerToken(customerToken)
+    const tokenData = CustomerService.decodeCustomerToken(customerToken)
     if (!tokenData.isValid) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired customer token'
+        message: 'Invalid or expired customer token',
+        error: tokenData.error
       })
     }
 
@@ -1824,11 +1626,11 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
     const { customerId } = tokenData
 
     // Find the offer by hash
-    const businessOffers = dataStore.getOffers().filter(offer => offer.businessId === businessId)
+    const businessOffers = await OfferService.findByBusinessId(businessId)
     let targetOffer = null
 
     for (const offer of businessOffers) {
-      if (dataStore.verifyOfferHash(offer.id, businessId, offerHash)) {
+      if (CustomerService.verifyOfferHash(offer.id, businessId, offerHash)) {
         targetOffer = offer
         break
       }
@@ -1837,12 +1639,12 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
     if (!targetOffer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: 'Offer not found or hash invalid'
       })
     }
 
     // Get customer progress
-    const progress = await dataStore.getCustomerProgress(customerId, targetOffer.id)
+    const progress = await CustomerService.findCustomerProgress(customerId, targetOffer.id)
 
     res.json({
       success: true,
@@ -1851,14 +1653,18 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
         offer: {
           id: targetOffer.id,
           title: targetOffer.title,
-          stampsRequired: targetOffer.stampsRequired
+          stampsRequired: targetOffer.stamps_required
         },
-        progress: progress || {
+        progress: progress ? {
+          currentStamps: progress.current_stamps,
+          maxStamps: progress.max_stamps,
+          isCompleted: progress.is_completed
+        } : {
           currentStamps: 0,
-          maxStamps: targetOffer.stampsRequired,
+          maxStamps: targetOffer.stamps_required,
           isCompleted: false
         },
-        canScan: !progress?.isCompleted
+        canScan: !progress?.is_completed
       }
     })
 
@@ -1878,17 +1684,20 @@ router.get('/scan/history', requireBusinessAuth, async (req, res) => {
     const businessId = req.business.id
     const limit = parseInt(req.query.limit) || 50
 
-    const scanHistory = await dataStore.getScanHistory(businessId, limit)
+    const scanHistory = await CustomerService.getScanHistory(businessId, limit)
 
     // Enrich scan data with offer titles
-    const enrichedHistory = await Promise.all(scanHistory.map(async (scan) => {
-      const offer = dataStore.getOffers().find(o => o.id === scan.offerId)
+    const businessOffers = await OfferService.findByBusinessId(businessId)
+    const offersMap = new Map(businessOffers.map(o => [o.id, o]))
+
+    const enrichedHistory = scanHistory.map((scan) => {
+      const offer = offersMap.get(scan.offerId || scan.offer_id)
       return {
         ...scan,
         offerTitle: offer?.title || 'Unknown Offer',
         offerType: offer?.type || 'stamps'
       }
-    }))
+    })
 
     res.json({
       success: true,
@@ -1912,7 +1721,7 @@ router.get('/scan/analytics', requireBusinessAuth, async (req, res) => {
     const businessId = req.business.id
     const offerId = req.query.offerId ? parseInt(req.query.offerId) : null
 
-    const analytics = await dataStore.getScanAnalytics(businessId, offerId)
+    const analytics = await CustomerService.getScanAnalytics(businessId, offerId)
 
     res.json({
       success: true,
@@ -1940,9 +1749,9 @@ router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
 
     console.log('🧪 Testing dual QR flow for business:', businessId)
 
-    // Step 1: Create test customer progress
-    const testCustomerId = 'demo-customer-123'
-    const testOfferId = dataStore.getOffers().find(o => o.businessId === businessId)?.id
+    // Step 1: Find or create test offer
+    const businessOffers = await OfferService.findByBusinessId(businessId)
+    let testOfferId = businessOffers[0]?.id
 
     if (!testOfferId) {
       return res.status(400).json({
@@ -1951,13 +1760,15 @@ router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    const progress = await dataStore.createCustomerProgress(testCustomerId, testOfferId, businessId)
+    // Step 2: Create test customer progress
+    const testCustomerId = 'demo-customer-123'
+    const progress = await CustomerService.createCustomerProgress(testCustomerId, testOfferId, businessId)
 
-    // Step 2: Generate customer progress QR data
-    const customerToken = Buffer.from(`${testCustomerId}:${businessId}:${Date.now()}`).toString('base64').substring(0, 24)
-    const offerHash = dataStore.verifyOfferHash.toString().substring(0, 8)
+    // Step 3: Generate customer progress QR data
+    const customerToken = CustomerService.encodeCustomerToken(testCustomerId, businessId)
+    const offerHash = CustomerService.generateOfferHash(testOfferId, businessId)
 
-    // Step 3: Simulate wallet pass generation with customer progress QR
+    // Step 4: Simulate wallet pass generation with customer progress QR
     const walletPassData = {
       customer: { customerId: testCustomerId },
       offer: { offerId: testOfferId, businessId },
@@ -1965,7 +1776,7 @@ router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
       progressQRUrl: `http://localhost:3000/scan/${customerToken}/${offerHash}`
     }
 
-    // Step 4: Return test results
+    // Step 5: Return test results
     res.json({
       success: true,
       message: 'Dual QR flow test completed successfully!',
@@ -1990,6 +1801,160 @@ router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Dual QR flow test failed',
+      error: error.message
+    })
+  }
+})
+
+// Debug endpoint to check Google Wallet object status
+router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, async (req, res) => {
+  try {
+    const { customerId, offerId } = req.params
+    const businessId = req.business.id
+
+    // Get database progress
+    const dbProgress = await CustomerService.findCustomerProgress(customerId, offerId)
+
+    // Try to fetch Google Wallet object
+    const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
+    const objectId = `${googleWalletController.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
+    
+    let walletStatus = null
+    try {
+      const authClient = await googleWalletController.auth.getClient()
+      const accessToken = await authClient.getAccessToken()
+      
+      const response = await fetch(`${googleWalletController.baseUrl}/loyaltyObject/${objectId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const walletObject = await response.json()
+        walletStatus = {
+          exists: true,
+          balance: walletObject.loyaltyPoints?.balance?.string,
+          state: walletObject.state,
+          textModules: walletObject.textModulesData || []
+        }
+      } else {
+        walletStatus = {
+          exists: false,
+          error: `${response.status} - ${response.statusText}`,
+          objectId: objectId
+        }
+      }
+    } catch (walletError) {
+      walletStatus = {
+        exists: false,
+        error: walletError.message,
+        objectId: objectId
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        objectId: objectId,
+        database: dbProgress ? {
+          current_stamps: dbProgress.current_stamps,
+          max_stamps: dbProgress.max_stamps,
+          is_completed: dbProgress.is_completed,
+          last_scan_date: dbProgress.last_scan_date
+        } : null,
+        wallet: walletStatus,
+        synced: dbProgress && walletStatus.exists ? 
+          walletStatus.balance === `${dbProgress.current_stamps}/${dbProgress.max_stamps}` : 
+          false
+      }
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// Create missing Google Wallet object for existing customer progress
+router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessAuth, async (req, res) => {
+  try {
+    const { customerId, offerId } = req.params
+    const businessId = req.business.id
+
+    // Get database progress and offer
+    const dbProgress = await CustomerService.findCustomerProgress(customerId, offerId)
+    const offer = await OfferService.findById(offerId)
+
+    if (!dbProgress) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer progress not found in database'
+      })
+    }
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found in database'
+      })
+    }
+
+    // Create Google Wallet object
+    const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
+    
+    const customerData = {
+      customerId: customerId,
+      firstName: 'Customer',
+      lastName: 'User'
+    }
+    
+    const offerData = {
+      offerId: offer.id,
+      businessName: req.business.business_name,
+      title: offer.title,
+      description: offer.description,
+      stamps_required: offer.stamps_required
+    }
+    
+    const progressData = {
+      current_stamps: dbProgress.current_stamps,
+      max_stamps: dbProgress.max_stamps,
+      is_completed: dbProgress.is_completed
+    }
+
+    console.log('🔨 Creating Google Wallet object for existing customer:', {
+      customerId,
+      offerId: offer.id,
+      progress: `${progressData.current_stamps}/${progressData.max_stamps}`
+    })
+
+    const authClient = await googleWalletController.auth.getClient()
+    
+    // Create loyalty class first
+    const loyaltyClass = await googleWalletController.createOrUpdateLoyaltyClass(authClient, offerData)
+    
+    // Create loyalty object
+    const loyaltyObject = await googleWalletController.createLoyaltyObject(authClient, customerData, offerData, progressData)
+
+    res.json({
+      success: true,
+      message: 'Google Wallet object created successfully',
+      data: {
+        classId: loyaltyClass.id,
+        objectId: loyaltyObject.id,
+        customerProgress: progressData
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Failed to create wallet object:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create wallet object',
       error: error.message
     })
   }

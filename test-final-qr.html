@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final QR Scanner Hash Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>🎯 Final QR Scanner Algorithm Test</h1>
+    <p>Testing the complete QR scanning workflow with corrected hash algorithms</p>
+    
+    <div id="test-results"></div>
+    <button onclick="runCompleteTest()">🧪 Run Complete Test</button>
+    <button onclick="testRealWalletQR()">📱 Test Real Wallet QR</button>
+    
+    <script>
+        // Test the exact same data that would come from a Google Wallet QR
+        const walletQRData = {
+            "customerId": "test-customer-12345",
+            "offerId": 1,
+            "timestamp": "2025-09-26T16:08:30.628Z"
+        };
+        
+        function runCompleteTest() {
+            console.log('🧪 Running Complete QR Scanner Test');
+            
+            // Step 1: Extract data (same as EnhancedQRScanner.jsx)
+            const actualCustomerId = walletQRData.customerId.replace('test-customer-', '');
+            const businessId = 1;
+            const extractedOfferId = walletQRData.offerId;
+            
+            // Step 2: Generate token (same as EnhancedQRScanner.jsx)
+            const tokenData = `${actualCustomerId}:${businessId}:${Date.now()}`;
+            const customerToken = btoa(tokenData);
+            
+            // Step 3: Generate hash (same as EnhancedQRScanner.jsx - now using MD5)
+            const hashData = `${extractedOfferId}:${businessId}:loyalty-platform`;
+            const offerHash = CryptoJS.MD5(hashData).toString();
+            
+            // Step 4: Display results
+            const results = `
+                <h2>✅ Complete QR Scanner Test Results</h2>
+                
+                <h3>📱 Input Wallet QR Data:</h3>
+                <pre>${JSON.stringify(walletQRData, null, 2)}</pre>
+                
+                <h3>🔍 Frontend Processing Results:</h3>
+                <ul>
+                    <li><strong>Original Customer ID:</strong> ${walletQRData.customerId}</li>
+                    <li><strong>Extracted Customer ID:</strong> ${actualCustomerId}</li>
+                    <li><strong>Business ID:</strong> ${businessId}</li>
+                    <li><strong>Offer ID:</strong> ${extractedOfferId}</li>
+                </ul>
+                
+                <h3>🔑 Token Generation:</h3>
+                <ul>
+                    <li><strong>Token Data:</strong> ${tokenData}</li>
+                    <li><strong>Base64 Token:</strong> ${customerToken}</li>
+                </ul>
+                
+                <h3>🔐 Hash Generation (MD5):</h3>
+                <ul>
+                    <li><strong>Hash Input:</strong> ${hashData}</li>
+                    <li><strong>MD5 Hash:</strong> ${offerHash}</li>
+                </ul>
+                
+                <h3>🎯 API Call Details:</h3>
+                <ul>
+                    <li><strong>Endpoint:</strong> POST /api/business/scan/progress/${encodeURIComponent(customerToken)}/${offerHash}</li>
+                    <li><strong>Headers:</strong> x-session-token, x-business-id</li>
+                </ul>
+                
+                <h3>🧪 Algorithm Verification:</h3>
+                <ul>
+                    <li><strong>Backend Algorithm:</strong> crypto.createHash('md5').update(input).digest('hex')</li>
+                    <li><strong>Frontend Algorithm:</strong> CryptoJS.MD5(input).toString()</li>
+                    <li><strong>Expected Result:</strong> ✅ MATCHING HASHES</li>
+                </ul>
+                
+                <button onclick="testBackendAPI('${customerToken}', '${offerHash}')">🌐 Test Backend API</button>
+            `;
+            
+            document.getElementById('test-results').innerHTML = results;
+        }
+        
+        async function testBackendAPI(token, hash) {
+            const url = `http://localhost:3001/api/business/scan/progress/${encodeURIComponent(token)}/${hash}`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-session-token': 'test-session',
+                        'x-business-id': '1'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                const apiResult = `
+                    <h3>🌐 Backend API Test Result:</h3>
+                    <ul>
+                        <li><strong>Status:</strong> ${response.status}</li>
+                        <li><strong>Success:</strong> ${response.ok ? '✅ YES' : '❌ NO'}</li>
+                        <li><strong>Response:</strong></li>
+                    </ul>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+                document.getElementById('test-results').innerHTML += apiResult;
+                
+                if (response.ok) {
+                    console.log('🎉 SUCCESS: QR Scanner hash algorithm fix is working!');
+                } else {
+                    console.error('❌ FAILED: Still have issues with hash algorithm');
+                }
+                
+            } catch (error) {
+                document.getElementById('test-results').innerHTML += `
+                    <h3>❌ API Test Error:</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+        
+        function testRealWalletQR() {
+            alert('To test with real wallet QR:\\n\\n1. Generate a Google Wallet pass\\n2. Scan the QR from the pass with your phone\\n3. Use business dashboard scanner\\n4. QR should now be processed correctly!');
+        }
+    </script>
+</body>
+</html>

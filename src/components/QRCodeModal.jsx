@@ -28,8 +28,8 @@ function QRCodeModal({ offer, onClose }) {
 
     setLoading(true)
     try {
-      // Generate unique offer ID if not exists
-      const offerId = offer.qrCodeId || QRCodeGenerator.generateOfferId(offer.title)
+      // Use the public_id for QR codes (scalable unique identifier)
+      const offerId = offer.public_id || offer.id
 
       const result = await QRCodeGenerator.generateQRCode(offerId, {
         size: qrOptions.size,
@@ -59,7 +59,8 @@ function QRCodeModal({ offer, onClose }) {
     const businessId = localStorage.getItem('businessId') || 'default'
     const storageKey = `qr_analytics_${businessId}`
     const events = JSON.parse(localStorage.getItem(storageKey) || '[]')
-    const offerEvents = events.filter(e => e.offerId === offer.qrCodeId)
+    const offerId = offer.public_id || offer.id
+    const offerEvents = events.filter(e => e.offerId === offerId)
 
     setAnalytics({
       scans: offerEvents.filter(e => e.eventType === 'scanned').length,

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import QrScanner from 'qr-scanner'
+import CryptoJS from 'crypto-js'
+import ApiService from '../utils/api.js'
 
 function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
   const videoRef = useRef(null)
@@ -104,16 +106,46 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
         }
 
       } else if (result.data.startsWith('{')) {
-        // Format 2: Google Wallet JSON format - {"customerId":"4","offerId":"5"}
-        console.log('📱 Processing Google Wallet JSON format')
+        // Format 2: Wallet JSON format - {"customerId":"CUST-123","offerId":"offer-456","timestamp":"..."}
+        console.log('📱 Processing Wallet JSON format')
         const walletData = JSON.parse(result.data)
 
         if (walletData.customerId && walletData.offerId) {
-          // Convert to expected format (may need business ID for proper token)
-          customerToken = walletData.customerId
-          offerHash = walletData.offerId
+          // Extract actual customer ID from wallet format
+          const actualCustomerId = walletData.customerId.replace('CUST-', '')
+
+          // Use business ID from QR code if available, otherwise fall back to localStorage
+          const businessId = walletData.businessId || localStorage.getItem('businessId') || '1'
+
+          // Validate that the current business can process this QR
+          ApiService.validateBusinessAccess(walletData.businessId)
+
+          // Create base64 encoded token in expected format: customerId:businessId:timestamp
+          const tokenData = `${actualCustomerId}:${businessId}:${Date.now()}`
+          customerToken = btoa(tokenData) // Don't truncate - match backend expectations
+
+          // Try to extract numeric offer ID from wallet offer string
+          // Format might be: "getthism-mfygbrap-onan1" or similar
+          const offerMatch = walletData.offerId.match(/\d+/) // Find first number
+          const extractedOfferId = offerMatch ? offerMatch[0] : walletData.offerId
+
+          // Generate offer hash using MD5 to match backend CustomerService
+          const hashData = `${extractedOfferId}:${businessId}:loyalty-platform`
+          offerHash = CryptoJS.MD5(hashData).toString()
+
+          console.log('🔄 Converted wallet data:', {
+            originalCustomerId: walletData.customerId,
+            extractedCustomerId: actualCustomerId,
+            businessId,
+            tokenData: `${actualCustomerId}:${businessId}:${Date.now()}`,
+            encodedToken: customerToken.substring(0, 20) + '...',
+            originalOfferId: walletData.offerId,
+            extractedOfferId: extractedOfferId,
+            hashInput: hashData,
+            generatedOfferHash: offerHash
+          })
         } else {
-          throw new Error('Invalid Google Wallet QR format. Missing customerId or offerId.')
+          throw new Error('Invalid Wallet QR format. Missing customerId or offerId.')
         }
 
       } else if (/^\d+$/.test(result.data)) {

@@ -117,7 +117,7 @@ function BranchesTab() {
     const cityMatch = cityFilter === 'All Cities' || branch.city === cityFilter
     const searchMatch = searchFilter === '' ||
       branch.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      branch.manager?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      branch.manager_name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
       branch.address.toLowerCase().includes(searchFilter.toLowerCase())
 
     return statusMatch && cityMatch && searchMatch
@@ -324,7 +324,7 @@ function BranchesTab() {
                   </div>
                   <div className="flex items-center">
                     <span className="w-4">👤</span>
-                    <span className="ml-2">{branch.manager}</span>
+                    <span className="ml-2">{branch.manager_name}</span>
                   </div>
                 </div>
 
@@ -411,7 +411,7 @@ function BranchesTab() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {branch.manager}
+                    {branch.manager_name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div>{branch.customers} customers</div>
@@ -513,10 +513,10 @@ function BranchModal({ branch, onClose, onSave }) {
     address: branch?.address || '',
     city: branch?.city || '',
     state: branch?.state || '',
-    zipCode: branch?.zipCode || '',
+    zip_code: branch?.zip_code || '',
     phone: branch?.phone || '',
     email: branch?.email || '',
-    manager: branch?.manager || '',
+    manager_name: branch?.manager_name || '',
     isMain: branch?.isMain || false,
     openingHours: branch?.openingHours || {
       monday: "9:00 AM - 9:00 PM",
@@ -588,8 +588,8 @@ function BranchModal({ branch, onClose, onSave }) {
                   </label>
                   <input
                     type="text"
-                    value={formData.manager}
-                    onChange={(e) => setFormData({...formData, manager: e.target.value})}
+                    value={formData.manager_name}
+                    onChange={(e) => setFormData({...formData, manager_name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Manager name"
                   />
@@ -642,8 +642,8 @@ function BranchModal({ branch, onClose, onSave }) {
                   <input
                     type="text"
                     required
-                    value={formData.zipCode}
-                    onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                    value={formData.zip_code}
+                    onChange={(e) => setFormData({...formData, zip_code: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>

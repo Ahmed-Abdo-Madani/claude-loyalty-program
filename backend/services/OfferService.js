@@ -30,7 +30,13 @@ class OfferService {
       throw new Error(`Business with ID ${offerData.business_id} not found`)
     }
 
-    const offer = await Offer.create(offerData)
+    // Generate public ID for the offer
+    const publicId = Offer.generatePublicId(offerData.title, offerData.business_id)
+
+    const offer = await Offer.create({
+      ...offerData,
+      public_id: publicId
+    })
     
     // Update business offer counts
     await business.increment(['total_offers', 'active_offers'])

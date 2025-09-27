@@ -1,5 +1,7 @@
-// Import unified data store
-import dataStore from '../models/DataStore.js'
+// Import services instead of DataStore
+import BusinessService from '../services/BusinessService.js'
+import OfferService from '../services/OfferService.js'
+import CustomerService from '../services/CustomerService.js'
 
 // Real Saudi Arabia data for admin analytics
 const getSaudiBusinessData = () => {
@@ -274,10 +276,23 @@ class AdminAnalyticsController {
   // Get platform overview dashboard
   static async getPlatformOverview(req, res) {
     try {
-      await dataStore.init()
+      // Get real analytics from database services
+      const [businesses, offers] = await Promise.all([
+        BusinessService.getAllBusinesses(),
+        OfferService.getAllOffers()
+      ])
 
-      // Get real analytics from unified data store
-      const analytics = dataStore.calculateAnalytics()
+      // Calculate analytics from database data
+      const analytics = {
+        total_businesses: businesses.length,
+        active_businesses: businesses.filter(b => b.status === 'active').length,
+        total_offers: offers.length,
+        active_offers: offers.filter(o => o.status === 'active').length,
+        total_customers: businesses.reduce((sum, b) => sum + (b.total_customers || 0), 0),
+        total_redemptions: businesses.reduce((sum, b) => sum + (b.total_redemptions || 0), 0),
+        cards_issued: offers.reduce((sum, o) => sum + (o.customers || 0), 0),
+        rewards_redeemed: offers.reduce((sum, o) => sum + (o.redeemed || 0), 0)
+      }
 
       // Calculate additional metrics
       const conversionRate = analytics.total_customers > 0

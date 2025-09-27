@@ -1,6 +1,8 @@
 // Mobile Wallet Pass Generator Utility
 // Supports both Apple Wallet (PassKit) and Google Pay (Wallet API)
 
+import CryptoJS from 'crypto-js'
+
 class WalletPassGenerator {
   constructor() {
     this.baseUrl = import.meta.env.VITE_BASE_URL || 'http://192.168.8.114:3000' // Network-accessible URL
@@ -13,23 +15,19 @@ class WalletPassGenerator {
     return `${this.baseUrl}/scan/${customerToken}/${offerHash}`
   }
 
-  // Encrypt customer token for security
+  // Encrypt customer token for security - FIXED to match backend expectations
   encryptCustomerToken(customerId, businessId) {
     const timestamp = Date.now()
     const data = `${customerId}:${businessId}:${timestamp}`
-    return btoa(data).substring(0, 24) // Base64 encoded, truncated for QR efficiency
+    // Don't truncate - keep full base64 to match backend decoding
+    return btoa(data)
   }
 
-  // Hash offer ID for security
+  // Hash offer ID for security - FIXED to match backend algorithm
   hashOfferId(offerId, businessId) {
-    const data = `${offerId}:${businessId}:progress`
-    let hash = 0
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash // Convert to 32bit integer
-    }
-    return Math.abs(hash).toString(36).substring(0, 8)
+    // Use same algorithm as backend CustomerService.generateOfferHash
+    const data = `${offerId}:${businessId}:loyalty-platform`
+    return CryptoJS.MD5(data).toString()
   }
 
   // Generate Apple Wallet Pass (.pkpass file)

@@ -53,11 +53,16 @@ function CustomerSignup() {
 
   const loadOffer = async () => {
     try {
+      console.log('🔄 Loading offer with ID:', offerId)
       setLoading(true)
       setError('')
       const response = await ApiService.getPublicOffer(offerId)
+      console.log('✅ API Response:', response)
       setOffer(response.data)
+      console.log('✅ Offer loaded successfully:', response.data)
     } catch (err) {
+      console.error('❌ Error loading offer:', err)
+      console.error('❌ Error details:', err.response?.data || err.message)
       setError(err.message || 'Failed to load offer details')
       console.error('Error loading offer:', err)
       // Use fallback data
@@ -192,7 +197,7 @@ function CustomerSignup() {
               customerData={customerData}
               offerData={{
                 offerId: offerId,
-                businessId: 'johns-pizza',
+                businessId: offer.businessId || offer.Business?.id,    
                 businessName: offer.businessName,
                 title: offer.title,
                 description: offer.description,

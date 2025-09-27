@@ -1,12 +1,12 @@
-// Import unified data store
-import dataStore from '../models/DataStore.js'
+// Clean AdminBusinessController - PostgreSQL only
+import BusinessService from '../services/BusinessService.js'
+import OfferService from '../services/OfferService.js'
+import { Business, Offer, CustomerProgress } from '../models/index.js'
 
 class AdminBusinessController {
   // Get all businesses with filters and pagination
   static async getBusinesses(req, res) {
     try {
-      await dataStore.init()
-
       const {
         status,
         search,
@@ -18,61 +18,33 @@ class AdminBusinessController {
         sort_order = 'desc'
       } = req.query
 
-      let businesses = dataStore.getBusinesses()
-
-      // Apply filters
-      if (status && status !== 'all') {
-        businesses = businesses.filter(b => b.status === status)
-      }
-
-      if (search) {
-        const searchTerm = search.toLowerCase()
-        businesses = businesses.filter(b =>
-          b.business_name.toLowerCase().includes(searchTerm) ||
-          b.email.toLowerCase().includes(searchTerm) ||
-          b.owner_name.toLowerCase().includes(searchTerm)
-        )
-      }
-
-      if (region && region !== 'all') {
-        businesses = businesses.filter(b => b.region.includes(region))
-      }
-
-      if (business_type && business_type !== 'all') {
-        businesses = businesses.filter(b => b.business_type === business_type)
-      }
-
-      // Sort businesses
-      businesses.sort((a, b) => {
-        const aVal = a[sort_by]
-        const bVal = b[sort_by]
-        if (sort_order === 'asc') {
-          return aVal > bVal ? 1 : -1
-        } else {
-          return aVal < bVal ? 1 : -1
-        }
+      // Use BusinessService with filters
+      const businesses = await BusinessService.getAllBusinesses({
+        status: status !== 'all' ? status : undefined,
+        search,
+        region: region !== 'all' ? region : undefined,
+        business_type: business_type !== 'all' ? business_type : undefined,
+        limit: parseInt(limit),
+        offset: parseInt(offset)
       })
 
-      // Apply pagination
-      const total = businesses.length
-      const paginatedBusinesses = businesses.slice(parseInt(offset), parseInt(offset) + parseInt(limit))
+      // Get total count for pagination
+      const total = await Business.count()
 
-      // Calculate statistics for each business from related data
-      const enrichedBusinesses = paginatedBusinesses.map(business => {
-        const branches = dataStore.getBranches().filter(b => b.businessId === business.id)
-        const offers = dataStore.getOffers().filter(o => o.businessId === business.id)
-        const customers = dataStore.getCustomers().filter(c => c.businessId === business.id)
+      // Enrich with related data
+      const enrichedBusinesses = await Promise.all(
+        businesses.map(async business => {
+          const offers = await Offer.findAll({
+            where: { business_id: business.id }
+          })
 
-        return {
-          ...business,
-          total_branches: branches.length,
-          total_offers: offers.length,
-          active_offers: offers.filter(o => o.status === 'active').length,
-          total_customers: branches.reduce((sum, branch) => sum + branch.customers, 0),
-          total_redemptions: offers.reduce((sum, offer) => sum + offer.redeemed, 0),
-          monthly_revenue: branches.reduce((sum, branch) => sum + branch.monthlyRevenue, 0)
-        }
-      })
+          return {
+            ...business.toJSON(),
+            total_offers: offers.length,
+            active_offers: offers.filter(o => o.status === 'active').length
+          }
+        })
+      )
 
       res.json({
         success: true,
@@ -99,10 +71,8 @@ class AdminBusinessController {
   // Get business statistics
   static async getBusinessStats(req, res) {
     try {
-      await dataStore.init()
-
-      const businesses = dataStore.getBusinesses()
-      const analytics = dataStore.calculateAnalytics()
+      const businesses = await Business.findAll()
+      const offers = await Offer.findAll()
 
       const stats = {
         total_businesses: businesses.length,
@@ -112,29 +82,17 @@ class AdminBusinessController {
 
         // Regional distribution
         regional_stats: {
-          central: businesses.filter(b => b.region.includes('Central')).length,
-          western: businesses.filter(b => b.region.includes('Western')).length,
-          eastern: businesses.filter(b => b.region.includes('Eastern')).length,
-          nationwide: businesses.filter(b => b.region.includes('All Regions')).length
-        },
-
-        // Business type distribution
-        type_stats: {
-          restaurant: businesses.filter(b => b.business_type.includes('Restaurant')).length,
-          coffee: businesses.filter(b => b.business_type.includes('Coffee')).length,
-          bakery: businesses.filter(b => b.business_type.includes('Bakery')).length,
-          other: businesses.filter(b => !['Restaurant', 'Coffee', 'Bakery'].some(type => b.business_type.includes(type))).length
+          central: businesses.filter(b => b.region && b.region.includes('Central')).length,
+          western: businesses.filter(b => b.region && b.region.includes('Western')).length,
+          eastern: businesses.filter(b => b.region && b.region.includes('Eastern')).length,
+          nationwide: businesses.filter(b => b.region && b.region.includes('All Regions')).length
         },
 
         // Performance metrics
-        total_revenue: analytics.total_revenue,
-        total_customers: analytics.total_customers,
-        total_offers: analytics.total_offers,
-        total_redemptions: analytics.total_redemptions,
-
-        // Growth metrics
-        monthly_growth: analytics.monthly_growth_rate,
-        engagement_rate: analytics.customer_engagement_rate
+        total_offers: offers.length,
+        active_offers: offers.filter(o => o.status === 'active').length,
+        total_customers: businesses.reduce((sum, b) => sum + (b.total_customers || 0), 0),
+        total_redemptions: businesses.reduce((sum, b) => sum + (b.total_redemptions || 0), 0)
       }
 
       res.json({
@@ -154,10 +112,8 @@ class AdminBusinessController {
   // Get single business details
   static async getBusinessById(req, res) {
     try {
-      await dataStore.init()
-
       const { id } = req.params
-      const business = dataStore.getBusinesses().find(b => b.id === parseInt(id))
+      const business = await Business.findByPk(parseInt(id))
 
       if (!business) {
         return res.status(404).json({
@@ -167,22 +123,13 @@ class AdminBusinessController {
       }
 
       // Get related data
-      const branches = dataStore.getBranches().filter(b => b.businessId === business.id)
-      const offers = dataStore.getOffers().filter(o => o.businessId === business.id)
-      const customers = dataStore.getCustomers().filter(c => c.businessId === business.id)
+      const offers = await Offer.findAll({ where: { business_id: business.id } })
 
-      // Enrich business data
       const enrichedBusiness = {
-        ...business,
-        branches,
+        ...business.toJSON(),
         offers,
-        customers: customers.length,
-        total_branches: branches.length,
         total_offers: offers.length,
-        active_offers: offers.filter(o => o.status === 'active').length,
-        total_customers: branches.reduce((sum, branch) => sum + branch.customers, 0),
-        total_redemptions: offers.reduce((sum, offer) => sum + offer.redeemed, 0),
-        monthly_revenue: branches.reduce((sum, branch) => sum + branch.monthlyRevenue, 0)
+        active_offers: offers.filter(o => o.status === 'active').length
       }
 
       res.json({
@@ -202,8 +149,6 @@ class AdminBusinessController {
   // Update business status (approve, suspend, etc.)
   static async updateBusinessStatus(req, res) {
     try {
-      await dataStore.init()
-
       const { id } = req.params
       const { status, reason } = req.body
 
@@ -214,7 +159,7 @@ class AdminBusinessController {
         })
       }
 
-      const updatedBusiness = await dataStore.updateBusinessStatus(id, status, reason)
+      const updatedBusiness = await BusinessService.updateBusinessStatus(id, status, reason, 1)
 
       res.json({
         success: true,
@@ -238,25 +183,62 @@ class AdminBusinessController {
     }
   }
 
+  // Add new business
+  static async addBusiness(req, res) {
+    try {
+      const businessData = req.body
+
+      // Validate required fields
+      const requiredFields = ['business_name', 'email', 'phone', 'owner_name']
+      const missingFields = requiredFields.filter(field => !businessData[field])
+
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`
+        })
+      }
+
+      // Check for duplicate email
+      const existingBusiness = await Business.findOne({ where: { email: businessData.email } })
+      if (existingBusiness) {
+        return res.status(400).json({
+          success: false,
+          message: 'Business with this email already exists'
+        })
+      }
+
+      const newBusiness = await BusinessService.createBusiness(businessData)
+
+      res.status(201).json({
+        success: true,
+        data: newBusiness,
+        message: 'Business registered successfully'
+      })
+
+    } catch (error) {
+      console.error('Add business error:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Failed to register business'
+      })
+    }
+  }
+
   // Delete business (super admin only)
   static async deleteBusiness(req, res) {
     try {
-      await dataStore.init()
-
       const { id } = req.params
-      const businesses = dataStore.getBusinesses()
-      const businessIndex = businesses.findIndex(b => b.id === parseInt(id))
+      const business = await Business.findByPk(parseInt(id))
 
-      if (businessIndex === -1) {
+      if (!business) {
         return res.status(404).json({
           success: false,
           message: 'Business not found'
         })
       }
 
-      const business = businesses[businessIndex]
-
-      // Safety checks
+      // Safety check - don't delete active businesses with customers
       if (business.status === 'active' && business.total_customers > 0) {
         return res.status(400).json({
           success: false,
@@ -264,15 +246,8 @@ class AdminBusinessController {
         })
       }
 
-      // Remove business and related data
-      businesses.splice(businessIndex, 1)
-
-      // Remove related branches, offers, customers
-      dataStore.data.branches = dataStore.data.branches.filter(b => b.businessId !== business.id)
-      dataStore.data.offers = dataStore.data.offers.filter(o => o.businessId !== business.id)
-      dataStore.data.customers = dataStore.data.customers.filter(c => c.businessId !== business.id)
-
-      await dataStore.save()
+      // Delete business and related data (CASCADE will handle related records)
+      await business.destroy()
 
       res.json({
         success: true,
@@ -291,8 +266,6 @@ class AdminBusinessController {
   // Bulk operations on businesses
   static async bulkUpdateBusinesses(req, res) {
     try {
-      await dataStore.init()
-
       const { business_ids, action, reason } = req.body
 
       if (!business_ids || !Array.isArray(business_ids) || business_ids.length === 0) {
@@ -322,7 +295,7 @@ class AdminBusinessController {
       // Update each business
       for (const businessId of business_ids) {
         try {
-          const updatedBusiness = await dataStore.updateBusinessStatus(businessId, targetStatus, reason)
+          const updatedBusiness = await BusinessService.updateBusinessStatus(businessId, targetStatus, reason, 1)
           updatedBusinesses.push(updatedBusiness)
         } catch (error) {
           console.error(`Error updating business ${businessId}:`, error)
@@ -345,50 +318,6 @@ class AdminBusinessController {
       res.status(500).json({
         success: false,
         message: 'Failed to perform bulk operation'
-      })
-    }
-  }
-
-  // Add new business (for admin registration)
-  static async addBusiness(req, res) {
-    try {
-      await dataStore.init()
-
-      const businessData = req.body
-
-      // Validate required fields
-      const requiredFields = ['business_name', 'email', 'phone', 'owner_name', 'business_type', 'region']
-      const missingFields = requiredFields.filter(field => !businessData[field])
-
-      if (missingFields.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: `Missing required fields: ${missingFields.join(', ')}`
-        })
-      }
-
-      // Check for duplicate email
-      const existingBusiness = dataStore.getBusinesses().find(b => b.email === businessData.email)
-      if (existingBusiness) {
-        return res.status(400).json({
-          success: false,
-          message: 'Business with this email already exists'
-        })
-      }
-
-      const newBusiness = await dataStore.addBusiness(businessData)
-
-      res.status(201).json({
-        success: true,
-        data: newBusiness,
-        message: 'Business registered successfully'
-      })
-
-    } catch (error) {
-      console.error('Add business error:', error)
-      res.status(500).json({
-        success: false,
-        message: 'Failed to register business'
       })
     }
   }

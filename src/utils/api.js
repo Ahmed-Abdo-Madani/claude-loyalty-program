@@ -154,10 +154,16 @@ class ApiService {
 
   // Authenticated CRUD operations for offers
   static async createMyOffer(offerData) {
-    return this.authenticatedRequest(endpoints.myOffers, {
+    console.log('📡 API: Creating offer with data:', offerData)
+    console.log('📡 API: Endpoint:', endpoints.myOffers)
+    
+    const result = await this.authenticatedRequest(endpoints.myOffers, {
       method: 'POST',
       body: JSON.stringify(offerData)
     })
+    
+    console.log('📡 API: Create offer result:', result)
+    return result
   }
 
   static async updateMyOffer(id, offerData) {
@@ -238,6 +244,53 @@ class ApiService {
     return this.authenticatedRequest(endpoints.testDualQR, {
       method: 'POST'
     })
+  }
+
+  // Debug wallet object sync
+  static async debugWalletObject(customerId, offerId) {
+    return this.authenticatedRequest(`${endpoints.debugWalletObject}/${customerId}/${offerId}`, {
+      method: 'GET'
+    })
+  }
+
+  // Create missing wallet object
+  static async createWalletObject(customerId, offerId) {
+    return this.authenticatedRequest(`${endpoints.createWalletObject}/${customerId}/${offerId}`, {
+      method: 'POST'
+    })
+  }
+
+  // Utility functions for business ID validation
+  static compareBusinessIds(id1, id2) {
+    if (!id1 || !id2) return false
+
+    const normalizedId1 = parseInt(id1)
+    const normalizedId2 = parseInt(id2)
+
+    if (isNaN(normalizedId1) || isNaN(normalizedId2)) {
+      // Fallback to string comparison for non-numeric IDs
+      return String(id1) === String(id2)
+    }
+
+    return normalizedId1 === normalizedId2
+  }
+
+  static getCurrentBusinessId() {
+    return localStorage.getItem('businessId')
+  }
+
+  static validateBusinessAccess(qrBusinessId) {
+    const currentBusinessId = this.getCurrentBusinessId()
+
+    if (!currentBusinessId) {
+      throw new Error('No business ID found. Please log in again.')
+    }
+
+    if (qrBusinessId && !this.compareBusinessIds(qrBusinessId, currentBusinessId)) {
+      throw new Error(`This QR code belongs to a different business (ID: ${qrBusinessId}). Current business ID: ${currentBusinessId}`)
+    }
+
+    return true
   }
 }
 

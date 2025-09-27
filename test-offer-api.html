@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Offer API</title>
+</head>
+<body>
+    <h1>Testing Offer API</h1>
+    <div id="result"></div>
+    <script>
+        async function testApi() {
+            try {
+                console.log('🔄 Testing API call to /api/business/public/offer/1');
+                const response = await fetch('http://192.168.8.114:3001/api/business/public/offer/1');
+                const data = await response.json();
+                console.log('✅ API Response:', data);
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('❌ API Error:', error);
+                document.getElementById('result').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+
+        testApi();
+    </script>
+</body>
+</html>

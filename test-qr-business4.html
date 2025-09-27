@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test QR Code for Business 4</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+    <h1>🧪 Test QR Code for Business 4</h1>
+    <p>This QR code simulates what would be in a Google Wallet pass for Business ID 4.</p>
+    
+    <div id="qr-code" style="margin: 20px 0;"></div>
+    <div id="qr-data" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <h3>QR Code Data:</h3>
+        <pre id="json-data"></pre>
+    </div>
+    
+    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <h3>📋 Instructions:</h3>
+        <ol>
+            <li>Open your business dashboard at <code>http://localhost:3000/dashboard</code></li>
+            <li>Go to the Scanner tab</li>
+            <li>Point your camera at the QR code above</li>
+            <li>The scanner should successfully process it and add a stamp!</li>
+        </ol>
+    </div>
+    
+    <script>
+        // Create QR data for Business ID 4
+        const qrData = {
+            customerId: "CUST-test-customer-business4",
+            offerId: 1,
+            businessId: 4,  // This matches your current business ID
+            timestamp: new Date().toISOString()
+        };
+        
+        const qrString = JSON.stringify(qrData);
+        
+        // Display the JSON data
+        document.getElementById('json-data').textContent = JSON.stringify(qrData, null, 2);
+        
+        // Generate QR code
+        QRCode.toCanvas(document.getElementById('qr-code'), qrString, {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        }, function (error) {
+            if (error) {
+                console.error('QR Code generation error:', error);
+                document.getElementById('qr-code').innerHTML = '<p>Error generating QR code</p>';
+            } else {
+                console.log('✅ QR Code generated successfully');
+            }
+        });
+    </script>
+</body>
+</html>

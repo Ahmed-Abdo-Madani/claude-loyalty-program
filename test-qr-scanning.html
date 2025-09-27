@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Scanner Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>QR Scanner Hash Algorithm Test</h1>
+    <div id="results"></div>
+
+    <script>
+        // Simulate the QR data from the wallet pass
+        const qrData = {"customerId":"test-customer-12345","offerId":1,"timestamp":"2025-09-26T16:08:30.628Z"};
+        
+        console.log('🔍 Testing QR data:', qrData);
+        
+        // Extract data
+        const actualCustomerId = qrData.customerId.split('_').pop();
+        const businessId = 1; // From your test
+        const extractedOfferId = qrData.offerId;
+        
+        console.log('📋 Extracted data:', {
+            actualCustomerId,
+            businessId,
+            extractedOfferId
+        });
+        
+        // Generate customer token (matching frontend logic)
+        const tokenData = `${actualCustomerId}:${businessId}:${Date.now()}`;
+        const customerToken = btoa(tokenData);
+        
+        console.log('🔑 Generated token:', {
+            tokenData,
+            customerToken
+        });
+        
+        // Generate offer hash (matching backend logic - MD5)
+        const hashData = `${extractedOfferId}:${businessId}:loyalty-platform`;
+        
+        // Simple MD5 implementation for testing
+        function md5Hash(str) {
+            return CryptoJS.MD5(str).toString();
+        }
+        
+        const offerHash = md5Hash(hashData);
+        
+        console.log('🔐 Generated hash:', {
+            hashData,
+            offerHash
+        });
+        
+        // Display results
+        document.getElementById('results').innerHTML = `
+            <h2>QR Scanner Algorithm Test Results</h2>
+            <h3>Input QR Data:</h3>
+            <pre>${JSON.stringify(qrData, null, 2)}</pre>
+            
+            <h3>Extracted Values:</h3>
+            <ul>
+                <li>Customer ID: ${actualCustomerId}</li>
+                <li>Business ID: ${businessId}</li>
+                <li>Offer ID: ${extractedOfferId}</li>
+            </ul>
+            
+            <h3>Generated Token:</h3>
+            <ul>
+                <li>Token Data: ${tokenData}</li>
+                <li>Base64 Token: ${customerToken}</li>
+            </ul>
+            
+            <h3>Generated Hash:</h3>
+            <ul>
+                <li>Hash Input: ${hashData}</li>
+                <li>MD5 Hash: ${offerHash}</li>
+            </ul>
+            
+            <h3>API Test:</h3>
+            <button onclick="testAPI()">Test Stamp Addition API</button>
+            <div id="apiResults"></div>
+        `;
+        
+        // Test function for API call
+        async function testAPI() {
+            const apiUrl = `http://localhost:3001/api/business/scan/progress/${encodeURIComponent(customerToken)}/${offerHash}`;
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-session-token': 'test-session',
+                        'x-business-id': businessId.toString()
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('apiResults').innerHTML = `
+                    <h4>API Response:</h4>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                    <p>Status: ${response.status}</p>
+                `;
+                
+                console.log('📡 API test result:', result);
+            } catch (error) {
+                document.getElementById('apiResults').innerHTML = `
+                    <h4>API Error:</h4>
+                    <pre>${error.message}</pre>
+                `;
+                console.error('❌ API test failed:', error);
+            }
+        }
+        
+        // Make testAPI globally available
+        window.testAPI = testAPI;
+    </script>
+</body>
+</html>

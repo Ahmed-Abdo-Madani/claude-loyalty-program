@@ -17,6 +17,7 @@ function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/join/:offerId" element={<CustomerSignup />} />
+        <Route path="/customer-signup/:offerId" element={<CustomerSignup />} />
         <Route path="/test" element={<TestPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />

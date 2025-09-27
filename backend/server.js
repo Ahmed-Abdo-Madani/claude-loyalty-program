@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import logger from './config/logger.js'
 import walletRoutes from './routes/wallet.js'
 import passRoutes from './routes/passes.js'
 import adminRoutes from './routes/admin.js'
@@ -51,7 +52,13 @@ app.use('/api/business', businessRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err)
+  logger.error('Unhandled application error', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip
+  })
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
@@ -67,13 +74,13 @@ app.use('*', (req, res) => {
 })
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Loyalty Platform Backend running on port ${PORT}`)
-  console.log(`📍 Local access: http://localhost:${PORT}`)
-  console.log(`🌐 Network access: http://192.168.8.114:${PORT}`)
-  console.log(`📱 Wallet API endpoints available at http://192.168.8.114:${PORT}/api/wallet`)
-  console.log(`🎫 Pass endpoints available at http://192.168.8.114:${PORT}/api/passes`)
-  console.log(`👑 Admin API endpoints available at http://192.168.8.114:${PORT}/api/admin`)
-  console.log(`🏢 Business API endpoints available at http://192.168.8.114:${PORT}/api/business`)
-  console.log(`❤️ Health check: http://192.168.8.114:${PORT}/health`)
-  console.log(`🔑 Business login: POST http://192.168.8.114:${PORT}/api/business/login`)
+  logger.info(`🚀 Loyalty Platform Backend running on port ${PORT}`)
+  logger.info(`📍 Local access: http://localhost:${PORT}`)
+  logger.info(`🌐 Network access: http://192.168.8.114:${PORT}`)
+  logger.info(`📱 Wallet API endpoints available at http://192.168.8.114:${PORT}/api/wallet`)
+  logger.info(`🎫 Pass endpoints available at http://192.168.8.114:${PORT}/api/passes`)
+  logger.info(`👑 Admin API endpoints available at http://192.168.8.114:${PORT}/api/admin`)
+  logger.info(`🏢 Business API endpoints available at http://192.168.8.114:${PORT}/api/business`)
+  logger.info(`❤️ Health check: http://192.168.8.114:${PORT}/health`)
+  logger.info(`🔑 Business login: POST http://192.168.8.114:${PORT}/api/business/login`)
 })

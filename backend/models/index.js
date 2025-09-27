@@ -1,4 +1,5 @@
 import sequelize from '../config/database.js'
+import logger from '../config/logger.js'
 import Business from './Business.js'
 import Offer from './Offer.js'
 import CustomerProgress from './CustomerProgress.js'
@@ -61,23 +62,23 @@ export {
 // Sync database (create tables) - only for development
 export async function syncDatabase(force = false) {
   try {
-    console.log('🔄 Syncing database...')
+    logger.info('🔄 Syncing database...')
 
     await sequelize.authenticate()
-    console.log('✅ Database connection established')
+    logger.info('✅ Database connection established')
 
     await sequelize.sync({ force })
 
     if (force) {
-      console.log('⚠️  Database tables recreated (all data lost)')
+      logger.warn('⚠️  Database tables recreated (all data lost)')
     } else {
-      console.log('✅ Database tables synchronized')
+      logger.info('✅ Database tables synchronized')
     }
 
-    console.log('🎉 Database sync completed!')
+    logger.info('🎉 Database sync completed!')
 
   } catch (error) {
-    console.error('❌ Database sync failed:', error.message)
+    logger.error('❌ Database sync failed', { error: error.message, stack: error.stack })
     throw error
   }
 }
@@ -85,12 +86,12 @@ export async function syncDatabase(force = false) {
 // Initialize database with sample data
 export async function seedDatabase() {
   try {
-    console.log('🌱 Seeding database with sample data...')
+    logger.info('🌱 Seeding database with sample data...')
 
     // Check if data already exists
     const businessCount = await Business.count()
     if (businessCount > 0) {
-      console.log('📊 Database already contains data, skipping seed')
+      logger.info('📊 Database already contains data, skipping seed')
       return
     }
 
@@ -134,12 +135,12 @@ export async function seedDatabase() {
       redeemed: 0
     })
 
-    console.log(`✅ Sample business created: ${sampleBusiness.business_name} (ID: ${sampleBusiness.id})`)
-    console.log(`✅ Sample offer created: ${sampleOffer.title} (ID: ${sampleOffer.id})`)
-    console.log('🎉 Database seeded successfully!')
+    logger.info(`✅ Sample business created: ${sampleBusiness.business_name} (ID: ${sampleBusiness.id})`)
+    logger.info(`✅ Sample offer created: ${sampleOffer.title} (ID: ${sampleOffer.id})`)
+    logger.info('🎉 Database seeded successfully!')
 
   } catch (error) {
-    console.error('❌ Database seeding failed:', error.message)
+    logger.error('❌ Database seeding failed', { error: error.message, stack: error.stack })
     throw error
   }
 }

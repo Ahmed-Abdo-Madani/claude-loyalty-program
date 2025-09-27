@@ -91,7 +91,7 @@ class RealGoogleWalletController {
   }
 
   async createOrUpdateLoyaltyClass(authClient, offerData) {
-    const classId = `${this.issuerId}.${offerData.offerId.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}`
 
     const loyaltyClass = {
       id: classId,
@@ -173,7 +173,7 @@ class RealGoogleWalletController {
 
   async createLoyaltyObject(authClient, customerData, offerData, progressData) {
     const objectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._]/g, '_')
-    const classId = `${this.issuerId}.${offerData.offerId.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}`
 
     const loyaltyObject = {
       id: objectId,
@@ -187,7 +187,7 @@ class RealGoogleWalletController {
       // Loyalty points
       loyaltyPoints: {
         balance: {
-          string: `${progressData.stampsEarned || 0}/${offerData.stampsRequired || 10}`
+          string: `${progressData.current_stamps || 0}/${offerData.stamps_required || 10}`
         },
         label: 'Stamps Collected'
       },
@@ -197,7 +197,7 @@ class RealGoogleWalletController {
         {
           id: 'progress',
           header: 'Progress',
-          body: `${progressData.stampsEarned || 0} of ${offerData.stampsRequired || 10} stamps`
+          body: `${progressData.current_stamps || 0} of ${offerData.stamps_required || 10} stamps`
         },
         {
           id: 'reward',
@@ -217,6 +217,7 @@ class RealGoogleWalletController {
         value: JSON.stringify({
           customerId: customerData.customerId,
           offerId: offerData.offerId,
+          businessId: offerData.businessId,
           timestamp: new Date().toISOString()
         }),
         alternateText: `Customer: ${customerData.customerId}`
@@ -361,14 +362,102 @@ class RealGoogleWalletController {
   // Push updates to Google Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {
-      console.log('📱 Pushing progress update to Google Wallet:', {
+      console.log('📱 Google Wallet Update Started:', {
         customerId,
         offerId,
-        progress: progressData
+        issuerId: this.issuerId,
+        progressData: {
+          current_stamps: progressData.current_stamps,
+          max_stamps: progressData.max_stamps,
+          is_completed: progressData.is_completed
+        }
       })
 
-      // Create object ID using same format as creation - CRITICAL FIX
+      // Create object ID using same format as creation - CRITICAL FIX: Use identical regex pattern
       const objectId = `${this.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._]/g, '_')
+      console.log(`🎯 Target Object ID: ${objectId}`)
+
+      // First verify object exists before attempting update
+      const authClient = await this.auth.getClient()
+      const accessToken = await authClient.getAccessToken()
+      
+      console.log('🔍 Verifying object exists...')
+      const checkResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!checkResponse.ok) {
+        const error = await checkResponse.text()
+        console.error('❌ Object verification failed:', {
+          status: checkResponse.status,
+          statusText: checkResponse.statusText,
+          error: error,
+          objectId: objectId
+        })
+        
+        // If object doesn't exist, we need to create it first
+        if (checkResponse.status === 404) {
+          console.log('🔧 Object not found, attempting to create it first...')
+          
+          try {
+            // Get offer data to create the missing object
+            const { Offer } = await import('../models/index.js')
+            const offer = await Offer.findByPk(offerId)
+            
+            if (!offer) {
+              throw new Error(`Offer ${offerId} not found in database`)
+            }
+
+            // Create the missing loyalty object
+            const customerData = {
+              customerId: customerId,
+              firstName: 'Customer', // Default values for scanning
+              lastName: 'User'
+            }
+            
+            const offerData = {
+              offerId: offer.id,
+              businessName: offer.business?.business_name || 'Business',
+              title: offer.title,
+              description: offer.description,
+              stamps_required: offer.stamps_required
+            }
+            
+            const defaultProgressData = {
+              current_stamps: 0,
+              max_stamps: offer.stamps_required,
+              is_completed: false
+            }
+
+            console.log('🔨 Creating missing loyalty object with data:', {
+              customerData,
+              offerData: { ...offerData, businessName: offerData.businessName.substring(0, 20) + '...' }
+            })
+
+            // Create loyalty class first
+            await this.createOrUpdateLoyaltyClass(authClient, offerData)
+            
+            // Create loyalty object
+            const createdObject = await this.createLoyaltyObject(authClient, customerData, offerData, defaultProgressData)
+            
+            console.log('✅ Missing object created successfully:', createdObject.id)
+            
+            // Now proceed with the update using the actual progress data
+            
+          } catch (createError) {
+            console.error('❌ Failed to create missing object:', createError.message)
+            throw new Error(`Object ${objectId} not found and creation failed: ${createError.message}`)
+          }
+        } else {
+          throw new Error(`Object ${objectId} verification failed. Status: ${checkResponse.status} - ${error}`)
+        }
+      } else {
+        console.log('✅ Object exists, proceeding with update...')
+      }
 
       // Prepare update data for Google Wallet - MAP FIELD NAMES CORRECTLY
       const updateData = {
@@ -397,8 +486,40 @@ class RealGoogleWalletController {
         })
       }
 
+      console.log('📦 Update payload:', JSON.stringify(updateData, null, 2))
+
       // Update the loyalty object in Google Wallet
       const result = await this.updateLoyaltyObject(objectId, updateData)
+      
+      console.log('📱 Update response received:', result)
+
+      // Verify the update was successful by fetching the updated object
+      console.log('🔍 Verifying update success...')
+      const verifyResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (verifyResponse.ok) {
+        const updatedObject = await verifyResponse.json()
+        const currentBalance = updatedObject.loyaltyPoints?.balance?.string
+        const expectedBalance = `${progressData.current_stamps}/${progressData.max_stamps}`
+        
+        console.log('🔍 Verification results:', {
+          expected: expectedBalance,
+          actual: currentBalance,
+          matches: currentBalance === expectedBalance
+        })
+        
+        if (currentBalance !== expectedBalance) {
+          console.warn('⚠️ Update verification failed: Balance mismatch')
+        }
+      } else {
+        console.warn('⚠️ Could not verify update success')
+      }
 
       console.log('✅ Google Wallet push notification sent successfully')
 

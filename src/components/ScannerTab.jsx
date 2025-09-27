@@ -326,7 +326,7 @@ function ScannerTab() {
               <div className="space-y-2 text-sm">
                 <div><strong>Customer:</strong> {scanResult.customer?.id}</div>
                 <div><strong>Offer:</strong> {scanResult.offer?.title}</div>
-                <div><strong>Progress:</strong> {scanResult.progress?.currentStamps}/{scanResult.progress?.maxStamps} stamps</div>
+                <div><strong>Progress:</strong> {scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps} stamps</div>
                 <div><strong>Status:</strong> {scanResult.canScan ? '✅ Ready to scan' : '❌ Already completed'}</div>
               </div>
             </div>
@@ -338,7 +338,7 @@ function ScannerTab() {
               <div className="space-y-2 text-sm">
                 <div><strong>Customer:</strong> {scanResult.customer?.id}</div>
                 <div><strong>Offer:</strong> {scanResult.offer?.title}</div>
-                <div><strong>New Progress:</strong> {scanResult.progress?.currentStamps}/{scanResult.progress?.maxStamps} stamps</div>
+                <div><strong>New Progress:</strong> {scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps} stamps</div>
                 <div><strong>Scan Time:</strong> {formatDate(scanResult.scan?.timestamp)}</div>
                 {scanResult.rewardEarned && (
                   <div className="bg-yellow-100 p-3 rounded-lg mt-3">

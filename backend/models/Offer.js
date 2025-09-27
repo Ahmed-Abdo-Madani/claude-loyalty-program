@@ -7,6 +7,12 @@ const Offer = sequelize.define('Offer', {
     primaryKey: true,
     autoIncrement: true
   },
+  public_id: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    unique: true,
+    comment: 'Public-facing unique identifier for URLs and QR codes'
+  },
   business_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -94,6 +100,20 @@ const Offer = sequelize.define('Offer', {
   createdAt: 'created_at',
   updatedAt: 'updated_at'
 })
+
+// Static method to generate public ID
+Offer.generatePublicId = function(title, businessId) {
+  const timestamp = Date.now().toString(36)
+  const random = Math.random().toString(36).substr(2, 5)
+
+  // Create prefix from title (first 4 chars, alphanumeric only)
+  const titlePrefix = title.toLowerCase().replace(/[^a-z0-9]/g, '').substr(0, 4) || 'ofr'
+
+  // Use last 2 digits of business ID for uniqueness
+  const businessSuffix = (businessId % 100).toString().padStart(2, '0')
+
+  return `${titlePrefix}_${businessSuffix}_${timestamp}_${random}`
+}
 
 // Instance methods
 Offer.prototype.incrementCustomers = async function() {

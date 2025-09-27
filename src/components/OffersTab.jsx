@@ -220,7 +220,7 @@ function OffersTab() {
                   <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(offer.status)}`}>
                     {getStatusIcon(offer.status)} {offer.status.charAt(0).toUpperCase() + offer.status.slice(1)}
                   </span>
-                  {offer.isTimeLimited && (
+                  {offer.is_time_limited && (
                     <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
                       ⏰ Time Limited
                     </span>
@@ -231,15 +231,15 @@ function OffersTab() {
 
                 <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
                   <span>🏪 {offer.branch}</span>
-                  <span>📅 Created {offer.createdAt}</span>
+                  <span>📅 Created {offer.created_at}</span>
                   <span>👥 {offer.customers} customers</span>
                   <span>🎁 {offer.redeemed} rewards redeemed</span>
                 </div>
 
-                {offer.isTimeLimited && (
+                {offer.is_time_limited && (
                   <div className="flex gap-4 text-sm text-gray-500">
-                    <span>📅 Start: {formatDate(offer.startDate)}</span>
-                    <span>📅 End: {formatDate(offer.endDate)}</span>
+                    <span>📅 Start: {formatDate(offer.start_date)}</span>
+                    <span>📅 End: {formatDate(offer.end_date)}</span>
                   </div>
                 )}
               </div>
@@ -358,19 +358,29 @@ function OffersTab() {
           }}
           onSave={async (offerData) => {
             try {
+              console.log('🔄 Saving offer data:', JSON.stringify(offerData, null, 2))
+              
               if (showEditModal) {
                 // Update existing offer
+                console.log('📝 Updating offer:', showEditModal.id)
                 await ApiService.updateMyOffer(showEditModal.id, offerData)
               } else {
                 // Create new offer
-                await ApiService.createMyOffer(offerData)
+                console.log('➕ Creating new offer')
+                const result = await ApiService.createMyOffer(offerData)
+                console.log('✅ Offer created successfully:', result)
               }
               await loadOffers() // Reload to get updated data
               setShowCreateModal(false)
               setShowEditModal(null)
             } catch (err) {
+              console.error('❌ Error saving offer:', {
+                message: err.message,
+                response: err.response,
+                data: err.response?.data,
+                status: err.response?.status
+              })
               setError(err.message || 'Failed to save offer')
-              console.error('Error saving offer:', err)
             }
           }}
         />
@@ -393,10 +403,10 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
     description: offer?.description || '',
     branch: offer?.branch || 'All Branches',
     type: offer?.type || 'stamps',
-    stampsRequired: offer?.stampsRequired || 10,
-    isTimeLimited: offer?.isTimeLimited || false,
-    startDate: offer?.startDate || '',
-    endDate: offer?.endDate || ''
+    stamps_required: offer?.stamps_required || 10,
+    is_time_limited: offer?.is_time_limited || false,
+    start_date: offer?.start_date || '',
+    end_date: offer?.end_date || ''
   })
 
   const handleSubmit = (e) => {
@@ -482,8 +492,8 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
               type="number"
               min="1"
               max="50"
-              value={formData.stampsRequired}
-              onChange={(e) => setFormData({...formData, stampsRequired: parseInt(e.target.value)})}
+              value={formData.stamps_required}
+              onChange={(e) => setFormData({...formData, stamps_required: parseInt(e.target.value)})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -494,8 +504,8 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
               <input
                 type="checkbox"
                 id="timeLimited"
-                checked={formData.isTimeLimited}
-                onChange={(e) => setFormData({...formData, isTimeLimited: e.target.checked})}
+                checked={formData.is_time_limited}
+                onChange={(e) => setFormData({...formData, is_time_limited: e.target.checked})}
                 className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
               />
               <label htmlFor="timeLimited" className="ml-2 text-sm text-gray-700">
@@ -503,7 +513,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
               </label>
             </div>
 
-            {formData.isTimeLimited && (
+            {formData.is_time_limited && (
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -511,9 +521,9 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                   </label>
                   <input
                     type="date"
-                    required={formData.isTimeLimited}
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                    required={formData.is_time_limited}
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
@@ -523,9 +533,9 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                   </label>
                   <input
                     type="date"
-                    required={formData.isTimeLimited}
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                    required={formData.is_time_limited}
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>

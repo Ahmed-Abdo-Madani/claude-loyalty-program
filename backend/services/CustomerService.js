@@ -1,6 +1,7 @@
 import { CustomerProgress, Offer, Business } from '../models/index.js'
 import { Op } from 'sequelize'
 import crypto from 'crypto'
+import logger from '../config/logger.js'
 
 class CustomerService {
   // Customer progress management
@@ -122,7 +123,7 @@ class CustomerService {
     }
     
     // You could store this in a separate table or log file
-    console.log('📊 Scan recorded:', scanData)
+    logger.debug('📊 Scan recorded', scanData)
     
     return scanData
   }
