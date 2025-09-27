@@ -35,7 +35,7 @@ class AdminBusinessController {
       const enrichedBusinesses = await Promise.all(
         businesses.map(async business => {
           const offers = await Offer.findAll({
-            where: { business_id: business.id }
+            where: { business_id: business.public_id }  // Use secure ID
           })
 
           return {

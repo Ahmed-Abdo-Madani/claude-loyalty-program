@@ -1,68 +1,9 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
-
-// Mock database operations (replace with actual database queries)
-const mockDb = {
-  // Find admin by email
-  async findAdminByEmail(email) {
-    // In production, this would be a database query
-    const mockAdmin = {
-      id: 1,
-      email: 'admin@loyaltyplatform.com',
-      password_hash: '$2b$10$jU2Plk9YVQA87C6hM.u8Tuxh1/Zn7k/cwzKH5doan1i6nkzRieS1e', // admin123
-      full_name: 'Platform Administrator',
-      role: 'super_admin',
-      status: 'active'
-    }
-
-    if (email === mockAdmin.email) {
-      return mockAdmin
-    }
-    return null
-  },
-
-  // Create admin session
-  async createSession(adminId, sessionToken, expiresAt, ipAddress, userAgent) {
-    // In production, this would insert into admin_sessions table
-    console.log(`Session created for admin ${adminId}: ${sessionToken}`)
-    return {
-      id: Date.now(),
-      admin_id: adminId,
-      session_token: sessionToken,
-      expires_at: expiresAt,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      is_active: true,
-      created_at: new Date()
-    }
-  },
-
-  // Update admin last login
-  async updateLastLogin(adminId) {
-    // In production, this would update the platform_admins table
-    console.log(`Updated last login for admin ${adminId}`)
-  },
-
-  // Find session by token
-  async findSessionByToken(token) {
-    // In production, this would query admin_sessions table
-    // For now, we'll just validate the JWT token
-    return null
-  },
-
-  // Deactivate session
-  async deactivateSession(token) {
-    // In production, this would update admin_sessions table
-    console.log(`Deactivated session: ${token}`)
-  },
-
-  // Log admin action
-  async logAdminAction(adminId, actionType, targetType, targetId, actionData, ipAddress, userAgent) {
-    // In production, this would insert into admin_actions table
-    console.log(`Admin action logged: ${actionType} by admin ${adminId}`)
-  }
-}
+import { Op } from 'sequelize'
+import PlatformAdmin from '../models/PlatformAdmin.js'
+import AdminSession from '../models/AdminSession.js'
 
 class AdminAuthController {
   // Admin login
@@ -71,6 +12,8 @@ class AdminAuthController {
       const { email, password } = req.body
       const ipAddress = req.ip || req.connection.remoteAddress
       const userAgent = req.get('User-Agent') || 'Unknown'
+
+      console.log('🔐 Admin login attempt:', { email, ipAddress, userAgent })
 
       // Validate input
       if (!email || !password) {
@@ -81,29 +24,23 @@ class AdminAuthController {
       }
 
       // Find admin by email
-      const admin = await mockDb.findAdminByEmail(email.toLowerCase())
+      const admin = await PlatformAdmin.findOne({
+        where: { email: email.toLowerCase() }
+      })
+      
       if (!admin) {
-        // Log failed login attempt
-        await mockDb.logAdminAction(
-          null, 'login_failed', 'admin', null,
-          { email, reason: 'admin_not_found' },
-          ipAddress, userAgent
-        )
-
+        console.log('❌ Admin not found:', email)
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials'
         })
       }
 
+      console.log('👤 Admin found:', { id: admin.id, email: admin.email, status: admin.status })
+
       // Check admin status
       if (admin.status !== 'active') {
-        await mockDb.logAdminAction(
-          admin.id, 'login_failed', 'admin', admin.id,
-          { reason: 'account_inactive', status: admin.status },
-          ipAddress, userAgent
-        )
-
+        console.log('❌ Admin account not active:', admin.status)
         return res.status(401).json({
           success: false,
           message: 'Account is not active'
@@ -111,19 +48,17 @@ class AdminAuthController {
       }
 
       // Verify password
+      console.log('🔑 Verifying password...')
       const isPasswordValid = await bcrypt.compare(password, admin.password_hash)
       if (!isPasswordValid) {
-        await mockDb.logAdminAction(
-          admin.id, 'login_failed', 'admin', admin.id,
-          { reason: 'invalid_password' },
-          ipAddress, userAgent
-        )
-
+        console.log('❌ Invalid password for admin:', email)
         return res.status(401).json({
           success: false,
           message: 'Invalid credentials'
         })
       }
+
+      console.log('✅ Password verified successfully')
 
       // Generate JWT token
       const tokenPayload = {
@@ -144,17 +79,19 @@ class AdminAuthController {
       const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 hours
 
       // Create session record
-      await mockDb.createSession(admin.id, sessionToken, expiresAt, ipAddress, userAgent)
+      await AdminSession.create({
+        admin_id: admin.id,
+        session_token: sessionToken,
+        expires_at: expiresAt,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        is_active: true
+      })
 
       // Update last login time
-      await mockDb.updateLastLogin(admin.id)
+      await admin.update({ last_login_at: new Date() })
 
-      // Log successful login
-      await mockDb.logAdminAction(
-        admin.id, 'login_success', 'admin', admin.id,
-        { ip_address: ipAddress },
-        ipAddress, userAgent
-      )
+      console.log('🎉 Admin login successful:', { adminId: admin.id, sessionToken })
 
       // Return success response
       res.json({
@@ -174,7 +111,7 @@ class AdminAuthController {
       })
 
     } catch (error) {
-      console.error('Admin login error:', error)
+      console.error('❌ Admin login error:', error)
       res.status(500).json({
         success: false,
         message: 'Internal server error during login'
@@ -188,20 +125,16 @@ class AdminAuthController {
       const sessionToken = req.headers['x-session-token']
       const adminId = req.admin?.adminId
       const ipAddress = req.ip || req.connection.remoteAddress
-      const userAgent = req.get('User-Agent') || 'Unknown'
+
+      console.log('🔓 Admin logout:', { adminId, sessionToken })
 
       // Deactivate session if token provided
       if (sessionToken) {
-        await mockDb.deactivateSession(sessionToken)
-      }
-
-      // Log logout action
-      if (adminId) {
-        await mockDb.logAdminAction(
-          adminId, 'logout', 'admin', adminId,
-          { session_token: sessionToken },
-          ipAddress, userAgent
+        await AdminSession.update(
+          { is_active: false },
+          { where: { session_token: sessionToken } }
         )
+        console.log('✅ Session deactivated')
       }
 
       res.json({
@@ -210,7 +143,7 @@ class AdminAuthController {
       })
 
     } catch (error) {
-      console.error('Admin logout error:', error)
+      console.error('❌ Admin logout error:', error)
       res.status(500).json({
         success: false,
         message: 'Internal server error during logout'
@@ -263,8 +196,22 @@ class AdminAuthController {
         })
       }
 
-      // In production, verify session is still valid in database
-      const session = await mockDb.findSessionByToken(session_token)
+      // Verify session is still valid
+      const session = await AdminSession.findOne({
+        where: { 
+          session_token,
+          admin_id: adminId,
+          is_active: true,
+          expires_at: { [Op.gt]: new Date() }
+        }
+      })
+
+      if (!session) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired session'
+        })
+      }
 
       // Generate new access token
       const tokenPayload = {
@@ -302,8 +249,6 @@ class AdminAuthController {
     try {
       const { current_password, new_password } = req.body
       const adminId = req.admin?.adminId
-      const ipAddress = req.ip || req.connection.remoteAddress
-      const userAgent = req.get('User-Agent') || 'Unknown'
 
       // Validate input
       if (!current_password || !new_password) {
@@ -321,7 +266,7 @@ class AdminAuthController {
       }
 
       // Find current admin
-      const admin = await mockDb.findAdminByEmail(req.admin.email)
+      const admin = await PlatformAdmin.findByPk(adminId)
       if (!admin) {
         return res.status(404).json({
           success: false,
@@ -332,12 +277,6 @@ class AdminAuthController {
       // Verify current password
       const isCurrentPasswordValid = await bcrypt.compare(current_password, admin.password_hash)
       if (!isCurrentPasswordValid) {
-        await mockDb.logAdminAction(
-          adminId, 'password_change_failed', 'admin', adminId,
-          { reason: 'invalid_current_password' },
-          ipAddress, userAgent
-        )
-
         return res.status(401).json({
           success: false,
           message: 'Current password is incorrect'
@@ -348,15 +287,8 @@ class AdminAuthController {
       const saltRounds = 12
       const newPasswordHash = await bcrypt.hash(new_password, saltRounds)
 
-      // In production, update password in database
-      console.log(`Password updated for admin ${adminId}`)
-
-      // Log password change
-      await mockDb.logAdminAction(
-        adminId, 'password_changed', 'admin', adminId,
-        { changed_at: new Date().toISOString() },
-        ipAddress, userAgent
-      )
+      // Update password in database
+      await admin.update({ password_hash: newPasswordHash })
 
       res.json({
         success: true,

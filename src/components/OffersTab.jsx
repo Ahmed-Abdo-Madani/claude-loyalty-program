@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import QRCodeModal from './QRCodeModal'
-import ApiService from '../utils/api'
+import { endpoints, secureApi } from '../config/api'
+import { validateSecureOfferId } from '../utils/secureAuth'
 
 function OffersTab() {
   const [offers, setOffers] = useState([])
@@ -28,8 +29,17 @@ function OffersTab() {
     try {
       setLoading(true)
       setError('')
-      const response = await ApiService.getMyOffers()
-      setOffers(response.data || [])
+      
+      console.log('🔒 Loading offers with secure authentication...')
+      const response = await secureApi.get(endpoints.myOffers)
+      const data = await response.json()
+      
+      if (data.success) {
+        setOffers(data.data || [])
+        console.log('🔒 Offers loaded successfully:', data.data?.length || 0)
+      } else {
+        throw new Error(data.message || 'Failed to load offers')
+      }
     } catch (err) {
       setError(err.message || 'Failed to load offers')
       console.error('Error loading offers:', err)
@@ -40,8 +50,14 @@ function OffersTab() {
 
   const loadBranches = async () => {
     try {
-      const response = await ApiService.getMyBranches()
-      setBranches(response.data || [])
+      console.log('🔒 Loading branches with secure authentication...')
+      const response = await secureApi.get(endpoints.myBranches)
+      const data = await response.json()
+      
+      if (data.success) {
+        setBranches(data.data || [])
+        console.log('🔒 Branches loaded successfully:', data.data?.length || 0)
+      }
     } catch (err) {
       console.error('Error loading branches:', err)
       // Don't set error here as it's secondary data
@@ -68,21 +84,45 @@ function OffersTab() {
     }
   }
 
-  const toggleOfferStatus = async (offerId) => {
+  const toggleOfferStatus = async (secureOfferId, currentStatus) => {
     try {
-      await ApiService.toggleMyOfferStatus(offerId)
-      await loadOffers() // Reload to get updated data
+      console.log('🔒 Toggling offer status:', { secureOfferId, currentStatus })
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+      
+      const response = await secureApi.put(`${endpoints.myOffers}/${secureOfferId}/status`, {
+        status: newStatus
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        setOffers(offers.map(offer => 
+          offer.public_id === secureOfferId 
+            ? { ...offer, status: newStatus }
+            : offer
+        ))
+        console.log('🔒 Offer status updated successfully')
+      } else {
+        alert('Failed to update offer status')
+      }
     } catch (err) {
-      setError(err.message || 'Failed to update offer status')
-      console.error('Error toggling offer status:', err)
+      console.error('Error updating offer status:', err)
+      alert('Error updating offer status')
     }
   }
-
-  const deleteOffer = async (offerId) => {
+  
+  const deleteOffer = async (secureOfferId) => {
     try {
-      await ApiService.deleteMyOffer(offerId)
-      setShowDeleteConfirm(null)
-      await loadOffers() // Reload to get updated data
+      console.log('🔒 Deleting offer:', secureOfferId)
+      const response = await secureApi.delete(`${endpoints.myOffers}/${secureOfferId}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setShowDeleteConfirm(null)
+        await loadOffers() // Reload to get updated data
+        console.log('🔒 Offer deleted successfully')
+      } else {
+        throw new Error(data.message || 'Failed to delete offer')
+      }
     } catch (err) {
       setError(err.message || 'Failed to delete offer')
       console.error('Error deleting offer:', err)
@@ -90,18 +130,28 @@ function OffersTab() {
     }
   }
 
-  const duplicateOffer = async (offerId) => {
+  const duplicateOffer = async (secureOfferId) => {
     try {
-      const offer = offers.find(o => o.id === offerId)
+      console.log('🔒 Duplicating offer:', secureOfferId)
+      const offer = offers.find(o => o.public_id === secureOfferId)
       if (offer) {
         const newOffer = {
           ...offer,
           title: `${offer.title} (Copy)`,
           status: 'paused'
         }
-        delete newOffer.id // Remove ID so API creates a new one
-        await ApiService.createMyOffer(newOffer)
-        await loadOffers() // Reload to get updated data
+        delete newOffer.public_id // Remove ID so API creates a new one
+        delete newOffer.id // Remove any legacy ID
+        
+        const response = await secureApi.post(endpoints.myOffers, newOffer)
+        const data = await response.json()
+        
+        if (data.success) {
+          await loadOffers() // Reload to get updated data
+          console.log('🔒 Offer duplicated successfully')
+        } else {
+          throw new Error(data.message || 'Failed to duplicate offer')
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to duplicate offer')
@@ -212,7 +262,7 @@ function OffersTab() {
           </div>
         ) : (
           filteredOffers.map((offer) => (
-            <div key={offer.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
+            <div key={offer.public_id || offer.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -262,7 +312,7 @@ function OffersTab() {
 
                 {/* Pause/Resume */}
                 <button
-                  onClick={() => toggleOfferStatus(offer.id)}
+                  onClick={() => toggleOfferStatus(offer.public_id || offer.id, offer.status)}
                   className={`p-2 rounded-lg transition-colors ${
                     offer.status === 'active'
                       ? 'text-yellow-600 hover:bg-yellow-50'
@@ -284,7 +334,7 @@ function OffersTab() {
 
                 {/* Duplicate */}
                 <button
-                  onClick={() => duplicateOffer(offer.id)}
+                  onClick={() => duplicateOffer(offer.public_id || offer.id)}
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                   title="Duplicate Offer"
                 >
@@ -293,7 +343,7 @@ function OffersTab() {
 
                 {/* Delete */}
                 <button
-                  onClick={() => setShowDeleteConfirm(offer.id)}
+                  onClick={() => setShowDeleteConfirm(offer.public_id || offer.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   title="Delete Offer"
                 >
@@ -358,17 +408,28 @@ function OffersTab() {
           }}
           onSave={async (offerData) => {
             try {
-              console.log('🔄 Saving offer data:', JSON.stringify(offerData, null, 2))
+              console.log('� Saving offer data:', JSON.stringify(offerData, null, 2))
               
               if (showEditModal) {
-                // Update existing offer
-                console.log('📝 Updating offer:', showEditModal.id)
-                await ApiService.updateMyOffer(showEditModal.id, offerData)
+                // Update existing offer using secure ID
+                console.log('📝 Updating offer:', showEditModal.public_id)
+                const response = await secureApi.put(`${endpoints.myOffers}/${showEditModal.public_id}`, offerData)
+                const data = await response.json()
+                
+                if (!data.success) {
+                  throw new Error(data.message || 'Failed to update offer')
+                }
+                console.log('✅ Offer updated successfully')
               } else {
                 // Create new offer
                 console.log('➕ Creating new offer')
-                const result = await ApiService.createMyOffer(offerData)
-                console.log('✅ Offer created successfully:', result)
+                const response = await secureApi.post(endpoints.myOffers, offerData)
+                const data = await response.json()
+                
+                if (!data.success) {
+                  throw new Error(data.message || 'Failed to create offer')
+                }
+                console.log('✅ Offer created successfully:', data.data?.public_id)
               }
               await loadOffers() // Reload to get updated data
               setShowCreateModal(false)

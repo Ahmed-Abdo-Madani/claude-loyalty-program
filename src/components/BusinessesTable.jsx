@@ -91,7 +91,7 @@ function BusinessesTable() {
     if (selectedBusinesses.length === businesses.length) {
       setSelectedBusinesses([])
     } else {
-      setSelectedBusinesses(businesses.map(b => b.id))
+      setSelectedBusinesses(businesses.map(b => b.public_id))
     }
   }
 
@@ -294,12 +294,12 @@ function BusinessesTable() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {businesses.map((business) => (
-                <tr key={business.id} className="hover:bg-gray-50">
+                <tr key={business.public_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
-                      checked={selectedBusinesses.includes(business.id)}
-                      onChange={() => handleSelectBusiness(business.id)}
+                      checked={selectedBusinesses.includes(business.public_id)}
+                      onChange={() => handleSelectBusiness(business.public_id)}
                       className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                     />
                   </td>
@@ -338,7 +338,7 @@ function BusinessesTable() {
                     </button>
                     {business.status === 'pending' && (
                       <button
-                        onClick={() => handleStatusChange(business.id, 'active')}
+                        onClick={() => handleStatusChange(business.public_id, 'active')}
                         className="text-green-600 hover:text-green-900 font-medium"
                       >
                         Approve - موافقة
@@ -346,7 +346,7 @@ function BusinessesTable() {
                     )}
                     {business.status === 'active' && (
                       <button
-                        onClick={() => handleStatusChange(business.id, 'suspended')}
+                        onClick={() => handleStatusChange(business.public_id, 'suspended')}
                         className="text-red-600 hover:text-red-900 font-medium"
                       >
                         Suspend - تعليق
@@ -461,7 +461,7 @@ function BusinessesTable() {
                 {selectedBusiness.status === 'pending' && (
                   <button
                     onClick={() => {
-                      handleStatusChange(selectedBusiness.id, 'active')
+                      handleStatusChange(selectedBusiness.public_id, 'active')
                       setShowModal(false)
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"

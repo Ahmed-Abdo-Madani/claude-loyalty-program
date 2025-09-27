@@ -1,11 +1,12 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
+import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
 const Business = sequelize.define('Business', {
-  id: {
-    type: DataTypes.INTEGER,
+  public_id: {
+    type: DataTypes.STRING(50),
     primaryKey: true,
-    autoIncrement: true
+    defaultValue: () => SecureIDGenerator.generateBusinessID()
   },
   email: {
     type: DataTypes.STRING(255),
@@ -14,6 +15,11 @@ const Business = sequelize.define('Business', {
     validate: {
       isEmail: true
     }
+  },
+  password_hash: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    field: 'password_hash'
   },
   business_name: {
     type: DataTypes.STRING(255),
@@ -71,10 +77,6 @@ const Business = sequelize.define('Business', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
-  password: {
-    type: DataTypes.STRING(255),
-    allowNull: false
-  },
   status: {
     type: DataTypes.ENUM('active', 'pending', 'suspended', 'inactive'),
     defaultValue: 'pending'
@@ -92,7 +94,7 @@ const Business = sequelize.define('Business', {
     allowNull: true
   },
   approved_by: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(50),  // Can be admin's secure ID
     allowNull: true
   },
   last_activity_at: {
@@ -127,14 +129,14 @@ const Business = sequelize.define('Business', {
   updatedAt: 'updated_at'
 })
 
-// Instance methods for business status management
+// Instance methods for secure business management
 Business.prototype.updateStatus = async function(status, reason = null, adminId = null) {
   this.status = status
   this.last_activity_at = new Date()
 
   if (status === 'active' && !this.approved_at) {
     this.approved_at = new Date()
-    this.approved_by = adminId
+    this.approved_by = adminId // Now stores admin's secure ID
   }
 
   if (status === 'suspended') {
@@ -148,20 +150,27 @@ Business.prototype.updateStatus = async function(status, reason = null, adminId 
   return this
 }
 
-// Calculate business analytics and performance metrics
+// Calculate business analytics with secure associations
 Business.prototype.getAnalytics = async function() {
-  // Note: These associations will be defined after all models are created
-  // const offers = await this.getOffers()
-  // const branches = await this.getBranches()
-  // const customers = await this.getCustomers()
+  // These associations will work with secure IDs
+  const offers = await this.getOffers()
+  const branches = await this.getBranches()
+  const customerProgress = await this.getCustomerProgress()
 
   return {
-    totalOffers: this.total_offers || 0,
-    activeOffers: this.active_offers || 0,
-    totalBranches: this.total_branches || 0,
-    totalCustomers: this.total_customers || 0,
-    totalRedemptions: this.total_redemptions || 0
+    totalOffers: offers?.length || this.total_offers || 0,
+    activeOffers: offers?.filter(o => o.status === 'active').length || this.active_offers || 0,
+    totalBranches: branches?.length || this.total_branches || 0,
+    totalCustomers: customerProgress?.length || this.total_customers || 0,
+    totalRedemptions: this.total_redemptions || 0,
+    conversionRate: this.calculateOverallConversionRate()
   }
+}
+
+// New method for conversion rate calculation
+Business.prototype.calculateOverallConversionRate = function() {
+  if (this.total_customers === 0) return 0
+  return ((this.total_redemptions / this.total_customers) * 100).toFixed(2)
 }
 
 export default Business

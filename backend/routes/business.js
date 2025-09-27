@@ -1,4 +1,5 @@
 import express from 'express'
+import bcrypt from 'bcryptjs'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
@@ -567,10 +568,20 @@ router.get('/analytics/activity', (req, res) => {
 // PUBLIC CUSTOMER ROUTES
 // ===============================
 
-// Get offer details for customer signup (public endpoint)
-router.get('/public/offer/:id', (req, res) => {
+// Get offer details for customer signup (public endpoint) - SECURE VERSION
+router.get('/public/offer/:id', async (req, res) => {
   try {
-    const offer = offers.find(o => o.id === parseInt(req.params.id))
+    const offerId = req.params.id // Now expects secure offer ID (off_*)
+
+    // Find offer by secure public_id with business relationship
+    const offer = await Offer.findByPk(offerId, {
+      include: [{ 
+        model: Business, 
+        as: 'business',
+        attributes: ['business_name', 'business_name_ar', 'phone', 'city']
+      }]
+    })
+
     if (!offer) {
       return res.status(404).json({
         success: false,
@@ -578,20 +589,27 @@ router.get('/public/offer/:id', (req, res) => {
       })
     }
 
-    // Get business info from branches (use first active branch as default)
-    const defaultBranch = branches.find(b => b.isMain) || branches.find(b => b.status === 'active') || branches[0]
-    const businessName = defaultBranch?.manager ? defaultBranch.manager.split(' ')[0] + "'s Business" : "Local Business"
+    // Check if offer is active
+    if (offer.status !== 'active') {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer is not currently available'
+      })
+    }
 
     // Format offer for customer display
     const customerOfferData = {
-      id: offer.id,
+      id: offer.public_id, // Return secure ID
       title: offer.title,
       description: offer.description,
-      businessName: businessName,
+      businessName: offer.business?.business_name || "Business",
+      businessNameAr: offer.business?.business_name_ar,
       branchName: offer.branch,
-      stampsRequired: offer.stampsRequired,
+      stampsRequired: offer.stamps_required,
       type: offer.type,
-      status: offer.status
+      status: offer.status,
+      businessPhone: offer.business?.phone,
+      businessCity: offer.business?.city
     }
 
     res.json({
@@ -599,6 +617,7 @@ router.get('/public/offer/:id', (req, res) => {
       data: customerOfferData
     })
   } catch (error) {
+    console.error('Get public offer error:', error)
     res.status(500).json({
       success: false,
       message: 'Failed to fetch offer details',
@@ -683,11 +702,11 @@ router.post('/customers', (req, res) => {
 // AUTHENTICATION MIDDLEWARE
 // ===============================
 
-// Middleware to verify business session
+// Middleware to verify business session - SECURE VERSION
 const requireBusinessAuth = async (req, res, next) => {
   try {
     const sessionToken = req.headers['x-session-token']
-    const businessId = req.headers['x-business-id']
+    const businessId = req.headers['x-business-id'] // Now expects secure ID (biz_*)
 
     if (!sessionToken || !businessId) {
       return res.status(401).json({
@@ -696,7 +715,8 @@ const requireBusinessAuth = async (req, res, next) => {
       })
     }
 
-    const business = await BusinessService.findById(parseInt(businessId))
+    // Find business by secure public_id instead of integer id
+    const business = await Business.findByPk(businessId) // businessId is now secure string
 
     if (!business || business.status !== 'active') {
       return res.status(401).json({
@@ -720,11 +740,14 @@ const requireBusinessAuth = async (req, res, next) => {
 // BUSINESS-SPECIFIC DATA ROUTES (AUTHENTICATED)
 // ===============================
 
-// Get business-specific offers
+// Get business-specific offers - SECURE VERSION
 router.get('/my/offers', requireBusinessAuth, async (req, res) => {
   try {
-    // Get offers associated with this business
-    const businessOffers = await OfferService.findByBusinessId(req.business.id)
+    // Get offers associated with this business using secure public_id
+    const businessOffers = await Offer.findAll({
+      where: { business_id: req.business.public_id },
+      order: [['created_at', 'DESC']]
+    })
 
     res.json({
       success: true,
@@ -739,12 +762,12 @@ router.get('/my/offers', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// Get business-specific branches
+// Get business-specific branches - SECURE VERSION
 router.get('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
-    const businessId = req.business.id
+    const businessId = req.business.public_id // Use secure public_id
 
-    // Query real branches from PostgreSQL database
+    // Query branches using secure business_id reference
     const branches = await Branch.findAll({
       where: { business_id: businessId },
       order: [['created_at', 'DESC']]
@@ -768,7 +791,7 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
 // Get business-specific analytics
 router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
   try {
-    const businessId = parseInt(req.business.id)
+    const businessId = req.business.public_id  // Use secure ID directly
 
     // Get business offers from database
     const businessOffers = await OfferService.findByBusinessId(businessId)
@@ -802,7 +825,7 @@ router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
 // Get business-specific recent activity
 router.get('/my/activity', requireBusinessAuth, async (req, res) => {
   try {
-    const businessId = parseInt(req.business.id)
+    const businessId = req.business.public_id  // Use secure ID directly
 
     // Get business offers from database
     const businessOffers = await OfferService.findByBusinessId(businessId)
@@ -867,11 +890,11 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
 // AUTHENTICATED CRUD OPERATIONS
 // ===============================
 
-// Create business offer
+// Create business offer - SECURE VERSION
 router.post('/my/offers', requireBusinessAuth, async (req, res) => {
   try {
     console.log('🔄 Creating offer - Request body:', req.body)
-    console.log('🔄 Creating offer - Business ID:', req.business.id)
+    console.log('🔄 Creating offer - Business ID:', req.business.public_id)
     
     // Process date fields - convert empty strings to null
     const processedBody = {
@@ -882,7 +905,7 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
     
     const newOfferData = {
       ...processedBody,
-      business_id: req.business.id,
+      business_id: req.business.public_id, // Use secure public_id
       status: req.body.status || 'paused'
     }
     
@@ -890,7 +913,7 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
 
     const newOffer = await Offer.create(newOfferData)
     
-    console.log('✅ Offer created successfully:', newOffer.id)
+    console.log('✅ Offer created successfully:', newOffer.public_id)
 
     res.status(201).json({
       success: true,
@@ -912,14 +935,17 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// Update business offer
+// Update business offer - SECURE VERSION
 router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
   try {
-    const offerId = parseInt(req.params.id)
-    const businessId = req.business.id
+    const offerId = req.params.id // Now expects secure offer ID (off_*)
+    const businessId = req.business.public_id // Use secure business ID
 
     const offer = await Offer.findOne({
-      where: { id: offerId, business_id: businessId }
+      where: { 
+        public_id: offerId, // Use secure public_id for lookup
+        business_id: businessId // Secure business reference
+      }
     })
 
     if (!offer) {
@@ -953,14 +979,17 @@ router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// Delete business offer
+// Delete business offer - SECURE VERSION
 router.delete('/my/offers/:id', requireBusinessAuth, async (req, res) => {
   try {
-    const offerId = parseInt(req.params.id)
-    const businessId = req.business.id
+    const offerId = req.params.id // Now expects secure offer ID (off_*)
+    const businessId = req.business.public_id // Use secure business ID
 
     const offer = await Offer.findOne({
-      where: { id: offerId, business_id: businessId }
+      where: { 
+        public_id: offerId, // Use secure public_id for lookup
+        business_id: businessId // Secure business reference
+      }
     })
 
     if (!offer) {
@@ -986,14 +1015,17 @@ router.delete('/my/offers/:id', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// Toggle business offer status
+// Toggle business offer status - SECURE VERSION
 router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
   try {
-    const offerId = parseInt(req.params.id)
-    const businessId = req.business.id
+    const offerId = req.params.id // Now expects secure offer ID (off_*)
+    const businessId = req.business.public_id // Use secure business ID
 
     const offer = await Offer.findOne({
-      where: { id: offerId, business_id: businessId }
+      where: { 
+        public_id: offerId, // Use secure public_id for lookup
+        business_id: businessId // Secure business reference
+      }
     })
 
     if (!offer) {
@@ -1021,12 +1053,12 @@ router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// Create business branch
+// Create business branch - SECURE VERSION
 router.post('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
     const newBranchData = {
       ...req.body,
-      business_id: req.business.id,
+      business_id: req.business.public_id, // Use secure public_id
       status: req.body.status || 'inactive'
     }
 
@@ -1047,14 +1079,17 @@ router.post('/my/branches', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// Update business branch
+// Update business branch - SECURE VERSION
 router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
   try {
-    const branchId = parseInt(req.params.id)
-    const businessId = req.business.id
+    const branchId = req.params.id // Now expects secure branch ID (branch_*)
+    const businessId = req.business.public_id // Use secure business ID
 
     const branch = await Branch.findOne({
-      where: { id: branchId, business_id: businessId }
+      where: { 
+        public_id: branchId, // Use secure public_id for lookup
+        business_id: businessId // Secure business reference
+      }
     })
 
     if (!branch) {
@@ -1085,7 +1120,7 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
   try {
     const branchId = parseInt(req.params.id)
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     const branch = await Branch.findOne({
       where: { id: branchId, business_id: businessId }
@@ -1161,7 +1196,7 @@ router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) => {
   try {
     const branchId = parseInt(req.params.id)
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     const branch = await Branch.findOne({
       where: { id: branchId, business_id: businessId }
@@ -1196,7 +1231,7 @@ router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) =>
 // BUSINESS AUTHENTICATION ROUTES
 // ===============================
 
-// Business login endpoint
+// Business login endpoint - SECURE VERSION
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body
@@ -1209,8 +1244,8 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // Authenticate business using service
-    const business = await BusinessService.authenticateBusiness(email, password)
+    // Find business by email using secure schema
+    const business = await Business.findOne({ where: { email } })
     if (!business) {
       return res.status(401).json({
         success: false,
@@ -1218,7 +1253,7 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // Check if business is approved/active (already handled in service)
+    // Check if business is approved/active
     if (business.status !== 'active') {
       return res.status(401).json({
         success: false,
@@ -1228,8 +1263,9 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // For now, check password directly (in production, use bcrypt)
-    if (business.password !== password) {
+    // Check password using bcrypt
+    const isPasswordValid = bcrypt.compareSync(password, business.password_hash)
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -1239,19 +1275,20 @@ router.post('/login', async (req, res) => {
     // Generate simple session token (in production, use JWT)
     const sessionToken = Date.now().toString() + Math.random().toString(36)
 
-    // Last activity already updated in authenticateBusinessLogin
+    // Update last activity
+    await business.update({ last_activity_at: new Date() })
 
-    // Return business info (excluding password)
-    // Convert Sequelize instance to plain object first
+    // Return business info (excluding password_hash) with SECURE public_id
     const businessObj = business.toJSON()
-    const { password: _, ...businessData } = businessObj
+    const { password_hash: _, ...businessData } = businessObj
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         business: businessData,
-        session_token: sessionToken
+        session_token: sessionToken,
+        business_id: business.public_id // Return secure ID for frontend use
       }
     })
 
@@ -1293,16 +1330,41 @@ router.post('/register', async (req, res) => {
       })
     }
 
+    // Hash the password for secure storage
+    const tempPassword = businessData.password || 'TempPass123!'
+    const hashedPassword = bcrypt.hashSync(tempPassword, 10)
+
     // Create business using PostgreSQL
     const newBusiness = await Business.create({
       ...businessData,
       status: 'pending', // New registrations start as pending
-      password: businessData.password || 'temppass123' // Default temp password
+      password_hash: hashedPassword  // Use hashed password
     })
 
-    // Remove password from response
+    // Automatically create the main branch for the new business
+    const mainBranch = await Branch.create({
+      business_id: newBusiness.public_id,  // Use the secure business ID
+      name: `${businessData.business_name} - Main Branch`,
+      address: businessData.address,
+      city: businessData.city,
+      phone: businessData.phone,
+      manager_name: businessData.owner_name,
+      status: 'inactive', // Will be activated when business is approved
+      country: 'Saudi Arabia'
+    })
+
+    // Update business total_branches count
+    await newBusiness.update({ total_branches: 1 })
+
+    console.log(`✅ Created main branch for business: ${newBusiness.business_name}`, {
+      businessId: newBusiness.public_id,
+      branchId: mainBranch.public_id,
+      branchName: mainBranch.name
+    })
+
+    // Remove password_hash from response for security
     const businessObj = newBusiness.toJSON()
-    const { password: _, ...businessResponse } = businessObj
+    const { password_hash: _, ...businessResponse } = businessObj
 
     res.status(201).json({
       success: true,
@@ -1392,7 +1454,7 @@ router.get('/categories', async (req, res) => {
 router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, async (req, res) => {
   try {
     const { customerToken, offerHash } = req.params
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     console.log('🔍 Progress scan attempt:', { customerToken, offerHash, businessId })
 
@@ -1603,7 +1665,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
 router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async (req, res) => {
   try {
     const { customerToken, offerHash } = req.params
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     // Decode and validate customer token
     const tokenData = CustomerService.decodeCustomerToken(customerToken)
@@ -1681,7 +1743,7 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
 // Get scan history for business
 router.get('/scan/history', requireBusinessAuth, async (req, res) => {
   try {
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
     const limit = parseInt(req.query.limit) || 50
 
     const scanHistory = await CustomerService.getScanHistory(businessId, limit)
@@ -1718,7 +1780,7 @@ router.get('/scan/history', requireBusinessAuth, async (req, res) => {
 // Get scan analytics for business
 router.get('/scan/analytics', requireBusinessAuth, async (req, res) => {
   try {
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
     const offerId = req.query.offerId ? parseInt(req.query.offerId) : null
 
     const analytics = await CustomerService.getScanAnalytics(businessId, offerId)
@@ -1745,7 +1807,7 @@ router.get('/scan/analytics', requireBusinessAuth, async (req, res) => {
 // Test dual QR flow with demo data
 router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
   try {
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     console.log('🧪 Testing dual QR flow for business:', businessId)
 
@@ -1810,7 +1872,7 @@ router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
 router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, async (req, res) => {
   try {
     const { customerId, offerId } = req.params
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     // Get database progress
     const dbProgress = await CustomerService.findCustomerProgress(customerId, offerId)
@@ -1883,7 +1945,7 @@ router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, asy
 router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessAuth, async (req, res) => {
   try {
     const { customerId, offerId } = req.params
-    const businessId = req.business.id
+    const businessId = req.business.public_id  // Use secure ID directly
 
     // Get database progress and offer
     const dbProgress = await CustomerService.findCustomerProgress(customerId, offerId)

@@ -1,52 +1,61 @@
 import sequelize from '../config/database.js'
 import logger from '../config/logger.js'
+import SecureIDGenerator from '../utils/secureIdGenerator.js'
 import Business from './Business.js'
 import Offer from './Offer.js'
 import CustomerProgress from './CustomerProgress.js'
 import Branch from './Branch.js'
 
-// Define model associations
+// Define SECURE model associations using public_id fields
 Business.hasMany(Offer, {
   foreignKey: 'business_id',
+  sourceKey: 'public_id',  // Use secure ID
   as: 'offers',
   onDelete: 'CASCADE'
 })
 
 Business.hasMany(Branch, {
   foreignKey: 'business_id',
+  sourceKey: 'public_id',  // Use secure ID
   as: 'branches',
   onDelete: 'CASCADE'
 })
 
 Branch.belongsTo(Business, {
   foreignKey: 'business_id',
+  targetKey: 'public_id',  // Use secure ID
   as: 'business'
 })
 
 Offer.belongsTo(Business, {
   foreignKey: 'business_id',
+  targetKey: 'public_id',  // Use secure ID
   as: 'business'
 })
 
 Business.hasMany(CustomerProgress, {
   foreignKey: 'business_id',
+  sourceKey: 'public_id',  // Use secure ID
   as: 'customerProgress',
   onDelete: 'CASCADE'
 })
 
 CustomerProgress.belongsTo(Business, {
   foreignKey: 'business_id',
+  targetKey: 'public_id',  // Use secure ID
   as: 'business'
 })
 
 Offer.hasMany(CustomerProgress, {
   foreignKey: 'offer_id',
+  sourceKey: 'public_id',  // Use secure ID
   as: 'customerProgress',
   onDelete: 'CASCADE'
 })
 
 CustomerProgress.belongsTo(Offer, {
   foreignKey: 'offer_id',
+  targetKey: 'public_id',  // Use secure ID
   as: 'offer'
 })
 
@@ -59,10 +68,10 @@ export {
   Branch
 }
 
-// Sync database (create tables) - only for development
+// Sync database (create tables) - SECURE VERSION
 export async function syncDatabase(force = false) {
   try {
-    logger.info('🔄 Syncing database...')
+    logger.info('🔄 Syncing SECURE database schema...')
 
     await sequelize.authenticate()
     logger.info('✅ Database connection established')
@@ -70,23 +79,23 @@ export async function syncDatabase(force = false) {
     await sequelize.sync({ force })
 
     if (force) {
-      logger.warn('⚠️  Database tables recreated (all data lost)')
+      logger.warn('⚠️  Database tables recreated with SECURE schema (all data lost)')
     } else {
-      logger.info('✅ Database tables synchronized')
+      logger.info('✅ SECURE database tables synchronized')
     }
 
-    logger.info('🎉 Database sync completed!')
+    logger.info('🎉 SECURE database sync completed!')
 
   } catch (error) {
-    logger.error('❌ Database sync failed', { error: error.message, stack: error.stack })
+    logger.error('❌ SECURE database sync failed', { error: error.message, stack: error.stack })
     throw error
   }
 }
 
-// Initialize database with sample data
+// Initialize database with SECURE sample data
 export async function seedDatabase() {
   try {
-    logger.info('🌱 Seeding database with sample data...')
+    logger.info('🌱 Seeding database with SECURE sample data...')
 
     // Check if data already exists
     const businessCount = await Business.count()
@@ -95,9 +104,10 @@ export async function seedDatabase() {
       return
     }
 
-    // Create sample business
+    // Create sample business with secure ID
     const sampleBusiness = await Business.create({
       email: 'demo@loyaltyplatform.sa',
+      password_hash: '$2b$10$examplehashedpassword', // Should be properly hashed
       business_name: 'مطعم الأمل التجريبي - Demo Al-Amal Restaurant',
       business_name_ar: 'مطعم الأمل التجريبي',
       phone: '+966 11 123-4567',
@@ -112,18 +122,17 @@ export async function seedDatabase() {
       owner_id: 'DEMO123456',
       owner_phone: '+966 11 123-4567',
       owner_email: 'demo@loyaltyplatform.sa',
-      password: 'demo123', // In production, this should be hashed
       status: 'active',
       approved_at: new Date(),
-      approved_by: 1,
+      approved_by: 'admin_secure_id_example',
       total_branches: 1,
       total_offers: 1,
       active_offers: 1
     })
 
-    // Create sample offer
+    // Create sample offer with secure ID
     const sampleOffer = await Offer.create({
-      business_id: sampleBusiness.id,
+      business_id: sampleBusiness.public_id, // Using secure business ID
       title: '🥙 اشترِ 8 شاورما واحصل على 1 مجاناً - Buy 8 Shawarma, Get 1 FREE',
       description: 'اجمع 8 أختام واحصل على شاورما مجانية! Collect 8 stamps for a free shawarma!',
       branch: 'جميع الفروع - All Branches',
@@ -135,12 +144,28 @@ export async function seedDatabase() {
       redeemed: 0
     })
 
-    logger.info(`✅ Sample business created: ${sampleBusiness.business_name} (ID: ${sampleBusiness.id})`)
-    logger.info(`✅ Sample offer created: ${sampleOffer.title} (ID: ${sampleOffer.id})`)
-    logger.info('🎉 Database seeded successfully!')
+    // Create sample customer progress with secure IDs
+    const sampleCustomerId = SecureIDGenerator.generateCustomerID()
+    await CustomerProgress.create({
+      customer_id: sampleCustomerId,
+      offer_id: sampleOffer.public_id, // Using secure offer ID
+      business_id: sampleBusiness.public_id, // Using secure business ID
+      current_stamps: 3,
+      max_stamps: 8,
+      customer_name: 'أحمد محمد - Ahmed Mohammed',
+      customer_phone: '+966 50 123-4567',
+      first_scan_date: new Date(),
+      last_scan_date: new Date(),
+      total_scans: 3
+    })
+
+    logger.info(`✅ Sample business created: ${sampleBusiness.business_name} (ID: ${sampleBusiness.public_id})`)
+    logger.info(`✅ Sample offer created: ${sampleOffer.title} (ID: ${sampleOffer.public_id})`)
+    logger.info(`✅ Sample customer progress created: ${sampleCustomerId}`)
+    logger.info('🎉 SECURE database seeded successfully!')
 
   } catch (error) {
-    logger.error('❌ Database seeding failed', { error: error.message, stack: error.stack })
+    logger.error('❌ SECURE database seeding failed', { error: error.message, stack: error.stack })
     throw error
   }
 }

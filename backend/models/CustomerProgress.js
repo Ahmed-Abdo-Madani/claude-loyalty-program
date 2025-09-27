@@ -10,22 +10,22 @@ const CustomerProgress = sequelize.define('CustomerProgress', {
   customer_id: {
     type: DataTypes.STRING(50),
     allowNull: false,
-    comment: 'Can be numeric ID or encoded customer token'
+    comment: 'Secure customer ID (cust_*)'
   },
   offer_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(50),
     allowNull: false,
     references: {
       model: 'offers',
-      key: 'id'
+      key: 'public_id'
     }
   },
   business_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(50),
     allowNull: false,
     references: {
       model: 'businesses',
-      key: 'id'
+      key: 'public_id'
     }
   },
   current_stamps: {
@@ -64,7 +64,7 @@ const CustomerProgress = sequelize.define('CustomerProgress', {
     unique: true,
     comment: 'Unique identifier for wallet pass'
   },
-  // Metadata
+  // Customer metadata
   customer_name: {
     type: DataTypes.STRING(255),
     allowNull: true
@@ -77,7 +77,7 @@ const CustomerProgress = sequelize.define('CustomerProgress', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
-  // Tracking
+  // Analytics tracking
   total_scans: {
     type: DataTypes.INTEGER,
     defaultValue: 0

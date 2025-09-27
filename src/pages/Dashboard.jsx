@@ -4,7 +4,8 @@ import OffersTab from '../components/OffersTab'
 import BranchesTab from '../components/BranchesTab'
 import WalletAnalytics from '../components/WalletAnalytics'
 import ScannerTab from '../components/ScannerTab'
-import ApiService from '../utils/api'
+import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
+import { endpoints, secureApi } from '../config/api'
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -15,17 +16,22 @@ function Dashboard() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Check authentication
-    const isAuthenticated = localStorage.getItem('isAuthenticated')
-    if (!isAuthenticated) {
+    // Check secure authentication
+    if (!isAuthenticated()) {
+      console.warn('🔒 Invalid authentication - redirecting to login')
       navigate('/auth?mode=signin')
       return
     }
 
-    // Get user info
-    const businessName = localStorage.getItem('businessName')
-    const userEmail = localStorage.getItem('userEmail')
-    setUser({ businessName, userEmail })
+    // Get user info from secure auth data
+    const authData = getAuthData()
+    setUser({ 
+      businessName: authData.businessName, 
+      userEmail: authData.userEmail,
+      businessId: authData.businessId // Now secure ID
+    })
+    
+    console.log('🔒 Dashboard loaded with secure business ID:', authData.businessId)
 
     // Load dashboard data
     loadDashboardData()
@@ -34,13 +40,26 @@ function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
+      
+      // Use secure API requests with authentication headers
       const [analyticsResponse, activityResponse] = await Promise.all([
-        ApiService.getMyAnalytics(),
-        ApiService.getMyActivity()
+        secureApi.get(endpoints.myAnalytics),
+        secureApi.get(endpoints.myActivity)
       ])
 
-      setAnalytics(analyticsResponse.data)
-      setRecentActivity(activityResponse.data)
+      const analyticsData = await analyticsResponse.json()
+      const activityData = await activityResponse.json()
+
+      if (analyticsData.success) {
+        setAnalytics(analyticsData.data)
+      }
+      
+      if (activityData.success) {
+        setRecentActivity(activityData.data)
+      }
+      
+      console.log('🔒 Dashboard data loaded successfully')
+      
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       // Use fallback data if API fails
@@ -57,12 +76,8 @@ function Dashboard() {
   }
 
   const handleSignOut = () => {
-    localStorage.removeItem('isAuthenticated')
-    localStorage.removeItem('businessName')
-    localStorage.removeItem('userEmail')
-    localStorage.removeItem('businessId')
-    localStorage.removeItem('sessionToken')
-    navigate('/')
+    console.log('🔒 Logging out - clearing secure authentication data')
+    logout() // Uses secure logout function
   }
 
   if (!user || loading) {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import ApiService from '../utils/api'
+import { endpoints, secureApi } from '../config/api'
+import { getSecureBusinessId } from '../utils/secureAuth'
 import EnhancedQRScanner from './EnhancedQRScanner'
 import QRTestGenerator from './QRTestGenerator'
 
@@ -21,8 +22,14 @@ function ScannerTab() {
 
   const loadScanHistory = async () => {
     try {
-      const response = await ApiService.getScanHistory(10) // Last 10 scans
-      setScanHistory(response.data || [])
+      console.log('🔒 Loading scan history with secure authentication...')
+      const response = await secureApi.get(`${endpoints.scanHistory}?limit=10`) // Last 10 scans
+      const data = await response.json()
+      
+      if (data.success) {
+        setScanHistory(data.data || [])
+        console.log('🔒 Scan history loaded successfully:', data.data?.length || 0)
+      }
     } catch (err) {
       console.error('Failed to load scan history:', err)
     }
@@ -30,8 +37,14 @@ function ScannerTab() {
 
   const loadScanAnalytics = async () => {
     try {
-      const response = await ApiService.getScanAnalytics()
-      setAnalytics(response.data || {})
+      console.log('🔒 Loading scan analytics with secure authentication...')
+      const response = await secureApi.get(endpoints.scanAnalytics)
+      const data = await response.json()
+      
+      if (data.success) {
+        setAnalytics(data.data || {})
+        console.log('🔒 Scan analytics loaded successfully')
+      }
     } catch (err) {
       console.error('Failed to load scan analytics:', err)
     }
@@ -81,8 +94,8 @@ function ScannerTab() {
 
       console.log('🎯 Starting demo scan simulation...')
 
-      // Generate a fresh demo token for the current business
-      const businessId = localStorage.getItem('businessId')
+      // Get secure business ID instead of localStorage
+      const businessId = getSecureBusinessId()
       if (!businessId) {
         throw new Error('No business ID found. Please log in again.')
       }
@@ -99,7 +112,8 @@ function ScannerTab() {
       console.log('🧪 Using test endpoint for demo scan...')
 
       // Call the test endpoint instead of direct scanning
-      const testResponse = await ApiService.testDualQRFlow()
+      const response = await secureApi.post(endpoints.testDualQRFlow)
+      const testResponse = await response.json()
 
       if (testResponse.success) {
         console.log('✅ Test flow completed:', testResponse.data)
@@ -137,44 +151,52 @@ function ScannerTab() {
       console.log('🔍 Processing scan:', { customerToken, offerHash })
 
       // First verify the scan
-      const verifyResponse = await ApiService.verifyScan(customerToken, offerHash)
+      const verifyResponse = await secureApi.post(endpoints.verifyScan, {
+        customerToken,
+        offerHash
+      })
+      const verifyData = await verifyResponse.json()
 
-      if (!verifyResponse.success) {
-        throw new Error(verifyResponse.message)
+      if (!verifyData.success) {
+        throw new Error(verifyData.message)
       }
 
-      const { data: verifyData } = verifyResponse
+      const { data } = verifyData
 
       // Show verification results
       setScanResult({
         type: 'verification',
-        customer: verifyData.customer,
-        offer: verifyData.offer,
-        progress: verifyData.progress,
-        canScan: verifyData.canScan
+        customer: data.customer,
+        offer: data.offer,
+        progress: data.progress,
+        canScan: data.canScan
       })
 
       // If customer can be scanned, proceed with progress update
-      if (verifyData.canScan) {
-        const scanResponse = await ApiService.scanProgress(customerToken, offerHash)
+      if (data.canScan) {
+        const scanResponse = await secureApi.post(endpoints.scanProgress, {
+          customerToken,
+          offerHash
+        })
+        const scanData = await scanResponse.json()
 
-        if (scanResponse.success) {
+        if (scanData.success) {
           setScanResult({
             type: 'success',
-            ...scanResponse.data,
-            message: scanResponse.message
+            ...scanData.data,
+            message: scanData.message
           })
 
           // Reload data
           await loadScanHistory()
           await loadScanAnalytics()
         } else {
-          throw new Error(scanResponse.message)
+          throw new Error(scanData.message)
         }
       } else {
         setScanResult({
           type: 'completed',
-          ...verifyData,
+          ...data,
           message: 'Customer has already completed this loyalty program!'
         })
       }
@@ -411,7 +433,7 @@ function ScannerTab() {
               </thead>
               <tbody>
                 {scanHistory.map((scan) => (
-                  <tr key={scan.id} className="border-b border-gray-100">
+                  <tr key={scan.public_id || scan.id} className="border-b border-gray-100">
                     <td className="py-2">{formatDate(scan.scannedAt)}</td>
                     <td className="py-2">
                       <div className="font-medium">{scan.offerTitle}</div>

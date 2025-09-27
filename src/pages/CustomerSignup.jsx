@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { apiBaseUrl } from '../config/api'
+import { validateSecureOfferId } from '../utils/secureAuth'
 import QRCodeGenerator from '../utils/qrCodeGenerator'
 import WalletCardPreview from '../components/WalletCardPreview'
 import WalletPassGenerator from '../utils/walletPassGenerator'
-import ApiService from '../utils/api'
 
 function CustomerSignup() {
   const { offerId } = useParams()
@@ -53,26 +54,39 @@ function CustomerSignup() {
 
   const loadOffer = async () => {
     try {
-      console.log('🔄 Loading offer with ID:', offerId)
+      console.log('� Loading public offer with secure ID:', offerId)
+      
+      // Validate offer ID format
+      if (!validateSecureOfferId(offerId)) {
+        throw new Error('Invalid offer ID format')
+      }
+      
       setLoading(true)
       setError('')
-      const response = await ApiService.getPublicOffer(offerId)
-      console.log('✅ API Response:', response)
-      setOffer(response.data)
-      console.log('✅ Offer loaded successfully:', response.data)
+      
+      // Use direct fetch to public endpoint (no authentication needed)
+      const response = await fetch(`${apiBaseUrl}/api/offers/${offerId}/public`)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to load offer')
+      }
+      
+      console.log('✅ Public offer loaded successfully:', data.data)
+      setOffer(data.data)
     } catch (err) {
       console.error('❌ Error loading offer:', err)
-      console.error('❌ Error details:', err.response?.data || err.message)
       setError(err.message || 'Failed to load offer details')
       console.error('Error loading offer:', err)
-      // Use fallback data
+      
+      // Use fallback data for development
       setOffer({
-        id: offerId,
+        public_id: offerId,
         title: "Special Loyalty Offer",
         description: "Join our loyalty program and start earning rewards!",
         businessName: "Local Business",
         branchName: "Main Branch",
-        stampsRequired: 10,
+        stamps_required: 10,
         type: "stamps",
         status: "active"
       })
@@ -173,7 +187,7 @@ function CustomerSignup() {
   if (isSubmitted && customerData && offer) {
     const progressData = {
       stampsEarned: 0, // New customer starts with 0 stamps
-      totalStamps: offer.stampsRequired
+      totalStamps: offer.stamps_required || offer.stampsRequired
     }
 
     return (
@@ -196,13 +210,13 @@ function CustomerSignup() {
             <WalletCardPreview
               customerData={customerData}
               offerData={{
-                offerId: offerId,
-                businessId: offer.businessId || offer.Business?.id,    
+                offerId: offerId, // This is now the secure offer ID
+                businessId: offer.business_id || offer.Business?.public_id || offer.Business?.id,    
                 businessName: offer.businessName,
                 title: offer.title,
                 description: offer.description,
                 rewardDescription: offer.title.includes('FREE') ? 'Free Pizza' : 'Reward',
-                stampsRequired: offer.stampsRequired,
+                stampsRequired: offer.stamps_required || offer.stampsRequired,
                 branchName: offer.branchName,
                 locations: [
                   { lat: 40.7128, lng: -74.0060 } // NYC coordinates for demo
@@ -229,7 +243,7 @@ function CustomerSignup() {
               <ul className="text-sm text-blue-700 space-y-1">
                 <li>• Visit {offer.businessName} and show your loyalty card</li>
                 <li>• Earn stamps with every qualifying purchase</li>
-                <li>• Get your reward after {offer.stampsRequired} stamps</li>
+                <li>• Get your reward after {offer.stamps_required || offer.stampsRequired} stamps</li>
                 <li>• Receive notifications about special offers</li>
               </ul>
             </div>
@@ -298,11 +312,11 @@ function CustomerSignup() {
           <div className="text-xl font-bold mb-4">{offer.title}</div>
 
           <div className="flex justify-center space-x-1 mb-2">
-            {Array.from({ length: offer.stampsRequired }, (_, i) => (
+            {Array.from({ length: offer.stamps_required || offer.stampsRequired }, (_, i) => (
               <span key={i} className="text-lg">⭐</span>
             ))}
           </div>
-          <div className="text-sm opacity-90">Collect {offer.stampsRequired} stamps</div>
+          <div className="text-sm opacity-90">Collect {offer.stamps_required || offer.stampsRequired} stamps</div>
         </div>
 
         {/* Form */}

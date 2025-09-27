@@ -9,7 +9,8 @@ This is a full-stack loyalty program platform with React frontend, Node.js/Expre
 - **Backend**: Express.js + Sequelize ORM (port 3001) 
 - **Database**: PostgreSQL with Sequelize models
 - **Mobile Wallets**: Apple PassKit + Google Wallet API integration
-- **QR Scanning**: Native camera access with `qr-scanner` library
+- **QR Scanning**: Native camera access with `qr-scanner` library + audio/vibration feedback
+- **Security**: JWT-based QR tokens, secure UUID-like IDs (migration planned)
 
 ## Critical Development Patterns
 
@@ -19,7 +20,7 @@ This is a full-stack loyalty program platform with React frontend, Node.js/Expre
 .\start-dev.ps1  # Starts both frontend (3000) and backend (3001)
 ```
 
-The platform requires both servers running simultaneously. Backend serves APIs, frontend handles UI. CORS is configured for `localhost:3000` and `localhost:5173` (Vite dev server).
+The platform requires both servers running simultaneously. Backend serves APIs, frontend handles UI. CORS is configured for `localhost:3000`, `localhost:5173` (Vite), `192.168.8.114` (network), and ngrok tunnels for mobile testing.
 
 ### 2. Authentication & Session Management
 - **Business Auth**: JWT tokens in `x-session-token` header
@@ -137,9 +138,62 @@ npm run dev:full                    # Both servers with port cleanup
 npm run dev                         # Frontend only (Vite)
 npm run backend:dev                 # Backend only (nodemon)
 
+# Port cleanup (Windows PowerShell)
+npm run clean-ports                 # Kill processes on 3000/3001
+
 # Database operations
 # Backend models handle sync automatically on startup
 ```
+
+## Security Architecture (MIGRATION COMPLETE - Phase 2)
+
+**🔒 STATUS: SECURE ARCHITECTURE ACTIVE** *(Updated: September 27, 2025)*
+
+### ✅ Implemented Security Features
+- **Secure IDs**: Business/offer IDs are cryptographically secure and non-enumerable
+- **JWT QR Codes**: Customer progress tokens encrypted with HMAC-SHA256  
+- **Database Migration**: Complete secure schema with public_id primary keys
+- **API Endpoints**: All business routes require and validate secure IDs
+- **Authentication**: Session tokens + secure business ID validation
+
+### 🔒 Current Secure ID Formats (Active)
+```javascript
+// Production secure ID formats (ACTIVE)
+businessId: "biz_4afb22bac12305436d6c3d585b"  // 30 chars, crypto-secure
+offerId: "off_968d972402a85d91a73266b09b"     // 30 chars, non-enumerable  
+branchId: "branch_e0f012d4f4d6ba89fdc4"       // 27 chars, collision-resistant
+customerId: "cust_5a6119a16bb51550894a"       // 25 chars, unique per customer
+
+// JWT QR tokens (ACTIVE)
+qrToken: "eyJhbGciOiJIUzI1NiJ9.eyJjdXN0b21lcklkIjoiY3VzdF81YTYxMTlhMTZiYjUxNTUwODk0YSIsIm9mZmVySWQiOiJvZmZfOTY4ZDk3MjQwMmE4NWQ5MWE3MzI2NmIwOWIiLCJidXNpbmVzc0lkIjoiYml6XzRhZmIyMmJhYzEyMzA1NDM2ZDZjM2Q1ODViIiwiaWF0IjoxNjk1ODI2ODAwfQ.secure-hmac-signature"
+```
+
+### 🛡️ Security Implementation Status
+- ✅ **Database Layer**: Secure primary keys active, foreign key constraints using public_id
+- ✅ **Model Layer**: All Sequelize models use secure public_id as primary key
+- ✅ **API Authentication**: Business login returns secure business_id, all endpoints validate
+- ✅ **Business Endpoints**: CRUD operations use secure IDs in URLs and database queries  
+- ✅ **Security Controls**: Cross-business access blocked, data isolation enforced
+- ⏳ **Frontend Integration**: React components need secure ID handling (Next Phase)
+- ⏳ **Customer QR Flow**: Wallet passes need secure ID integration (Next Phase)
+
+### 🔧 Development Guidelines (Secure Architecture)
+```javascript
+// ✅ CORRECT - Use secure IDs in API calls
+const business = await Business.findByPk('biz_4afb22bac12305436d6c3d585b')
+const offers = await Offer.findAll({ where: { business_id: business.public_id } })
+
+// ✅ CORRECT - Authentication headers with secure IDs
+headers: {
+  'x-session-token': sessionToken,
+  'x-business-id': 'biz_4afb22bac12305436d6c3d585b'  // Secure business ID
+}
+
+// ❌ WRONG - Don't use integer IDs (legacy, insecure)
+const business = await Business.findByPk(123) // NEVER USE
+```
+
+**Critical**: All new development must use secure IDs exclusively. The platform has migrated away from integer IDs for security.
 
 ## Key Files for Understanding Flow
 

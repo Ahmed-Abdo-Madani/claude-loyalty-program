@@ -46,12 +46,18 @@ function AuthPage() {
         const data = await response.json()
 
         if (response.ok) {
-          // Store business authentication data
+          // Store business authentication data - SECURE VERSION
           localStorage.setItem('isAuthenticated', 'true')
-          localStorage.setItem('businessId', data.data.business.id)
+          localStorage.setItem('businessId', data.data.business_id) // Now secure ID (biz_*)
           localStorage.setItem('businessName', data.data.business.business_name)
           localStorage.setItem('userEmail', data.data.business.email)
           localStorage.setItem('sessionToken', data.data.session_token)
+          
+          console.log('🔒 Secure login successful:', {
+            businessId: data.data.business_id,
+            businessName: data.data.business.business_name
+          })
+          
           navigate('/dashboard')
         } else {
           setError(data.message || 'Login failed')

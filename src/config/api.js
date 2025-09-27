@@ -1,6 +1,11 @@
+import { getSecureAuthHeaders, secureApiRequest } from '../utils/secureAuth'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 console.log('🔧 API Base URL:', API_BASE_URL)
+
+// Export for components that need direct access
+export const apiBaseUrl = API_BASE_URL
 
 export const endpoints = {
   baseURL: API_BASE_URL,
@@ -32,19 +37,59 @@ export const endpoints = {
 
   // Progress Scanning APIs
   scanProgress: `${API_BASE_URL}/api/business/scan/progress`,
-  scanVerify: `${API_BASE_URL}/api/business/scan/verify`,
+  verifyScan: `${API_BASE_URL}/api/business/scan/verify`,
   scanHistory: `${API_BASE_URL}/api/business/scan/history`,
   scanAnalytics: `${API_BASE_URL}/api/business/scan/analytics`,
 
   // Test APIs
-  testDualQR: `${API_BASE_URL}/api/business/test/dual-qr-flow`,
+  testDualQRFlow: `${API_BASE_URL}/api/business/test/dual-qr-flow`,
   
   // Debug APIs
   debugWalletObject: `${API_BASE_URL}/api/business/debug/wallet-object`,
   createWalletObject: `${API_BASE_URL}/api/business/debug/create-wallet-object`
 }
 
+// Secure API helper functions
+export const secureApi = {
+  // GET request with secure authentication
+  async get(endpoint) {
+    return await secureApiRequest(endpoint, { method: 'GET' })
+  },
+
+  // POST request with secure authentication  
+  async post(endpoint, data) {
+    return await secureApiRequest(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  },
+
+  // PUT request with secure authentication
+  async put(endpoint, data) {
+    return await secureApiRequest(endpoint, {
+      method: 'PUT', 
+      body: JSON.stringify(data)
+    })
+  },
+
+  // DELETE request with secure authentication
+  async delete(endpoint) {
+    return await secureApiRequest(endpoint, { method: 'DELETE' })
+  },
+
+  // PATCH request with secure authentication
+  async patch(endpoint, data = null) {
+    const options = { method: 'PATCH' }
+    if (data) {
+      options.body = JSON.stringify(data)
+    }
+    return await secureApiRequest(endpoint, options)
+  }
+}
+
 export default {
   baseURL: API_BASE_URL,
-  endpoints
+  apiBaseUrl: API_BASE_URL,
+  endpoints,
+  secureApi
 }

@@ -25,7 +25,12 @@ app.use(cors({
     /^https:\/\/.*\.ngrok\.app$/           // Allow ngrok.app domains
   ],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'x-session-token', 'x-business-id'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',      // Added for admin JWT tokens
+    'x-session-token', 
+    'x-business-id'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }))
 app.use(express.json())

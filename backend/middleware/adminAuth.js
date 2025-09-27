@@ -1,29 +1,7 @@
 import jwt from 'jsonwebtoken'
-
-// Mock database operations for admin verification
-const mockDb = {
-  async findAdminById(adminId) {
-    // In production, this would query the platform_admins table
-    const mockAdmin = {
-      id: 1,
-      email: 'admin@loyaltyplatform.com',
-      full_name: 'Platform Administrator',
-      role: 'super_admin',
-      status: 'active'
-    }
-
-    if (adminId === mockAdmin.id) {
-      return mockAdmin
-    }
-    return null
-  },
-
-  async findActiveSession(sessionToken) {
-    // In production, this would query admin_sessions table
-    // For now, we'll just check if session token exists
-    return sessionToken ? { is_active: true, admin_id: 1 } : null
-  }
-}
+import { Op } from 'sequelize'
+import PlatformAdmin from '../models/PlatformAdmin.js'
+import AdminSession from '../models/AdminSession.js'
 
 // Middleware to verify admin JWT token
 export const verifyAdminToken = async (req, res, next) => {
@@ -66,7 +44,7 @@ export const verifyAdminToken = async (req, res, next) => {
     }
 
     // Verify admin still exists and is active
-    const admin = await mockDb.findAdminById(decoded.adminId)
+    const admin = await PlatformAdmin.findByPk(decoded.adminId)
     if (!admin) {
       return res.status(401).json({
         success: false,
@@ -159,9 +137,16 @@ export const verifyAdminSession = async (req, res, next) => {
       })
     }
 
-    // Verify session is active
-    const session = await mockDb.findActiveSession(sessionToken)
-    if (!session || !session.is_active) {
+    // Verify session is active and not expired
+    const session = await AdminSession.findOne({
+      where: { 
+        session_token: sessionToken,
+        is_active: true,
+        expires_at: { [Op.gt]: new Date() }
+      }
+    })
+
+    if (!session) {
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired session',

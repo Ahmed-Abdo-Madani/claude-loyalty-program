@@ -1,18 +1,20 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
+import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
 const Branch = sequelize.define('Branch', {
-  id: {
-    type: DataTypes.INTEGER,
+  public_id: {
+    type: DataTypes.STRING(50),
     primaryKey: true,
-    autoIncrement: true
+    defaultValue: () => SecureIDGenerator.generateBranchID(),
+    allowNull: false
   },
   business_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(50),
     allowNull: false,
     references: {
       model: 'businesses',
-      key: 'id'
+      key: 'public_id'
     }
   },
   name: {

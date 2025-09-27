@@ -1,24 +1,19 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
+import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
 const Offer = sequelize.define('Offer', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
   public_id: {
     type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true,
-    comment: 'Public-facing unique identifier for URLs and QR codes'
+    primaryKey: true,
+    defaultValue: () => SecureIDGenerator.generateOfferID()
   },
   business_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(50),
     allowNull: false,
     references: {
       model: 'businesses',
-      key: 'id'
+      key: 'public_id'
     }
   },
   title: {
@@ -70,7 +65,6 @@ const Offer = sequelize.define('Offer', {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
-  // Additional offer settings
   max_redemptions_per_customer: {
     type: DataTypes.INTEGER,
     allowNull: true
@@ -79,12 +73,10 @@ const Offer = sequelize.define('Offer', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  // QR and tracking
   qr_code_url: {
     type: DataTypes.STRING(500),
     allowNull: true
   },
-  // Analytics
   total_scans: {
     type: DataTypes.INTEGER,
     defaultValue: 0
@@ -101,21 +93,7 @@ const Offer = sequelize.define('Offer', {
   updatedAt: 'updated_at'
 })
 
-// Static method to generate public ID
-Offer.generatePublicId = function(title, businessId) {
-  const timestamp = Date.now().toString(36)
-  const random = Math.random().toString(36).substr(2, 5)
-
-  // Create prefix from title (first 4 chars, alphanumeric only)
-  const titlePrefix = title.toLowerCase().replace(/[^a-z0-9]/g, '').substr(0, 4) || 'ofr'
-
-  // Use last 2 digits of business ID for uniqueness
-  const businessSuffix = (businessId % 100).toString().padStart(2, '0')
-
-  return `${titlePrefix}_${businessSuffix}_${timestamp}_${random}`
-}
-
-// Instance methods
+// Instance methods for secure offers
 Offer.prototype.incrementCustomers = async function() {
   this.customers = (this.customers || 0) + 1
   await this.save()

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import ApiService from '../utils/api'
+import { endpoints, secureApi } from '../config/api'
+import { validateSecureBranchId } from '../utils/secureAuth'
 
 function BranchesTab() {
   const [branches, setBranches] = useState([])
@@ -25,8 +26,16 @@ function BranchesTab() {
     try {
       setLoading(true)
       setError('')
-      const response = await ApiService.getMyBranches()
-      setBranches(response.data || [])
+      console.log('🔒 Loading branches with secure authentication...')
+      const response = await secureApi.get(endpoints.myBranches)
+      const data = await response.json()
+      
+      if (data.success) {
+        setBranches(data.data || [])
+        console.log('🔒 Branches loaded successfully:', data.data?.length || 0)
+      } else {
+        throw new Error(data.message || 'Failed to load branches')
+      }
     } catch (err) {
       setError(err.message || 'Failed to load branches')
       console.error('Error loading branches:', err)
@@ -53,25 +62,40 @@ function BranchesTab() {
     }
   }
 
-  const toggleBranchStatus = async (branchId) => {
+  const toggleBranchStatus = async (secureBranchId) => {
     try {
-      await ApiService.toggleMyBranchStatus(branchId)
-      await loadBranches() // Reload to get updated data
+      console.log('🔒 Toggling branch status:', secureBranchId)
+      const response = await secureApi.put(`${endpoints.myBranches}/${secureBranchId}/toggle-status`)
+      const data = await response.json()
+      
+      if (data.success) {
+        await loadBranches() // Reload to get updated data
+        console.log('🔒 Branch status updated successfully')
+      } else {
+        throw new Error(data.message || 'Failed to update branch status')
+      }
     } catch (err) {
       setError(err.message || 'Failed to update branch status')
       console.error('Error toggling branch status:', err)
     }
   }
 
-  const deleteBranch = async (branchId) => {
+  const deleteBranch = async (secureBranchId) => {
     try {
-      const response = await ApiService.deleteMyBranch(branchId)
-      setShowDeleteConfirm(null)
-      await loadBranches() // Reload to get updated data
+      console.log('🔒 Deleting branch:', secureBranchId)
+      const response = await secureApi.delete(`${endpoints.myBranches}/${secureBranchId}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setShowDeleteConfirm(null)
+        await loadBranches() // Reload to get updated data
 
-      // If offers were deleted with the branch, show success message
-      if (response.data && response.data.deletedOffers > 0) {
-        console.log(`Branch deleted successfully. ${response.data.deletedOffers} associated offer(s) were also removed.`)
+        // If offers were deleted with the branch, show success message
+        if (data.data && data.data.deletedOffers > 0) {
+          console.log(`🔒 Branch deleted successfully. ${data.data.deletedOffers} associated offer(s) were also removed.`)
+        }
+      } else {
+        throw new Error(data.message || 'Failed to delete branch')
       }
     } catch (err) {
       setError(err.message || 'Failed to delete branch')
@@ -80,9 +104,10 @@ function BranchesTab() {
     }
   }
 
-  const duplicateBranch = async (branchId) => {
+  const duplicateBranch = async (secureBranchId) => {
     try {
-      const branch = branches.find(b => b.id === branchId)
+      console.log('🔒 Duplicating branch:', secureBranchId)
+      const branch = branches.find(b => b.public_id === secureBranchId)
       if (branch) {
         const newBranch = {
           ...branch,
@@ -90,9 +115,18 @@ function BranchesTab() {
           isMain: false,
           status: 'inactive'
         }
-        delete newBranch.id // Remove ID so API creates a new one
-        await ApiService.createMyBranch(newBranch)
-        await loadBranches() // Reload to get updated data
+        delete newBranch.public_id // Remove ID so API creates a new one
+        delete newBranch.id // Remove any legacy ID
+        
+        const response = await secureApi.post(endpoints.myBranches, newBranch)
+        const data = await response.json()
+        
+        if (data.success) {
+          await loadBranches() // Reload to get updated data
+          console.log('🔒 Branch duplicated successfully')
+        } else {
+          throw new Error(data.message || 'Failed to duplicate branch')
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to duplicate branch')
@@ -254,7 +288,7 @@ function BranchesTab() {
             </div>
           ) : (
             filteredBranches.map((branch) => (
-              <div key={branch.id} className="bg-white rounded-lg shadow border hover:shadow-lg transition-shadow">
+              <div key={branch.public_id || branch.id} className="bg-white rounded-lg shadow border hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -274,7 +308,7 @@ function BranchesTab() {
                   {/* Action Buttons */}
                   <div className="flex items-center space-x-1">
                     <button
-                      onClick={() => toggleBranchStatus(branch.id)}
+                      onClick={() => toggleBranchStatus(branch.public_id || branch.id)}
                       className={`p-2 rounded-lg transition-colors ${
                         branch.status === 'active'
                           ? 'text-red-600 hover:bg-red-50'
@@ -294,7 +328,7 @@ function BranchesTab() {
                     </button>
 
                     <button
-                      onClick={() => duplicateBranch(branch.id)}
+                      onClick={() => duplicateBranch(branch.public_id || branch.id)}
                       className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                       title="Duplicate Branch"
                     >
@@ -303,7 +337,7 @@ function BranchesTab() {
 
                     {!branch.isMain && (
                       <button
-                        onClick={() => setShowDeleteConfirm(branch.id)}
+                        onClick={() => setShowDeleteConfirm(branch.public_id || branch.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete Branch"
                       >
@@ -393,7 +427,7 @@ function BranchesTab() {
                 </tr>
               ) : (
                 filteredBranches.map((branch) => (
-                  <tr key={branch.id} className="hover:bg-gray-50">
+                  <tr key={branch.public_id || branch.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="flex items-center">
@@ -420,7 +454,7 @@ function BranchesTab() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => toggleBranchStatus(branch.id)}
+                        onClick={() => toggleBranchStatus(branch.public_id || branch.id)}
                         className="text-primary hover:text-blue-600"
                       >
                         {branch.status === 'active' ? 'Pause' : 'Activate'}
@@ -433,7 +467,7 @@ function BranchesTab() {
                       </button>
                       {!branch.isMain && (
                         <button
-                          onClick={() => setShowDeleteConfirm(branch.id)}
+                          onClick={() => setShowDeleteConfirm(branch.public_id || branch.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Delete
@@ -486,12 +520,28 @@ function BranchesTab() {
           }}
           onSave={async (branchData) => {
             try {
+              console.log('🔒 Saving branch data:', JSON.stringify(branchData, null, 2))
+              
               if (showEditModal) {
-                // Update existing branch
-                await ApiService.updateMyBranch(showEditModal.id, branchData)
+                // Update existing branch using secure ID
+                console.log('📝 Updating branch:', showEditModal.public_id)
+                const response = await secureApi.put(`${endpoints.myBranches}/${showEditModal.public_id || showEditModal.id}`, branchData)
+                const data = await response.json()
+                
+                if (!data.success) {
+                  throw new Error(data.message || 'Failed to update branch')
+                }
+                console.log('✅ Branch updated successfully')
               } else {
                 // Create new branch
-                await ApiService.createMyBranch(branchData)
+                console.log('➕ Creating new branch')
+                const response = await secureApi.post(endpoints.myBranches, branchData)
+                const data = await response.json()
+                
+                if (!data.success) {
+                  throw new Error(data.message || 'Failed to create branch')
+                }
+                console.log('✅ Branch created successfully:', data.data?.public_id)
               }
               await loadBranches() // Reload to get updated data
               setShowCreateModal(false)
