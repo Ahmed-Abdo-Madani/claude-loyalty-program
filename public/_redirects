@@ -1,5 +1,2 @@
-# Redirects for React Router (SPA)
+# SPA routing - catch all routes and serve index.html
 /*    /index.html   200
-
-# Redirect root domain to app
-/    /auth?mode=signin   302
