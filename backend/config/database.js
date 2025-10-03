@@ -55,7 +55,34 @@ const config = {
 
 // Initialize Sequelize
 const env = process.env.NODE_ENV || 'development'
-const sequelize = new Sequelize(config[env])
+
+// In production, use DATABASE_URL if available (Render.com provides this)
+let sequelize
+if (env === 'production' && process.env.DATABASE_URL) {
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    logging: false,
+    define: {
+      timestamps: true,
+      underscored: true,
+      freezeTableName: true
+    },
+    pool: {
+      max: 20,
+      min: 0,
+      acquire: 60000,
+      idle: 10000
+    },
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  })
+} else {
+  sequelize = new Sequelize(config[env])
+}
 
 export { sequelize, config }
 export default sequelize
