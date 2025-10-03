@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { endpoints } from '../config/api'
+import InteractiveLogo from '../components/InteractiveLogo'
 
 function AuthPage() {
   const [searchParams] = useSearchParams()
@@ -75,53 +76,61 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="text-center">
-          <Link to="/" className="text-3xl font-bold text-primary">
-            🎯 Loyalty Platform
-          </Link>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          {mode === 'signin' ? (
-            <>
-              Don't have an account?{' '}
-              <Link to="/auth?mode=signup" className="font-medium text-primary hover:text-blue-500">
-                Sign up for free
-              </Link>
-            </>
-          ) : (
-            <>
-              Already have an account?{' '}
-              <Link to="/auth?mode=signin" className="font-medium text-primary hover:text-blue-500">
-                Sign in
-              </Link>
-            </>
-          )}
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-
-          {/* Error Display */}
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="text-sm text-red-800">{error}</div>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+        {/* Logo Section */}
+        <div className="text-center max-w-md mx-auto mb-8">
+          <Link to="/" className="inline-block">
+            <div className="w-48 h-auto mx-auto mb-6">
+              <InteractiveLogo className="transition-transform duration-700 ease-out hover:scale-105" />
             </div>
-          )}
+          </Link>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {mode === 'signup' && (
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            {mode === 'signin' ? 'Welcome Back' : 'Get Started'}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {mode === 'signin' ? 'Sign in to your business account' : 'Create your business account'}
+          </p>
+
+          {/* Mode Toggle */}
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {mode === 'signin' ? (
               <>
-                <div>
-                  <label htmlFor="businessName" className="block text-sm font-medium text-gray-700">
-                    Business Name
-                  </label>
-                  <div className="mt-1">
+                Don't have an account?{' '}
+                <Link to="/auth?mode=signup" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                  Sign up for free
+                </Link>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <Link to="/auth?mode=signin" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                  Sign in
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Form Section */}
+        <div className="w-full max-w-md mx-auto">
+          <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 border border-gray-200 dark:border-gray-700">
+
+            {/* Error Display */}
+            {error && (
+              <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div className="text-sm text-red-800 dark:text-red-400">{error}</div>
+              </div>
+            )}
+
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {mode === 'signup' && (
+                <>
+                  <div>
+                    <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Business Name
+                    </label>
                     <input
                       id="businessName"
                       name="businessName"
@@ -129,17 +138,15 @@ function AuthPage() {
                       required
                       value={formData.businessName}
                       onChange={handleInputChange}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       placeholder="Your Business Name"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-                    Phone Number
-                  </label>
-                  <div className="mt-1">
+                  <div>
+                    <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Phone Number
+                    </label>
                     <input
                       id="phoneNumber"
                       name="phoneNumber"
@@ -147,19 +154,17 @@ function AuthPage() {
                       required
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       placeholder="+1 (555) 123-4567"
                     />
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <div className="mt-1">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email address
+                </label>
                 <input
                   id="email"
                   name="email"
@@ -168,17 +173,15 @@ function AuthPage() {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                   placeholder="you@example.com"
                 />
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1">
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Password
+                </label>
                 <input
                   id="password"
                   name="password"
@@ -187,18 +190,16 @@ function AuthPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                   placeholder="Password"
                 />
               </div>
-            </div>
 
-            {mode === 'signup' && (
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirm Password
-                </label>
-                <div className="mt-1">
+              {mode === 'signup' && (
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Confirm Password
+                  </label>
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -206,40 +207,38 @@ function AuthPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                     placeholder="Confirm Password"
                   />
                 </div>
-              </div>
-            )}
+              )}
 
-            {mode === 'signin' && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Remember me
-                  </label>
+              {mode === 'signin' && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <input
+                      id="remember-me"
+                      name="remember-me"
+                      type="checkbox"
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                    />
+                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                      Remember me
+                    </label>
+                  </div>
+
+                  <div className="text-sm">
+                    <a href="#" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                      Forgot password?
+                    </a>
+                  </div>
                 </div>
+              )}
 
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-primary hover:text-blue-500">
-                    Forgot your password?
-                  </a>
-                </div>
-              </div>
-            )}
-
-            <div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-base font-semibold text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02]"
               >
                 {loading ? (
                   <div className="flex items-center">
@@ -253,48 +252,48 @@ function AuthPage() {
                   mode === 'signin' ? 'Sign in' : 'Create account'
                 )}
               </button>
-            </div>
-          </form>
+            </form>
 
-          {mode === 'signup' && (
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+            {mode === 'signup' && (
+              <div className="mt-8">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">What's included</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Features included</span>
+
+                <div className="mt-6 grid grid-cols-1 gap-3">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Unlimited loyalty programs</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Mobile wallet integration</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">QR code generation</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">24/7 customer support</span>
+                  </div>
                 </div>
               </div>
-
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm text-gray-600">Unlimited loyalty programs</span>
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm text-gray-600">Mobile wallet integration</span>
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm text-gray-600">QR code generation</span>
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm text-gray-600">24/7 customer support</span>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

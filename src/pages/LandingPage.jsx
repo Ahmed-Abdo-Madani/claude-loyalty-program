@@ -1,21 +1,19 @@
-import { Link } from 'react-router-dom'
-import Header from '../components/Header'
-import Hero from '../components/Hero'
-import Benefits from '../components/Benefits'
-import HowItWorks from '../components/HowItWorks'
-import CTA from '../components/CTA'
+import MinimalHero from '../components/MinimalHero'
+import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
 
 function LandingPage() {
   return (
     <>
-      <Header />
+      {/* Dark Mode Toggle - positioned fixed in top-right */}
+      <DarkModeToggle />
+
+      {/* Main Minimal Landing Page */}
       <main>
-        <Hero />
-        <Benefits />
-        <HowItWorks />
-        <CTA />
+        <MinimalHero />
       </main>
+
+      {/* Keep Footer for copyright info */}
       <Footer />
     </>
   )

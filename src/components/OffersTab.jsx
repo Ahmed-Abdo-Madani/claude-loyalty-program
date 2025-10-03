@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import QRCodeModal from './QRCodeModal'
+import OfferGrid from './OfferGrid'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureOfferId } from '../utils/secureAuth'
 
@@ -64,32 +65,13 @@ function OffersTab() {
     }
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'paused': return 'bg-yellow-100 text-yellow-800'
-      case 'scheduled': return 'bg-blue-100 text-blue-800'
-      case 'expired': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'active': return '🟢'
-      case 'paused': return '⏸️'
-      case 'scheduled': return '⏰'
-      case 'expired': return '⏹️'
-      default: return '⚪'
-    }
-  }
 
   const toggleOfferStatus = async (secureOfferId, currentStatus) => {
     try {
       console.log('🔒 Toggling offer status:', { secureOfferId, currentStatus })
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
       
-      const response = await secureApi.put(`${endpoints.myOffers}/${secureOfferId}/status`, {
+      const response = await secureApi.patch(`${endpoints.myOffers}/${secureOfferId}/status`, {
         status: newStatus
       })
       const data = await response.json()
@@ -159,10 +141,6 @@ function OffersTab() {
     }
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'No end date'
-    return new Date(dateString).toLocaleDateString()
-  }
 
   // Filter offers based on selected filters
   const filteredOffers = offers.filter(offer => {
@@ -187,16 +165,20 @@ function OffersTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 space-y-4 md:space-y-0">
         <div>
-          <h2 className="text-xl font-semibold">My Loyalty Offers</h2>
-          <p className="text-gray-600">Manage your loyalty programs and track performance</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Active Offers</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your loyalty programs and track performance</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="btn-primary"
+          className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center space-x-2 shadow-sm"
         >
-          + Create New Offer
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Create Offer</span>
         </button>
       </div>
 
@@ -217,158 +199,68 @@ function OffersTab() {
       )}
 
       {/* Filters */}
-      <div className="flex space-x-4 mb-6">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option>All Status</option>
-          <option>Active</option>
-          <option>Paused</option>
-          <option>Scheduled</option>
-          <option>Expired</option>
-        </select>
-        <select
-          value={branchFilter}
-          onChange={(e) => setBranchFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option>All Branches</option>
-          {branches?.map((branch) => (
-            <option key={branch.id} value={branch.name}>
-              {branch.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option>All Types</option>
-          <option>Stamp Cards</option>
-          <option>Discounts</option>
-          <option>Points</option>
-        </select>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Offers</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option>All Status</option>
+              <option>Active</option>
+              <option>Paused</option>
+              <option>Scheduled</option>
+              <option>Expired</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Branch</label>
+            <select
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option>All Branches</option>
+              {branches?.map((branch) => (
+                <option key={branch.id} value={branch.name}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option>All Types</option>
+              <option>Stamp Cards</option>
+              <option>Discounts</option>
+              <option>Points</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {/* Offers List */}
-      <div className="space-y-4">
-        {filteredOffers.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <div className="text-lg mb-2">🔍 No offers found</div>
-            <div>Try adjusting your filters or create a new offer.</div>
-          </div>
-        ) : (
-          filteredOffers.map((offer) => (
-            <div key={offer.public_id || offer.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold">{offer.title}</h3>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(offer.status)}`}>
-                    {getStatusIcon(offer.status)} {offer.status.charAt(0).toUpperCase() + offer.status.slice(1)}
-                  </span>
-                  {offer.is_time_limited && (
-                    <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
-                      ⏰ Time Limited
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-gray-600 mb-2">{offer.description}</p>
-
-                <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-3">
-                  <span>🏪 {offer.branch}</span>
-                  <span>📅 Created {offer.created_at}</span>
-                  <span>👥 {offer.customers} customers</span>
-                  <span>🎁 {offer.redeemed} rewards redeemed</span>
-                </div>
-
-                {offer.is_time_limited && (
-                  <div className="flex gap-4 text-sm text-gray-500">
-                    <span>📅 Start: {formatDate(offer.start_date)}</span>
-                    <span>📅 End: {formatDate(offer.end_date)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center space-x-2 ml-4">
-                {/* QR Code */}
-                <button
-                  onClick={() => setShowQRModal(offer)}
-                  className="p-2 text-primary hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Generate QR Code"
-                >
-                  📱
-                </button>
-
-                {/* Analytics */}
-                <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors" title="View Analytics">
-                  📊
-                </button>
-
-                {/* Pause/Resume */}
-                <button
-                  onClick={() => toggleOfferStatus(offer.public_id || offer.id, offer.status)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    offer.status === 'active'
-                      ? 'text-yellow-600 hover:bg-yellow-50'
-                      : 'text-green-600 hover:bg-green-50'
-                  }`}
-                  title={offer.status === 'active' ? 'Pause Offer' : 'Resume Offer'}
-                >
-                  {offer.status === 'active' ? '⏸️' : '▶️'}
-                </button>
-
-                {/* Edit */}
-                <button
-                  onClick={() => setShowEditModal(offer)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Edit Offer"
-                >
-                  ✏️
-                </button>
-
-                {/* Duplicate */}
-                <button
-                  onClick={() => duplicateOffer(offer.public_id || offer.id)}
-                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                  title="Duplicate Offer"
-                >
-                  📋
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => setShowDeleteConfirm(offer.public_id || offer.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Delete Offer"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
-
-            {/* Performance Bar */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Redemption Rate</span>
-                <span>{offer.customers > 0 ? Math.round((offer.redeemed / offer.customers) * 100) : 0}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full"
-                  style={{width: `${offer.customers > 0 ? Math.min((offer.redeemed / offer.customers) * 100, 100) : 0}%`}}
-                ></div>
-              </div>
-            </div>
-          </div>
-          ))
-        )}
-      </div>
+      {/* Offers Grid */}
+      <OfferGrid
+        offers={filteredOffers}
+        loading={false}
+        onEdit={setShowEditModal}
+        onDelete={setShowDeleteConfirm}
+        onToggleStatus={toggleOfferStatus}
+        onQRCode={setShowQRModal}
+        onAnalytics={(offer) => {
+          // Analytics functionality placeholder
+          console.log('View analytics for offer:', offer.public_id || offer.id)
+        }}
+        onDuplicate={duplicateOffer}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
@@ -476,150 +368,177 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">
-          {offer ? 'Edit Offer' : 'Create New Offer'}
-        </h3>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Offer Title *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="e.g., Buy 10 Get 1 Free"
-            />
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {offer ? 'Edit Offer' : 'Create New Offer'}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {offer ? 'Update your loyalty offer details' : 'Set up a new loyalty program for your customers'}
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              rows="3"
-              placeholder="Describe your loyalty offer..."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        {/* Form Content */}
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Offer Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch Location
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Offer Title *
               </label>
-              <select
-                value={formData.branch}
-                onChange={(e) => setFormData({...formData, branch: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="All Branches">All Branches</option>
-                {branches?.map((branch) => (
-                  <option key={branch.id} value={branch.name}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Program Type
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({...formData, type: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="stamps">Stamp Card</option>
-                <option value="points">Points System</option>
-                <option value="discount">Discount Code</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {formData.type === 'stamps' ? 'Stamps Required' : 'Points Required'}
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="50"
-              value={formData.stamps_required}
-              onChange={(e) => setFormData({...formData, stamps_required: parseInt(e.target.value)})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Time Limits */}
-          <div>
-            <div className="flex items-center mb-4">
               <input
-                type="checkbox"
-                id="timeLimited"
-                checked={formData.is_time_limited}
-                onChange={(e) => setFormData({...formData, is_time_limited: e.target.checked})}
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                placeholder="e.g., Buy 10 Get 1 Free Coffee"
               />
-              <label htmlFor="timeLimited" className="ml-2 text-sm text-gray-700">
-                Set time limits for this offer
-              </label>
             </div>
 
-            {formData.is_time_limited && (
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date *
-                  </label>
-                  <input
-                    type="date"
-                    required={formData.is_time_limited}
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date *
-                  </label>
-                  <input
-                    type="date"
-                    required={formData.is_time_limited}
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 resize-none"
+                rows="3"
+                placeholder="Describe your loyalty offer and its benefits..."
+              />
+            </div>
 
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600"
-            >
-              {offer ? 'Update Offer' : 'Create Offer'}
-            </button>
-          </div>
-        </form>
+            {/* Branch and Program Type Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Branch Location
+                </label>
+                <select
+                  value={formData.branch}
+                  onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                >
+                  <option value="All Branches">All Branches</option>
+                  {branches?.map((branch) => (
+                    <option key={branch.id} value={branch.name}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Program Type
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                >
+                  <option value="stamps">🎫 Stamp Card</option>
+                  <option value="points">⭐ Points System</option>
+                  <option value="discount">💰 Discount Code</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Requirements */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                {formData.type === 'stamps' ? '🎫 Stamps Required' : formData.type === 'points' ? '⭐ Points Required' : '💰 Minimum Purchase'}
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={formData.stamps_required}
+                onChange={(e) => setFormData({...formData, stamps_required: parseInt(e.target.value)})}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                placeholder={formData.type === 'stamps' ? 'e.g., 10' : formData.type === 'points' ? 'e.g., 100' : 'e.g., 50'}
+              />
+            </div>
+
+            {/* Time Limits Section */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="timeLimited"
+                  checked={formData.is_time_limited}
+                  onChange={(e) => setFormData({...formData, is_time_limited: e.target.checked})}
+                  className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                />
+                <label htmlFor="timeLimited" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  ⏰ Set time limits for this offer
+                </label>
+              </div>
+
+              {formData.is_time_limited && (
+                <div className="p-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Start Date *
+                      </label>
+                      <input
+                        type="date"
+                        required={formData.is_time_limited}
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        End Date *
+                      </label>
+                      <input
+                        type="date"
+                        required={formData.is_time_limited}
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
+              >
+                {offer ? '✨ Update Offer' : '🎉 Create Offer'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

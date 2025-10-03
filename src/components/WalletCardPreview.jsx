@@ -152,11 +152,21 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
       {/* Wallet Card Preview */}
       <div className="bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl p-6 shadow-lg max-w-sm mx-auto">
         <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-lg font-bold">{walletPreview.businessName}</h3>
-            <p className="text-blue-100 text-sm">{walletPreview.offerTitle}</p>
+          <div className="flex items-start space-x-3">
+            {/* Business Logo */}
+            {offerData.businessLogo && (
+              <img
+                src={offerData.businessLogo.url}
+                alt={`${walletPreview.businessName} Logo`}
+                className="w-12 h-12 object-contain rounded-lg border border-white/20 bg-white/10 flex-shrink-0"
+              />
+            )}
+            <div>
+              <h3 className="text-lg font-bold">{walletPreview.businessName}</h3>
+              <p className="text-blue-100 text-sm">{walletPreview.offerTitle}</p>
+            </div>
           </div>
-          <div className="text-right">
+          <div className="text-right flex-shrink-0">
             <div className="text-2xl font-bold">{walletPreview.progress.current}</div>
             <div className="text-xs text-blue-100">of {walletPreview.progress.required}</div>
           </div>

@@ -107,28 +107,28 @@ async function setupEssentialAdminTables() {
 
     // Check if default admin exists
     const adminCheck = await client.query(`
-      SELECT email FROM platform_admins WHERE email = 'admin@loyaltyplatform.com'
+      SELECT email FROM platform_admins WHERE email = 'toni91994@gmail.com'
     `)
 
     if (adminCheck.rows.length === 0) {
       console.log('👤 Creating default admin user...')
-      
-      // Hash password: admin123
-      const password = 'admin123'
+
+      // Hash password: Watashi12Des
+      const password = 'Watashi12Des'
       const saltRounds = 10
       const passwordHash = await bcrypt.hash(password, saltRounds)
-      
+
       await client.query(`
-        INSERT INTO platform_admins (email, password_hash, full_name, role, status) 
+        INSERT INTO platform_admins (email, password_hash, full_name, role, status)
         VALUES ($1, $2, $3, $4, $5)
       `, [
-        'admin@loyaltyplatform.com',
+        'toni91994@gmail.com',
         passwordHash,
-        'Platform Administrator', 
+        'Platform Administrator',
         'super_admin',
         'active'
       ])
-      
+
       console.log('✅ Default admin created successfully!')
     } else {
       console.log('✅ Default admin already exists')
@@ -154,8 +154,8 @@ async function setupEssentialAdminTables() {
     console.log('🎉 Essential admin database setup complete!')
     console.log('')
     console.log('🔑 Admin Login Credentials:')
-    console.log('   📧 Email: admin@loyaltyplatform.com')
-    console.log('   🔐 Password: admin123')
+    console.log('   📧 Email: toni91994@gmail.com')
+    console.log('   🔐 Password: Watashi12Des')
     console.log('')
     console.log('🌐 Admin Dashboard URL: http://192.168.8.114:3000/admin')
 

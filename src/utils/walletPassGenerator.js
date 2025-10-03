@@ -54,7 +54,7 @@ class WalletPassGenerator {
           {
             key: 'progress',
             label: 'Progress',
-            value: `${progressData.stampsEarned} of ${offerData.stampsRequired}`,
+            value: `${progressData.stampsEarned} of ${offerData.stamps_required || offerData.stampsRequired}`,
             textAlignment: 'PKTextAlignmentCenter'
           }
         ],
@@ -189,7 +189,7 @@ class WalletPassGenerator {
               {
                 id: 'progress',
                 header: 'Progress',
-                body: `${progressData.stampsEarned} of ${offerData.stampsRequired} stamps`
+                body: `${progressData.stampsEarned} of ${offerData.stamps_required || offerData.stampsRequired} stamps`
               },
               {
                 id: 'reward',
@@ -229,7 +229,7 @@ class WalletPassGenerator {
             // Points and progress
             loyaltyPoints: {
               balance: {
-                string: `${progressData.stampsEarned}/${offerData.stampsRequired}`
+                string: `${progressData.stampsEarned}/${offerData.stamps_required || offerData.stampsRequired}`
               },
               label: 'Stamps Collected'
             },
@@ -292,20 +292,24 @@ class WalletPassGenerator {
 
   // Generate wallet pass preview (for web display)
   generateWalletPreview(customerData, offerData, progressData) {
-    const progressPercentage = Math.round((progressData.stampsEarned / offerData.stampsRequired) * 100)
+    // Handle both snake_case and camelCase property names for compatibility
+    const stampsRequired = offerData.stamps_required || offerData.stampsRequired || 0
+    const stampsEarned = progressData.stampsEarned || 0
+    
+    const progressPercentage = stampsRequired > 0 ? Math.round((stampsEarned / stampsRequired) * 100) : 0
 
     return {
       businessName: offerData.businessName,
       offerTitle: offerData.title,
       customerName: `${customerData.firstName} ${customerData.lastName}`,
       progress: {
-        current: progressData.stampsEarned,
-        required: offerData.stampsRequired,
+        current: stampsEarned,
+        required: stampsRequired,
         percentage: progressPercentage,
-        remaining: offerData.stampsRequired - progressData.stampsEarned
+        remaining: Math.max(0, stampsRequired - stampsEarned)
       },
-      stamps: this.generateStampVisual(progressData.stampsEarned, offerData.stampsRequired),
-      status: progressData.stampsEarned >= offerData.stampsRequired ? 'reward_ready' : 'collecting',
+      stamps: this.generateStampVisual(stampsEarned, stampsRequired),
+      status: stampsEarned >= stampsRequired ? 'reward_ready' : 'collecting',
       rewardDescription: offerData.rewardDescription,
       branchName: offerData.branchName,
       memberSince: this.formatDate(customerData.joinedDate),
@@ -404,7 +408,9 @@ class WalletPassGenerator {
     if (!offerData?.businessName) errors.push('Business name required')
     if (!offerData?.title) errors.push('Offer title required')
     if (typeof progressData?.stampsEarned !== 'number') errors.push('Stamps earned must be a number')
-    if (typeof offerData?.stampsRequired !== 'number') errors.push('Stamps required must be a number')
+    
+    const stampsRequired = offerData?.stamps_required || offerData?.stampsRequired
+    if (typeof stampsRequired !== 'number') errors.push('Stamps required must be a number')
 
     return {
       isValid: errors.length === 0,

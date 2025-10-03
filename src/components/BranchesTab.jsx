@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import BranchGrid from './BranchGrid'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
 
@@ -10,7 +11,6 @@ function BranchesTab() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
-  const [viewMode, setViewMode] = useState('cards') // 'cards' or 'table'
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('All Status')
@@ -44,28 +44,11 @@ function BranchesTab() {
     }
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-red-100 text-red-800'
-      case 'maintenance': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'active': return '🟢'
-      case 'inactive': return '🔴'
-      case 'maintenance': return '🟡'
-      default: return '⚪'
-    }
-  }
 
   const toggleBranchStatus = async (secureBranchId) => {
     try {
       console.log('🔒 Toggling branch status:', secureBranchId)
-      const response = await secureApi.put(`${endpoints.myBranches}/${secureBranchId}/toggle-status`)
+      const response = await secureApi.patch(`${endpoints.myBranches}/${secureBranchId}/status`)  // Use /status not /toggle-status
       const data = await response.json()
       
       if (data.success) {
@@ -134,16 +117,6 @@ function BranchesTab() {
     }
   }
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
-  }
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString()
-  }
 
   // Filter branches based on selected filters
   const filteredBranches = branches.filter(branch => {
@@ -168,39 +141,21 @@ function BranchesTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 space-y-4 md:space-y-0">
         <div>
-          <h2 className="text-xl font-semibold">Branch Management</h2>
-          <p className="text-gray-600">Manage your business locations and track performance</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Branch Management</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your business locations and track performance</p>
         </div>
-        <div className="flex items-center space-x-3">
-          {/* View Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                viewMode === 'cards' ? 'bg-white text-primary shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              📱 Cards
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-white text-primary shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              📊 Table
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary"
-          >
-            + Add New Branch
-          </button>
-        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center space-x-2 shadow-sm"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Add Branch</span>
+        </button>
       </div>
 
       {/* Error Display */}
@@ -219,269 +174,69 @@ function BranchesTab() {
         </div>
       )}
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-primary">{branches.length}</div>
-          <div className="text-gray-600 text-sm">Total Branches</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-green-600">
-            {branches.filter(b => b.status === 'active').length}
-          </div>
-          <div className="text-gray-600 text-sm">Active Locations</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-blue-600">
-            {branches.reduce((sum, b) => sum + b.customers, 0)}
-          </div>
-          <div className="text-gray-600 text-sm">Total Customers</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="text-2xl font-bold text-accent">
-            {formatCurrency(branches.reduce((sum, b) => sum + b.monthlyRevenue, 0))}
-          </div>
-          <div className="text-gray-600 text-sm">Monthly Revenue</div>
-        </div>
-      </div>
 
       {/* Filters */}
-      <div className="flex space-x-4 mb-6">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option>All Status</option>
-          <option>Active</option>
-          <option>Inactive</option>
-          <option>Maintenance</option>
-        </select>
-        <select
-          value={cityFilter}
-          onChange={(e) => setCityFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option>All Cities</option>
-          {[...new Set(branches?.map(branch => branch.city))].map((city) => (
-            <option key={city} value={city}>
-              {city}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder="Search branches..."
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Branches</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option>All Status</option>
+              <option>Active</option>
+              <option>Inactive</option>
+              <option>Maintenance</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option>All Cities</option>
+              {[...new Set(branches?.map(branch => branch.city))].map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
+            <input
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Search branches..."
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Branches List */}
-      {viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredBranches.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-gray-500">
-              <div className="text-lg mb-2">🔍 No branches found</div>
-              <div>Try adjusting your filters or add a new branch.</div>
-            </div>
-          ) : (
-            filteredBranches.map((branch) => (
-              <div key={branch.public_id || branch.id} className="bg-white rounded-lg shadow border hover:shadow-lg transition-shadow">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold">{branch.name}</h3>
-                      {branch.isMain && (
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                          🏠 Main
-                        </span>
-                      )}
-                    </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(branch.status)}`}>
-                      {getStatusIcon(branch.status)} {branch.status.charAt(0).toUpperCase() + branch.status.slice(1)}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={() => toggleBranchStatus(branch.public_id || branch.id)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        branch.status === 'active'
-                          ? 'text-red-600 hover:bg-red-50'
-                          : 'text-green-600 hover:bg-green-50'
-                      }`}
-                      title={branch.status === 'active' ? 'Deactivate Branch' : 'Activate Branch'}
-                    >
-                      {branch.status === 'active' ? '⏸️' : '▶️'}
-                    </button>
-
-                    <button
-                      onClick={() => setShowEditModal(branch)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Edit Branch"
-                    >
-                      ✏️
-                    </button>
-
-                    <button
-                      onClick={() => duplicateBranch(branch.public_id || branch.id)}
-                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                      title="Duplicate Branch"
-                    >
-                      📋
-                    </button>
-
-                    {!branch.isMain && (
-                      <button
-                        onClick={() => setShowDeleteConfirm(branch.public_id || branch.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete Branch"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm text-gray-600 mb-4">
-                  <div className="flex items-center">
-                    <span className="w-4">📍</span>
-                    <span className="ml-2">{branch.address}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-4">📞</span>
-                    <span className="ml-2">{branch.phone}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-4">👤</span>
-                    <span className="ml-2">{branch.manager_name}</span>
-                  </div>
-                </div>
-
-                {/* Performance Metrics */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-primary">{branch.customers}</div>
-                    <div className="text-xs text-gray-500">Customers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-green-600">{branch.activeOffers}</div>
-                    <div className="text-xs text-gray-500">Active Offers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-accent">
-                      {formatCurrency(branch.monthlyRevenue)}
-                    </div>
-                    <div className="text-xs text-gray-500">Monthly</div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex space-x-2">
-                  <button className="flex-1 text-xs px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-                    📊 Analytics
-                  </button>
-                  <button className="flex-1 text-xs px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-                    🎯 Manage Offers
-                  </button>
-                </div>
-              </div>
-            </div>
-            ))
-          )}
-        </div>
-      ) : (
-        /* Table View */
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Branch
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Manager
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Performance
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredBranches.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                    <div className="text-lg mb-2">🔍 No branches found</div>
-                    <div>Try adjusting your filters or add a new branch.</div>
-                  </td>
-                </tr>
-              ) : (
-                filteredBranches.map((branch) => (
-                  <tr key={branch.public_id || branch.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="flex items-center">
-                        <div className="text-sm font-medium text-gray-900">{branch.name}</div>
-                        {branch.isMain && (
-                          <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Main</span>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500">{branch.address}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(branch.status)}`}>
-                      {getStatusIcon(branch.status)} {branch.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {branch.manager_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>{branch.customers} customers</div>
-                    <div>{formatCurrency(branch.monthlyRevenue)}/month</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => toggleBranchStatus(branch.public_id || branch.id)}
-                        className="text-primary hover:text-blue-600"
-                      >
-                        {branch.status === 'active' ? 'Pause' : 'Activate'}
-                      </button>
-                      <button
-                        onClick={() => setShowEditModal(branch)}
-                        className="text-primary hover:text-blue-600"
-                      >
-                        Edit
-                      </button>
-                      {!branch.isMain && (
-                        <button
-                          onClick={() => setShowDeleteConfirm(branch.public_id || branch.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Branches Grid */}
+      <BranchGrid
+        branches={filteredBranches}
+        loading={false}
+        onEdit={setShowEditModal}
+        onDelete={setShowDeleteConfirm}
+        onToggleStatus={toggleBranchStatus}
+        onDuplicate={duplicateBranch}
+        onAnalytics={(branch) => {
+          // Analytics functionality placeholder
+          console.log('View analytics for branch:', branch.public_id || branch.id)
+        }}
+        onManageOffers={(branch) => {
+          // Manage offers functionality placeholder
+          console.log('Manage offers for branch:', branch.public_id || branch.id)
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
@@ -587,204 +342,255 @@ function BranchModal({ branch, onClose, onSave }) {
   }
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  const dayEmojis = {
+    monday: '📅',
+    tuesday: '📅',
+    wednesday: '📅',
+    thursday: '📅',
+    friday: '🎉',
+    saturday: '🎉',
+    sunday: '☀️'
+  }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">
-          {branch ? 'Edit Branch' : 'Add New Branch'}
-        </h3>
-
-        {/* Tab Navigation */}
-        <div className="flex space-x-4 mb-6 border-b">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {branch ? '🏢 Edit Branch' : '🏪 Add New Branch'}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {branch ? 'Update your branch information and settings' : 'Create a new branch location for your business'}
+            </p>
+          </div>
           <button
-            onClick={() => setActiveTab('basic')}
-            className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'basic' ? 'border-primary text-primary' : 'border-transparent text-gray-500'
-            }`}
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            Basic Info
-          </button>
-          <button
-            onClick={() => setActiveTab('hours')}
-            className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'hours' ? 'border-primary text-primary' : 'border-transparent text-gray-500'
-            }`}
-          >
-            Operating Hours
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {activeTab === 'basic' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Branch Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="e.g., Downtown Branch"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Manager
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.manager_name}
-                    onChange={(e) => setFormData({...formData, manager_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Manager name"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Street address"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.city}
-                    onChange={(e) => setFormData({...formData, city: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    State *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.state}
-                    onChange={(e) => setFormData({...formData, state: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ZIP Code *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.zip_code}
-                    onChange={(e) => setFormData({...formData, zip_code: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="branch@business.com"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isMain"
-                  checked={formData.isMain}
-                  onChange={(e) => setFormData({...formData, isMain: e.target.checked})}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="isMain" className="ml-2 text-sm text-gray-700">
-                  Set as main branch
-                </label>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'hours' && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Set operating hours for this branch. Leave blank or enter "Closed" for closed days.
-              </p>
-              {days.map((day) => (
-                <div key={day} className="grid grid-cols-2 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 capitalize">
-                    {day}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.openingHours[day]}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      openingHours: {
-                        ...formData.openingHours,
-                        [day]: e.target.value
-                      }
-                    })}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="9:00 AM - 5:00 PM or Closed"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex space-x-3 pt-6 mt-6 border-t">
+        {/* Enhanced Tab Navigation */}
+        <div className="px-6 pt-6">
+          <div className="flex space-x-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
             <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              onClick={() => setActiveTab('basic')}
+              className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                activeTab === 'basic'
+                  ? 'bg-white dark:bg-gray-800 text-primary shadow-sm border border-gray-200 dark:border-gray-600'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
             >
-              Cancel
+              📍 Basic Info
             </button>
             <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600"
+              onClick={() => setActiveTab('hours')}
+              className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                activeTab === 'hours'
+                  ? 'bg-white dark:bg-gray-800 text-primary shadow-sm border border-gray-200 dark:border-gray-600'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
             >
-              {branch ? 'Update Branch' : 'Add Branch'}
+              ⏰ Operating Hours
             </button>
           </div>
-        </form>
+        </div>
+
+        {/* Form Content */}
+        <div className="p-6">
+          <form onSubmit={handleSubmit}>
+            {activeTab === 'basic' && (
+              <div className="space-y-6">
+                {/* Branch Name and Manager */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      🏪 Branch Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="e.g., Downtown Branch"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      👤 Manager
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.manager_name}
+                      onChange={(e) => setFormData({...formData, manager_name: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="Manager name"
+                    />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    📍 Address *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                    placeholder="Street address"
+                  />
+                </div>
+
+                {/* Location Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      🏙️ City *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="City"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      🗺️ State *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.state}
+                      onChange={(e) => setFormData({...formData, state: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="State"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      📮 ZIP Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.zip_code}
+                      onChange={(e) => setFormData({...formData, zip_code: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="ZIP"
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      📞 Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      📧 Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      placeholder="branch@business.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Main Branch Setting */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="isMain"
+                      checked={formData.isMain}
+                      onChange={(e) => setFormData({...formData, isMain: e.target.checked})}
+                      className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                    />
+                    <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                      ⭐ Set as main branch
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Primary location)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'hours' && (
+              <div className="space-y-6">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-800 dark:text-blue-400 mb-0">
+                    💡 Set operating hours for this branch. Enter "Closed" for non-operating days or leave blank.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {days.map((day) => (
+                    <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize flex items-center sm:w-32">
+                        {dayEmojis[day]} {day}
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.openingHours[day]}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          openingHours: {
+                            ...formData.openingHours,
+                            [day]: e.target.value
+                          }
+                        })}
+                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                        placeholder="9:00 AM - 5:00 PM or Closed"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
+              >
+                {branch ? '✨ Update Branch' : '🎉 Add Branch'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

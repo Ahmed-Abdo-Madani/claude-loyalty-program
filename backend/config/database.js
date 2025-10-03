@@ -12,7 +12,7 @@ const config = {
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: false, // Disabled SQL query logging for cleaner terminal output
     define: {
       timestamps: true,
       underscored: true,

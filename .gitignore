@@ -55,3 +55,28 @@ nul
 
 # Claude specific
 .claude/
+
+# Development/Test files
+test-*.js
+**/test-*.js
+decode-jwt-test.js
+setup-customer-db.js
+QR-SCANNER-ISSUES-ANALYSIS.md
+
+# Development documentation (keep only main README)
+wireframes-*.md
+SCALABILITY-ROADMAP.md
+
+# Production deployment files (keep local)
+render.yaml
+.env.production
+deployment/
+
+# Windows batch files
+*.bat
+*.ps1
+
+# Database dumps and backups
+*.sql
+*.dump
+backup/

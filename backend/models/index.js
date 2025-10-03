@@ -5,6 +5,10 @@ import Business from './Business.js'
 import Offer from './Offer.js'
 import CustomerProgress from './CustomerProgress.js'
 import Branch from './Branch.js'
+import Customer from './Customer.js'
+import NotificationCampaign from './NotificationCampaign.js'
+import NotificationLog from './NotificationLog.js'
+import CustomerSegment from './CustomerSegment.js'
 
 // Define SECURE model associations using public_id fields
 Business.hasMany(Offer, {
@@ -59,13 +63,99 @@ CustomerProgress.belongsTo(Offer, {
   as: 'offer'
 })
 
+// Customer model relationships
+Business.hasMany(Customer, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'customers',
+  onDelete: 'CASCADE'
+})
+
+Customer.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+// Customer to CustomerProgress relationship
+Customer.hasMany(CustomerProgress, {
+  foreignKey: 'customer_id',
+  sourceKey: 'customer_id',
+  as: 'progress'
+})
+
+CustomerProgress.belongsTo(Customer, {
+  foreignKey: 'customer_id',
+  targetKey: 'customer_id',
+  as: 'customer'
+})
+
+// Notification Campaign relationships
+Business.hasMany(NotificationCampaign, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'notificationCampaigns',
+  onDelete: 'CASCADE'
+})
+
+NotificationCampaign.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+// Notification Log relationships
+Business.hasMany(NotificationLog, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'notificationLogs',
+  onDelete: 'CASCADE'
+})
+
+NotificationLog.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+NotificationCampaign.hasMany(NotificationLog, {
+  foreignKey: 'campaign_id',
+  sourceKey: 'campaign_id',
+  as: 'logs',
+  onDelete: 'CASCADE'
+})
+
+NotificationLog.belongsTo(NotificationCampaign, {
+  foreignKey: 'campaign_id',
+  targetKey: 'campaign_id',
+  as: 'campaign'
+})
+
+// Customer Segment relationships
+Business.hasMany(CustomerSegment, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'customerSegments',
+  onDelete: 'CASCADE'
+})
+
+CustomerSegment.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
   Business,
   Offer,
   CustomerProgress,
-  Branch
+  Branch,
+  Customer,
+  NotificationCampaign,
+  NotificationLog,
+  CustomerSegment
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -176,6 +266,10 @@ export default {
   Offer,
   CustomerProgress,
   Branch,
+  Customer,
+  NotificationCampaign,
+  NotificationLog,
+  CustomerSegment,
   syncDatabase,
   seedDatabase
 }

@@ -11,12 +11,6 @@ function AdminLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Demo credentials for admin
-  const demoCredentials = {
-    email: 'admin@loyaltyplatform.com',
-    password: 'admin123'
-  }
-
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
@@ -63,14 +57,6 @@ function AdminLoginPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const fillDemoCredentials = () => {
-    setFormData({
-      email: demoCredentials.email,
-      password: demoCredentials.password
-    })
-    setError('')
   }
 
   return (
@@ -145,23 +131,6 @@ function AdminLoginPage() {
                 </div>
               </div>
             )}
-
-            {/* Demo Credentials Button */}
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-800 font-medium">Demo Access</p>
-                  <p className="text-xs text-blue-600">Use demo admin credentials</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={fillDemoCredentials}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  Fill Demo
-                </button>
-              </div>
-            </div>
 
             {/* Submit Button */}
             <div>

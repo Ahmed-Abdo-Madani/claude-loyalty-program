@@ -120,6 +120,27 @@ const Business = sequelize.define('Business', {
   total_redemptions: {
     type: DataTypes.INTEGER,
     defaultValue: 0
+  },
+  // Logo fields for business branding
+  logo_filename: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Original filename of uploaded logo'
+  },
+  logo_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Accessible URL path to logo file'
+  },
+  logo_uploaded_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Timestamp when logo was uploaded'
+  },
+  logo_file_size: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'File size in bytes'
   }
 }, {
   tableName: 'businesses',

@@ -51,6 +51,26 @@ class SecureIDGenerator {
   }
 
   /**
+   * Generate a secure campaign ID
+   * @returns {string} Campaign ID in format: camp_[20chars]
+   */
+  static generateCampaignID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `camp_${randomString}`
+  }
+
+  /**
+   * Generate a secure segment ID
+   * @returns {string} Segment ID in format: seg_[20chars]
+   */
+  static generateSegmentID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `seg_${randomString}`
+  }
+
+  /**
    * Validate if an ID follows secure format
    * @param {string} id - The ID to validate
    * @param {string} type - The expected type (business, offer, customer, branch)
@@ -63,7 +83,9 @@ class SecureIDGenerator {
       business: /^biz_[a-f0-9]{26}$/,
       offer: /^off_[a-f0-9]{26}$/,
       customer: /^cust_[a-f0-9]{20}$/,
-      branch: /^branch_[a-f0-9]{20}$/
+      branch: /^branch_[a-f0-9]{20}$/,
+      campaign: /^camp_[a-f0-9]{20}$/,
+      segment: /^seg_[a-f0-9]{20}$/
     }
 
     return patterns[type]?.test(id) || false
@@ -81,6 +103,8 @@ class SecureIDGenerator {
     if (id.startsWith('off_')) return 'offer'
     if (id.startsWith('cust_')) return 'customer'
     if (id.startsWith('branch_')) return 'branch'
+    if (id.startsWith('camp_')) return 'campaign'
+    if (id.startsWith('seg_')) return 'segment'
 
     return null
   }
@@ -96,12 +120,14 @@ class SecureIDGenerator {
       business: this.generateBusinessID,
       offer: this.generateOfferID,
       customer: this.generateCustomerID,
-      branch: this.generateBranchID
+      branch: this.generateBranchID,
+      campaign: this.generateCampaignID,
+      segment: this.generateSegmentID
     }
 
     const generator = generators[type]
     if (!generator) {
-      throw new Error(`Invalid type: ${type}. Must be one of: business, offer, customer, branch`)
+      throw new Error(`Invalid type: ${type}. Must be one of: business, offer, customer, branch, campaign, segment`)
     }
 
     const ids = new Set()
@@ -121,6 +147,8 @@ export const {
   generateOfferID,
   generateCustomerID,
   generateBranchID,
+  generateCampaignID,
+  generateSegmentID,
   validateSecureID,
   getIDType,
   generateBatch

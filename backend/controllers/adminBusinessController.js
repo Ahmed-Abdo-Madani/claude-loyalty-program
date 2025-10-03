@@ -18,6 +18,14 @@ class AdminBusinessController {
         sort_order = 'desc'
       } = req.query
 
+      console.log('🔍 Admin: Fetching businesses with filters:', {
+        status: status !== 'all' ? status : 'all',
+        search: search || 'none',
+        region: region !== 'all' ? region : 'all',
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      })
+
       // Use BusinessService with filters
       const businesses = await BusinessService.getAllBusinesses({
         status: status !== 'all' ? status : undefined,
@@ -28,23 +36,48 @@ class AdminBusinessController {
         offset: parseInt(offset)
       })
 
+      console.log(`📊 Admin: Retrieved ${businesses.length} businesses from database`)
+
       // Get total count for pagination
       const total = await Business.count()
 
       // Enrich with related data
       const enrichedBusinesses = await Promise.all(
         businesses.map(async business => {
-          const offers = await Offer.findAll({
-            where: { business_id: business.public_id }  // Use secure ID
-          })
+          // Safely get the business ID - handle both old and new secure ID format
+          const businessId = business.public_id || business.id
+          
+          if (!businessId) {
+            console.error('⚠️ Business missing ID:', business)
+            return {
+              ...business.toJSON(),
+              total_offers: 0,
+              active_offers: 0
+            }
+          }
 
-          return {
-            ...business.toJSON(),
-            total_offers: offers.length,
-            active_offers: offers.filter(o => o.status === 'active').length
+          try {
+            const offers = await Offer.findAll({
+              where: { business_id: businessId }  // Use the resolved business ID
+            })
+
+            return {
+              ...business.toJSON(),
+              total_offers: offers.length,
+              active_offers: offers.filter(o => o.status === 'active').length
+            }
+          } catch (offerError) {
+            console.error('Error fetching offers for business:', businessId, offerError.message)
+            return {
+              ...business.toJSON(),
+              total_offers: 0,
+              active_offers: 0
+            }
           }
         })
       )
+
+      console.log(`✅ Admin: Successfully enriched ${enrichedBusinesses.length} businesses`)
 
       res.json({
         success: true,
@@ -60,10 +93,16 @@ class AdminBusinessController {
       })
 
     } catch (error) {
-      console.error('Get businesses error:', error)
+      console.error('❌ Admin: Get businesses error:', error)
+      console.error('❌ Admin: Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack?.substring(0, 500)
+      })
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve businesses'
+        message: 'Failed to retrieve businesses',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       })
     }
   }
@@ -113,7 +152,13 @@ class AdminBusinessController {
   static async getBusinessById(req, res) {
     try {
       const { id } = req.params
-      const business = await Business.findByPk(parseInt(id))
+      
+      // Try to find by both secure ID and legacy ID
+      let business = await Business.findByPk(id)
+      if (!business && !id.startsWith('biz_')) {
+        // If not found and it's a numeric ID, try as legacy ID
+        business = await Business.findByPk(parseInt(id))
+      }
 
       if (!business) {
         return res.status(404).json({
@@ -122,8 +167,11 @@ class AdminBusinessController {
         })
       }
 
-      // Get related data
-      const offers = await Offer.findAll({ where: { business_id: business.id } })
+      // Get related data using the correct business ID
+      const businessId = business.public_id || business.id
+      const offers = await Offer.findAll({ 
+        where: { business_id: businessId } 
+      })
 
       const enrichedBusiness = {
         ...business.toJSON(),
@@ -229,7 +277,12 @@ class AdminBusinessController {
   static async deleteBusiness(req, res) {
     try {
       const { id } = req.params
-      const business = await Business.findByPk(parseInt(id))
+      
+      // Try to find by both secure ID and legacy ID
+      let business = await Business.findByPk(id)
+      if (!business && !id.startsWith('biz_')) {
+        business = await Business.findByPk(parseInt(id))
+      }
 
       if (!business) {
         return res.status(404).json({

@@ -84,7 +84,7 @@ class CustomerService {
       
       return {
         customerId: customerId,
-        businessId: parseInt(businessId),
+        businessId: businessId, // Keep as string for secure business IDs
         timestamp: parseInt(timestamp),
         isValid: true
       }
@@ -181,6 +181,55 @@ class CustomerService {
 
   static generateTestCustomerId() {
     return 'TEST-' + Date.now()
+  }
+
+  // Customer analytics for business dashboard
+  static async getBusinessCustomerAnalytics(businessId) {
+    const { Customer } = await import('../models/index.js')
+
+    const customers = await Customer.findAll({
+      where: { business_id: businessId }
+    })
+
+    const totalCustomers = customers.length
+    const activeCustomers = customers.filter(c => c.status === 'active').length
+    const vipCustomers = customers.filter(c => c.status === 'vip').length
+    const inactiveCustomers = customers.filter(c => c.status === 'inactive').length
+
+    // Lifecycle stage distribution
+    const lifecycleStages = {
+      new_customer: customers.filter(c => c.lifecycle_stage === 'new_customer').length,
+      repeat_customer: customers.filter(c => c.lifecycle_stage === 'repeat_customer').length,
+      loyal_customer: customers.filter(c => c.lifecycle_stage === 'loyal_customer').length,
+      vip_customer: customers.filter(c => c.lifecycle_stage === 'vip_customer').length,
+      at_risk: customers.filter(c => c.lifecycle_stage === 'at_risk').length
+    }
+
+    // Calculate average lifetime value
+    const totalLifetimeValue = customers.reduce((sum, c) => sum + parseFloat(c.total_lifetime_value || 0), 0)
+    const averageLifetimeValue = totalCustomers > 0 ? totalLifetimeValue / totalCustomers : 0
+
+    // Growth metrics (simple calculation for demo)
+    const thisMonth = new Date()
+    thisMonth.setMonth(thisMonth.getMonth())
+    const lastMonth = new Date()
+    lastMonth.setMonth(lastMonth.getMonth() - 1)
+
+    const newCustomersThisMonth = customers.filter(c =>
+      new Date(c.created_at) >= lastMonth
+    ).length
+
+    return {
+      totalCustomers,
+      activeCustomers,
+      vipCustomers,
+      inactiveCustomers,
+      lifecycleStages,
+      totalLifetimeValue,
+      averageLifetimeValue,
+      newCustomersThisMonth,
+      customerGrowthRate: totalCustomers > 0 ? (newCustomersThisMonth / totalCustomers) * 100 : 0
+    }
   }
 
   // Customer data validation

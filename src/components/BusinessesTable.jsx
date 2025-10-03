@@ -352,6 +352,14 @@ function BusinessesTable() {
                         Suspend - تعليق
                       </button>
                     )}
+                    {business.status === 'suspended' && (
+                      <button
+                        onClick={() => handleStatusChange(business.public_id, 'active')}
+                        className="text-green-600 hover:text-green-900 font-medium"
+                      >
+                        Activate - تفعيل
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -467,6 +475,28 @@ function BusinessesTable() {
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
                   >
                     Approve - موافقة
+                  </button>
+                )}
+                {selectedBusiness.status === 'suspended' && (
+                  <button
+                    onClick={() => {
+                      handleStatusChange(selectedBusiness.public_id, 'active')
+                      setShowModal(false)
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+                  >
+                    Activate - تفعيل
+                  </button>
+                )}
+                {selectedBusiness.status === 'active' && (
+                  <button
+                    onClick={() => {
+                      handleStatusChange(selectedBusiness.public_id, 'suspended')
+                      setShowModal(false)
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+                  >
+                    Suspend - تعليق
                   </button>
                 )}
               </div>

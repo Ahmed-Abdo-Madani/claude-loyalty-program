@@ -1,11 +1,14 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
+import path from 'path'
+import fs from 'fs'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
 import { Business, Offer, CustomerProgress, Branch } from '../models/index.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
+import { upload, handleUploadError } from '../middleware/logoUpload.js'
 
 const router = express.Router()
 
@@ -568,17 +571,72 @@ router.get('/analytics/activity', (req, res) => {
 // PUBLIC CUSTOMER ROUTES
 // ===============================
 
+// Public endpoint to serve business logos for customer-facing pages
+router.get('/public/logo/:businessId/:filename', async (req, res) => {
+  try {
+    const { businessId, filename } = req.params
+
+    // Find business by secure public_id and verify they own this logo file
+    const business = await Business.findByPk(businessId, {
+      attributes: ['logo_filename', 'logo_url']
+    })
+
+    if (!business || business.logo_filename !== filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Logo not found'
+      })
+    }
+
+    const filePath = path.join('./uploads/logos', filename)
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Logo file not found'
+      })
+    }
+
+    // Set appropriate headers
+    const ext = path.extname(filename).toLowerCase()
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp'
+    }
+
+    const mimeType = mimeTypes[ext] || 'application/octet-stream'
+    res.setHeader('Content-Type', mimeType)
+    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
+    res.setHeader('Access-Control-Allow-Origin', '*') // Allow cross-origin access for customer pages
+
+    // Send file
+    res.sendFile(path.resolve(filePath))
+
+  } catch (error) {
+    console.error('❌ Public logo serve error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve logo',
+      error: error.message
+    })
+  }
+})
+
 // Get offer details for customer signup (public endpoint) - SECURE VERSION
 router.get('/public/offer/:id', async (req, res) => {
   try {
     const offerId = req.params.id // Now expects secure offer ID (off_*)
 
-    // Find offer by secure public_id with business relationship
+    // Find offer by secure public_id with business relationship including logo info
     const offer = await Offer.findByPk(offerId, {
-      include: [{ 
-        model: Business, 
+      include: [{
+        model: Business,
         as: 'business',
-        attributes: ['business_name', 'business_name_ar', 'phone', 'city']
+        attributes: ['business_name', 'business_name_ar', 'phone', 'city', 'logo_filename', 'logo_url']
       }]
     })
 
@@ -609,7 +667,12 @@ router.get('/public/offer/:id', async (req, res) => {
       type: offer.type,
       status: offer.status,
       businessPhone: offer.business?.phone,
-      businessCity: offer.business?.city
+      businessCity: offer.business?.city,
+      // Business logo information for customer-facing display
+      businessLogo: offer.business?.logo_url ? {
+        url: `/api/business/public/logo/${offer.business_id}/${offer.business.logo_filename}`,
+        filename: offer.business.logo_filename
+      } : null
     }
 
     res.json({
@@ -893,9 +956,6 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
 // Create business offer - SECURE VERSION
 router.post('/my/offers', requireBusinessAuth, async (req, res) => {
   try {
-    console.log('🔄 Creating offer - Request body:', req.body)
-    console.log('🔄 Creating offer - Business ID:', req.business.public_id)
-    
     // Process date fields - convert empty strings to null
     const processedBody = {
       ...req.body,
@@ -908,12 +968,8 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
       business_id: req.business.public_id, // Use secure public_id
       status: req.body.status || 'paused'
     }
-    
-    console.log('🔄 Creating offer - Final data:', newOfferData)
 
     const newOffer = await Offer.create(newOfferData)
-    
-    console.log('✅ Offer created successfully:', newOffer.public_id)
 
     res.status(201).json({
       success: true,
@@ -1119,11 +1175,11 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 // Delete business branch
 router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
   try {
-    const branchId = parseInt(req.params.id)
+    const branchId = req.params.id  // Use secure branch ID directly (branch_*)
     const businessId = req.business.public_id  // Use secure ID directly
 
     const branch = await Branch.findOne({
-      where: { id: branchId, business_id: businessId }
+      where: { public_id: branchId, business_id: businessId }  // Use secure IDs
     })
 
     if (!branch) {
@@ -1195,11 +1251,11 @@ router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 // Toggle business branch status
 router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) => {
   try {
-    const branchId = parseInt(req.params.id)
+    const branchId = req.params.id  // Use secure branch ID directly (branch_*)
     const businessId = req.business.public_id  // Use secure ID directly
 
     const branch = await Branch.findOne({
-      where: { id: branchId, business_id: businessId }
+      where: { public_id: branchId, business_id: businessId }  // Use secure IDs
     })
 
     if (!branch) {
@@ -1356,12 +1412,6 @@ router.post('/register', async (req, res) => {
     // Update business total_branches count
     await newBusiness.update({ total_branches: 1 })
 
-    console.log(`✅ Created main branch for business: ${newBusiness.business_name}`, {
-      businessId: newBusiness.public_id,
-      branchId: mainBranch.public_id,
-      branchName: mainBranch.name
-    })
-
     // Remove password_hash from response for security
     const businessObj = newBusiness.toJSON()
     const { password_hash: _, ...businessResponse } = businessObj
@@ -1377,6 +1427,216 @@ router.post('/register', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to register business'
+    })
+  }
+})
+
+// ===============================
+// BUSINESS LOGO UPLOAD ROUTES
+// ===============================
+
+// Upload business logo
+router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUploadError, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No logo file provided'
+      })
+    }
+
+    const business = req.business
+    const file = req.file
+
+    // Delete old logo file if it exists
+    if (business.logo_filename && business.logo_url) {
+      const oldFilePath = path.join('./uploads/logos', business.logo_filename)
+      if (fs.existsSync(oldFilePath)) {
+        try {
+          fs.unlinkSync(oldFilePath)
+          console.log(`🗑️ Deleted old logo file: ${business.logo_filename}`)
+        } catch (deleteError) {
+          console.warn(`⚠️ Failed to delete old logo file: ${deleteError.message}`)
+        }
+      }
+    }
+
+    // Generate accessible URL path
+    const logoUrl = `/api/business/my/logo/${file.filename}`
+
+    // Update business with logo information
+    await business.update({
+      logo_filename: file.filename,
+      logo_url: logoUrl,
+      logo_uploaded_at: new Date(),
+      logo_file_size: file.size
+    })
+
+    console.log(`✅ Logo uploaded for business ${business.public_id}: ${file.filename}`)
+
+    res.json({
+      success: true,
+      message: 'Logo uploaded successfully',
+      data: {
+        logo_url: logoUrl,
+        logo_filename: file.filename,
+        logo_file_size: file.size,
+        logo_uploaded_at: business.logo_uploaded_at
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Logo upload error:', error)
+
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (cleanupError) {
+        console.warn(`⚠️ Failed to cleanup uploaded file: ${cleanupError.message}`)
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload logo',
+      error: error.message
+    })
+  }
+})
+
+// Get business logo (serve logo file)
+router.get('/my/logo/:filename', requireBusinessAuth, (req, res) => {
+  try {
+    const filename = req.params.filename
+    const business = req.business
+
+    // Security check: verify this business owns this logo file
+    if (business.logo_filename !== filename) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied to this logo file'
+      })
+    }
+
+    const filePath = path.join('./uploads/logos', filename)
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Logo file not found'
+      })
+    }
+
+    // Set appropriate headers
+    const ext = path.extname(filename).toLowerCase()
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp'
+    }
+
+    const mimeType = mimeTypes[ext] || 'application/octet-stream'
+    res.setHeader('Content-Type', mimeType)
+    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
+
+    // Send file
+    res.sendFile(path.resolve(filePath))
+
+  } catch (error) {
+    console.error('❌ Logo serve error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve logo',
+      error: error.message
+    })
+  }
+})
+
+// Delete business logo
+router.delete('/my/logo', requireBusinessAuth, async (req, res) => {
+  try {
+    const business = req.business
+
+    if (!business.logo_filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'No logo found to delete'
+      })
+    }
+
+    // Delete file from filesystem
+    const filePath = path.join('./uploads/logos', business.logo_filename)
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath)
+        console.log(`🗑️ Deleted logo file: ${business.logo_filename}`)
+      } catch (deleteError) {
+        console.warn(`⚠️ Failed to delete logo file: ${deleteError.message}`)
+      }
+    }
+
+    // Clear logo information from database
+    await business.update({
+      logo_filename: null,
+      logo_url: null,
+      logo_uploaded_at: null,
+      logo_file_size: null
+    })
+
+    res.json({
+      success: true,
+      message: 'Logo deleted successfully'
+    })
+
+  } catch (error) {
+    console.error('❌ Logo delete error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete logo',
+      error: error.message
+    })
+  }
+})
+
+// Get business logo info (without serving the file)
+router.get('/my/logo-info', requireBusinessAuth, (req, res) => {
+  try {
+    const business = req.business
+
+    if (!business.logo_filename) {
+      return res.json({
+        success: true,
+        data: {
+          has_logo: false,
+          logo_url: null,
+          logo_filename: null,
+          logo_file_size: null,
+          logo_uploaded_at: null
+        }
+      })
+    }
+
+    res.json({
+      success: true,
+      data: {
+        has_logo: true,
+        logo_url: business.logo_url,
+        logo_filename: business.logo_filename,
+        logo_file_size: business.logo_file_size,
+        logo_uploaded_at: business.logo_uploaded_at
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Logo info error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get logo info',
+      error: error.message
     })
   }
 })
@@ -1483,7 +1743,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     let targetOffer = null
 
     for (const offer of businessOffers) {
-      if (CustomerService.verifyOfferHash(offer.id, businessId, offerHash)) {
+      if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
         targetOffer = offer
         break
       }
@@ -1496,18 +1756,21 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       })
     }
 
-    console.log('✅ Validated scan for:', { customerId, offerId: targetOffer.id, offerTitle: targetOffer.title })
+    console.log('✅ Scanner: Valid scan detected', { 
+      customerId, 
+      offerId: targetOffer.public_id, 
+      offerTitle: targetOffer.title 
+    })
 
     // Get or create customer progress
-    let progress = await CustomerService.findCustomerProgress(customerId, targetOffer.id)
+    let progress = await CustomerService.findCustomerProgress(customerId, targetOffer.public_id)
     if (!progress) {
-      progress = await CustomerService.createCustomerProgress(customerId, targetOffer.id, businessId)
-      console.log('🆕 Created new customer progress:', progress)
+      progress = await CustomerService.createCustomerProgress(customerId, targetOffer.public_id, businessId)
       
       // For new customers, also create Google Wallet object if it doesn't exist
       try {
         const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
-        const objectId = `${googleWalletController.issuerId}.${customerId}_${targetOffer.id}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
+        const objectId = `${googleWalletController.issuerId}.${customerId}_${targetOffer.public_id}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
         
         const authClient = await googleWalletController.auth.getClient()
         const accessToken = await authClient.getAccessToken()
@@ -1531,7 +1794,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
           }
           
           const offerData = {
-            offerId: targetOffer.id,
+            offerId: targetOffer.public_id,
             businessName: req.business.business_name,
             title: targetOffer.title,
             description: targetOffer.description,
@@ -1572,12 +1835,12 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     const progressBefore = progress.current_stamps
 
     // Update progress (add one stamp)
-    const updatedProgress = await CustomerService.updateCustomerProgress(customerId, targetOffer.id, 1)
+    const updatedProgress = await CustomerService.updateCustomerProgress(customerId, targetOffer.public_id, 1)
 
     // Record scan transaction
     const scanTransaction = await CustomerService.recordScanTransaction(
       customerId,
-      targetOffer.id,
+      targetOffer.public_id,
       businessId,
       {
         businessEmail: req.business.email,
@@ -1587,12 +1850,6 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       }
     )
 
-    console.log('📊 Progress updated:', {
-      before: progressBefore,
-      after: updatedProgress.current_stamps,
-      completed: updatedProgress.is_completed
-    })
-
     // Push updates to wallet passes (Apple & Google Wallet)
     const walletUpdates = []
 
@@ -1600,7 +1857,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       // Push to Apple Wallet
       const appleUpdate = await appleWalletController.pushProgressUpdate(
         customerId,
-        targetOffer.id,
+        targetOffer.public_id,
         updatedProgress
       )
       walletUpdates.push({ platform: 'Apple Wallet', ...appleUpdate })
@@ -1608,12 +1865,16 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       // Push to Google Wallet
       const googleUpdate = await googleWalletController.pushProgressUpdate(
         customerId,
-        targetOffer.id,
+        targetOffer.public_id,
         updatedProgress
       )
       walletUpdates.push({ platform: 'Google Wallet', ...googleUpdate })
 
-      console.log('📱 Wallet updates completed:', walletUpdates.map(u => ({ platform: u.platform, success: u.success })))
+      // Log wallet updates summary only
+      if (walletUpdates.length > 0) {
+        const successCount = walletUpdates.filter(u => u.success).length
+        console.log(`📱 Wallet updates: ${successCount}/${walletUpdates.length} successful`)
+      }
     } catch (walletError) {
       console.warn('⚠️ Wallet updates failed (continuing with scan):', walletError.message)
     }
@@ -1623,7 +1884,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       progress: updatedProgress,
       customer: { id: customerId },
       offer: {
-        id: targetOffer.id,
+        id: targetOffer.public_id,
         title: targetOffer.title,
         business: targetOffer.businessName || req.business.business_name
       },
@@ -1631,7 +1892,7 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
         id: scanTransaction.id,
         timestamp: scanTransaction.scannedAt
       },
-      rewardEarned: updatedProgress.isCompleted && !progress.isCompleted,
+      rewardEarned: updatedProgress.is_completed && !progress.is_completed,
       walletUpdates: walletUpdates.map(u => ({
         platform: u.platform,
         success: u.success,
@@ -1640,8 +1901,8 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
     }
 
     // Success message in Arabic and English
-    let message = `Progress updated! ${updatedProgress.currentStamps}/${updatedProgress.maxStamps} stamps collected.`
-    if (updatedProgress.isCompleted) {
+    let message = `Progress updated! ${updatedProgress.current_stamps}/${updatedProgress.max_stamps} stamps collected.`
+    if (updatedProgress.is_completed) {
       message = `🎉 Congratulations! Reward earned! تهانينا! تم كسب المكافأة!`
     }
 
@@ -1691,9 +1952,14 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
     const businessOffers = await OfferService.findByBusinessId(businessId)
     let targetOffer = null
 
+    console.log(`🔍 Scanning for offer hash: ${offerHash}`)
+
     for (const offer of businessOffers) {
-      if (CustomerService.verifyOfferHash(offer.id, businessId, offerHash)) {
+      const expectedHash = CustomerService.generateOfferHash(offer.public_id, businessId)
+      
+      if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
         targetOffer = offer
+        console.log(`✅ Found matching offer: ${offer.public_id}`)
         break
       }
     }
@@ -1706,14 +1972,14 @@ router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async 
     }
 
     // Get customer progress
-    const progress = await CustomerService.findCustomerProgress(customerId, targetOffer.id)
+    const progress = await CustomerService.findCustomerProgress(customerId, targetOffer.public_id)
 
     res.json({
       success: true,
       data: {
         customer: { id: customerId },
         offer: {
-          id: targetOffer.id,
+          id: targetOffer.public_id,
           title: targetOffer.title,
           stampsRequired: targetOffer.stamps_required
         },

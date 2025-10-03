@@ -16,5 +16,22 @@ export default defineConfig({
       '.ngrok.io',                    // Allow ngrok.io domains too
       '.ngrok.app'                    // Allow ngrok.app domains
     ]
+  },
+  build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          utils: ['axios', 'crypto-js']
+        }
+      }
+    }
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
   }
 })

@@ -37,7 +37,7 @@ export const endpoints = {
 
   // Progress Scanning APIs
   scanProgress: `${API_BASE_URL}/api/business/scan/progress`,
-  verifyScan: `${API_BASE_URL}/api/business/scan/verify`,
+  scanVerify: `${API_BASE_URL}/api/business/scan/verify`,
   scanHistory: `${API_BASE_URL}/api/business/scan/history`,
   scanAnalytics: `${API_BASE_URL}/api/business/scan/analytics`,
 
@@ -46,7 +46,24 @@ export const endpoints = {
   
   // Debug APIs
   debugWalletObject: `${API_BASE_URL}/api/business/debug/wallet-object`,
-  createWalletObject: `${API_BASE_URL}/api/business/debug/create-wallet-object`
+  createWalletObject: `${API_BASE_URL}/api/business/debug/create-wallet-object`,
+
+  // Customer Management APIs
+  customers: `${API_BASE_URL}/api/customers`,
+  customerAnalytics: `${API_BASE_URL}/api/customers/analytics/overview`,
+
+  // Notification APIs
+  notifications: `${API_BASE_URL}/api/notifications`,
+  notificationCampaigns: `${API_BASE_URL}/api/notifications/campaigns`,
+  notificationLogs: `${API_BASE_URL}/api/notifications/logs`,
+  notificationAnalytics: `${API_BASE_URL}/api/notifications/analytics`,
+
+  // Segmentation APIs
+  segments: `${API_BASE_URL}/api/segments`,
+  segmentsPredefined: `${API_BASE_URL}/api/segments/predefined`,
+  segmentsHighValue: `${API_BASE_URL}/api/segments/predefined/high-value`,
+  segmentsAtRisk: `${API_BASE_URL}/api/segments/predefined/at-risk`,
+  segmentsBirthday: `${API_BASE_URL}/api/segments/predefined/birthday`
 }
 
 // Secure API helper functions

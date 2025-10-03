@@ -13,6 +13,70 @@ router.post('/apple/update/:passId', AppleWalletController.updatePass)
 router.post('/google/generate', RealGoogleWalletController.generatePass)
 router.get('/google/save/:token', RealGoogleWalletController.savePass)
 
+// Test endpoint for Google Wallet push notifications
+router.post('/google/test-push', async (req, res) => {
+  try {
+    const { customerId, offerId, progressData } = req.body
+
+    console.log('🧪 Testing Google Wallet push notification:', {
+      customer: customerId,
+      offer: offerId,
+      progress: `${progressData.current_stamps}/${progressData.max_stamps}`
+    })
+
+    const result = await RealGoogleWalletController.pushProgressUpdate(
+      customerId,
+      offerId,
+      progressData
+    )
+
+    res.json({
+      success: true,
+      message: 'Push notification test completed',
+      result: result
+    })
+
+  } catch (error) {
+    console.error('❌ Push notification test failed:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+// Additional test endpoint for the test files
+router.post('/test-push', async (req, res) => {
+  try {
+    const { customerId, offerId, progressData } = req.body
+
+    console.log('🧪 Testing Google Wallet push notification (via test route):', {
+      customer: customerId,
+      offer: offerId,
+      progress: `${progressData.current_stamps}/${progressData.max_stamps}`
+    })
+
+    const result = await RealGoogleWalletController.pushProgressUpdate(
+      customerId,
+      offerId,
+      progressData
+    )
+
+    res.json({
+      success: result.success,
+      message: 'Push notification test completed',
+      result: result
+    })
+
+  } catch (error) {
+    console.error('❌ Push notification test failed:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
 // Image serving for passes
 router.get('/images/:type/:businessId', (req, res) => {
   const { type, businessId } = req.params

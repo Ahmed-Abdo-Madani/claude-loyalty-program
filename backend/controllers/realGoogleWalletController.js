@@ -13,11 +13,6 @@ class RealGoogleWalletController {
     this.issuerId = process.env.GOOGLE_ISSUER_ID || '3388000000023017940'
     this.projectId = process.env.GOOGLE_PROJECT_ID || 'madna-platform'
 
-    console.log('🔧 Google Wallet Configuration:')
-    console.log('  Issuer ID:', this.issuerId)
-    console.log('  Project ID:', this.projectId)
-    console.log('  Service Account:', this.credentials.client_email)
-
     // Initialize Google Auth
     this.auth = new GoogleAuth({
       keyFile: this.credentialsPath,
@@ -26,6 +21,9 @@ class RealGoogleWalletController {
 
     // Base URLs for Google Wallet Objects API
     this.baseUrl = 'https://walletobjects.googleapis.com/walletobjects/v1'
+
+    // Push notification rate limiting (3 notifications per 24 hours per user)
+    this.notificationTracker = new Map() // objectId -> { count: number, resetTime: Date }
 
     // Bind methods
     this.generatePass = this.generatePass.bind(this)
@@ -37,6 +35,13 @@ class RealGoogleWalletController {
     try {
       const { customerData, offerData, progressData } = req.body
 
+      // Debug logging for stamp values (keeping this for Google Wallet debugging)
+      console.log('🔍 Google Wallet: Generating pass', {
+        customer: customerData.customerId,
+        offer: offerData.offerId,
+        stamps_required: offerData?.stamps_required
+      })
+
       // Validate required data
       if (!customerData?.customerId || !offerData?.offerId || !offerData?.businessName) {
         return res.status(400).json({
@@ -45,11 +50,10 @@ class RealGoogleWalletController {
         })
       }
 
-      console.log('📱 Generating REAL Google Wallet pass for:', {
+      console.log('📱 Google Wallet: Pass generation started', {
         customer: customerData.customerId,
         offer: offerData.offerId,
-        business: offerData.businessName,
-        issuer: this.issuerId
+        business: offerData.businessName
       })
 
       // Get authenticated client
@@ -57,11 +61,9 @@ class RealGoogleWalletController {
 
       // Step 1: Create or update loyalty class
       const loyaltyClass = await this.createOrUpdateLoyaltyClass(authClient, offerData)
-      console.log('✅ Loyalty class created/updated:', loyaltyClass.id)
 
       // Step 2: Create loyalty object (customer's specific card)
       const loyaltyObject = await this.createLoyaltyObject(authClient, customerData, offerData, progressData)
-      console.log('✅ Loyalty object created:', loyaltyObject.id)
 
       // Step 3: Generate signed JWT for Save to Google Wallet
       const jwt = this.generateSaveToWalletJWT(loyaltyObject)
@@ -69,7 +71,7 @@ class RealGoogleWalletController {
       // Step 4: Create save URL
       const saveUrl = `https://pay.google.com/gp/v/save/${jwt}`
 
-      console.log('✅ Real Google Wallet pass generated successfully')
+      console.log('✅ Google Wallet: Pass generated successfully')
 
       res.json({
         success: true,
@@ -124,6 +126,9 @@ class RealGoogleWalletController {
       // Review status (required)
       reviewStatus: 'UNDER_REVIEW',
 
+      // Enable push notifications for this class
+      hasUsers: true,
+
       // Contact information
       homepageUri: {
         uri: process.env.BASE_URL || 'https://loyalty-platform.com',
@@ -144,7 +149,6 @@ class RealGoogleWalletController {
       })
 
       if (response.ok) {
-        console.log(`Loyalty class ${classId} already exists`)
         return await response.json()
       }
 
@@ -172,8 +176,13 @@ class RealGoogleWalletController {
   }
 
   async createLoyaltyObject(authClient, customerData, offerData, progressData) {
-    const objectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._]/g, '_')
-    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}`
+    // Validate required data
+    if (!offerData.stamps_required) {
+      throw new Error(`stamps_required is missing from offerData: ${JSON.stringify(offerData)}`)
+    }
+    
+    const objectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
+    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9\-]/g, '_')}`
 
     const loyaltyObject = {
       id: objectId,
@@ -187,7 +196,7 @@ class RealGoogleWalletController {
       // Loyalty points
       loyaltyPoints: {
         balance: {
-          string: `${progressData.current_stamps || 0}/${offerData.stamps_required || 10}`
+          string: `${progressData.current_stamps || 0}/${offerData.stamps_required}`
         },
         label: 'Stamps Collected'
       },
@@ -197,7 +206,7 @@ class RealGoogleWalletController {
         {
           id: 'progress',
           header: 'Progress',
-          body: `${progressData.current_stamps || 0} of ${offerData.stamps_required || 10} stamps`
+          body: `${progressData.current_stamps || 0} of ${offerData.stamps_required} stamps`
         },
         {
           id: 'reward',
@@ -232,7 +241,10 @@ class RealGoogleWalletController {
             id: 'account_link'
           }
         ]
-      }
+      },
+
+      // Enable push notifications for field updates
+      notifyPreference: 'notifyOnUpdate'
     }
 
     try {
@@ -249,7 +261,6 @@ class RealGoogleWalletController {
 
       if (getResponse.ok) {
         // Object exists, update it
-        console.log(`Loyalty object ${objectId} already exists, updating...`)
         const updateResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
           method: 'PATCH',
           headers: {
@@ -268,7 +279,6 @@ class RealGoogleWalletController {
       }
 
       // Object doesn't exist, create new one
-      console.log(`Creating new loyalty object ${objectId}`)
       const response = await fetch(`${this.baseUrl}/loyaltyObject`, {
         method: 'POST',
         headers: {
@@ -318,8 +328,6 @@ class RealGoogleWalletController {
       // Verify the JWT token
       const decoded = jwt.verify(token, this.credentials.private_key, { algorithms: ['RS256'] })
 
-      console.log('Google Wallet save request for token:', token.substring(0, 20) + '...')
-
       // Redirect to Google Wallet
       res.redirect(`https://pay.google.com/gp/v/save/${token}`)
 
@@ -337,6 +345,7 @@ class RealGoogleWalletController {
       const authClient = await this.auth.getClient()
       const accessToken = await authClient.getAccessToken()
 
+      // Step 1: Update the loyalty object
       const response = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
         method: 'PATCH',
         headers: {
@@ -351,7 +360,12 @@ class RealGoogleWalletController {
         throw new Error(`Failed to update loyalty object: ${JSON.stringify(error)}`)
       }
 
-      return await response.json()
+      const updatedObject = await response.json()
+
+      // Step 2: Send push notification to user's device
+      await this.sendPushNotification(objectId, authClient)
+
+      return updatedObject
 
     } catch (error) {
       console.error('Failed to update loyalty object:', error)
@@ -359,29 +373,132 @@ class RealGoogleWalletController {
     }
   }
 
+  // Check if we can send a push notification (3 per 24 hours limit)
+  canSendNotification(objectId) {
+    const now = new Date()
+    const tracker = this.notificationTracker.get(objectId)
+
+    if (!tracker) {
+      // First notification for this object
+      this.notificationTracker.set(objectId, {
+        count: 1,
+        resetTime: new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours from now
+      })
+      return { allowed: true, remaining: 2 }
+    }
+
+    // Check if 24 hours have passed
+    if (now >= tracker.resetTime) {
+      // Reset counter
+      this.notificationTracker.set(objectId, {
+        count: 1,
+        resetTime: new Date(now.getTime() + 24 * 60 * 60 * 1000)
+      })
+      return { allowed: true, remaining: 2 }
+    }
+
+    // Check if under limit
+    if (tracker.count < 3) {
+      tracker.count++
+      return { allowed: true, remaining: 3 - tracker.count }
+    }
+
+    // Rate limit exceeded
+    const hoursRemaining = Math.ceil((tracker.resetTime - now) / (60 * 60 * 1000))
+    return {
+      allowed: false,
+      remaining: 0,
+      hoursUntilReset: hoursRemaining
+    }
+  }
+
+  // Send push notification to update Google Wallet pass on user's device
+  async sendPushNotification(objectId, authClient) {
+    try {
+      console.log('🔔 Google Wallet: Sending push notification for', objectId)
+
+      // Check rate limiting first
+      const rateLimitCheck = this.canSendNotification(objectId)
+      if (!rateLimitCheck.allowed) {
+        console.log(`⚠️ Google Wallet: Rate limit exceeded for ${objectId}. Reset in ${rateLimitCheck.hoursUntilReset} hours`)
+        return {
+          success: false,
+          rateLimited: true,
+          message: `Rate limit exceeded. Reset in ${rateLimitCheck.hoursUntilReset} hours`,
+          hoursUntilReset: rateLimitCheck.hoursUntilReset
+        }
+      }
+
+      console.log(`📊 Google Wallet: ${rateLimitCheck.remaining} notifications remaining today for ${objectId}`)
+
+      const accessToken = await authClient.getAccessToken()
+
+      // Method 1: Try the Google Wallet Push API with TEXT_AND_NOTIFY
+      try {
+        const pushResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}/addMessage`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: {
+              messageType: 'TEXT_AND_NOTIFY',
+              header: 'Loyalty Progress Updated',
+              body: 'Your stamp collection has been updated!',
+              actionUri: {
+                uri: process.env.BASE_URL || 'http://localhost:3001'
+              }
+            }
+          })
+        })
+
+        if (pushResponse.ok) {
+          console.log('✅ Google Wallet: Push notification sent via addMessage API')
+          return {
+            success: true,
+            method: 'addMessage',
+            remaining: rateLimitCheck.remaining
+          }
+        } else {
+          const error = await pushResponse.text()
+          console.warn('⚠️ Google Wallet: addMessage API failed:', error)
+        }
+      } catch (addMessageError) {
+        console.warn('⚠️ Google Wallet: addMessage API not available:', addMessageError.message)
+      }
+
+      // Method 2: Field Update with Notify Preference (for loyaltyPoints.balance)
+      // This is the preferred method for loyalty point updates according to Google Wallet API
+      console.log('🔄 Google Wallet: Attempting field update notification...')
+      return {
+        success: true,
+        method: 'fieldUpdate',
+        message: 'Field update will trigger notification via notifyPreference',
+        remaining: rateLimitCheck.remaining
+      }
+
+    } catch (error) {
+      console.warn('⚠️ Google Wallet: Push notification error:', error.message)
+      return { success: false, error: error.message }
+    }
+  }
+
   // Push updates to Google Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {
-      console.log('📱 Google Wallet Update Started:', {
-        customerId,
-        offerId,
-        issuerId: this.issuerId,
-        progressData: {
-          current_stamps: progressData.current_stamps,
-          max_stamps: progressData.max_stamps,
-          is_completed: progressData.is_completed
-        }
+      console.log('📱 Google Wallet: Pushing update', {
+        customer: customerId,
+        stamps: `${progressData.current_stamps}/${progressData.max_stamps}`
       })
 
       // Create object ID using same format as creation - CRITICAL FIX: Use identical regex pattern
-      const objectId = `${this.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._]/g, '_')
-      console.log(`🎯 Target Object ID: ${objectId}`)
+      const objectId = `${this.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
 
       // First verify object exists before attempting update
       const authClient = await this.auth.getClient()
       const accessToken = await authClient.getAccessToken()
       
-      console.log('🔍 Verifying object exists...')
       const checkResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
         method: 'GET',
         headers: {
@@ -528,7 +645,8 @@ class RealGoogleWalletController {
         objectId,
         updated: new Date().toISOString(),
         progress: progressData,
-        result
+        result,
+        pushNotification: await this.sendPushNotification(objectId, authClient)
       }
     } catch (error) {
       console.error('❌ Google Wallet push update failed:', error)

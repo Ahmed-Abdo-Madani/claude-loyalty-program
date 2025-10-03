@@ -114,7 +114,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
           // Extract actual customer ID from wallet format
           const actualCustomerId = walletData.customerId.replace('CUST-', '')
 
-          // Use business ID from QR code if available, otherwise fall back to localStorage
+          // Use business ID from QR code if available, otherwise fall back to secure auth
           const businessId = walletData.businessId || localStorage.getItem('businessId') || '1'
 
           // Validate that the current business can process this QR
@@ -124,14 +124,13 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
           const tokenData = `${actualCustomerId}:${businessId}:${Date.now()}`
           customerToken = btoa(tokenData) // Don't truncate - match backend expectations
 
-          // Try to extract numeric offer ID from wallet offer string
-          // Format might be: "getthism-mfygbrap-onan1" or similar
-          const offerMatch = walletData.offerId.match(/\d+/) // Find first number
-          const extractedOfferId = offerMatch ? offerMatch[0] : walletData.offerId
+          // Use the secure offer ID directly (no extraction needed)
+          const secureOfferId = walletData.offerId
 
           // Generate offer hash using MD5 to match backend CustomerService
-          const hashData = `${extractedOfferId}:${businessId}:loyalty-platform`
-          offerHash = CryptoJS.MD5(hashData).toString()
+          // Backend expects: offerId:businessId:loyalty-platform (using secure IDs)
+          const hashData = `${secureOfferId}:${businessId}:loyalty-platform`
+          offerHash = CryptoJS.MD5(hashData).toString().substring(0, 8) // Match backend 8-char limit
 
           console.log('🔄 Converted wallet data:', {
             originalCustomerId: walletData.customerId,
@@ -139,8 +138,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
             businessId,
             tokenData: `${actualCustomerId}:${businessId}:${Date.now()}`,
             encodedToken: customerToken.substring(0, 20) + '...',
-            originalOfferId: walletData.offerId,
-            extractedOfferId: extractedOfferId,
+            secureOfferId: secureOfferId,
             hashInput: hashData,
             generatedOfferHash: offerHash
           })
@@ -193,23 +191,47 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
         setScanStatus('initializing')
         setErrorMessage('')
 
-        // Check camera permissions
+        // Check camera permissions and HTTPS requirement
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error('Camera not supported in this browser')
         }
 
-        // Create QR Scanner instance
-        qrScannerRef.current = new QrScanner(
-          videoRef.current,
-          handleQRDetection,
-          {
-            highlightScanRegion: true,
-            highlightCodeOutline: true,
-            preferredCamera: 'environment', // Use back camera on mobile
-            maxScansPerSecond: 2, // Limit scan frequency
-            returnDetailedScanResult: true,
-          }
-        )
+        // Check if running on HTTPS (required for camera access)
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          throw new Error('Camera access requires HTTPS. Please use HTTPS or localhost.')
+        }
+
+        console.log('🔒 Camera access check:', {
+          protocol: location.protocol,
+          hostname: location.hostname,
+          mediaDevices: !!navigator.mediaDevices,
+          getUserMedia: !!navigator.mediaDevices?.getUserMedia
+        })
+
+        // Create QR Scanner instance with fallback options
+        try {
+          qrScannerRef.current = new QrScanner(
+            videoRef.current,
+            handleQRDetection,
+            {
+              highlightScanRegion: true,
+              highlightCodeOutline: true,
+              preferredCamera: 'environment', // Use back camera on mobile
+              maxScansPerSecond: 2, // Limit scan frequency
+              returnDetailedScanResult: true,
+            }
+          )
+        } catch (constructorError) {
+          console.warn('⚠️ QrScanner constructor failed, trying with basic options:', constructorError)
+          // Fallback with minimal options
+          qrScannerRef.current = new QrScanner(
+            videoRef.current,
+            handleQRDetection,
+            {
+              returnDetailedScanResult: true,
+            }
+          )
+        }
 
         // Check for flashlight support
         const hasFlash = await QrScanner.hasCamera()
@@ -228,11 +250,15 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
         let errorMsg = 'Failed to start camera: ' + error.message
 
         if (error.name === 'NotAllowedError') {
-          errorMsg = 'Camera access denied. Please allow camera permissions and try again.'
+          errorMsg = 'Camera access denied. Please allow camera permissions and refresh the page.'
         } else if (error.name === 'NotFoundError') {
-          errorMsg = 'No camera found on this device.'
+          errorMsg = 'No camera found on this device. Please check camera connection.'
         } else if (error.name === 'NotReadableError') {
-          errorMsg = 'Camera is already in use by another application.'
+          errorMsg = 'Camera is already in use by another application. Please close other apps using the camera.'
+        } else if (error.name === 'OverconstrainedError') {
+          errorMsg = 'Camera constraints not supported. Trying with different settings...'
+        } else if (error.name === 'SecurityError') {
+          errorMsg = 'Camera access blocked by browser security. Please enable camera permissions.'
         }
 
         setErrorMessage(errorMsg)

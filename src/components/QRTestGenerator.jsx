@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { getSecureBusinessId } from '../utils/secureAuth'
 
 function QRTestGenerator() {
   const [generatedQR, setGeneratedQR] = useState('')
 
   const generateTestQR = () => {
     // Generate test tokens matching the format expected by the scanner
-    const businessId = localStorage.getItem('businessId') || '4'
+    const businessId = getSecureBusinessId() || localStorage.getItem('businessId') || '4'
     const demoCustomerId = 'demo-customer-123'
     const timestamp = Date.now()
     const tokenData = `${demoCustomerId}:${businessId}:${timestamp}`

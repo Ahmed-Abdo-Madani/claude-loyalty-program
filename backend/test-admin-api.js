@@ -19,8 +19,8 @@ const testEndpoints = async () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        email: 'admin@loyaltyplatform.com',
-        password: 'admin123'
+        email: 'toni91994@gmail.com',
+        password: 'Watashi12Des'
       })
     })
     
