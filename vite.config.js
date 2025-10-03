@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  publicDir: 'public', // Ensure public folder (including _redirects) is copied to dist
   server: {
     port: 3000,
     host: true,

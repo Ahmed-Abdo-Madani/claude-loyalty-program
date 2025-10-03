@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: madna-loyalty-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, s-maxage=300
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://api.madna.me
+      - key: VITE_NODE_ENV
+        value: production
