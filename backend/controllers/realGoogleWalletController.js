@@ -5,19 +5,16 @@ import path from 'path'
 
 class RealGoogleWalletController {
   constructor() {
-    // Load Google Cloud credentials
-    const credentialsFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || './credentials/madna-platform-d8bf716cd142.json'
-    this.credentialsPath = path.join(process.cwd(), credentialsFile)
-    this.credentials = JSON.parse(fs.readFileSync(this.credentialsPath, 'utf8'))
+    // Load Google Cloud credentials from environment variables or file
+    this.isGoogleWalletEnabled = this.initializeGoogleWallet()
+
+    if (!this.isGoogleWalletEnabled) {
+      console.log('⚠️ Google Wallet: Service disabled - credentials not available')
+      return
+    }
 
     this.issuerId = process.env.GOOGLE_ISSUER_ID || '3388000000023017940'
     this.projectId = process.env.GOOGLE_PROJECT_ID || 'madna-platform'
-
-    // Initialize Google Auth
-    this.auth = new GoogleAuth({
-      keyFile: this.credentialsPath,
-      scopes: ['https://www.googleapis.com/auth/wallet_object.issuer']
-    })
 
     // Base URLs for Google Wallet Objects API
     this.baseUrl = 'https://walletobjects.googleapis.com/walletobjects/v1'
@@ -31,8 +28,64 @@ class RealGoogleWalletController {
     this.pushProgressUpdate = this.pushProgressUpdate.bind(this)
   }
 
+  initializeGoogleWallet() {
+    try {
+      // Try to load from environment variables (production)
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+        console.log('✅ Google Wallet: Loading credentials from environment variables')
+        this.credentials = {
+          client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+          private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        }
+
+        // Initialize Google Auth with environment credentials
+        this.auth = new GoogleAuth({
+          credentials: this.credentials,
+          scopes: ['https://www.googleapis.com/auth/wallet_object.issuer']
+        })
+
+        return true
+      }
+
+      // Try to load from file (development)
+      const credentialsFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || './credentials/madna-platform-d8bf716cd142.json'
+      const credentialsPath = path.join(process.cwd(), credentialsFile)
+
+      if (fs.existsSync(credentialsPath)) {
+        console.log('✅ Google Wallet: Loading credentials from file')
+        this.credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'))
+        this.credentialsPath = credentialsPath
+
+        // Initialize Google Auth with file
+        this.auth = new GoogleAuth({
+          keyFile: this.credentialsPath,
+          scopes: ['https://www.googleapis.com/auth/wallet_object.issuer']
+        })
+
+        return true
+      }
+
+      // No credentials available
+      console.log('⚠️ Google Wallet: No credentials available (neither environment variables nor file)')
+      return false
+
+    } catch (error) {
+      console.error('❌ Google Wallet: Failed to initialize credentials:', error.message)
+      return false
+    }
+  }
+
   async generatePass(req, res) {
     try {
+      // Check if Google Wallet is enabled
+      if (!this.isGoogleWalletEnabled) {
+        return res.status(503).json({
+          error: 'Google Wallet service unavailable',
+          message: 'Google Wallet credentials not configured',
+          mock: true
+        })
+      }
+
       const { customerData, offerData, progressData } = req.body
 
       // Debug logging for stamp values (keeping this for Google Wallet debugging)
@@ -323,6 +376,14 @@ class RealGoogleWalletController {
 
   async savePass(req, res) {
     try {
+      // Check if Google Wallet is enabled
+      if (!this.isGoogleWalletEnabled) {
+        return res.status(503).json({
+          error: 'Google Wallet service unavailable',
+          message: 'Google Wallet credentials not configured'
+        })
+      }
+
       const { token } = req.params
 
       // Verify the JWT token
@@ -487,6 +548,16 @@ class RealGoogleWalletController {
   // Push updates to Google Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {
+      // Check if Google Wallet is enabled
+      if (!this.isGoogleWalletEnabled) {
+        console.log('⚠️ Google Wallet: Service disabled, skipping push update')
+        return {
+          success: false,
+          disabled: true,
+          message: 'Google Wallet service not available'
+        }
+      }
+
       console.log('📱 Google Wallet: Pushing update', {
         customer: customerId,
         stamps: `${progressData.current_stamps}/${progressData.max_stamps}`
