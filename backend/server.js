@@ -15,6 +15,35 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// Critical: Global error handlers to prevent server crashes
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('🔴 Unhandled Promise Rejection - Critical', {
+    reason: reason instanceof Error ? reason.message : reason,
+    stack: reason instanceof Error ? reason.stack : undefined,
+    promise: promise
+  })
+
+  // In production, consider graceful shutdown for unhandled rejections
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('Initiating graceful shutdown due to unhandled rejection')
+    setTimeout(() => {
+      process.exit(1)
+    }, 1000) // Give logger time to flush
+  }
+})
+
+process.on('uncaughtException', (error) => {
+  logger.error('🔴 Uncaught Exception - Server must restart', {
+    error: error.message,
+    stack: error.stack
+  })
+
+  // Always exit on uncaught exceptions - the process is in an undefined state
+  setTimeout(() => {
+    process.exit(1)
+  }, 1000) // Give logger time to flush
+})
+
 // Configure CORS based on environment
 const corsOrigins = process.env.NODE_ENV === 'production'
   ? [
@@ -57,60 +86,81 @@ app.get('/health', (req, res) => {
   })
 })
 
-// Production security middleware
-if (process.env.NODE_ENV === 'production') {
-  // Trust proxy for Render deployment
-  app.set('trust proxy', 1)
+// Trust proxy for production deployment (needed for accurate IP detection)
+app.set('trust proxy', 1)
 
-  // Security headers
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff')
-    res.setHeader('X-Frame-Options', 'DENY')
-    res.setHeader('X-XSS-Protection', '1; mode=block')
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
-    next()
-  })
+// Security headers (all environments)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-XSS-Protection', '1; mode=block')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  next()
+})
 
-  // Basic rate limiting (without external packages)
-  const requestCounts = new Map()
-  const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes
-  const RATE_LIMIT_MAX = 100 // requests per window
+// Rate limiting (ALL ENVIRONMENTS - protects against DoS attacks)
+// Note: /health endpoint is exempt (defined above before this middleware)
+const requestCounts = new Map()
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_MAX = process.env.NODE_ENV === 'production' ? 100 : 500 // Higher limit for dev/testing
 
-  app.use((req, res, next) => {
-    const clientIP = req.ip || req.connection.remoteAddress
-    const now = Date.now()
-    const windowStart = now - RATE_LIMIT_WINDOW
+// Periodic cleanup to prevent memory growth from old IP entries
+setInterval(() => {
+  const now = Date.now()
+  const windowStart = now - RATE_LIMIT_WINDOW
+  let cleaned = 0
 
-    // Clean old entries
-    for (const [ip, data] of requestCounts.entries()) {
-      if (data.timestamp < windowStart) {
-        requestCounts.delete(ip)
-      }
+  for (const [ip, data] of requestCounts.entries()) {
+    if (data.timestamp < windowStart) {
+      requestCounts.delete(ip)
+      cleaned++
     }
+  }
 
-    // Check current client
-    const clientData = requestCounts.get(clientIP) || { count: 0, timestamp: now }
+  if (cleaned > 0) {
+    logger.debug(`Rate limiter cleanup: removed ${cleaned} expired IP entries`)
+  }
+}, 5 * 60 * 1000) // Clean every 5 minutes
 
-    if (clientData.timestamp < windowStart) {
-      clientData.count = 1
-      clientData.timestamp = now
-    } else {
-      clientData.count++
-    }
+app.use((req, res, next) => {
+  const clientIP = req.ip || req.connection.remoteAddress
+  const now = Date.now()
+  const windowStart = now - RATE_LIMIT_WINDOW
 
-    requestCounts.set(clientIP, clientData)
+  // Get or initialize client data
+  const clientData = requestCounts.get(clientIP) || { count: 0, timestamp: now }
 
-    if (clientData.count > RATE_LIMIT_MAX) {
-      return res.status(429).json({
-        error: 'Too many requests',
-        message: 'Rate limit exceeded. Please try again later.'
-      })
-    }
+  // Reset if outside window
+  if (clientData.timestamp < windowStart) {
+    clientData.count = 1
+    clientData.timestamp = now
+  } else {
+    clientData.count++
+  }
 
-    next()
-  })
-}
+  requestCounts.set(clientIP, clientData)
+
+  // Check if limit exceeded
+  if (clientData.count > RATE_LIMIT_MAX) {
+    const retryAfter = Math.ceil((clientData.timestamp + RATE_LIMIT_WINDOW - now) / 1000)
+
+    logger.warn('Rate limit exceeded', {
+      ip: clientIP,
+      count: clientData.count,
+      limit: RATE_LIMIT_MAX,
+      path: req.path
+    })
+
+    return res.status(429).json({
+      error: 'Too many requests',
+      message: 'Rate limit exceeded. Please try again later.',
+      retryAfter: retryAfter
+    })
+  }
+
+  next()
+})
 
 // Static file serving for images
 app.use('/static', express.static('public'))
