@@ -54,7 +54,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
         dark:from-purple-900 dark:via-purple-800 dark:to-indigo-900
         transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        flex flex-col
+        flex flex-col overflow-y-auto
       `}>
 
         {/* Sidebar Header */}

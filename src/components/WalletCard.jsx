@@ -33,22 +33,22 @@ function WalletCard({ title, value, subtitle, icon, color, trend, onClick, child
   return (
     <div
       className={`
-        rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer
+        rounded-xl p-4 md:p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer
         ${getColorClasses(color)}
         ${onClick ? 'hover:scale-105' : ''}
       `}
       onClick={onClick}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
         <div className="flex items-center space-x-2">
-          {icon && <span className="text-2xl">{icon}</span>}
-          <h3 className={`font-medium text-sm ${color && color !== 'default' ? 'text-white/80' : 'text-gray-600 dark:text-gray-400'}`}>
+          {icon && <span className="text-xl md:text-2xl">{icon}</span>}
+          <h3 className={`font-medium text-xs md:text-sm ${color && color !== 'default' ? 'text-white/80' : 'text-gray-600 dark:text-gray-400'}`}>
             {title}
           </h3>
         </div>
         {trend !== undefined && (
-          <div className={`flex items-center space-x-1 text-sm ${getTrendColor(trend)}`}>
+          <div className={`flex items-center space-x-1 text-xs md:text-sm ${getTrendColor(trend)}`}>
             <span>{getTrendIcon(trend)}</span>
             <span>{Math.abs(trend)}%</span>
           </div>
@@ -57,11 +57,11 @@ function WalletCard({ title, value, subtitle, icon, color, trend, onClick, child
 
       {/* Value */}
       <div className="mb-2">
-        <div className={`text-3xl font-bold ${color && color !== 'default' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+        <div className={`text-2xl md:text-3xl font-bold ${color && color !== 'default' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
           {value}
         </div>
         {subtitle && (
-          <div className={`text-sm ${color && color !== 'default' ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
+          <div className={`text-xs md:text-sm ${color && color !== 'default' ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
             {subtitle}
           </div>
         )}

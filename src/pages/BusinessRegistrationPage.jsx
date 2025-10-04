@@ -329,11 +329,17 @@ function BusinessRegistrationPage() {
 
     switch (step) {
       case 1:
-        // Check business name in selected language
-        const businessNameField = selectedLanguage === 'ar' ? 'business_name_ar' : 'business_name'
-        if (!formData[businessNameField].trim()) {
+        // Check business name in either language (accept any one)
+        const hasBusinessName = formData.business_name.trim() || formData.business_name_ar.trim()
+        if (!hasBusinessName) {
           setError(t.businessNameRequired)
           return false
+        }
+        // Auto-populate the missing language field if only one is filled
+        if (formData.business_name.trim() && !formData.business_name_ar.trim()) {
+          setFormData(prev => ({ ...prev, business_name_ar: formData.business_name }))
+        } else if (formData.business_name_ar.trim() && !formData.business_name.trim()) {
+          setFormData(prev => ({ ...prev, business_name: formData.business_name_ar }))
         }
         if (!formData.business_type) {
           setError(t.businessTypeRequired)
@@ -381,11 +387,17 @@ function BusinessRegistrationPage() {
         return true
 
       case 3:
-        // Check owner name in selected language
-        const ownerNameField = selectedLanguage === 'ar' ? 'owner_name_ar' : 'owner_name'
-        if (!formData[ownerNameField].trim()) {
+        // Check owner name in either language (accept any one)
+        const hasOwnerName = formData.owner_name.trim() || formData.owner_name_ar.trim()
+        if (!hasOwnerName) {
           setError(t.ownerNameRequired)
           return false
+        }
+        // Auto-populate the missing language field if only one is filled
+        if (formData.owner_name.trim() && !formData.owner_name_ar.trim()) {
+          setFormData(prev => ({ ...prev, owner_name_ar: formData.owner_name }))
+        } else if (formData.owner_name_ar.trim() && !formData.owner_name.trim()) {
+          setFormData(prev => ({ ...prev, owner_name: formData.owner_name_ar }))
         }
         if (!formData.owner_id.trim()) {
           setError(t.ownerIdRequired)

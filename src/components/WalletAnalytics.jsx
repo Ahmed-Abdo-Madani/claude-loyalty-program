@@ -59,9 +59,9 @@ function WalletAnalytics() {
         <p className="text-gray-600 dark:text-gray-400 mt-1">Track digital wallet adoption and customer engagement</p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <WalletCard
             title="Wallet Cards Added"
             value={analytics.totalWalletAdds}

@@ -98,7 +98,7 @@ function AuthPage() {
             {mode === 'signin' ? (
               <>
                 Don't have an account?{' '}
-                <Link to="/auth?mode=signup" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                <Link to="/business/register" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
                   Sign up for free
                 </Link>
               </>

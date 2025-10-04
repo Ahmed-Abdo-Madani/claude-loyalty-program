@@ -24,14 +24,6 @@ function StatsCardGrid({ analytics }) {
       icon: '💎',
       color: 'bg-purple-500',
       highlight: false
-    },
-    {
-      id: 'revenue_impact',
-      title: 'Revenue Impact',
-      value: `$${(analytics?.totalCustomers * 12.5).toLocaleString() || '0'}`, // Estimated revenue
-      icon: '💰',
-      color: 'bg-green-500',
-      highlight: false
     }
   ]
 
@@ -95,7 +87,7 @@ function StatsCardGrid({ analytics }) {
       </div>
 
       {/* Tablet and Desktop: Grid layout */}
-      <div className="hidden md:grid grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-6">
         {statsCards.map((stat) => (
           <div
             key={stat.id}

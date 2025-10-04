@@ -189,35 +189,35 @@ function CustomersTab() {
       <div className="space-y-8">
         {/* Analytics Cards */}
         {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">👥</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl md:text-2xl">👥</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.totalCustomers}</div>
-              <div className="text-white/80 text-sm">Total Customers</div>
+              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{analytics.totalCustomers}</div>
+              <div className="text-white/80 text-xs md:text-sm">Total Customers</div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">✅</span>
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl md:text-2xl">✅</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.activeCustomers}</div>
-              <div className="text-white/80 text-sm">Active Customers</div>
+              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{analytics.activeCustomers}</div>
+              <div className="text-white/80 text-xs md:text-sm">Active Customers</div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">👑</span>
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-4 md:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl md:text-2xl">👑</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.vipCustomers}</div>
-              <div className="text-white/80 text-sm">VIP Customers</div>
+              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{analytics.vipCustomers}</div>
+              <div className="text-white/80 text-xs md:text-sm">VIP Customers</div>
             </div>
           </div>
         )}
