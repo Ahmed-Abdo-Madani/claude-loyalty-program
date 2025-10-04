@@ -47,6 +47,16 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }))
 app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' }))
 
+// Health check endpoint - MUST be before rate limiting to avoid blocking Render health checks
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'loyalty-platform-backend',
+    version: '1.0.0'
+  })
+})
+
 // Production security middleware
 if (process.env.NODE_ENV === 'production') {
   // Trust proxy for Render deployment
@@ -104,16 +114,6 @@ if (process.env.NODE_ENV === 'production') {
 
 // Static file serving for images
 app.use('/static', express.static('public'))
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'loyalty-platform-backend',
-    version: '1.0.0'
-  })
-})
 
 // API Routes
 app.use('/api/wallet', walletRoutes)
