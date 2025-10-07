@@ -1,16 +1,23 @@
 import express from 'express'
 import AppleWalletController from '../controllers/appleWalletController.js'
 import RealGoogleWalletController from '../controllers/realGoogleWalletController.js'
+import WalletPassService from '../services/WalletPassService.js'
 
 const router = express.Router()
 
 // Apple Wallet routes
-router.post('/apple/generate', AppleWalletController.generatePass)
+router.post('/apple/generate', async (req, res, next) => {
+  // Pass through to controller, which will now also record wallet pass
+  await AppleWalletController.generatePass(req, res, next)
+})
 router.get('/apple/download/:passId', AppleWalletController.downloadPass)
 router.post('/apple/update/:passId', AppleWalletController.updatePass)
 
 // Google Wallet routes - always use real API
-router.post('/google/generate', RealGoogleWalletController.generatePass)
+router.post('/google/generate', async (req, res, next) => {
+  // Pass through to controller, which will now also record wallet pass
+  await RealGoogleWalletController.generatePass(req, res, next)
+})
 router.get('/google/save/:token', RealGoogleWalletController.savePass)
 
 // Test endpoint for Google Wallet push notifications

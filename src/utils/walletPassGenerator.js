@@ -10,6 +10,12 @@ class WalletPassGenerator {
 
   // Generate customer progress QR code URL
   generateProgressQRUrl(customerData, offerData) {
+    // ✅ VALIDATE: Customer ID must be in cust_* format
+    if (!customerData.customerId || !customerData.customerId.startsWith('cust_')) {
+      console.error('❌ Invalid customer ID format:', customerData.customerId)
+      throw new Error(`Customer ID must be in cust_* format. Received: ${customerData.customerId}`)
+    }
+
     const customerToken = this.encryptCustomerToken(customerData.customerId, offerData.businessId)
     const offerHash = this.hashOfferId(offerData.offerId, offerData.businessId)
     return `${this.baseUrl}/scan/${customerToken}/${offerHash}`
@@ -17,6 +23,12 @@ class WalletPassGenerator {
 
   // Encrypt customer token for security - FIXED to match backend expectations
   encryptCustomerToken(customerId, businessId) {
+    // ✅ VALIDATE: Customer ID must be in cust_* format
+    if (!customerId || !customerId.startsWith('cust_')) {
+      console.error('❌ Invalid customer ID for token generation:', customerId)
+      throw new Error(`Customer ID must be in cust_* format. Received: ${customerId}`)
+    }
+
     const timestamp = Date.now()
     const data = `${customerId}:${businessId}:${timestamp}`
     // Don't truncate - keep full base64 to match backend decoding

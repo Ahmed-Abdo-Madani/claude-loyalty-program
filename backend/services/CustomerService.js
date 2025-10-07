@@ -1,9 +1,104 @@
-import { CustomerProgress, Offer, Business } from '../models/index.js'
+import { CustomerProgress, Offer, Business, Customer } from '../models/index.js'
 import { Op } from 'sequelize'
 import crypto from 'crypto'
 import logger from '../config/logger.js'
+import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
 class CustomerService {
+  // Customer management
+  static async createCustomer(customerData) {
+    try {
+      // Generate secure customer ID if not provided
+      if (!customerData.customer_id) {
+        customerData.customer_id = SecureIDGenerator.generateCustomerID()
+      }
+
+      // Validate customer ID format
+      if (!customerData.customer_id.startsWith('cust_')) {
+        throw new Error(`Invalid customer ID format: ${customerData.customer_id}. Must start with cust_`)
+      }
+
+      // Create customer record
+      const customer = await Customer.create({
+        customer_id: customerData.customer_id,
+        business_id: customerData.business_id,
+        name: customerData.name || `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim(),
+        phone: customerData.phone || null,
+        email: customerData.email || null,
+        date_of_birth: customerData.date_of_birth || null,
+        status: customerData.status || 'new',
+        lifecycle_stage: customerData.lifecycle_stage || 'new_customer',
+        total_visits: 0,
+        total_stamps_earned: 0,
+        total_rewards_claimed: 0,
+        total_lifetime_value: 0,
+        first_visit_date: new Date(),
+        last_activity_date: new Date(),
+        acquisition_source: customerData.acquisition_source || 'in_store',
+        preferred_language: customerData.preferred_language || 'en'
+      })
+
+      logger.info(`✅ Customer created via API: ${customer.customer_id}`)
+      return customer
+    } catch (error) {
+      logger.error('❌ createCustomer failed:', error)
+      throw error
+    }
+  }
+
+  static async findOrCreateCustomer(customerId, businessId, customerData = {}) {
+    try {
+      // Validate customer ID format
+      let validCustomerId = customerId
+
+      // If customer ID doesn't match cust_* format, generate a new one
+      if (!customerId || !customerId.startsWith('cust_')) {
+        logger.warn(`⚠️ Invalid customer ID format: ${customerId}. Generating new secure ID.`)
+        validCustomerId = SecureIDGenerator.generateCustomerID()
+      }
+
+      // Try to find existing customer
+      let customer = await Customer.findOne({
+        where: {
+          customer_id: validCustomerId,
+          business_id: businessId
+        }
+      })
+
+      // If not found, create new customer
+      if (!customer) {
+        logger.info(`✨ Creating new customer: ${validCustomerId}`)
+
+        customer = await Customer.create({
+          customer_id: validCustomerId,
+          business_id: businessId,
+          name: customerData.name || `${customerData.firstName || 'Guest'} ${customerData.lastName || 'Customer'}`.trim(),
+          phone: customerData.phone || null,
+          email: customerData.email || null,
+          status: 'new',
+          lifecycle_stage: 'new_customer',
+          total_visits: 0,
+          total_stamps_earned: 0,
+          total_rewards_claimed: 0,
+          total_lifetime_value: 0,
+          first_visit_date: new Date(),
+          last_activity_date: new Date(),
+          acquisition_source: customerData.source || 'in_store',
+          preferred_language: customerData.language || 'en'
+        })
+
+        logger.info(`✅ Customer created successfully: ${customer.customer_id}`)
+      } else {
+        logger.info(`♻️ Found existing customer: ${customer.customer_id}`)
+      }
+
+      return customer
+    } catch (error) {
+      logger.error('❌ findOrCreateCustomer failed:', error)
+      throw error
+    }
+  }
+
   // Customer progress management
   static async findCustomerProgress(customerId, offerId) {
     return await CustomerProgress.findOne({
@@ -16,29 +111,41 @@ class CustomerService {
   }
 
   static async createCustomerProgress(customerId, offerId, businessId, customerData = {}) {
-    const offer = await Offer.findByPk(offerId)
-    if (!offer) {
-      throw new Error(`Offer with ID ${offerId} not found`)
-    }
+    try {
+      // STEP 1: Ensure customer exists in database (fixes foreign key constraint)
+      const customer = await this.findOrCreateCustomer(customerId, businessId, customerData)
 
-    const progressData = {
-      customer_id: customerId,
-      offer_id: offerId,
-      business_id: businessId,
-      max_stamps: offer.stamps_required,
-      current_stamps: 0,
-      customer_name: customerData.name || null,
-      customer_phone: customerData.phone || null,
-      customer_email: customerData.email || null,
-      wallet_pass_serial: this.generateWalletPassSerial()
-    }
+      // STEP 2: Get offer details
+      const offer = await Offer.findByPk(offerId)
+      if (!offer) {
+        throw new Error(`Offer with ID ${offerId} not found`)
+      }
 
-    const progress = await CustomerProgress.create(progressData)
-    
-    // Increment offer customer count
-    await offer.increment('customers')
-    
-    return progress
+      // STEP 3: Create progress record (now safe - customer exists)
+      const progressData = {
+        customer_id: customer.customer_id, // Use verified customer ID from database
+        offer_id: offerId,
+        business_id: businessId,
+        max_stamps: offer.stamps_required,
+        current_stamps: 0,
+        customer_name: customer.name || customerData.name || null,
+        customer_phone: customer.phone || customerData.phone || null,
+        customer_email: customer.email || customerData.email || null,
+        wallet_pass_serial: this.generateWalletPassSerial()
+      }
+
+      const progress = await CustomerProgress.create(progressData)
+
+      // STEP 4: Increment offer customer count
+      await offer.increment('customers')
+
+      logger.info(`✅ Customer progress created: ${customer.customer_id} → ${offerId}`)
+
+      return progress
+    } catch (error) {
+      logger.error('❌ createCustomerProgress failed:', error)
+      throw error
+    }
   }
 
   static async updateCustomerProgress(customerId, offerId, stampsToAdd = 1) {

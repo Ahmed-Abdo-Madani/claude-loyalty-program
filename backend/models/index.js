@@ -9,6 +9,7 @@ import Customer from './Customer.js'
 import NotificationCampaign from './NotificationCampaign.js'
 import NotificationLog from './NotificationLog.js'
 import CustomerSegment from './CustomerSegment.js'
+import WalletPass from './WalletPass.js'
 
 // Define SECURE model associations using public_id fields
 Business.hasMany(Offer, {
@@ -145,6 +146,59 @@ CustomerSegment.belongsTo(Business, {
   as: 'business'
 })
 
+// WalletPass relationships
+Customer.hasMany(WalletPass, {
+  foreignKey: 'customer_id',
+  sourceKey: 'customer_id',
+  as: 'walletPasses',
+  onDelete: 'CASCADE'
+})
+
+WalletPass.belongsTo(Customer, {
+  foreignKey: 'customer_id',
+  targetKey: 'customer_id',
+  as: 'customer'
+})
+
+CustomerProgress.hasMany(WalletPass, {
+  foreignKey: 'progress_id',
+  sourceKey: 'id',
+  as: 'walletPasses',
+  onDelete: 'CASCADE'
+})
+
+WalletPass.belongsTo(CustomerProgress, {
+  foreignKey: 'progress_id',
+  targetKey: 'id',
+  as: 'progress'
+})
+
+Business.hasMany(WalletPass, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'walletPasses',
+  onDelete: 'CASCADE'
+})
+
+WalletPass.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+Offer.hasMany(WalletPass, {
+  foreignKey: 'offer_id',
+  sourceKey: 'public_id',
+  as: 'walletPasses',
+  onDelete: 'CASCADE'
+})
+
+WalletPass.belongsTo(Offer, {
+  foreignKey: 'offer_id',
+  targetKey: 'public_id',
+  as: 'offer'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -155,7 +209,8 @@ export {
   Customer,
   NotificationCampaign,
   NotificationLog,
-  CustomerSegment
+  CustomerSegment,
+  WalletPass
 }
 
 // Sync database (create tables) - SECURE VERSION

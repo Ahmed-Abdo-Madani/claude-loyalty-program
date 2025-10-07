@@ -1736,7 +1736,15 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       })
     }
 
-    const { customerId } = tokenData
+    let { customerId } = tokenData
+
+    // ✅ VALIDATE AND NORMALIZE CUSTOMER ID
+    // If old numeric format, generate new cust_* ID
+    if (!customerId || !customerId.startsWith('cust_')) {
+      console.log(`⚠️ Legacy customer ID detected: ${customerId}. Will generate new cust_* ID during customer creation.`)
+      // Don't generate here - let findOrCreateCustomer handle it
+      // This preserves the original ID in the token for logging purposes
+    }
 
     // Find the offer by reverse-engineering the hash
     const businessOffers = await OfferService.findByBusinessId(businessId)
@@ -1850,28 +1858,65 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
       }
     )
 
-    // Push updates to wallet passes (Apple & Google Wallet)
+    // ✨ SMART WALLET UPDATES - Only push to wallets customer actually has
     const walletUpdates = []
 
     try {
-      // Push to Apple Wallet
-      const appleUpdate = await appleWalletController.pushProgressUpdate(
-        customerId,
-        targetOffer.public_id,
-        updatedProgress
-      )
-      walletUpdates.push({ platform: 'Apple Wallet', ...appleUpdate })
+      // Import WalletPassService dynamically
+      const WalletPassService = (await import('../services/WalletPassService.js')).default
 
-      // Push to Google Wallet
-      const googleUpdate = await googleWalletController.pushProgressUpdate(
-        customerId,
-        targetOffer.public_id,
-        updatedProgress
-      )
-      walletUpdates.push({ platform: 'Google Wallet', ...googleUpdate })
+      // Get customer's active wallet passes for this offer
+      const activeWallets = await WalletPassService.getCustomerWallets(customerId, targetOffer.public_id)
 
-      // Log wallet updates summary only
-      if (walletUpdates.length > 0) {
+      if (activeWallets.length === 0) {
+        console.log('📱 No wallet passes found for customer - skipping wallet updates')
+      } else {
+        console.log(`📱 Found ${activeWallets.length} wallet pass(es) for customer:`, activeWallets.map(w => w.wallet_type).join(', '))
+
+        // Update each wallet type the customer has
+        for (const wallet of activeWallets) {
+          try {
+            if (wallet.wallet_type === 'apple') {
+              const appleUpdate = await appleWalletController.pushProgressUpdate(
+                customerId,
+                targetOffer.public_id,
+                updatedProgress
+              )
+              walletUpdates.push({
+                platform: 'Apple Wallet',
+                walletPassId: wallet.id,
+                ...appleUpdate
+              })
+
+              // Update last push timestamp
+              await wallet.updateLastPush()
+            } else if (wallet.wallet_type === 'google') {
+              const googleUpdate = await googleWalletController.pushProgressUpdate(
+                customerId,
+                targetOffer.public_id,
+                updatedProgress
+              )
+              walletUpdates.push({
+                platform: 'Google Wallet',
+                walletPassId: wallet.id,
+                ...googleUpdate
+              })
+
+              // Update last push timestamp
+              await wallet.updateLastPush()
+            }
+          } catch (singleWalletError) {
+            console.warn(`⚠️ Failed to update ${wallet.wallet_type} wallet:`, singleWalletError.message)
+            walletUpdates.push({
+              platform: `${wallet.wallet_type} Wallet`,
+              walletPassId: wallet.id,
+              success: false,
+              error: singleWalletError.message
+            })
+          }
+        }
+
+        // Log wallet updates summary
         const successCount = walletUpdates.filter(u => u.success).length
         console.log(`📱 Wallet updates: ${successCount}/${walletUpdates.length} successful`)
       }

@@ -124,6 +124,26 @@ class RealGoogleWalletController {
       // Step 4: Create save URL
       const saveUrl = `https://pay.google.com/gp/v/save/${jwt}`
 
+      // ✨ Step 5: Record wallet pass in database
+      try {
+        const WalletPassService = (await import('../services/WalletPassService.js')).default
+        await WalletPassService.createWalletPass(
+          customerData.customerId,
+          offerData.offerId,
+          'google',
+          {
+            wallet_object_id: loyaltyObject.id,
+            device_info: {
+              user_agent: req.headers['user-agent'],
+              generated_at: new Date().toISOString()
+            }
+          }
+        )
+        console.log('✨ Google Wallet pass recorded in database')
+      } catch (walletPassError) {
+        console.warn('⚠️ Failed to record Google Wallet pass (continuing with generation):', walletPassError.message)
+      }
+
       console.log('✅ Google Wallet: Pass generated successfully')
 
       res.json({
@@ -229,11 +249,17 @@ class RealGoogleWalletController {
   }
 
   async createLoyaltyObject(authClient, customerData, offerData, progressData) {
+    // Validate customer ID format
+    if (!customerData.customerId || !customerData.customerId.startsWith('cust_')) {
+      console.error(`❌ Invalid customer ID format: ${customerData.customerId}. Expected cust_* format.`)
+      throw new Error(`Invalid customer ID format: ${customerData.customerId}. Google Wallet requires cust_* format.`)
+    }
+
     // Validate required data
     if (!offerData.stamps_required) {
       throw new Error(`stamps_required is missing from offerData: ${JSON.stringify(offerData)}`)
     }
-    
+
     const objectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
     const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9\-]/g, '_')}`
 
@@ -548,6 +574,15 @@ class RealGoogleWalletController {
   // Push updates to Google Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {
+      // Validate customer ID format
+      if (!customerId || !customerId.startsWith('cust_')) {
+        console.error(`❌ Invalid customer ID format for wallet update: ${customerId}. Expected cust_* format.`)
+        return {
+          success: false,
+          error: `Invalid customer ID format: ${customerId}. Google Wallet requires cust_* format.`
+        }
+      }
+
       // Check if Google Wallet is enabled
       if (!this.isGoogleWalletEnabled) {
         console.log('⚠️ Google Wallet: Service disabled, skipping push update')

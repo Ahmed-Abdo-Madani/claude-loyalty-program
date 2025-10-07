@@ -1,0 +1,106 @@
+[
+  {
+    "timestamp": 1759573665880,
+    "rss": 48005120,
+    "heapTotal": 9011200,
+    "heapUsed": 6977640,
+    "external": 3396068,
+    "requestCount": 0
+  },
+  {
+    "timestamp": 1759573671290,
+    "rss": 51761152,
+    "heapTotal": 12312576,
+    "heapUsed": 7710664,
+    "external": 3542551,
+    "requestCount": 50
+  },
+  {
+    "timestamp": 1759573676709,
+    "rss": 51912704,
+    "heapTotal": 9166848,
+    "heapUsed": 7539608,
+    "external": 3547534,
+    "requestCount": 100
+  },
+  {
+    "timestamp": 1759573682115,
+    "rss": 52027392,
+    "heapTotal": 10215424,
+    "heapUsed": 7633296,
+    "external": 3549086,
+    "requestCount": 150
+  },
+  {
+    "timestamp": 1759573687522,
+    "rss": 52264960,
+    "heapTotal": 9166848,
+    "heapUsed": 7651168,
+    "external": 3548747,
+    "requestCount": 200
+  },
+  {
+    "timestamp": 1759573692952,
+    "rss": 52477952,
+    "heapTotal": 9166848,
+    "heapUsed": 7531984,
+    "external": 3548571,
+    "requestCount": 250
+  },
+  {
+    "timestamp": 1759573698373,
+    "rss": 52912128,
+    "heapTotal": 9166848,
+    "heapUsed": 7434872,
+    "external": 3545333,
+    "requestCount": 300
+  },
+  {
+    "timestamp": 1759573703806,
+    "rss": 52912128,
+    "heapTotal": 9166848,
+    "heapUsed": 7425152,
+    "external": 3545504,
+    "requestCount": 350
+  },
+  {
+    "timestamp": 1759573709218,
+    "rss": 52895744,
+    "heapTotal": 9166848,
+    "heapUsed": 7404016,
+    "external": 3545052,
+    "requestCount": 400
+  },
+  {
+    "timestamp": 1759573714633,
+    "rss": 52838400,
+    "heapTotal": 9166848,
+    "heapUsed": 7439368,
+    "external": 3545162,
+    "requestCount": 450
+  },
+  {
+    "timestamp": 1759573720063,
+    "rss": 52924416,
+    "heapTotal": 9428992,
+    "heapUsed": 7413688,
+    "external": 3545889,
+    "requestCount": 500
+  },
+  {
+    "timestamp": 1759573725482,
+    "rss": 52916224,
+    "heapTotal": 9428992,
+    "heapUsed": 7443872,
+    "external": 3545437,
+    "requestCount": 550
+  },
+  {
+    "timestamp": 1759573725883,
+    "rss": 52961280,
+    "heapTotal": 9428992,
+    "heapUsed": 7225048,
+    "external": 3541450,
+    "requestCount": 553
+  }
+]

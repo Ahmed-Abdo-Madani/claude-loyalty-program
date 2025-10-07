@@ -3,6 +3,7 @@ import archiver from 'archiver'
 import forge from 'node-forge'
 import sharp from 'sharp'
 import { PassGenerator } from '../utils/passGenerator.js'
+import WalletPassService from '../services/WalletPassService.js'
 
 class AppleWalletController {
   constructor() {
@@ -46,6 +47,24 @@ class AppleWalletController {
 
       // Create .pkpass ZIP file
       const pkpassBuffer = await this.createPkpassZip(passData, manifest, signature, images)
+
+      // ✨ Record wallet pass in database
+      try {
+        await WalletPassService.createWalletPass(
+          customerData.customerId,
+          offerData.offerId,
+          'apple',
+          {
+            wallet_serial: passData.serialNumber,
+            device_info: {
+              user_agent: req.headers['user-agent'],
+              generated_at: new Date().toISOString()
+            }
+          }
+        )
+      } catch (walletPassError) {
+        console.warn('⚠️ Failed to record Apple Wallet pass (continuing with generation):', walletPassError.message)
+      }
 
       // Set headers for .pkpass download
       res.setHeader('Content-Type', 'application/vnd.apple.pkpass')

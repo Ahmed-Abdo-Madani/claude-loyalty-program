@@ -140,9 +140,39 @@ const calculatePlatformOverview = () => {
   const total_customers = saudiBranches.reduce((sum, branch) => sum + branch.customers, 0)
   const total_redemptions = saudiOffers.reduce((sum, offer) => sum + offer.redeemed, 0)
 
-  // Mock wallet passes for demo (60% Apple, 40% Google in Saudi market)
-  const apple_wallet_passes = Math.floor(total_customers * 0.6)
-  const google_wallet_passes = Math.floor(total_customers * 0.4)
+  // ✨ REAL WALLET STATISTICS - Query from wallet_passes table
+  let apple_wallet_passes = 0
+  let google_wallet_passes = 0
+
+  try {
+    const WalletPassService = (await import('../services/WalletPassService.js')).default
+
+    // Get aggregated wallet stats across all businesses
+    const { sequelize } = await import('../models/index.js')
+    const [walletStats] = await sequelize.query(`
+      SELECT
+        wallet_type,
+        COUNT(*) as count
+      FROM wallet_passes
+      WHERE pass_status = 'active'
+      GROUP BY wallet_type
+    `, { type: sequelize.QueryTypes.SELECT })
+
+    if (walletStats) {
+      walletStats.forEach(row => {
+        if (row.wallet_type === 'apple') {
+          apple_wallet_passes = parseInt(row.count)
+        } else if (row.wallet_type === 'google') {
+          google_wallet_passes = parseInt(row.count)
+        }
+      })
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to get real wallet statistics, using estimates:', error.message)
+    // Fallback to estimates if wallet_passes table doesn't exist yet
+    apple_wallet_passes = Math.floor(total_customers * 0.6)
+    google_wallet_passes = Math.floor(total_customers * 0.4)
+  }
 
   const monthly_growth_rate = 22.8 // Higher growth rate in Saudi market
   const customer_engagement_rate = 78.5 // Higher engagement in Saudi market
