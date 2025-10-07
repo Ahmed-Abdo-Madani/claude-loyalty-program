@@ -4,7 +4,7 @@ import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
 
 // Real Saudi Arabia data for admin analytics
-const getSaudiBusinessData = () => {
+const getSaudiBusinessData = async () => {
   // This represents the Saudi businesses data
   const saudiOffers = [
     {
@@ -127,8 +127,8 @@ const getSaudiBusinessData = () => {
 }
 
 // Calculate real analytics from Saudi data
-const calculatePlatformOverview = () => {
-  const { saudiOffers, saudiBranches, saudiCustomers } = getSaudiBusinessData()
+const calculatePlatformOverview = async () => {
+  const { saudiOffers, saudiBranches, saudiCustomers } = await getSaudiBusinessData()
 
   const total_businesses = 1 // One business (Al-Amal Restaurant) with multiple branches
   const active_businesses = 1
@@ -196,8 +196,8 @@ const calculatePlatformOverview = () => {
 // Mock analytics data structure updated with Saudi data
 const mockAnalyticsDb = {
   // Platform overview metrics - now calculated from real Saudi data
-  get platformOverview() {
-    return calculatePlatformOverview()
+  async getPlatformOverview() {
+    return await calculatePlatformOverview()
   },
 
   // Business growth over time (last 30 days)
@@ -239,8 +239,8 @@ const mockAnalyticsDb = {
   },
 
   // Top performing businesses - Saudi branches data
-  get topBusinesses() {
-    const { saudiBranches, saudiOffers } = getSaudiBusinessData()
+  async getTopBusinesses() {
+    const { saudiBranches, saudiOffers } = await getSaudiBusinessData()
 
     return saudiBranches.map(branch => {
       // Calculate metrics for each branch
@@ -455,7 +455,7 @@ class AdminAnalyticsController {
     try {
       const { metric = 'customers', limit = 10 } = req.query
 
-      let businesses = [...mockAnalyticsDb.topBusinesses]
+      let businesses = [...await mockAnalyticsDb.getTopBusinesses()]
 
       // Sort by specified metric
       const sortMetrics = {
@@ -589,7 +589,7 @@ class AdminAnalyticsController {
 
       // Include requested sections
       if (sections.includes('overview')) {
-        report.platform_overview = mockAnalyticsDb.platformOverview
+        report.platform_overview = await mockAnalyticsDb.getPlatformOverview()
       }
 
       if (sections.includes('growth')) {
@@ -601,7 +601,7 @@ class AdminAnalyticsController {
       }
 
       if (sections.includes('businesses')) {
-        report.top_businesses = mockAnalyticsDb.topBusinesses.slice(0, 5)
+        report.top_businesses = (await mockAnalyticsDb.getTopBusinesses()).slice(0, 5)
       }
 
       if (sections.includes('health')) {
@@ -646,10 +646,10 @@ class AdminAnalyticsController {
           generated_by: req.admin.fullName
         },
         data: {
-          platform_overview: mockAnalyticsDb.platformOverview,
+          platform_overview: await mockAnalyticsDb.getPlatformOverview(),
           business_growth: mockAnalyticsDb.businessGrowth,
           wallet_metrics: mockAnalyticsDb.walletMetrics,
-          top_businesses: mockAnalyticsDb.topBusinesses,
+          top_businesses: await mockAnalyticsDb.getTopBusinesses(),
           system_health: mockAnalyticsDb.systemHealth,
           revenue_metrics: mockAnalyticsDb.revenueMetrics,
           support_metrics: mockAnalyticsDb.supportMetrics
