@@ -7,7 +7,7 @@ function QRCodeModal({ offer, onClose }) {
   const [downloadFormat, setDownloadFormat] = useState('png')
   const [qrOptions, setQrOptions] = useState({
     size: 256,
-    source: 'dashboard',
+    source: 'in_store',
     branchId: offer?.branchId || null
   })
   const [analytics, setAnalytics] = useState({

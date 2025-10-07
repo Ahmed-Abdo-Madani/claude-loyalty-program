@@ -815,7 +815,7 @@ router.post('/customers/signup', async (req, res) => {
         name: `${customerData.firstName || ''} ${customerData.lastName || ''}`.trim() || 'Guest Customer',
         whatsapp: customerData.whatsapp || null,
         birthday: customerData.birthday || null,
-        source: customerData.source || 'qr_scan',
+        source: customerData.source || 'in_store',
         branch: customerData.branch || null
       }
     )

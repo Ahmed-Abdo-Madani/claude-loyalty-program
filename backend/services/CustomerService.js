@@ -18,6 +18,11 @@ class CustomerService {
         throw new Error(`Invalid customer ID format: ${customerData.customer_id}. Must start with cust_`)
       }
 
+      // Validate and sanitize acquisition_source
+      const validSources = ['organic', 'referral', 'social', 'advertising', 'in_store', 'other']
+      const acquisitionSource = customerData.acquisition_source || 'in_store'
+      const sanitizedSource = validSources.includes(acquisitionSource) ? acquisitionSource : 'other'
+
       // Create customer record
       const customer = await Customer.create({
         customer_id: customerData.customer_id,
@@ -34,7 +39,7 @@ class CustomerService {
         total_lifetime_value: 0,
         first_visit_date: new Date(),
         last_activity_date: new Date(),
-        acquisition_source: customerData.acquisition_source || 'in_store',
+        acquisition_source: sanitizedSource,
         preferred_language: customerData.preferred_language || 'en'
       })
 
@@ -69,6 +74,11 @@ class CustomerService {
       if (!customer) {
         logger.info(`✨ Creating new customer: ${validCustomerId}`)
 
+        // Validate and sanitize acquisition_source
+        const validSources = ['organic', 'referral', 'social', 'advertising', 'in_store', 'other']
+        const acquisitionSource = customerData.source || 'in_store'
+        const sanitizedSource = validSources.includes(acquisitionSource) ? acquisitionSource : 'other'
+
         customer = await Customer.create({
           customer_id: validCustomerId,
           business_id: businessId,
@@ -83,7 +93,7 @@ class CustomerService {
           total_lifetime_value: 0,
           first_visit_date: new Date(),
           last_activity_date: new Date(),
-          acquisition_source: customerData.source || 'in_store',
+          acquisition_source: sanitizedSource,
           preferred_language: customerData.language || 'en'
         })
 
