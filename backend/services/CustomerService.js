@@ -245,8 +245,8 @@ class CustomerService {
   }
 
   static async getScanHistory(businessId, limit = 50) {
-    return await CustomerProgress.findAll({
-      where: { 
+    const results = await CustomerProgress.findAll({
+      where: {
         business_id: businessId,
         total_scans: { [Op.gt]: 0 }
       },
@@ -254,6 +254,9 @@ class CustomerService {
       order: [['last_scan_date', 'DESC']],
       limit
     })
+
+    // Convert Sequelize models to plain objects to avoid circular JSON references
+    return results.map(r => r.toJSON())
   }
 
   static async getScanAnalytics(businessId, offerId = null) {

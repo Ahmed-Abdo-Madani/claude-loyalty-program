@@ -124,25 +124,21 @@ class RealGoogleWalletController {
       // Step 4: Create save URL
       const saveUrl = `https://pay.google.com/gp/v/save/${jwt}`
 
-      // ✨ Step 5: Record wallet pass in database
-      try {
-        const WalletPassService = (await import('../services/WalletPassService.js')).default
-        await WalletPassService.createWalletPass(
-          customerData.customerId,
-          offerData.offerId,
-          'google',
-          {
-            wallet_object_id: loyaltyObject.id,
-            device_info: {
-              user_agent: req.headers['user-agent'],
-              generated_at: new Date().toISOString()
-            }
+      // ✨ Step 5: Record wallet pass in database (CRITICAL - don't skip!)
+      const WalletPassService = (await import('../services/WalletPassService.js')).default
+      await WalletPassService.createWalletPass(
+        customerData.customerId,
+        offerData.offerId,
+        'google',
+        {
+          wallet_object_id: loyaltyObject.id,
+          device_info: {
+            user_agent: req.headers['user-agent'],
+            generated_at: new Date().toISOString()
           }
-        )
-        console.log('✨ Google Wallet pass recorded in database')
-      } catch (walletPassError) {
-        console.warn('⚠️ Failed to record Google Wallet pass (continuing with generation):', walletPassError.message)
-      }
+        }
+      )
+      console.log('✨ Google Wallet pass recorded in database successfully')
 
       console.log('✅ Google Wallet: Pass generated successfully')
 

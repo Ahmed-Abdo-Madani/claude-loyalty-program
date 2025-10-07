@@ -14,6 +14,8 @@ class WalletPassService {
    */
   static async createWalletPass(customerId, offerId, walletType, metadata = {}) {
     try {
+      logger.info(`🔍 Creating wallet pass: ${walletType} for customer ${customerId}, offer ${offerId}`)
+
       // Find customer progress record
       const progress = await CustomerProgress.findOne({
         where: {
@@ -23,8 +25,12 @@ class WalletPassService {
       })
 
       if (!progress) {
-        throw new Error(`Customer progress not found for customer ${customerId} and offer ${offerId}`)
+        const errorMsg = `Customer progress not found for customer ${customerId} and offer ${offerId}`
+        logger.error(`❌ ${errorMsg}`)
+        throw new Error(errorMsg)
       }
+
+      logger.info(`✅ Found customer progress: ID ${progress.id}, business ${progress.business_id}`)
 
       // Check if wallet pass already exists
       const existing = await WalletPass.findOne({
@@ -36,11 +42,12 @@ class WalletPassService {
       })
 
       if (existing) {
-        logger.info(`♻️ Wallet pass already exists: ${walletType} for ${customerId}`)
+        logger.info(`♻️ Wallet pass already exists: ${walletType} for ${customerId} (ID: ${existing.id})`)
         return existing
       }
 
       // Create wallet pass
+      logger.info(`🆕 Creating new wallet pass record in database...`)
       const walletPass = await WalletPass.create({
         customer_id: customerId,
         progress_id: progress.id,
@@ -53,11 +60,18 @@ class WalletPassService {
         device_info: metadata.device_info || {}
       })
 
-      logger.info(`✨ Created ${walletType} wallet pass for customer ${customerId}`)
+      logger.info(`✨ Created ${walletType} wallet pass for customer ${customerId} (Pass ID: ${walletPass.id})`)
 
       return walletPass
     } catch (error) {
-      logger.error('❌ Failed to create wallet pass:', error)
+      logger.error(`❌ CRITICAL: Failed to create wallet pass for ${customerId}:`, {
+        error: error.message,
+        stack: error.stack,
+        customerId,
+        offerId,
+        walletType,
+        sqlError: error.original?.message || 'N/A'
+      })
       throw error
     }
   }

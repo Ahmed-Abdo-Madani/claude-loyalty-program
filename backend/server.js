@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import logger from './config/logger.js'
+import sequelize from './config/database.js'
 import walletRoutes from './routes/wallet.js'
 import passRoutes from './routes/passes.js'
 import adminRoutes from './routes/admin.js'
@@ -197,29 +198,78 @@ app.use('*', (req, res) => {
   })
 })
 
-const server = app.listen(PORT, '0.0.0.0', () => {
-  const baseUrl = process.env.NODE_ENV === 'production'
-    ? 'https://api.madna.me'
-    : `http://localhost:${PORT}`
+// Initialize database and ensure wallet_passes table exists
+async function initializeDatabase() {
+  try {
+    // Test database connection
+    await sequelize.authenticate()
+    logger.info('✅ Database connection established')
 
-  logger.info(`🚀 Madna Loyalty Platform Backend running on port ${PORT}`)
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  logger.info(`📍 Base URL: ${baseUrl}`)
+    // Check if wallet_passes table exists
+    const [tables] = await sequelize.query(`
+      SELECT tablename
+      FROM pg_tables
+      WHERE schemaname='public' AND tablename='wallet_passes'
+    `)
 
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info(`🌐 Network access: http://192.168.8.114:${PORT}`)
+    if (tables.length === 0) {
+      logger.warn('⚠️ wallet_passes table not found - creating automatically...')
+
+      try {
+        // Import and run migration
+        const { up } = await import('./migrations/create-wallet-passes-table.js')
+        await up()
+        logger.info('✅ wallet_passes table created successfully')
+      } catch (migrationError) {
+        logger.error('❌ CRITICAL: Failed to create wallet_passes table:', migrationError)
+        throw new Error(`Database initialization failed: ${migrationError.message}`)
+      }
+    } else {
+      logger.info('✅ wallet_passes table exists')
+    }
+
+    return true
+  } catch (error) {
+    logger.error('❌ Database initialization failed:', error)
+    throw error
   }
+}
 
-  logger.info(`❤️ Health check: ${baseUrl}/health`)
-  logger.info(`🏢 Business API: ${baseUrl}/api/business`)
-  logger.info(`👥 Customer API: ${baseUrl}/api/customers`)
-  logger.info(`📱 Wallet API: ${baseUrl}/api/wallet`)
-})
+// Start server with database initialization
+;(async () => {
+  try {
+    // Initialize database first
+    await initializeDatabase()
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully')
-  server.close(() => {
-    logger.info('Process terminated')
-  })
-})
+    // Then start the server
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://api.madna.me'
+        : `http://localhost:${PORT}`
+
+      logger.info(`🚀 Madna Loyalty Platform Backend running on port ${PORT}`)
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+      logger.info(`📍 Base URL: ${baseUrl}`)
+
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`🌐 Network access: http://192.168.8.114:${PORT}`)
+      }
+
+      logger.info(`❤️ Health check: ${baseUrl}/health`)
+      logger.info(`🏢 Business API: ${baseUrl}/api/business`)
+      logger.info(`👥 Customer API: ${baseUrl}/api/customers`)
+      logger.info(`📱 Wallet API: ${baseUrl}/api/wallet`)
+    })
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      logger.info('SIGTERM received, shutting down gracefully')
+      server.close(() => {
+        logger.info('Process terminated')
+      })
+    })
+  } catch (error) {
+    logger.error('❌ Failed to start server:', error)
+    process.exit(1)
+  }
+})()

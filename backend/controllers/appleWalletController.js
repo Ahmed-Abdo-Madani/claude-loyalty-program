@@ -48,23 +48,20 @@ class AppleWalletController {
       // Create .pkpass ZIP file
       const pkpassBuffer = await this.createPkpassZip(passData, manifest, signature, images)
 
-      // ✨ Record wallet pass in database
-      try {
-        await WalletPassService.createWalletPass(
-          customerData.customerId,
-          offerData.offerId,
-          'apple',
-          {
-            wallet_serial: passData.serialNumber,
-            device_info: {
-              user_agent: req.headers['user-agent'],
-              generated_at: new Date().toISOString()
-            }
+      // ✨ Record wallet pass in database (CRITICAL - don't skip!)
+      await WalletPassService.createWalletPass(
+        customerData.customerId,
+        offerData.offerId,
+        'apple',
+        {
+          wallet_serial: passData.serialNumber,
+          device_info: {
+            user_agent: req.headers['user-agent'],
+            generated_at: new Date().toISOString()
           }
-        )
-      } catch (walletPassError) {
-        console.warn('⚠️ Failed to record Apple Wallet pass (continuing with generation):', walletPassError.message)
-      }
+        }
+      )
+      console.log('✨ Apple Wallet pass recorded in database successfully')
 
       // Set headers for .pkpass download
       res.setHeader('Content-Type', 'application/vnd.apple.pkpass')
