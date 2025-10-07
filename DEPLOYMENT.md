@@ -79,6 +79,7 @@ DATABASE_URL=[Auto-filled from database]
 JWT_SECRET=[Generate random 64-char string]
 SESSION_SECRET=[Generate random 64-char string]
 ENCRYPTION_KEY=[Generate random 32-char string]
+FRONTEND_URL=https://app.madna.me
 
 # Optional (for wallet integration)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
@@ -88,6 +89,8 @@ GOOGLE_PROJECT_ID=your-google-cloud-project
 # Email (future)
 SENDGRID_API_KEY=your-sendgrid-key
 ```
+
+**Note**: `FRONTEND_URL` is used for generating customer-facing URLs in test endpoints and notifications.
 
 ### Step 3: Custom Domain
 
@@ -115,12 +118,15 @@ Set in Render:
 
 ```bash
 VITE_API_BASE_URL=https://api.madna.me
+VITE_BASE_URL=https://app.madna.me
 VITE_NODE_ENV=production
 VITE_APP_NAME=Madna Loyalty Platform
 VITE_DOMAIN=madna.me
 VITE_SUPPORT_EMAIL=customer_support@madna.me
 VITE_ADMIN_EMAIL=super_admin@madna.me
 ```
+
+**Important**: `VITE_BASE_URL` is required for QR code generation in wallet passes. Without it, QR codes will default to production URL but it's best to set explicitly.
 
 ### Step 3: Custom Domain
 

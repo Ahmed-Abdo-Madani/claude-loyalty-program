@@ -106,13 +106,13 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
         }
 
       } else if (result.data.startsWith('{')) {
-        // Format 2: Wallet JSON format - {"customerId":"CUST-123","offerId":"offer-456","timestamp":"..."}
+        // Format 2: Wallet JSON format - {"customerId":"cust_abc123","offerId":"off_xyz456","timestamp":"..."}
         console.log('📱 Processing Wallet JSON format')
         const walletData = JSON.parse(result.data)
 
         if (walletData.customerId && walletData.offerId) {
-          // Extract actual customer ID from wallet format
-          const actualCustomerId = walletData.customerId.replace('CUST-', '')
+          // Use customer ID directly (should be in cust_* format)
+          const actualCustomerId = walletData.customerId
 
           // Use business ID from QR code if available, otherwise fall back to secure auth
           const businessId = walletData.businessId || localStorage.getItem('businessId') || '1'

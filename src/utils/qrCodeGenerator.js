@@ -3,8 +3,8 @@ import QRCode from 'qrcode'
 // QR Code Generator Utility
 class QRCodeGenerator {
   constructor() {
-    // Use environment variable or fallback to localhost
-    const baseUrl = import.meta.env.VITE_BASE_URL || 'http://localhost:3000'
+    // Use environment variable or fallback to production
+    const baseUrl = import.meta.env.VITE_BASE_URL || 'https://app.madna.me'
     this.baseUrl = `${baseUrl}/customer-signup`
   }
 

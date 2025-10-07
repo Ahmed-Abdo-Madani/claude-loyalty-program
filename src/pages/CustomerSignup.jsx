@@ -239,9 +239,15 @@ function CustomerSignup() {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // Generate customer data
+    // Generate customer data with secure ID format (cust_* + 20 hex chars)
+    const generateSecureCustomerId = () => {
+      const timestamp = Date.now().toString(16) // 12 chars
+      const random = Math.random().toString(16).substring(2, 10) // 8 chars
+      return `cust_${timestamp}${random}`.substring(0, 25) // cust_ + 20 chars
+    }
+
     const newCustomerData = {
-      customerId: `CUST-${Date.now()}`,
+      customerId: generateSecureCustomerId(),
       firstName: formData.firstName,
       lastName: formData.lastName,
       whatsapp: formData.whatsapp,

@@ -5,7 +5,7 @@ import CryptoJS from 'crypto-js'
 
 class WalletPassGenerator {
   constructor() {
-    this.baseUrl = import.meta.env.VITE_BASE_URL || 'http://192.168.8.114:3000' // Network-accessible URL
+    this.baseUrl = import.meta.env.VITE_BASE_URL || 'https://app.madna.me'
   }
 
   // Generate customer progress QR code URL

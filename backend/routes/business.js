@@ -2142,11 +2142,12 @@ router.post('/test/dual-qr-flow', requireBusinessAuth, async (req, res) => {
     const offerHash = CustomerService.generateOfferHash(testOfferId, businessId)
 
     // Step 4: Simulate wallet pass generation with customer progress QR
+    const frontendUrl = process.env.FRONTEND_URL || 'https://app.madna.me'
     const walletPassData = {
       customer: { customerId: testCustomerId },
       offer: { offerId: testOfferId, businessId },
       progress: progress,
-      progressQRUrl: `http://localhost:3000/scan/${customerToken}/${offerHash}`
+      progressQRUrl: `${frontendUrl}/scan/${customerToken}/${offerHash}`
     }
 
     // Step 5: Return test results
