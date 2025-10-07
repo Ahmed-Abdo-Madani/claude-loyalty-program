@@ -236,49 +236,76 @@ function CustomerSignup() {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setLoading(true)
+    setError('')
 
-    // Generate customer data with secure ID format (cust_* + 20 hex chars)
-    const generateSecureCustomerId = () => {
-      const timestamp = Date.now().toString(16) // 12 chars
-      const random = Math.random().toString(16).substring(2, 10) // 8 chars
-      return `cust_${timestamp}${random}`.substring(0, 25) // cust_ + 20 chars
-    }
+    try {
+      // Generate customer data with secure ID format (cust_* + 20 hex chars)
+      const generateSecureCustomerId = () => {
+        const timestamp = Date.now().toString(16) // 12 chars
+        const random = Math.random().toString(16).substring(2, 10) // 8 chars
+        return `cust_${timestamp}${random}`.substring(0, 25) // cust_ + 20 chars
+      }
 
-    const newCustomerData = {
-      customerId: generateSecureCustomerId(),
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      whatsapp: formData.whatsapp,
-      birthday: formData.birthday,
-      joinedDate: new Date().toISOString(),
-      source: qrSource?.source,
-      branch: qrSource?.branch
-    }
-
-    setCustomerData(newCustomerData)
-
-    // Track conversion event
-    if (offerId) {
-      QRCodeGenerator.trackQREvent(offerId, 'converted', {
-        customerData: {
-          customerId: newCustomerData.customerId,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          hasWhatsapp: !!formData.whatsapp,
-          hasBirthday: !!formData.birthday
-        },
+      const newCustomerData = {
+        customerId: generateSecureCustomerId(),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        whatsapp: formData.whatsapp,
+        birthday: formData.birthday,
+        joinedDate: new Date().toISOString(),
         source: qrSource?.source,
-        branch: qrSource?.branch,
-        ref: qrSource?.ref
+        branch: qrSource?.branch
+      }
+
+      console.log('📝 Submitting customer signup:', newCustomerData)
+
+      // ✨ Call backend API to create customer in database
+      const response = await fetch(`${apiBaseUrl}/api/business/customers/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerData: newCustomerData,
+          offerId: offerId
+        })
       })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.message || 'Signup failed')
+      }
+
+      console.log('✅ Customer signup successful:', data)
+
+      // Now customer exists in database!
+      setCustomerData(newCustomerData)
+      setIsSubmitted(true)
+
+      // Track conversion event
+      if (offerId) {
+        QRCodeGenerator.trackQREvent(offerId, 'converted', {
+          customerData: {
+            customerId: newCustomerData.customerId,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            hasWhatsapp: !!formData.whatsapp,
+            hasBirthday: !!formData.birthday
+          },
+          source: qrSource?.source,
+          branch: qrSource?.branch,
+          ref: qrSource?.ref
+        })
+      }
+
+    } catch (error) {
+      console.error('❌ Customer signup failed:', error)
+      setError(error.message || 'Failed to complete signup. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    console.log('Customer signup:', newCustomerData)
-    console.log('QR Source:', qrSource)
-
-    setIsSubmitted(true)
   }
 
   const handleWalletAdded = (walletType, passData) => {
@@ -586,11 +613,32 @@ function CustomerSignup() {
               </label>
             </div>
 
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
+                <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-primary hover:bg-blue-700 text-white py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-primary/25"
+              disabled={loading}
+              className={`w-full py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/25 ${
+                loading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary hover:bg-blue-700 text-white transform hover:scale-[1.02]'
+              }`}
             >
-              📱 {t.joinAddToWallet}
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {selectedLanguage === 'ar' ? 'جاري التسجيل...' : 'Signing up...'}
+                </span>
+              ) : (
+                `📱 ${t.joinAddToWallet}`
+              )}
             </button>
           </form>
 

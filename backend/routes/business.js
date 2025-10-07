@@ -761,6 +761,95 @@ router.post('/customers', (req, res) => {
   }
 })
 
+// Customer signup endpoint - creates customer and customer_progress in database
+router.post('/customers/signup', async (req, res) => {
+  try {
+    const { customerData, offerId } = req.body
+
+    // Validate required fields
+    if (!customerData?.customerId || !offerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer ID and offer ID are required'
+      })
+    }
+
+    // Validate customer ID format
+    if (!customerData.customerId.startsWith('cust_')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid customer ID format. Must start with cust_'
+      })
+    }
+
+    console.log('📝 Customer signup request:', {
+      customerId: customerData.customerId,
+      offerId: offerId,
+      name: `${customerData.firstName} ${customerData.lastName}`
+    })
+
+    // Get offer to find business ID
+    const offer = await Offer.findOne({
+      where: { public_id: offerId }
+    })
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Offer not found'
+      })
+    }
+
+    console.log('✅ Found offer:', {
+      offerId: offer.public_id,
+      businessId: offer.business_id,
+      title: offer.title
+    })
+
+    // Create customer + customer_progress using CustomerService
+    const progress = await CustomerService.createCustomerProgress(
+      customerData.customerId,
+      offerId,
+      offer.business_id,
+      {
+        name: `${customerData.firstName || ''} ${customerData.lastName || ''}`.trim() || 'Guest Customer',
+        whatsapp: customerData.whatsapp || null,
+        birthday: customerData.birthday || null,
+        source: customerData.source || 'qr_scan',
+        branch: customerData.branch || null
+      }
+    )
+
+    console.log('✅ Customer signup completed:', {
+      customerId: customerData.customerId,
+      progressId: progress.id,
+      stampsEarned: progress.stamps_earned
+    })
+
+    res.json({
+      success: true,
+      data: {
+        customerId: customerData.customerId,
+        progress: {
+          id: progress.id,
+          stampsEarned: progress.stamps_earned,
+          stampsRequired: progress.stamps_required || offer.stamps_required,
+          status: progress.status
+        }
+      },
+      message: 'Customer registered successfully'
+    })
+
+  } catch (error) {
+    console.error('❌ Customer signup failed:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register customer',
+      error: error.message
+    })
+  }
+})
+
 // ===============================
 // AUTHENTICATION MIDDLEWARE
 // ===============================
