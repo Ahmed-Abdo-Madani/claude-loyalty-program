@@ -19,9 +19,6 @@ class RealGoogleWalletController {
     // Base URLs for Google Wallet Objects API
     this.baseUrl = 'https://walletobjects.googleapis.com/walletobjects/v1'
 
-    // Push notification rate limiting (3 notifications per 24 hours per user)
-    this.notificationTracker = new Map() // objectId -> { count: number, resetTime: Date }
-
     // Bind methods
     this.generatePass = this.generatePass.bind(this)
     this.savePass = this.savePass.bind(this)
@@ -456,63 +453,10 @@ class RealGoogleWalletController {
     }
   }
 
-  // Check if we can send a push notification (3 per 24 hours limit)
-  canSendNotification(objectId) {
-    const now = new Date()
-    const tracker = this.notificationTracker.get(objectId)
-
-    if (!tracker) {
-      // First notification for this object
-      this.notificationTracker.set(objectId, {
-        count: 1,
-        resetTime: new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24 hours from now
-      })
-      return { allowed: true, remaining: 2 }
-    }
-
-    // Check if 24 hours have passed
-    if (now >= tracker.resetTime) {
-      // Reset counter
-      this.notificationTracker.set(objectId, {
-        count: 1,
-        resetTime: new Date(now.getTime() + 24 * 60 * 60 * 1000)
-      })
-      return { allowed: true, remaining: 2 }
-    }
-
-    // Check if under limit
-    if (tracker.count < 3) {
-      tracker.count++
-      return { allowed: true, remaining: 3 - tracker.count }
-    }
-
-    // Rate limit exceeded
-    const hoursRemaining = Math.ceil((tracker.resetTime - now) / (60 * 60 * 1000))
-    return {
-      allowed: false,
-      remaining: 0,
-      hoursUntilReset: hoursRemaining
-    }
-  }
-
   // Send push notification to update Google Wallet pass on user's device
   async sendPushNotification(objectId, authClient) {
     try {
       console.log('🔔 Google Wallet: Sending push notification for', objectId)
-
-      // Check rate limiting first
-      const rateLimitCheck = this.canSendNotification(objectId)
-      if (!rateLimitCheck.allowed) {
-        console.log(`⚠️ Google Wallet: Rate limit exceeded for ${objectId}. Reset in ${rateLimitCheck.hoursUntilReset} hours`)
-        return {
-          success: false,
-          rateLimited: true,
-          message: `Rate limit exceeded. Reset in ${rateLimitCheck.hoursUntilReset} hours`,
-          hoursUntilReset: rateLimitCheck.hoursUntilReset
-        }
-      }
-
-      console.log(`📊 Google Wallet: ${rateLimitCheck.remaining} notifications remaining today for ${objectId}`)
 
       const accessToken = await authClient.getAccessToken()
 
@@ -540,8 +484,7 @@ class RealGoogleWalletController {
           console.log('✅ Google Wallet: Push notification sent via addMessage API')
           return {
             success: true,
-            method: 'addMessage',
-            remaining: rateLimitCheck.remaining
+            method: 'addMessage'
           }
         } else {
           const error = await pushResponse.text()
@@ -557,8 +500,7 @@ class RealGoogleWalletController {
       return {
         success: true,
         method: 'fieldUpdate',
-        message: 'Field update will trigger notification via notifyPreference',
-        remaining: rateLimitCheck.remaining
+        message: 'Field update will trigger notification via notifyPreference'
       }
 
     } catch (error) {

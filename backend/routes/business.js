@@ -1455,9 +1455,18 @@ router.post('/register', async (req, res) => {
   try {
     const businessData = req.body
 
-    // Validate required fields
-    const requiredFields = ['business_name', 'email', 'phone', 'owner_name', 'business_type', 'region']
+    // Validate required fields - Updated for new location system
+    const requiredFields = ['business_name', 'email', 'phone', 'owner_name', 'business_type']
     const missingFields = requiredFields.filter(field => !businessData[field])
+
+    // Check if location is provided (either old format or new location_data)
+    const hasLocation = businessData.region || 
+                       businessData.city || 
+                       (businessData.location_data && businessData.location_data.type)
+
+    if (!hasLocation) {
+      missingFields.push('location')
+    }
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -1479,9 +1488,13 @@ router.post('/register', async (req, res) => {
     const tempPassword = businessData.password || 'TempPass123!'
     const hashedPassword = bcrypt.hashSync(tempPassword, 10)
 
-    // Create business using PostgreSQL
+    // Create business using PostgreSQL with location data
     const newBusiness = await Business.create({
       ...businessData,
+      // Handle location metadata if provided
+      location_id: businessData.location_data?.id || null,
+      location_type: businessData.location_data?.type || null,
+      location_hierarchy: businessData.location_data?.hierarchy || null,
       status: 'pending', // New registrations start as pending
       password_hash: hashedPassword  // Use hashed password
     })

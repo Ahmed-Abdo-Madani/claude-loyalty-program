@@ -63,7 +63,14 @@ export const endpoints = {
   segmentsPredefined: `${API_BASE_URL}/api/segments/predefined`,
   segmentsHighValue: `${API_BASE_URL}/api/segments/predefined/high-value`,
   segmentsAtRisk: `${API_BASE_URL}/api/segments/predefined/at-risk`,
-  segmentsBirthday: `${API_BASE_URL}/api/segments/predefined/birthday`
+  segmentsBirthday: `${API_BASE_URL}/api/segments/predefined/birthday`,
+
+  // Location APIs
+  locationBase: `${API_BASE_URL}/api/locations`,
+  locations: `${API_BASE_URL}/api/locations`,
+  locationSearch: `${API_BASE_URL}/api/locations/search`,
+  locationRegions: `${API_BASE_URL}/api/locations/regions`,
+  locationValidate: `${API_BASE_URL}/api/locations/validate`
 }
 
 // Secure API helper functions

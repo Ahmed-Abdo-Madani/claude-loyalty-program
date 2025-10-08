@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { endpoints } from '../config/api'
 import DarkModeToggle from '../components/DarkModeToggle'
+import LocationAutocomplete from '../components/LocationAutocomplete'
+
+// District cache for performance optimization
+const districtCache = new Map()
 
 // Saudi business categories from our DataStore
 const businessCategories = [
@@ -54,8 +58,13 @@ const content = {
     regionPlaceholder: 'اختر المنطقة',
     city: 'المدينة',
     cityPlaceholder: 'اختر المدينة',
-    businessAddress: 'عنوان الأعمال',
-    addressPlaceholder: 'الشارع، الحي',
+    district: 'الحي',
+    districtPlaceholder: 'اختر الحي (اختياري)',
+    selectDistrict: 'اختر الحي',
+    loadingDistricts: 'جاري تحميل الأحياء...',
+    noDistricts: 'لا توجد أحياء متاحة',
+    businessAddress: 'اسم الشارع',
+    addressPlaceholder: 'اسم الشارع',
     businessPhone: 'هاتف الأعمال',
     businessEmail: 'بريد الأعمال الإلكتروني',
 
@@ -102,7 +111,7 @@ const content = {
     invalidCrFormat: 'تنسيق السجل التجاري غير صحيح. استخدم 10 أرقام',
     regionRequired: 'المنطقة مطلوبة',
     cityRequired: 'المدينة مطلوبة',
-    addressRequired: 'عنوان الأعمال مطلوب',
+    addressRequired: 'اسم الشارع مطلوب',
     phoneRequired: 'رقم الهاتف مطلوب',
     invalidPhoneFormat: 'تنسيق الهاتف غير صحيح. استخدم: +966XXXXXXXXX',
     emailRequired: 'البريد الإلكتروني مطلوب',
@@ -156,8 +165,13 @@ const content = {
     regionPlaceholder: 'Select region',
     city: 'City',
     cityPlaceholder: 'Select city',
-    businessAddress: 'Business Address',
-    addressPlaceholder: 'Street, District',
+    district: 'District',
+    districtPlaceholder: 'Select district (optional)',
+    selectDistrict: 'Select district',
+    loadingDistricts: 'Loading districts...',
+    noDistricts: 'No districts available',
+    businessAddress: 'Street Name',
+    addressPlaceholder: 'Street Name',
     businessPhone: 'Business Phone',
     businessEmail: 'Business Email',
 
@@ -204,7 +218,7 @@ const content = {
     invalidCrFormat: 'Invalid CR format. Use 10 digits: XXXXXXXXXX',
     regionRequired: 'Region is required',
     cityRequired: 'City is required',
-    addressRequired: 'Business address is required',
+    addressRequired: 'Street name is required',
     phoneRequired: 'Phone number is required',
     invalidPhoneFormat: 'Invalid phone format. Use: +966XXXXXXXXX',
     emailRequired: 'Email is required',
@@ -220,28 +234,17 @@ const content = {
   }
 }
 
-// Saudi regions and cities
-const saudiRegions = {
-  'Central Region': {
-    nameAr: 'المنطقة الوسطى',
-    cities: ['الرياض - Riyadh', 'الخرج - Al-Kharj', 'الدرعية - Diriyah', 'المجمعة - Al-Majma\'ah']
-  },
-  'Western Region': {
-    nameAr: 'المنطقة الغربية',
-    cities: ['جدة - Jeddah', 'مكة المكرمة - Makkah', 'المدينة المنورة - Madinah', 'الطائف - Taif', 'ينبع - Yanbu']
-  },
-  'Eastern Region': {
-    nameAr: 'المنطقة الشرقية',
-    cities: ['الدمام - Dammam', 'الخبر - Khobar', 'الأحساء - Al-Ahsa', 'الجبيل - Jubail', 'القطيف - Qatif']
-  }
-}
-
 function BusinessRegistrationPage() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState('ar') // 'ar' or 'en'
+
+  // District management state
+  const [loadingDistricts, setLoadingDistricts] = useState(false)
+  const [districtOptions, setDistrictOptions] = useState([])
+  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false)
 
   const [formData, setFormData] = useState({
     // Step 1: Business Information
@@ -252,8 +255,10 @@ function BusinessRegistrationPage() {
     description: '',
 
     // Step 2: Location & Contact
-    region: '',
-    city: '',
+    location: null, // Will store selected location object from autocomplete
+    region: '',     // Legacy - will be populated from location
+    city: '',       // Legacy - will be populated from location  
+    district: '',   // New field from location data
     address: '',
     phone: '',
     email: '',
@@ -273,6 +278,176 @@ function BusinessRegistrationPage() {
 
   // Get current language content
   const t = content[selectedLanguage]
+
+  // Extract region from location hierarchy
+  const extractRegionFromHierarchy = (hierarchy) => {
+    if (!hierarchy) return ''
+    // "العليا، منطقة الرياض" → "منطقة الرياض"
+    const parts = hierarchy.split('، ')
+    return parts[parts.length - 1] // Last part is the region
+  }
+
+  // Load districts for a city with caching and smart defaults
+  const loadDistrictsForCity = async (cityId, cityName) => {
+    if (!cityId) return
+
+    try {
+      setLoadingDistricts(true)
+      
+      // Check cache first
+      if (districtCache.has(cityId)) {
+        const cachedDistricts = districtCache.get(cityId)
+        handleDistrictsLoaded(cachedDistricts, cityName)
+        return
+      }
+
+      // Fetch from API
+      const response = await fetch(`${endpoints.locationBase}/cities/${cityId}/districts`)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const result = await response.json()
+      const districts = result.success ? result.data : []
+      
+      // Cache the results
+      districtCache.set(cityId, districts)
+      
+      handleDistrictsLoaded(districts, cityName)
+      
+    } catch (error) {
+      console.error('Failed to load districts:', error)
+      // Fallback: use city name as district
+      setFormData(prev => ({ ...prev, district: cityName }))
+      setShowDistrictDropdown(false)
+    } finally {
+      setLoadingDistricts(false)
+    }
+  }
+
+  // Handle districts loaded with smart default behavior
+  const handleDistrictsLoaded = (districts, cityName) => {
+    if (districts.length === 0) {
+      // No districts available - use city name as district
+      setFormData(prev => ({ ...prev, district: cityName }))
+      setShowDistrictDropdown(false)
+      console.log('📍 No districts found, using city name as district')
+    } else if (districts.length === 1) {
+      // Auto-select single district
+      const district = districts[0]
+      const districtName = selectedLanguage === 'ar' ? district.name_ar : district.name_en
+      setFormData(prev => ({ ...prev, district: districtName }))
+      setShowDistrictDropdown(false) // Hide dropdown since auto-selected
+      console.log('📍 Single district auto-selected:', districtName)
+    } else {
+      // Multiple districts - show dropdown for selection
+      setDistrictOptions(districts)
+      setShowDistrictDropdown(true)
+      setFormData(prev => ({ ...prev, district: '' })) // Reset district for user selection
+      console.log('📍 Multiple districts loaded, showing dropdown')
+    }
+  }
+
+  // Handle location selection from autocomplete
+  const handleLocationSelect = (location) => {
+    console.log('🏙️ Location selected:', location)
+    
+    if (!location) return
+
+    // Extract region from hierarchy (auto-populate hidden field)
+    const region = extractRegionFromHierarchy(location.hierarchy)
+    
+    // Reset district state
+    setShowDistrictDropdown(false)
+    setDistrictOptions([])
+    setLoadingDistricts(false)
+    
+    if (location.type === 'city') {
+      // City selected - auto-populate region and load districts
+      const cityName = selectedLanguage === 'ar' ? location.name_ar : location.name_en
+      const cityId = location.city_id || location.id
+      
+      console.log('🔧 Extracted location data:', { region, city: cityName, cityId })
+      
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+        region: region, // Auto-populated from hierarchy
+        city: cityName,
+        district: '', // Will be set by loadDistrictsForCity
+        location_data: {
+          id: cityId,
+          type: 'city',
+          name_ar: location.name_ar,
+          name_en: location.name_en,
+          hierarchy: location.hierarchy
+        }
+      }))
+      
+      // Load districts immediately
+      loadDistrictsForCity(cityId, cityName)
+      
+    } else if (location.type === 'district') {
+      // District selected directly - extract city and region info
+      const districtName = selectedLanguage === 'ar' ? location.name_ar : location.name_en
+      
+      // Try to extract city from hierarchy
+      let cityName = ''
+      if (location.hierarchy) {
+        const parts = location.hierarchy.split('، ')
+        if (parts.length >= 2) {
+          cityName = parts[parts.length - 2] // Second to last part is city
+        }
+      }
+      
+      console.log('🔧 Extracted location data:', { region, city: cityName, district: districtName })
+      
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+        region: region,
+        city: cityName,
+        district: districtName,
+        location_data: {
+          id: location.district_id || location.id,
+          type: 'district',
+          name_ar: location.name_ar,
+          name_en: location.name_en,
+          hierarchy: location.hierarchy
+        }
+      }))
+      
+    } else if (location.type === 'region') {
+      // Region selected - just set region, clear city and district
+      const regionName = selectedLanguage === 'ar' ? location.name_ar : location.name_en
+      
+      console.log('🔧 Extracted location data:', { region: regionName })
+      
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+        region: regionName,
+        city: '',
+        district: '',
+        location_data: {
+          id: location.region_id || location.id,
+          type: 'region',
+          name_ar: location.name_ar,
+          name_en: location.name_en,
+          hierarchy: location.hierarchy
+        }
+      }))
+    }
+  }
+
+  // Handle district selection from dropdown
+  const handleDistrictSelect = (e) => {
+    const districtName = e.target.value
+    setFormData(prev => ({
+      ...prev,
+      district: districtName
+    }))
+  }
 
   // Helper function to handle form input based on language
   const handleLanguageSpecificInput = (fieldName, value) => {
@@ -356,12 +531,13 @@ function BusinessRegistrationPage() {
         return true
 
       case 2:
-        if (!formData.region) {
-          setError(t.regionRequired)
-          return false
-        }
-        if (!formData.city) {
-          setError(t.cityRequired)
+        console.log('🔍 Step 2 validation debug:')
+        console.log('- formData.location:', formData.location)
+        console.log('- formData.region:', formData.region)
+        console.log('- formData.city:', formData.city)
+        
+        if (!formData.location) {
+          setError(selectedLanguage === 'ar' ? 'يرجى اختيار الموقع (المنطقة أو المدينة أو الحي)' : 'Please select a location (region, city, or district)')
           return false
         }
         if (!formData.address.trim()) {
@@ -475,6 +651,7 @@ function BusinessRegistrationPage() {
         description: formData.description,
         region: formData.region,
         city: formData.city,
+        district: formData.district,
         address: formData.address,
         phone: formData.phone,
         email: formData.email,
@@ -483,8 +660,24 @@ function BusinessRegistrationPage() {
         owner_id: formData.owner_id,
         owner_phone: formData.owner_phone,
         owner_email: formData.owner_email,
-        password: formData.password
+        password: formData.password,
+        
+        // Include location metadata
+        location_data: formData.location ? {
+          id: formData.location.city_id || formData.location.region_id || formData.location.district_id || formData.location.id,
+          type: formData.location.type,
+          name_ar: formData.location.name_ar,
+          name_en: formData.location.name_en,
+          hierarchy: formData.location.hierarchy
+        } : null
       }
+
+      // Debug logging
+      console.log('🔍 Form submission debug:')
+      console.log('- formData.location:', formData.location)
+      console.log('- formData.region:', formData.region)
+      console.log('- formData.city:', formData.city)
+      console.log('- businessData:', businessData)
 
       // Call the unified DataStore API
       const response = await fetch(endpoints.businessRegister, {
@@ -510,8 +703,6 @@ function BusinessRegistrationPage() {
       setLoading(false)
     }
   }
-
-  const availableCities = formData.region ? saudiRegions[formData.region]?.cities || [] : []
 
   // Helper to get current business name based on selected language
   const getCurrentBusinessName = () => {
@@ -612,48 +803,82 @@ function BusinessRegistrationPage() {
               {t.locationContact}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.saudiRegion} *
-                </label>
-                <select
-                  name="region"
-                  value={formData.region}
-                  onChange={handleInputChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  required
-                >
-                  <option value="">{t.regionPlaceholder}</option>
-                  {Object.entries(saudiRegions).map(([key, region]) => (
-                    <option key={key} value={key}>
-                      {selectedLanguage === 'ar' ? region.nameAr : key}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.city} *
-                </label>
-                <select
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm disabled:opacity-50"
-                  required
-                  disabled={!formData.region}
-                >
-                  <option value="">{t.cityPlaceholder}</option>
-                  {availableCities.map(city => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Saudi Location Search */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {selectedLanguage === 'ar' ? 'الموقع (المنطقة، المدينة، أو الحي)' : 'Location (Region, City, or District)'} *
+              </label>
+              <LocationAutocomplete
+                value={formData.location}
+                onChange={handleLocationSelect}
+                language={selectedLanguage}
+                placeholder={selectedLanguage === 'ar' ? 'ابحث عن المنطقة أو المدينة أو الحي...' : 'Search for region, city, or district...'}
+                placeholderEn="Search for region, city, or district..."
+                className="w-full"
+                required
+              />
+              {formData.location && (
+                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="text-sm text-blue-800 dark:text-blue-300">
+                    <strong>{selectedLanguage === 'ar' ? 'الموقع المحدد:' : 'Selected Location:'}</strong>
+                    <div className="mt-1">
+                      {formData.region && (
+                        <span className="inline-block bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs mr-2 mb-1">
+                          {selectedLanguage === 'ar' ? 'منطقة:' : 'Region:'} {formData.region}
+                        </span>
+                      )}
+                      {formData.city && (
+                        <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-md text-xs mr-2 mb-1">
+                          {selectedLanguage === 'ar' ? 'مدينة:' : 'City:'} {formData.city}
+                        </span>
+                      )}
+                      {formData.district && (
+                        <span className="inline-block bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-md text-xs mr-2 mb-1">
+                          {selectedLanguage === 'ar' ? 'حي:' : 'District:'} {formData.district}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* District Dropdown - shown when city is selected and multiple districts are available */}
+            {showDistrictDropdown && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t.district}
+                </label>
+                {loadingDistricts ? (
+                  // Skeleton loader
+                  <div className="animate-pulse">
+                    <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.district}
+                    onChange={handleDistrictSelect}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                  >
+                    <option value="">{t.districtPlaceholder}</option>
+                    {districtOptions.map((district, index) => (
+                      <option 
+                        key={district.district_id || district.id || index} 
+                        value={selectedLanguage === 'ar' ? district.name_ar : district.name_en}
+                      >
+                        {selectedLanguage === 'ar' ? district.name_ar : district.name_en}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {loadingDistricts && (
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {t.loadingDistricts}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

@@ -29,6 +29,16 @@ const Branch = sequelize.define('Branch', {
     type: DataTypes.STRING(100),
     allowNull: true
   },
+  region: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Saudi Arabia region'
+  },
+  district: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'District/neighborhood within the city'
+  },
   state: {
     type: DataTypes.STRING(100),
     allowNull: true
@@ -41,6 +51,22 @@ const Branch = sequelize.define('Branch', {
     type: DataTypes.STRING(100),
     allowNull: true,
     defaultValue: 'Saudi Arabia'
+  },
+  // Location metadata from Saudi location service
+  location_id: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'ID from Saudi location data service'
+  },
+  location_type: {
+    type: DataTypes.ENUM('region', 'city', 'district'),
+    allowNull: true,
+    comment: 'Type of location selected (region, city, or district)'
+  },
+  location_hierarchy: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Full location hierarchy (e.g., "Riyadh Region - Riyadh City - Al-Malaz District")'
   },
   phone: {
     type: DataTypes.STRING(20),

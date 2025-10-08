@@ -10,6 +10,7 @@ import businessRoutes from './routes/business.js'
 import customerRoutes from './routes/customers.js'
 import notificationRoutes from './routes/notifications.js'
 import segmentRoutes from './routes/segments.js'
+import locationRoutes from './routes/locations.js'
 
 dotenv.config()
 
@@ -174,6 +175,7 @@ app.use('/api/business', businessRoutes)
 app.use('/api/customers', customerRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/segments', segmentRoutes)
+app.use('/api/locations', locationRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -240,6 +242,16 @@ async function initializeDatabase() {
   try {
     // Initialize database first
     await initializeDatabase()
+
+    // Initialize location service
+    try {
+      const LocationService = (await import('./services/LocationService.js')).default
+      await LocationService.initialize()
+      logger.info('✅ LocationService initialized successfully')
+    } catch (error) {
+      logger.warn('⚠️ LocationService initialization failed:', error.message)
+      // Continue startup even if location service fails
+    }
 
     // Then start the server
     const server = app.listen(PORT, '0.0.0.0', () => {

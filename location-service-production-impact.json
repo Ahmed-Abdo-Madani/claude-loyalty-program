@@ -1,0 +1,318 @@
+{
+  "timestamp": "2025-10-08T10:24:51.284Z",
+  "metrics": {
+    "memory": {
+      "before_initialization": {
+        "rss": 40,
+        "heapTotal": 12.8,
+        "heapUsed": 9.53,
+        "external": 1.83,
+        "timestamp": 1759919088493
+      },
+      "after_regions_loaded": {
+        "rss": 40.32,
+        "heapTotal": 12.8,
+        "heapUsed": 9.6,
+        "external": 1.83,
+        "timestamp": 1759919088496
+      },
+      "after_full_data_loaded": {
+        "rss": 45.02,
+        "heapTotal": 18.46,
+        "heapUsed": 13.09,
+        "external": 1.83,
+        "timestamp": 1759919088512
+      },
+      "after_concurrent_load": {
+        "rss": 55.41,
+        "heapTotal": 26.93,
+        "heapUsed": 13.3,
+        "external": 1.83,
+        "timestamp": 1759919088733
+      },
+      "after_memory_pressure": {
+        "rss": 57.72,
+        "heapTotal": 29.26,
+        "heapUsed": 19.37,
+        "external": 1.83,
+        "timestamp": 1759919091083
+      }
+    },
+    "timing": {
+      "service_initialization": {
+        "durationMs": 2.3683,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 16
+      },
+      "first_search_with_loading": {
+        "durationMs": 16.2407,
+        "cpuUsage": {
+          "user": 16,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 581
+      },
+      "100_concurrent_users": {
+        "durationMs": 219.7135,
+        "cpuUsage": {
+          "user": 203,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 21375
+      },
+      "memory_pressure_test": {
+        "durationMs": 2348.6953,
+        "cpuUsage": {
+          "user": 2328,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 169701
+      },
+      "search_الرياض_ar": {
+        "durationMs": 2.9597,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 834
+      },
+      "concurrent_الرياض_ar_10x": {
+        "durationMs": 24.9802,
+        "cpuUsage": {
+          "user": 31,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 8351
+      },
+      "search_riyadh_en": {
+        "durationMs": 1.06,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 718
+      },
+      "concurrent_riyadh_en_10x": {
+        "durationMs": 14.2343,
+        "cpuUsage": {
+          "user": 16,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 7191
+      },
+      "search_جدة_ar": {
+        "durationMs": 2.3076,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 489
+      },
+      "concurrent_جدة_ar_10x": {
+        "durationMs": 23.1232,
+        "cpuUsage": {
+          "user": 16,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 4901
+      },
+      "search_jeddah_en": {
+        "durationMs": 1.2612,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 218
+      },
+      "concurrent_jeddah_en_10x": {
+        "durationMs": 10.5746,
+        "cpuUsage": {
+          "user": 15,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 2191
+      },
+      "search_الدمام_ar": {
+        "durationMs": 2.7718,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 82
+      },
+      "concurrent_الدمام_ar_10x": {
+        "durationMs": 25.3578,
+        "cpuUsage": {
+          "user": 32,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 831
+      },
+      "search_dammam_en": {
+        "durationMs": 1.0408,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 82
+      },
+      "concurrent_dammam_en_10x": {
+        "durationMs": 11.8883,
+        "cpuUsage": {
+          "user": 15,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 831
+      },
+      "search_مكة_ar": {
+        "durationMs": 2.3422,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 338
+      },
+      "concurrent_مكة_ar_10x": {
+        "durationMs": 24.8802,
+        "cpuUsage": {
+          "user": 16,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 3391
+      },
+      "search_makkah_en": {
+        "durationMs": 1.0506,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 338
+      },
+      "concurrent_makkah_en_10x": {
+        "durationMs": 10.9347,
+        "cpuUsage": {
+          "user": 15,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 3391
+      },
+      "search_xyz123_en": {
+        "durationMs": 0.99,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 2
+      },
+      "concurrent_xyz123_en_10x": {
+        "durationMs": 11.3558,
+        "cpuUsage": {
+          "user": 16,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 31
+      },
+      "search_ص_ar": {
+        "durationMs": 0.0113,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 2
+      },
+      "concurrent_ص_ar_10x": {
+        "durationMs": 0.0068,
+        "cpuUsage": {
+          "user": 0,
+          "system": 0
+        },
+        "success": true,
+        "resultSize": 31
+      }
+    },
+    "dataSize": {
+      "regions_lite.json": {
+        "fileSizeKB": 2.17,
+        "recordCount": 13,
+        "avgRecordSize": 171,
+        "lastModified": "2025-10-08T09:33:07.323Z"
+      },
+      "cities_lite.json": {
+        "fileSizeKB": 497.65,
+        "recordCount": 4581,
+        "avgRecordSize": 111,
+        "lastModified": "2025-10-08T09:32:45.177Z"
+      },
+      "districts_lite.json": {
+        "fileSizeKB": 559.66,
+        "recordCount": 3732,
+        "avgRecordSize": 154,
+        "lastModified": "2025-10-08T09:33:01.307Z"
+      }
+    },
+    "performance": {}
+  },
+  "impact": {
+    "memoryFootprint": {
+      "baselineMemoryMB": 9.53,
+      "peakMemoryMB": 19.37,
+      "memoryIncreaseMB": 9.84,
+      "memoryEfficiency": "excellent"
+    },
+    "startupImpact": {
+      "initializationTimeMs": 2.3683,
+      "firstSearchTimeMs": 16.2407,
+      "totalStartupTimeMs": 18.61
+    },
+    "performanceMetrics": {
+      "averageSearchTimeMs": 1.58,
+      "concurrentUserCapacity": 100,
+      "searchThroughputPerSecond": 455.14,
+      "cacheEfficiency": "high"
+    },
+    "scalabilityFactors": {
+      "dataSize": {
+        "totalRecords": 8326,
+        "totalSizeKB": 1059.48
+      },
+      "recommendedServerSpecs": {
+        "minimumRAM": "39MB",
+        "recommendedRAM": "78MB",
+        "cpuCores": 1,
+        "storageForCache": "3MB"
+      },
+      "estimatedUserCapacity": 18987
+    }
+  },
+  "environment": {
+    "nodeVersion": "v22.19.0",
+    "platform": "win32",
+    "arch": "x64"
+  }
+}

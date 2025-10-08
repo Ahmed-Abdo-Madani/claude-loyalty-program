@@ -322,34 +322,12 @@ function BranchModal({ branch, onClose, onSave }) {
     phone: branch?.phone || '',
     email: branch?.email || '',
     manager_name: branch?.manager_name || '',
-    isMain: branch?.isMain || false,
-    openingHours: branch?.openingHours || {
-      monday: "9:00 AM - 9:00 PM",
-      tuesday: "9:00 AM - 9:00 PM",
-      wednesday: "9:00 AM - 9:00 PM",
-      thursday: "9:00 AM - 9:00 PM",
-      friday: "9:00 AM - 10:00 PM",
-      saturday: "10:00 AM - 10:00 PM",
-      sunday: "10:00 AM - 8:00 PM"
-    }
+    isMain: branch?.isMain || false
   })
-
-  const [activeTab, setActiveTab] = useState('basic')
 
   const handleSubmit = (e) => {
     e.preventDefault()
     onSave(formData)
-  }
-
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-  const dayEmojis = {
-    monday: '📅',
-    tuesday: '📅',
-    wednesday: '📅',
-    thursday: '📅',
-    friday: '🎉',
-    saturday: '🎉',
-    sunday: '☀️'
   }
 
   return (
@@ -375,37 +353,10 @@ function BranchModal({ branch, onClose, onSave }) {
           </button>
         </div>
 
-        {/* Enhanced Tab Navigation */}
-        <div className="px-6 pt-6">
-          <div className="flex space-x-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
-            <button
-              onClick={() => setActiveTab('basic')}
-              className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                activeTab === 'basic'
-                  ? 'bg-white dark:bg-gray-800 text-primary shadow-sm border border-gray-200 dark:border-gray-600'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              📍 Basic Info
-            </button>
-            <button
-              onClick={() => setActiveTab('hours')}
-              className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                activeTab === 'hours'
-                  ? 'bg-white dark:bg-gray-800 text-primary shadow-sm border border-gray-200 dark:border-gray-600'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              ⏰ Operating Hours
-            </button>
-          </div>
-        </div>
-
         {/* Form Content */}
         <div className="p-6">
           <form onSubmit={handleSubmit}>
-            {activeTab === 'basic' && (
-              <div className="space-y-6">
+            <div className="space-y-6">
                 {/* Branch Name and Manager */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -538,40 +489,6 @@ function BranchModal({ branch, onClose, onSave }) {
                   </div>
                 </div>
               </div>
-            )}
-
-            {activeTab === 'hours' && (
-              <div className="space-y-6">
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                  <p className="text-sm text-blue-800 dark:text-blue-400 mb-0">
-                    💡 Set operating hours for this branch. Enter "Closed" for non-operating days or leave blank.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {days.map((day) => (
-                    <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize flex items-center sm:w-32">
-                        {dayEmojis[day]} {day}
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.openingHours[day]}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          openingHours: {
-                            ...formData.openingHours,
-                            [day]: e.target.value
-                          }
-                        })}
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                        placeholder="9:00 AM - 5:00 PM or Closed"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
