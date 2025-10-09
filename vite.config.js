@@ -48,8 +48,8 @@ export default defineConfig({
   },
   // Optimize dependency pre-bundling
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
-    exclude: ['qrcode', 'qr-scanner'] // Don't pre-bundle large QR libs
+    include: ['react', 'react-dom', 'react-router-dom', 'qrcode'], // Include qrcode for CommonJS → ESM conversion
+    exclude: ['qr-scanner'] // Exclude qr-scanner only
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
