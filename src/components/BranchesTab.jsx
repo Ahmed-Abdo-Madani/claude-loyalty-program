@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import BranchGrid from './BranchGrid'
+import LocationAutocomplete from './LocationAutocomplete'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
 
@@ -315,15 +316,225 @@ function BranchesTab() {
 function BranchModal({ branch, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: branch?.name || '',
-    address: branch?.address || '',
-    city: branch?.city || '',
-    state: branch?.state || '',
-    zip_code: branch?.zip_code || '',
+    location: branch?.location || null,           // Location object from LocationAutocomplete
+    region: branch?.region || '',                 // Auto-populated from location
+    city: branch?.city || '',                     // Auto-populated from location
+    district: branch?.district || '',             // Auto-populated from location
+    street_name: branch?.address || '',           // Renamed from 'address' - street name only
+    location_data: branch?.location_data || null, // Full location metadata
     phone: branch?.phone || '',
     email: branch?.email || '',
     manager_name: branch?.manager_name || '',
     isMain: branch?.isMain || false
   })
+
+  // District management state
+  const [loadingDistricts, setLoadingDistricts] = useState(false)
+  const [districtOptions, setDistrictOptions] = useState([])
+  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false)
+
+  // Initialize location data when editing existing branch
+  useEffect(() => {
+    if (branch && (branch.city || branch.region)) {
+      console.log('🔧 Edit mode: Reconstructing location from branch data', branch)
+
+      // Helper: Construct hierarchy if not stored
+      const constructHierarchy = (district, city, region) => {
+        const parts = []
+        if (district) parts.push(district)
+        if (city && city !== district) parts.push(city)
+        if (region) parts.push(region)
+        return parts.join('، ')
+      }
+
+      // Determine location type
+      const locationType = branch.district ? 'district' : (branch.city ? 'city' : 'region')
+      const locationName = branch.district || branch.city || branch.region || ''
+
+      // Reconstruct location object from stored data
+      const reconstructedLocation = {
+        type: locationType,
+        name_ar: locationName,
+        name_en: locationName,
+        hierarchy: branch.location_hierarchy ||
+                   constructHierarchy(branch.district, branch.city, branch.region),
+        id: branch.location_id || null,
+        city_id: branch.location_id || null,
+        district_id: branch.location_id || null,
+        region_id: branch.location_id || null
+      }
+
+      console.log('✅ Reconstructed location object:', reconstructedLocation)
+
+      // Update formData with reconstructed location
+      setFormData(prev => ({
+        ...prev,
+        location: reconstructedLocation,
+        region: branch.region || '',
+        city: branch.city || '',
+        district: branch.district || ''
+      }))
+
+      // Don't show district dropdown in edit mode (already selected)
+      setShowDistrictDropdown(false)
+    }
+  }, [branch])
+
+  // Extract region from location hierarchy
+  const extractRegionFromHierarchy = (hierarchy) => {
+    if (!hierarchy) return ''
+    const parts = hierarchy.split('، ')
+    return parts[parts.length - 1] // Last part is the region
+  }
+
+  // Load districts for a city with caching and smart defaults
+  const loadDistrictsForCity = async (cityId, cityName) => {
+    if (!cityId) return
+
+    try {
+      setLoadingDistricts(true)
+
+      // Fetch from API
+      const response = await fetch(`${endpoints.locationBase}/cities/${cityId}/districts`)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const result = await response.json()
+      const districts = result.success ? result.data : []
+
+      handleDistrictsLoaded(districts, cityName)
+
+    } catch (error) {
+      console.error('Failed to load districts:', error)
+      // Fallback: use city name as district
+      setFormData(prev => ({ ...prev, district: cityName }))
+      setShowDistrictDropdown(false)
+    } finally {
+      setLoadingDistricts(false)
+    }
+  }
+
+  // Handle districts loaded with smart default behavior
+  const handleDistrictsLoaded = (districts, cityName) => {
+    if (districts.length === 0) {
+      // No districts available - use city name as district
+      setFormData(prev => ({ ...prev, district: cityName }))
+      setShowDistrictDropdown(false)
+      console.log('📍 No districts found, using city name as district')
+    } else if (districts.length === 1) {
+      // Auto-select single district
+      const district = districts[0]
+      const districtName = district.name_ar || district.name_en
+      setFormData(prev => ({ ...prev, district: districtName }))
+      setShowDistrictDropdown(false) // Hide dropdown since auto-selected
+      console.log('📍 Single district auto-selected:', districtName)
+    } else {
+      // Multiple districts - show dropdown for selection
+      setDistrictOptions(districts)
+      setShowDistrictDropdown(true)
+      setFormData(prev => ({ ...prev, district: '' })) // Reset district for user selection
+      console.log('📍 Multiple districts loaded, showing dropdown')
+    }
+  }
+
+  // Handle district selection from dropdown
+  const handleDistrictSelect = (e) => {
+    const districtName = e.target.value
+    setFormData(prev => ({
+      ...prev,
+      district: districtName
+    }))
+  }
+
+  // Handle location selection from autocomplete
+  const handleLocationSelect = (location) => {
+    console.log('🏙️ Branch location selected:', location)
+
+    if (!location) return
+
+    // Extract region from hierarchy
+    const region = extractRegionFromHierarchy(location.hierarchy)
+
+    if (location.type === 'city') {
+      // City selected - auto-populate region, city, then load districts
+      const cityName = location.name_ar || location.name_en
+      const cityId = location.city_id || location.id
+
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+        region: region,
+        city: cityName,
+        district: '', // Will be populated by loadDistrictsForCity
+        location_data: {
+          id: cityId,
+          type: 'city',
+          name_ar: location.name_ar,
+          name_en: location.name_en,
+          hierarchy: location.hierarchy
+        }
+      }))
+
+      // Load districts for this city
+      loadDistrictsForCity(cityId, cityName)
+
+    } else if (location.type === 'district') {
+      // District selected directly - extract city and region
+      const districtName = location.name_ar || location.name_en
+
+      // Try to extract city from hierarchy
+      let cityName = ''
+      if (location.hierarchy) {
+        const parts = location.hierarchy.split('، ')
+        if (parts.length >= 2) {
+          cityName = parts[parts.length - 2] // Second to last part is city
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+        region: region,
+        city: cityName,
+        district: districtName,
+        location_data: {
+          id: location.district_id || location.id,
+          type: 'district',
+          name_ar: location.name_ar,
+          name_en: location.name_en,
+          hierarchy: location.hierarchy
+        }
+      }))
+
+      // District already selected - hide dropdown
+      setShowDistrictDropdown(false)
+      setDistrictOptions([])
+
+    } else if (location.type === 'region') {
+      // Region selected - set region only
+      const regionName = location.name_ar || location.name_en
+
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+        region: regionName,
+        city: '',
+        district: '',
+        location_data: {
+          id: location.region_id || location.id,
+          type: 'region',
+          name_ar: location.name_ar,
+          name_en: location.name_en,
+          hierarchy: location.hierarchy
+        }
+      }))
+
+      // Region only - hide district dropdown
+      setShowDistrictDropdown(false)
+      setDistrictOptions([])
+    }
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -386,62 +597,99 @@ function BranchModal({ branch, onClose, onSave }) {
                   </div>
                 </div>
 
-                {/* Address */}
+                {/* Saudi Location Search */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    📍 Address *
+                    🗺️ Location (Region, City, or District) *
+                  </label>
+                  <LocationAutocomplete
+                    value={formData.location}
+                    onChange={handleLocationSelect}
+                    language="ar"
+                    placeholder="ابحث عن المنطقة أو المدينة أو الحي..."
+                    placeholderEn="Search for region, city, or district..."
+                    className="w-full"
+                    required
+                  />
+                  {formData.location && (
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="text-sm text-blue-800 dark:text-blue-300">
+                        <strong>Selected Location:</strong>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {formData.region && (
+                            <span className="inline-block bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs">
+                              Region: {formData.region}
+                            </span>
+                          )}
+                          {formData.city && (
+                            <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-md text-xs">
+                              City: {formData.city}
+                            </span>
+                          )}
+                          {formData.district && (
+                            <span className="inline-block bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-md text-xs">
+                              District: {formData.district}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* District Dropdown - shown when city is selected and multiple districts are available */}
+                {showDistrictDropdown && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      🏘️ District (Neighborhood) *
+                    </label>
+                    {loadingDistricts ? (
+                      // Skeleton loader
+                      <div className="animate-pulse">
+                        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.district}
+                        onChange={handleDistrictSelect}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      >
+                        <option value="">Select a district...</option>
+                        {districtOptions.map((district, index) => (
+                          <option
+                            key={district.district_id || district.id || index}
+                            value={district.name_ar || district.name_en}
+                          >
+                            {district.name_ar} ({district.name_en})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {loadingDistricts && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Loading districts for {formData.city}...
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Street Name */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    📍 Street Name *
                   </label>
                   <input
                     type="text"
                     required
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    value={formData.street_name}
+                    onChange={(e) => setFormData({...formData, street_name: e.target.value})}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                    placeholder="Street address"
+                    placeholder="e.g., King Fahd Road, Al Tahlia Street"
                   />
-                </div>
-
-                {/* Location Details */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      🏙️ City *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.city}
-                      onChange={(e) => setFormData({...formData, city: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                      placeholder="City"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      🗺️ State *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.state}
-                      onChange={(e) => setFormData({...formData, state: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                      placeholder="State"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      📮 ZIP Code *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.zip_code}
-                      onChange={(e) => setFormData({...formData, zip_code: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                      placeholder="ZIP"
-                    />
-                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Enter the street name only (location is selected above)
+                  </p>
                 </div>
 
                 {/* Contact Information */}

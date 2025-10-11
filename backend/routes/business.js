@@ -1201,10 +1201,33 @@ router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
 // Create business branch - SECURE VERSION
 router.post('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
+    // Handle street_name alias (frontend may send 'street_name' instead of 'address')
+    const branchData = { ...req.body }
+    if (branchData.street_name) {
+      branchData.address = branchData.street_name
+      delete branchData.street_name
+    }
+
+    // Process location_data if provided
+    if (branchData.location_data) {
+      // Extract location metadata from location_data object
+      branchData.location_id = branchData.location_data.id || null
+      branchData.location_type = branchData.location_data.type || null
+      branchData.location_hierarchy = branchData.location_data.hierarchy || null
+    }
+
     const newBranchData = {
-      ...req.body,
+      ...branchData,
       business_id: req.business.public_id, // Use secure public_id
-      status: req.body.status || 'inactive'
+      status: branchData.status || 'inactive'
+    }
+
+    // Validate that location data is provided
+    if (!newBranchData.region && !newBranchData.city) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location data is required. Please provide region and city information.'
+      })
     }
 
     const newBranch = await Branch.create(newBranchData)
@@ -1231,7 +1254,7 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
     const businessId = req.business.public_id // Use secure business ID
 
     const branch = await Branch.findOne({
-      where: { 
+      where: {
         public_id: branchId, // Use secure public_id for lookup
         business_id: businessId // Secure business reference
       }
@@ -1244,7 +1267,22 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    await branch.update(req.body)
+    // Handle street_name alias (frontend may send 'street_name' instead of 'address')
+    const updateData = { ...req.body }
+    if (updateData.street_name) {
+      updateData.address = updateData.street_name
+      delete updateData.street_name
+    }
+
+    // Process location_data if provided
+    if (updateData.location_data) {
+      // Extract location metadata from location_data object
+      updateData.location_id = updateData.location_data.id || null
+      updateData.location_type = updateData.location_data.type || null
+      updateData.location_hierarchy = updateData.location_data.hierarchy || null
+    }
+
+    await branch.update(updateData)
 
     res.json({
       success: true,

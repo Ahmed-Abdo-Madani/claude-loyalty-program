@@ -23,29 +23,33 @@ const Branch = sequelize.define('Branch', {
   },
   address: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    comment: 'UPDATED: Now stores street name only (not full address). Use region/city/district for location hierarchy.'
   },
   city: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
+    comment: 'City name from Saudi location service'
   },
   region: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    comment: 'Saudi Arabia region'
+    comment: 'Saudi Arabia region (e.g., Riyadh Region, Makkah Region)'
   },
   district: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    comment: 'District/neighborhood within the city'
+    comment: 'District/neighborhood within the city (e.g., Al-Malaz, Al-Olaya)'
   },
   state: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
+    comment: 'DEPRECATED: No longer used. Replaced by region/city/district fields from Saudi location service.'
   },
   zip_code: {
     type: DataTypes.STRING(20),
-    allowNull: true
+    allowNull: true,
+    comment: 'DEPRECATED: No longer used in Saudi Arabia location system.'
   },
   country: {
     type: DataTypes.STRING(100),

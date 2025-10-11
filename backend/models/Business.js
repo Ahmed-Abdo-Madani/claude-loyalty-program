@@ -47,20 +47,23 @@ const Business = sequelize.define('Business', {
   },
   region: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
+    comment: 'Saudi Arabia region (e.g., Riyadh Region, Makkah Region)'
   },
   city: {
     type: DataTypes.STRING(100),
-    allowNull: true
+    allowNull: true,
+    comment: 'City name from Saudi location service'
   },
   district: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    comment: 'District/neighborhood within the city'
+    comment: 'District/neighborhood within the city (e.g., Al-Malaz, Al-Olaya)'
   },
   address: {
     type: DataTypes.TEXT,
-    allowNull: true
+    allowNull: true,
+    comment: 'UPDATED: Now stores street name only (not full address). Use region/city/district for location hierarchy.'
   },
   // Location metadata from Saudi location service
   location_id: {

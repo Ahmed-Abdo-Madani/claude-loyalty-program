@@ -894,6 +894,9 @@ function BusinessRegistrationPage() {
                 dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
                 required
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {selectedLanguage === 'ar' ? 'أدخل اسم الشارع فقط (تم اختيار الموقع أعلاه)' : 'Enter the street name only (location is selected above)'}
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
