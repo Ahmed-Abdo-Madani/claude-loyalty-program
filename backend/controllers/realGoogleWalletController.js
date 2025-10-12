@@ -2,6 +2,7 @@ import { GoogleAuth } from 'google-auth-library'
 import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import path from 'path'
+import CardDesignService from '../services/CardDesignService.js'
 
 class RealGoogleWalletController {
   constructor() {
@@ -161,15 +162,44 @@ class RealGoogleWalletController {
   async createOrUpdateLoyaltyClass(authClient, offerData) {
     const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}`
 
+    // Phase 4: Load card design if available (with backward compatibility)
+    let design = null
+    try {
+      design = await CardDesignService.getDesignByOffer(offerData.offerId)
+      if (design) {
+        console.log('🎨 Using custom card design for Google Wallet class:', offerData.offerId)
+        console.log('🎨 Design values:', {
+          logo_url: design.logo_url,
+          logo_google_url: design.logo_google_url,
+          background_color: design.background_color,
+          hero_image_url: design.hero_image_url
+        })
+      } else {
+        console.log('📝 No custom design found, using defaults for:', offerData.offerId)
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load card design, using defaults:', error.message)
+    }
+
+    // Calculate logo URI with triple fallback
+    const logoUri = design?.logo_google_url || design?.logo_url || 'https://img.icons8.com/color/200/loyalty-card.png'
+    const backgroundColor = design?.background_color || '#3B82F6'
+
+    console.log('🔧 Google Wallet class config:', {
+      logoUri,
+      backgroundColor,
+      hasHeroImage: !!design?.hero_image_url
+    })
+
     const loyaltyClass = {
       id: classId,
       issuerName: offerData.businessName,
       programName: offerData.title,
 
-      // Program logo (using reliable CDN image)
+      // Program logo - Use custom logo or default
       programLogo: {
         sourceUri: {
-          uri: 'https://img.icons8.com/color/200/loyalty-card.png'
+          uri: logoUri
         },
         contentDescription: {
           defaultValue: {
@@ -179,8 +209,23 @@ class RealGoogleWalletController {
         }
       },
 
-      // Visual styling
-      hexBackgroundColor: '#3B82F6',
+      // Visual styling - Use custom colors or defaults
+      hexBackgroundColor: backgroundColor,
+
+      // Hero image (if available)
+      ...(design?.hero_image_url && {
+        heroImage: {
+          sourceUri: {
+            uri: design.hero_image_url
+          },
+          contentDescription: {
+            defaultValue: {
+              language: 'en-US',
+              value: `${offerData.businessName} Banner`
+            }
+          }
+        }
+      }),
 
       // Reward tier information
       rewardsTier: 'Standard',

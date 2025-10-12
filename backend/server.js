@@ -11,6 +11,7 @@ import customerRoutes from './routes/customers.js'
 import notificationRoutes from './routes/notifications.js'
 import segmentRoutes from './routes/segments.js'
 import locationRoutes from './routes/locations.js'
+import cardDesignRoutes from './routes/cardDesign.js'
 
 dotenv.config()
 
@@ -166,6 +167,7 @@ app.use((req, res, next) => {
 
 // Static file serving for images
 app.use('/static', express.static('public'))
+app.use('/uploads', express.static('uploads'))
 
 // API Routes
 app.use('/api/wallet', walletRoutes)
@@ -176,6 +178,7 @@ app.use('/api/customers', customerRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/segments', segmentRoutes)
 app.use('/api/locations', locationRoutes)
+app.use('/api/card-design', cardDesignRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

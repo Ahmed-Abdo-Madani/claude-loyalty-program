@@ -3,6 +3,8 @@ import QRCodeModal from './QRCodeModal'
 import OfferGrid from './OfferGrid'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureOfferId } from '../utils/secureAuth'
+import { CardDesignProvider } from '../contexts/CardDesignContext'
+import CardDesignEditor from './cardDesign/CardDesignEditor'
 
 function OffersTab() {
   const [offers, setOffers] = useState([])
@@ -14,6 +16,7 @@ function OffersTab() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [showEditModal, setShowEditModal] = useState(null)
   const [showQRModal, setShowQRModal] = useState(null)
+  const [showCardDesigner, setShowCardDesigner] = useState(null)
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('All Status')
@@ -260,6 +263,7 @@ function OffersTab() {
           console.log('View analytics for offer:', offer.public_id || offer.id)
         }}
         onDuplicate={duplicateOffer}
+        onDesignCard={setShowCardDesigner}
       />
 
       {/* Delete Confirmation Modal */}
@@ -345,6 +349,22 @@ function OffersTab() {
           offer={showQRModal}
           onClose={() => setShowQRModal(null)}
         />
+      )}
+
+      {/* Card Design Editor Modal */}
+      {showCardDesigner && (
+        <CardDesignProvider>
+          <CardDesignEditor
+            offer={showCardDesigner}
+            onClose={() => setShowCardDesigner(null)}
+            onSave={(savedDesign) => {
+              console.log('💾 Card design saved:', savedDesign)
+              setShowCardDesigner(null)
+              // Optionally reload offers to get updated data
+              // loadOffers()
+            }}
+          />
+        </CardDesignProvider>
       )}
     </div>
   )

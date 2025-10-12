@@ -8,7 +8,8 @@ function OfferGrid({
   onToggleStatus,
   onQRCode,
   onAnalytics,
-  onDuplicate
+  onDuplicate,
+  onDesignCard
 }) {
 
   if (loading) {
@@ -53,6 +54,7 @@ function OfferGrid({
             onQRCode={onQRCode}
             onAnalytics={onAnalytics}
             onDuplicate={onDuplicate}
+            onDesignCard={onDesignCard}
           />
         ))}
       </div>

@@ -4,6 +4,7 @@ import forge from 'node-forge'
 import sharp from 'sharp'
 import { PassGenerator } from '../utils/passGenerator.js'
 import WalletPassService from '../services/WalletPassService.js'
+import CardDesignService from '../services/CardDesignService.js'
 
 class AppleWalletController {
   constructor() {
@@ -32,11 +33,24 @@ class AppleWalletController {
         business: offerData.businessName
       })
 
+      // Phase 4: Load card design if available (with backward compatibility)
+      let design = null
+      try {
+        design = await CardDesignService.getDesignByOffer(offerData.offerId)
+        if (design) {
+          console.log('🎨 Using custom card design for Apple Wallet pass:', offerData.offerId)
+        } else {
+          console.log('📝 No custom design found, using defaults for:', offerData.offerId)
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to load card design, using defaults:', error.message)
+      }
+
       // Generate pass data
-      const passData = this.createPassJson(customerData, offerData, progressData)
+      const passData = this.createPassJson(customerData, offerData, progressData, design)
 
       // Generate pass images
-      const images = await this.generatePassImages(offerData)
+      const images = await this.generatePassImages(offerData, design)
 
       // Create manifest with file hashes
       const manifest = this.createManifest(passData, images)
@@ -80,8 +94,22 @@ class AppleWalletController {
     }
   }
 
-  createPassJson(customerData, offerData, progressData) {
+  // Helper function to convert hex color to RGB format for Apple Wallet
+  hexToRgb(hex) {
+    if (!hex) return null
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result
+      ? `rgb(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)})`
+      : null
+  }
+
+  createPassJson(customerData, offerData, progressData, design = null) {
     const serialNumber = `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
+
+    // Convert design colors to RGB format (Apple Wallet requirement)
+    const backgroundColor = this.hexToRgb(design?.background_color) || 'rgb(59, 130, 246)'
+    const foregroundColor = this.hexToRgb(design?.text_color) || 'rgb(255, 255, 255)'
+    const labelColor = foregroundColor // Use same color for labels as text
 
     return {
       formatVersion: 1,
@@ -91,11 +119,11 @@ class AppleWalletController {
       organizationName: offerData.businessName,
       description: `${offerData.businessName} Loyalty Card`,
 
-      // Visual styling
+      // Visual styling - Use custom colors or defaults
       logoText: offerData.businessName,
-      foregroundColor: 'rgb(255, 255, 255)',
-      backgroundColor: 'rgb(59, 130, 246)',
-      labelColor: 'rgb(255, 255, 255)',
+      foregroundColor,
+      backgroundColor,
+      labelColor,
 
       // Store Card structure
       storeCard: {
@@ -177,31 +205,82 @@ class AppleWalletController {
     }
   }
 
-  async generatePassImages(offerData) {
-    // Generate placeholder images using Sharp
-    // In production, these would be actual business logos and branding
+  async generatePassImages(offerData, design = null) {
+    // Generate pass images - use custom logo or placeholder
+    let logoBuffer
 
-    const logoBuffer = await sharp({
-      create: {
-        width: 58,
-        height: 58,
-        channels: 4,
-        background: { r: 59, g: 130, b: 246, alpha: 1 }
+    // Try to use custom logo from design
+    if (design?.logo_url) {
+      try {
+        console.log('🎨 Fetching custom logo for Apple Wallet:', design.logo_url)
+        const response = await fetch(design.logo_url)
+        if (response.ok) {
+          const imageBuffer = Buffer.from(await response.arrayBuffer())
+          // Resize to Apple Wallet logo size (58x58 for 1x, 116x116 for 2x)
+          logoBuffer = await sharp(imageBuffer)
+            .resize(58, 58, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .png()
+            .toBuffer()
+          console.log('✅ Custom logo processed successfully')
+        } else {
+          throw new Error(`Failed to fetch logo: ${response.status}`)
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch custom logo, using placeholder:', error.message)
+        logoBuffer = null
       }
-    })
-    .png()
-    .toBuffer()
+    }
 
-    const stripBuffer = await sharp({
-      create: {
-        width: 624,
-        height: 168,
-        channels: 4,
-        background: { r: 59, g: 130, b: 246, alpha: 1 }
+    // Fallback to placeholder logo if custom logo not available
+    if (!logoBuffer) {
+      logoBuffer = await sharp({
+        create: {
+          width: 58,
+          height: 58,
+          channels: 4,
+          background: { r: 59, g: 130, b: 246, alpha: 1 }
+        }
+      })
+      .png()
+      .toBuffer()
+    }
+
+    // Generate strip/hero image
+    let stripBuffer
+    if (design?.hero_image_url) {
+      try {
+        console.log('🎨 Fetching hero image for Apple Wallet:', design.hero_image_url)
+        const response = await fetch(design.hero_image_url)
+        if (response.ok) {
+          const imageBuffer = Buffer.from(await response.arrayBuffer())
+          // Resize to Apple Wallet strip size (624x168 for 2x)
+          stripBuffer = await sharp(imageBuffer)
+            .resize(624, 168, { fit: 'cover' })
+            .png()
+            .toBuffer()
+          console.log('✅ Hero image processed successfully')
+        } else {
+          throw new Error(`Failed to fetch hero image: ${response.status}`)
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch hero image, using placeholder:', error.message)
+        stripBuffer = null
       }
-    })
-    .png()
-    .toBuffer()
+    }
+
+    // Fallback to placeholder strip if hero image not available
+    if (!stripBuffer) {
+      stripBuffer = await sharp({
+        create: {
+          width: 624,
+          height: 168,
+          channels: 4,
+          background: { r: 59, g: 130, b: 246, alpha: 1 }
+        }
+      })
+      .png()
+      .toBuffer()
+    }
 
     return {
       'logo.png': logoBuffer,

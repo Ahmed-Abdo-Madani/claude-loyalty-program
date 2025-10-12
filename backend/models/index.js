@@ -10,6 +10,7 @@ import NotificationCampaign from './NotificationCampaign.js'
 import NotificationLog from './NotificationLog.js'
 import CustomerSegment from './CustomerSegment.js'
 import WalletPass from './WalletPass.js'
+import OfferCardDesign from './OfferCardDesign.js'
 
 // Define SECURE model associations using public_id fields
 Business.hasMany(Offer, {
@@ -199,6 +200,33 @@ WalletPass.belongsTo(Offer, {
   as: 'offer'
 })
 
+// OfferCardDesign relationships
+Offer.hasOne(OfferCardDesign, {
+  foreignKey: 'offer_id',
+  sourceKey: 'public_id',
+  as: 'cardDesign',
+  onDelete: 'CASCADE'
+})
+
+OfferCardDesign.belongsTo(Offer, {
+  foreignKey: 'offer_id',
+  targetKey: 'public_id',
+  as: 'offer'
+})
+
+Business.hasMany(OfferCardDesign, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'cardDesigns',
+  onDelete: 'CASCADE'
+})
+
+OfferCardDesign.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -210,7 +238,8 @@ export {
   NotificationCampaign,
   NotificationLog,
   CustomerSegment,
-  WalletPass
+  WalletPass,
+  OfferCardDesign
 }
 
 // Sync database (create tables) - SECURE VERSION

@@ -1,6 +1,6 @@
 import StatusBadge from './StatusBadge'
 
-function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalytics, onDuplicate }) {
+function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalytics, onDuplicate, onDesignCard }) {
 
   const getOfferTypeIcon = (type) => {
     switch (type) {
@@ -175,6 +175,17 @@ function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalyt
       {/* Action Bar */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
         <div className="flex items-center space-x-2">
+          {/* Design Card Button - NEW */}
+          <button
+            onClick={() => onDesignCard && onDesignCard(offer)}
+            className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/20 rounded-lg transition-colors duration-200 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+            title="Design Card"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            </svg>
+          </button>
+
           {/* Analytics Button */}
           <button
             onClick={() => onAnalytics && onAnalytics(offer)}
