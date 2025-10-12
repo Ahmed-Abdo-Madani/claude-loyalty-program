@@ -32,17 +32,6 @@ function GoogleWalletPreview({ design, offerData }) {
         className="rounded-2xl shadow-2xl overflow-hidden"
         style={{ backgroundColor: background_color }}
       >
-        {/* Hero Image (if exists) */}
-        {hero_image_url && (
-          <div className="w-full h-32 overflow-hidden">
-            <img
-              src={hero_image_url}
-              alt="Hero"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
         {/* Card Content */}
         <div className="p-6">
           {/* Header with Logo */}
@@ -77,16 +66,17 @@ function GoogleWalletPreview({ design, offerData }) {
             )}
           </div>
 
-          {/* Progress Section */}
+          {/* Progress Section - Google Wallet Accurate Display (Phase 4) */}
           <div className="mt-6 pt-4 border-t" style={{ borderColor: foreground_color + '30' }}>
-            {type === 'stamps' && progress_display_style === 'grid' && (
-              <div>
-                <div className="flex justify-between items-center mb-3">
+            {type === 'stamps' && (
+              <div className="space-y-3">
+                {/* Loyalty Points Label */}
+                <div className="flex justify-between items-center">
                   <span
                     className="text-sm font-semibold"
                     style={{ color: foreground_color }}
                   >
-                    Stamps
+                    ⭐ Stamps Collected
                   </span>
                   <span
                     className="text-sm opacity-90"
@@ -95,53 +85,58 @@ function GoogleWalletPreview({ design, offerData }) {
                     {mockProgress} / {stamps_required}
                   </span>
                 </div>
-                {/* Stamp Grid */}
-                <div className="grid grid-cols-5 gap-2">
-                  {Array.from({ length: stamps_required }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`aspect-square rounded-lg flex items-center justify-center text-2xl
-                        ${i < mockProgress ? 'opacity-100' : 'opacity-30'}`}
-                      style={{
-                        backgroundColor: foreground_color + (i < mockProgress ? '20' : '10'),
-                        color: foreground_color
-                      }}
-                    >
-                      {stamp_icon}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {type === 'stamps' && progress_display_style === 'bar' && (
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: foreground_color }}
-                  >
-                    Progress
-                  </span>
-                  <span
-                    className="text-sm opacity-90"
-                    style={{ color: foreground_color }}
-                  >
-                    {mockProgress} / {stamps_required} {stamp_icon}
-                  </span>
-                </div>
-                {/* Progress Bar */}
+                {/* Visual Progress with Stars - Matches Google Wallet Text Module */}
                 <div
-                  className="h-3 rounded-full overflow-hidden"
-                  style={{ backgroundColor: foreground_color + '20' }}
+                  className="rounded-lg p-3"
+                  style={{ backgroundColor: foreground_color + '10' }}
                 >
+                  <p
+                    className="text-xs font-semibold mb-2 opacity-90"
+                    style={{ color: foreground_color }}
+                  >
+                    Your Progress
+                  </p>
                   <div
-                    className="h-full transition-all duration-500 rounded-full"
-                    style={{
-                      width: `${progressPercentage}%`,
-                      backgroundColor: foreground_color
-                    }}
-                  />
+                    className="text-lg leading-relaxed text-center py-2"
+                    style={{ color: foreground_color }}
+                  >
+                    {'⭐'.repeat(mockProgress)}{'☆'.repeat(stamps_required - mockProgress)}
+                  </div>
+                  <p
+                    className="text-xs text-center mt-2 opacity-75"
+                    style={{ color: foreground_color }}
+                  >
+                    {mockProgress} of {stamps_required} stamps collected
+                    <br />
+                    {stamps_required - mockProgress === 0
+                      ? '🎉 Reward Ready!'
+                      : stamps_required - mockProgress === 1
+                      ? 'Only 1 more stamp to go! 🎯'
+                      : `${stamps_required - mockProgress} more stamps until reward! 🎁`
+                    }
+                  </p>
+                </div>
+
+                {/* Additional Info Modules - Matches Google Wallet Text Modules */}
+                <div
+                  className="rounded-lg p-3 space-y-2"
+                  style={{ backgroundColor: foreground_color + '05' }}
+                >
+                  <div>
+                    <p
+                      className="text-xs font-semibold opacity-75"
+                      style={{ color: foreground_color }}
+                    >
+                      🎁 Reward
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ color: foreground_color }}
+                    >
+                      {description || 'Free Item'}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -153,7 +148,7 @@ function GoogleWalletPreview({ design, offerData }) {
                     className="text-sm font-semibold"
                     style={{ color: foreground_color }}
                   >
-                    Points Balance
+                    ⭐ Points Balance
                   </span>
                   <span
                     className="text-2xl font-bold"
@@ -200,6 +195,17 @@ function GoogleWalletPreview({ design, offerData }) {
             </p>
           </div>
         </div>
+
+        {/* Hero Image at Bottom - Matches Google Wallet Display */}
+        {hero_image_url && (
+          <div className="w-full h-32 overflow-hidden border-t" style={{ borderColor: foreground_color + '20' }}>
+            <img
+              src={hero_image_url}
+              alt="Hero"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
       </div>
 
       {/* Platform Label */}
@@ -208,6 +214,23 @@ function GoogleWalletPreview({ design, offerData }) {
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           Google Wallet Preview
         </span>
+      </div>
+
+      {/* Platform Limitations Disclaimer */}
+      <div className="mt-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-start space-x-2">
+          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-blue-900 dark:text-blue-100">
+              Accurate Google Wallet Display
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              This preview matches Google Wallet's actual capabilities. Your custom colors, logo, and hero image will appear exactly as shown. Stamp progress is displayed with star emojis (⭐) per Google's platform requirements.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

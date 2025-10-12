@@ -159,6 +159,28 @@ class RealGoogleWalletController {
     }
   }
 
+  /**
+   * Generate progress text with star emojis for Google Wallet display
+   * Phase 4: Align preview with Google Wallet capabilities
+   * @param {number} earned - Stamps earned
+   * @param {number} required - Stamps required
+   * @returns {string} Formatted progress text with stars
+   */
+  generateProgressText(earned, required) {
+    const filledStars = '⭐'.repeat(earned)
+    const emptyStars = '☆'.repeat(required - earned)
+    const stars = filledStars + emptyStars
+    const remaining = required - earned
+
+    if (remaining === 0) {
+      return `🎉 Reward Ready!\n${stars}\nYou've collected all ${required} stamps!`
+    } else if (remaining === 1) {
+      return `${stars}\n${earned} of ${required} stamps collected\nOnly 1 more stamp to go! 🎯`
+    } else {
+      return `${stars}\n${earned} of ${required} stamps collected\n${remaining} more stamps until reward! 🎁`
+    }
+  }
+
   async createOrUpdateLoyaltyClass(authClient, offerData) {
     const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}`
 
@@ -310,29 +332,42 @@ class RealGoogleWalletController {
       accountName: `${customerData.firstName} ${customerData.lastName}`,
       accountId: customerData.customerId,
 
-      // Loyalty points
+      // Loyalty points - Enhanced with star emoji (Phase 4)
       loyaltyPoints: {
         balance: {
           string: `${progressData.current_stamps || 0}/${offerData.stamps_required}`
         },
-        label: 'Stamps Collected'
+        label: '⭐ Stamps Collected',
+        // Add localized labels for international support
+        localizedLabel: {
+          defaultValue: {
+            language: 'en-US',
+            value: '⭐ Stamps Collected'
+          },
+          translatedValues: [
+            {
+              language: 'ar',
+              value: '⭐ الطوابع المجمعة'
+            }
+          ]
+        }
       },
 
-      // Text modules for card content
+      // Text modules for card content - Enhanced with visual progress (Phase 4)
       textModulesData: [
         {
-          id: 'progress',
-          header: 'Progress',
-          body: `${progressData.current_stamps || 0} of ${offerData.stamps_required} stamps`
+          id: 'progress_visual',
+          header: 'Your Progress',
+          body: this.generateProgressText(progressData.current_stamps || 0, offerData.stamps_required)
         },
         {
           id: 'reward',
-          header: 'Reward',
+          header: '🎁 Reward',
           body: offerData.rewardDescription || 'Free Item'
         },
         {
           id: 'location',
-          header: 'Valid At',
+          header: '📍 Valid At',
           body: offerData.branchName || 'All Locations'
         }
       ],
