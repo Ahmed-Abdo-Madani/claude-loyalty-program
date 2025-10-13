@@ -13,7 +13,8 @@ function AppleWalletPreview({ design, offerData }) {
     label_color = '#E0F2FE',
     logo_apple_url,
     stamp_icon = '⭐',
-    progress_display_style = 'bar'
+    progress_display_style = 'bar',
+    stamp_display_type = 'icon' // 'icon' or 'logo'
   } = design || {}
 
   const {
@@ -135,14 +136,23 @@ function AppleWalletPreview({ design, offerData }) {
                 {Array.from({ length: Math.min(stamps_required, 10) }).map((_, i) => (
                   <div
                     key={i}
-                    className={`aspect-square rounded flex items-center justify-center text-xl
+                    className={`aspect-square rounded flex items-center justify-center overflow-hidden
                       ${i < mockProgress ? 'opacity-100' : 'opacity-25'}`}
                     style={{
-                      backgroundColor: foreground_color + '20',
-                      color: foreground_color
+                      backgroundColor: foreground_color + '20'
                     }}
                   >
-                    {stamp_icon}
+                    {stamp_display_type === 'logo' && logo_apple_url ? (
+                      <img
+                        src={logo_apple_url}
+                        alt="Stamp"
+                        className="w-full h-full object-cover p-1"
+                      />
+                    ) : (
+                      <span className="text-xl" style={{ color: foreground_color }}>
+                        {stamp_icon}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -249,6 +259,23 @@ function AppleWalletPreview({ design, offerData }) {
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           Apple Wallet Preview
         </span>
+      </div>
+
+      {/* Platform Capabilities Info */}
+      <div className="mt-3 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+        <div className="flex items-start space-x-2">
+          <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-green-900 dark:text-green-100">
+              Full Design Control
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+              Apple Wallet supports all your design choices including Progress Display style (bar/grid), custom colors, logo, and stamp icons. What you see here is exactly what your customers will see.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

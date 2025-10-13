@@ -123,14 +123,14 @@ function OffersTab() {
         const newOffer = {
           ...offer,
           title: `${offer.title} (Copy)`,
-          status: 'paused'
+          status: 'active' // Duplicated offers should be active by default
         }
         delete newOffer.public_id // Remove ID so API creates a new one
         delete newOffer.id // Remove any legacy ID
-        
+
         const response = await secureApi.post(endpoints.myOffers, newOffer)
         const data = await response.json()
-        
+
         if (data.success) {
           await loadOffers() // Reload to get updated data
           console.log('🔒 Offer duplicated successfully')

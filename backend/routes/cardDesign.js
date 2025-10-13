@@ -5,6 +5,7 @@ import ImageProcessingService from '../services/ImageProcessingService.js'
 import DesignValidationService from '../services/DesignValidationService.js'
 import { requireBusinessAuth } from '../middleware/hybridBusinessAuth.js'
 import logger from '../config/logger.js'
+import { CARD_DESIGN_TEMPLATES } from '../constants/cardDesignTemplates.js'
 
 const router = express.Router()
 
@@ -379,155 +380,10 @@ router.get('/templates', requireBusinessAuth, async (req, res) => {
   try {
     logger.info('📚 Getting design templates...')
 
-    // Define built-in templates
-    const templates = [
-      {
-        id: 'coffee_classic',
-        name: 'Coffee Shop Classic',
-        description: 'Perfect for coffee shops and cafes',
-        industry: 'coffee',
-        config: {
-          background_color: '#6F4E37',
-          foreground_color: '#FFFFFF',
-          label_color: '#FFF8DC',
-          stamp_icon: '☕',
-          progress_display_style: 'grid'
-        },
-        preview_image: '/templates/coffee-classic.png'
-      },
-      {
-        id: 'restaurant_rewards',
-        name: 'Restaurant Rewards',
-        description: 'Elegant design for restaurants',
-        industry: 'restaurant',
-        config: {
-          background_color: '#DC2626',
-          foreground_color: '#FFFFFF',
-          label_color: '#FEE2E2',
-          stamp_icon: '🍽️',
-          progress_display_style: 'bar'
-        },
-        preview_image: '/templates/restaurant-rewards.png'
-      },
-      {
-        id: 'retail_rewards',
-        name: 'Retail Rewards',
-        description: 'Professional design for retail stores',
-        industry: 'retail',
-        config: {
-          background_color: '#2563EB',
-          foreground_color: '#FFFFFF',
-          label_color: '#BFDBFE',
-          stamp_icon: '🛍️',
-          progress_display_style: 'bar'
-        },
-        preview_image: '/templates/retail-rewards.png'
-      },
-      {
-        id: 'beauty_wellness',
-        name: 'Beauty & Wellness',
-        description: 'Stylish design for beauty salons and spas',
-        industry: 'beauty',
-        config: {
-          background_color: '#EC4899',
-          foreground_color: '#FFFFFF',
-          label_color: '#FCE7F3',
-          stamp_icon: '💆',
-          progress_display_style: 'circular'
-        },
-        preview_image: '/templates/beauty-wellness.png'
-      },
-      {
-        id: 'fitness_gym',
-        name: 'Fitness & Gym',
-        description: 'Energetic design for fitness centers',
-        industry: 'fitness',
-        config: {
-          background_color: '#F97316',
-          foreground_color: '#FFFFFF',
-          label_color: '#FFEDD5',
-          stamp_icon: '💪',
-          progress_display_style: 'grid'
-        },
-        preview_image: '/templates/fitness-gym.png'
-      },
-      {
-        id: 'professional_default',
-        name: 'Professional Default',
-        description: 'Clean, professional design for any business',
-        industry: 'general',
-        config: {
-          background_color: '#1E40AF',
-          foreground_color: '#FFFFFF',
-          label_color: '#DBEAFE',
-          stamp_icon: '⭐',
-          progress_display_style: 'bar'
-        },
-        preview_image: '/templates/professional-default.png'
-      },
-      // Phase 3: Additional Templates
-      {
-        id: 'hotel_hospitality',
-        name: 'Hotel & Hospitality',
-        description: 'Luxurious design for hotels and hospitality',
-        industry: 'hotel',
-        config: {
-          background_color: '#7C3AED',
-          foreground_color: '#FFFFFF',
-          label_color: '#EDE9FE',
-          stamp_icon: '🏨',
-          progress_display_style: 'bar'
-        },
-        preview_image: '/templates/hotel-hospitality.png'
-      },
-      {
-        id: 'auto_service',
-        name: 'Auto Service',
-        description: 'Bold design for car washes and auto shops',
-        industry: 'automotive',
-        config: {
-          background_color: '#0891B2',
-          foreground_color: '#FFFFFF',
-          label_color: '#CFFAFE',
-          stamp_icon: '🚗',
-          progress_display_style: 'grid'
-        },
-        preview_image: '/templates/auto-service.png'
-      },
-      {
-        id: 'food_delivery',
-        name: 'Food Delivery',
-        description: 'Fresh design for food delivery services',
-        industry: 'food',
-        config: {
-          background_color: '#EAB308',
-          foreground_color: '#FFFFFF',
-          label_color: '#FEF3C7',
-          stamp_icon: '🍕',
-          progress_display_style: 'bar'
-        },
-        preview_image: '/templates/food-delivery.png'
-      },
-      {
-        id: 'pet_services',
-        name: 'Pet Services',
-        description: 'Playful design for pet shops and grooming',
-        industry: 'pets',
-        config: {
-          background_color: '#10B981',
-          foreground_color: '#FFFFFF',
-          label_color: '#D1FAE5',
-          stamp_icon: '🐾',
-          progress_display_style: 'grid'
-        },
-        preview_image: '/templates/pet-services.png'
-      }
-    ]
-
     res.json({
       success: true,
-      data: templates,
-      total: templates.length
+      data: CARD_DESIGN_TEMPLATES,
+      total: CARD_DESIGN_TEMPLATES.length
     })
 
   } catch (error) {
@@ -548,10 +404,10 @@ router.post('/apply-template/:offerId', requireBusinessAuth, async (req, res) =>
     const { offerId } = req.params
     const { templateId, templateConfig } = req.body
 
-    if (!templateId || !templateConfig) {
+    if (!templateId) {
       return res.status(400).json({
         success: false,
-        error: 'templateId and templateConfig are required'
+        error: 'templateId is required'
       })
     }
 
@@ -560,7 +416,7 @@ router.post('/apply-template/:offerId', requireBusinessAuth, async (req, res) =>
     const design = await CardDesignService.applyTemplate(
       offerId,
       templateId,
-      templateConfig
+      templateConfig || {} // Optional config, defaults to empty object
     )
 
     res.json({

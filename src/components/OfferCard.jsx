@@ -2,35 +2,6 @@ import StatusBadge from './StatusBadge'
 
 function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalytics, onDuplicate, onDesignCard }) {
 
-  const getOfferTypeIcon = (type) => {
-    switch (type) {
-      case 'stamps': return '🎫'
-      case 'points': return '💎'
-      case 'discount': return '🏷️'
-      default: return '🎁'
-    }
-  }
-
-  const getOfferTypeLabel = (type) => {
-    switch (type) {
-      case 'stamps': return 'Stamps Required'
-      case 'points': return 'Points Required'
-      case 'discount': return 'Discount Amount'
-      default: return 'Requirements'
-    }
-  }
-
-  const formatRequirement = (offer) => {
-    if (offer.type === 'stamps') {
-      return offer.stamps_required || 0
-    } else if (offer.type === 'points') {
-      return offer.stamps_required || 0 // API uses stamps_required for all types
-    } else if (offer.type === 'discount') {
-      return `${offer.discount_percentage || 0}%`
-    }
-    return offer.stamps_required || 0
-  }
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-gray-700">
       {/* Header with Title and Actions */}
@@ -73,27 +44,14 @@ function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalyt
         </p>
       )}
 
-      {/* QR Code Section - Prominent and Accessible */}
+      {/* Primary Actions - QR Code & Card Design */}
       <div className="mb-6">
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-          {/* Desktop Layout: Side by side */}
-          <div className="hidden sm:flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-1">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  📱 QR Code
-                </h4>
-                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
-                  Ready
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Generate and share your offer QR code
-              </p>
-            </div>
+          {/* Desktop Layout: Two buttons side by side */}
+          <div className="hidden sm:grid sm:grid-cols-2 sm:gap-3">
             <button
               onClick={() => onQRCode(offer)}
-              className="px-4 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center space-x-2 min-h-[44px]"
+              className="px-4 py-2 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-center space-x-2 min-h-[44px]"
               title="Generate QR Code for this offer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,23 +59,20 @@ function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalyt
               </svg>
               <span>Get QR Code</span>
             </button>
+            <button
+              onClick={() => onDesignCard && onDesignCard(offer)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-center space-x-2 min-h-[44px]"
+              title="Design loyalty card appearance"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              <span>Design Card</span>
+            </button>
           </div>
 
-          {/* Mobile Layout: Stacked */}
+          {/* Mobile Layout: Stacked buttons */}
           <div className="sm:hidden space-y-3">
-            <div className="text-center">
-              <div className="flex items-center justify-center space-x-2 mb-1">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  📱 QR Code
-                </h4>
-                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
-                  Ready
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Generate and share your offer QR code
-              </p>
-            </div>
             <button
               onClick={() => onQRCode(offer)}
               className="w-full px-4 py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-center space-x-2 min-h-[48px]"
@@ -128,39 +83,25 @@ function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalyt
               </svg>
               <span>Get QR Code</span>
             </button>
+            <button
+              onClick={() => onDesignCard && onDesignCard(offer)}
+              className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-center space-x-2 min-h-[48px]"
+              title="Design loyalty card appearance"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              <span>Design Card</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-            {getOfferTypeLabel(offer.type)}
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {formatRequirement(offer)}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-            Times Redeemed
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {offer.redeemed || 0}
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Info */}
+      {/* Simplified Info */}
       <div className="space-y-2 mb-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-500 dark:text-gray-400">Branch:</span>
           <span className="text-gray-900 dark:text-white font-medium">{offer.branch || 'All Branches'}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Customers:</span>
-          <span className="text-gray-900 dark:text-white font-medium">{offer.customers || 0}</span>
         </div>
         {offer.is_time_limited && (
           <div className="flex items-center justify-between text-sm">
@@ -175,71 +116,55 @@ function OfferCard({ offer, onEdit, onDelete, onToggleStatus, onQRCode, onAnalyt
       {/* Action Bar */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
         <div className="flex items-center space-x-2">
-          {/* Design Card Button - NEW */}
-          <button
-            onClick={() => onDesignCard && onDesignCard(offer)}
-            className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-900/20 rounded-lg transition-colors duration-200 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            title="Design Card"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-            </svg>
-          </button>
-
-          {/* Analytics Button */}
+          {/* Analytics Button with Text */}
           <button
             onClick={() => onAnalytics && onAnalytics(offer)}
-            className="p-2 text-gray-600 hover:text-primary hover:bg-gray-50 dark:text-gray-400 dark:hover:text-primary dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            title="View Analytics"
+            className="flex items-center space-x-1 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 touch-manipulation min-h-[44px]"
+            title="View detailed analytics"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
+            <span className="text-sm font-medium">Analytics</span>
           </button>
 
-          {/* Duplicate Button */}
+          {/* Duplicate Button with Text */}
           <button
             onClick={() => onDuplicate(offer.public_id || offer.id)}
-            className="p-2 text-gray-600 hover:text-primary hover:bg-gray-50 dark:text-gray-400 dark:hover:text-primary dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            title="Duplicate Offer"
+            className="flex items-center space-x-1 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 touch-manipulation min-h-[44px]"
+            title="Duplicate this offer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
+            <span className="text-sm font-medium">Duplicate</span>
           </button>
         </div>
 
         {/* Status Toggle Button */}
         <button
           onClick={() => onToggleStatus(offer.public_id || offer.id, offer.status)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 touch-manipulation min-h-[44px] ${
-            offer.status === 'active'
-              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30'
-              : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30'
-          }`}
+          className="flex items-center space-x-1 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 touch-manipulation min-h-[44px]"
           title={offer.status === 'active' ? 'Pause Offer' : 'Activate Offer'}
         >
-          {offer.status === 'active' ? '⏸️ Pause' : '▶️ Activate'}
+          {offer.status === 'active' ? (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-medium">Pause</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-medium">Activate</span>
+            </>
+          )}
         </button>
       </div>
-
-      {/* Performance Indicator */}
-      {offer.customers > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mb-2">
-            <span>Redemption Rate</span>
-            <span>{Math.round((offer.redeemed / offer.customers) * 100)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{
-                width: `${Math.min((offer.redeemed / offer.customers) * 100, 100)}%`
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

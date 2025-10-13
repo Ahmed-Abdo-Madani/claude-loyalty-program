@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { useCardDesign } from '../../contexts/CardDesignContext'
+import { useIsDesktop } from '../../hooks/useMediaQuery'
 import ColorPicker from './ColorPicker'
 import LogoUploader from './LogoUploader'
 import HeroImageUploader from './HeroImageUploader'
@@ -32,7 +33,8 @@ function CardDesignEditor({ offer, onClose, onSave }) {
     isDirty
   } = useCardDesign()
 
-  const [activeTab, setActiveTab] = useState('design') // 'design', 'templates', 'validation'
+  const isDesktop = useIsDesktop() // Detect desktop viewport
+  const [activeTab, setActiveTab] = useState('design') // 'design', 'preview', 'validation'
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -162,7 +164,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
           {/* Left Panel - Design Controls */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className={`space-y-6 ${isDesktop ? 'lg:col-span-1' : ''}`}>
             {/* Tabs */}
             <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
@@ -175,6 +177,19 @@ function CardDesignEditor({ offer, onClose, onSave }) {
               >
                 Design
               </button>
+              {/* Mobile: Show Preview Tab */}
+              {!isDesktop && (
+                <button
+                  onClick={() => setActiveTab('preview')}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                    ${activeTab === 'preview'
+                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400'
+                    }`}
+                >
+                  Preview
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('validation')}
                 className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
@@ -281,6 +296,32 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   </div>
                 </div>
 
+                {/* Stamp Display Type Section */}
+                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
+                    Stamp Display (Apple Wallet Grid Only)
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'icon', label: 'Use Icon', description: 'Show stamp icon in grid' },
+                      { value: 'logo', label: 'Use Logo', description: 'Show your logo in grid' }
+                    ].map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() => updateDesignField('stamp_display_type', type.value)}
+                        className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200
+                          ${(currentDesign?.stamp_display_type || 'icon') === type.value
+                            ? 'bg-primary text-white shadow-md'
+                            : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
+                          }`}
+                      >
+                        <div className="font-medium">{type.label}</div>
+                        <div className="text-xs opacity-75 mt-0.5">{type.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Progress Style Section */}
                 <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
@@ -289,8 +330,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   <div className="space-y-2">
                     {[
                       { value: 'bar', label: 'Progress Bar', icon: '━' },
-                      { value: 'grid', label: 'Stamp Grid', icon: '⊞' },
-                      { value: 'circular', label: 'Circular', icon: '◯' }
+                      { value: 'grid', label: 'Stamp Grid', icon: '⊞' }
                     ].map((style) => (
                       <button
                         key={style.value}
@@ -314,14 +354,21 @@ function CardDesignEditor({ offer, onClose, onSave }) {
             {activeTab === 'validation' && (
               <ValidationPanel validation={validation} design={currentDesign} />
             )}
+
+            {/* Mobile Preview Tab */}
+            {!isDesktop && activeTab === 'preview' && (
+              <CardPreview design={currentDesign} offerData={offer} isMobile={true} />
+            )}
           </div>
 
-          {/* Right Panel - Preview */}
-          <div className="lg:col-span-2">
-            <div className="sticky top-0">
-              <CardPreview design={currentDesign} offerData={offer} />
+          {/* Right Panel - Preview (Desktop Only) */}
+          {isDesktop && (
+            <div className="lg:col-span-2">
+              <div className="sticky top-0">
+                <CardPreview design={currentDesign} offerData={offer} isMobile={false} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer Actions */}

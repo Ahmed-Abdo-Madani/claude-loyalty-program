@@ -1,6 +1,7 @@
 import { OfferCardDesign, Offer, Business } from '../models/index.js'
 import logger from '../config/logger.js'
 import { Op } from 'sequelize'
+import { getTemplateById } from '../constants/cardDesignTemplates.js'
 
 /**
  * Card Design Service
@@ -227,10 +228,21 @@ class CardDesignService {
         throw new Error(`Offer ${offerId} not found`)
       }
 
+      // Load template config if not provided
+      let config = templateConfig
+      if (!config || Object.keys(config).length === 0) {
+        const template = getTemplateById(templateId)
+        if (!template) {
+          throw new Error(`Template ${templateId} not found`)
+        }
+        config = template.config
+        logger.info(`📋 Loaded config from template: ${template.name}`)
+      }
+
       const existingDesign = await OfferCardDesign.findByOfferId(offerId)
 
       const designData = {
-        ...templateConfig,
+        ...config,
         template_id: templateId,
         is_custom: false,  // Mark as non-custom (from template)
         version: existingDesign ? (existingDesign.version + 1) : 1
