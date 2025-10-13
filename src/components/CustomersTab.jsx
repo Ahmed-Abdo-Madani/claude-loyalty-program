@@ -132,9 +132,9 @@ function CustomersTab() {
   // Filter customers based on search and status
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = !searchTerm ||
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone.includes(searchTerm)
+      customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.phone?.includes(searchTerm)
 
     const matchesStatus = filterStatus === 'all' || customer.status === filterStatus
 
@@ -315,12 +315,12 @@ function CustomersTab() {
                     <td className="py-4 px-2">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {customer.name.charAt(0).toUpperCase()}
+                          {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-white">{customer.name}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{customer.email}</div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone}</div>
+                          <div className="font-medium text-gray-900 dark:text-white">{customer.name || 'Unknown Customer'}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{customer.email || 'No email'}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone || 'No phone'}</div>
                         </div>
                       </div>
                     </td>

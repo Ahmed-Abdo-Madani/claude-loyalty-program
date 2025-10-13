@@ -23,9 +23,22 @@ const Customer = sequelize.define('Customer', {
     }
   },
   // Basic Information
-  name: {
-    type: DataTypes.STRING(255),
+  first_name: {
+    type: DataTypes.STRING(100),
     allowNull: true
+  },
+  last_name: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  name: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      const firstName = this.getDataValue('first_name') || ''
+      const lastName = this.getDataValue('last_name') || ''
+      const fullName = `${firstName} ${lastName}`.trim()
+      return fullName || 'Unknown Customer'
+    }
   },
   phone: {
     type: DataTypes.STRING(20),

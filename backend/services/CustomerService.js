@@ -27,7 +27,8 @@ class CustomerService {
       const customer = await Customer.create({
         customer_id: customerData.customer_id,
         business_id: customerData.business_id,
-        name: customerData.name || `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim(),
+        first_name: customerData.first_name || null,
+        last_name: customerData.last_name || null,
         phone: customerData.phone || null,
         email: customerData.email || null,
         date_of_birth: customerData.date_of_birth || null,
@@ -82,7 +83,8 @@ class CustomerService {
         customer = await Customer.create({
           customer_id: validCustomerId,
           business_id: businessId,
-          name: customerData.name || `${customerData.firstName || 'Guest'} ${customerData.lastName || 'Customer'}`.trim(),
+          first_name: customerData.firstName || customerData.first_name || 'Guest',
+          last_name: customerData.lastName || customerData.last_name || 'Customer',
           phone: customerData.phone || null,
           email: customerData.email || null,
           status: 'new',
@@ -138,7 +140,7 @@ class CustomerService {
         business_id: businessId,
         max_stamps: offer.stamps_required,
         current_stamps: 0,
-        customer_name: customer.name || customerData.name || null,
+        customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || null,
         customer_phone: customer.phone || customerData.phone || null,
         customer_email: customer.email || customerData.email || null,
         wallet_pass_serial: this.generateWalletPassSerial()
@@ -304,51 +306,96 @@ class CustomerService {
   }
 
   // Customer analytics for business dashboard
-  static async getBusinessCustomerAnalytics(businessId) {
+  static async getBusinessCustomerAnalytics(businessId, options = {}) {
     const { Customer } = await import('../models/index.js')
+    const { start_date, end_date } = options
 
+    // Get all customers for this business
     const customers = await Customer.findAll({
       where: { business_id: businessId }
     })
 
     const totalCustomers = customers.length
-    const activeCustomers = customers.filter(c => c.status === 'active').length
-    const vipCustomers = customers.filter(c => c.status === 'vip').length
+
+    // Active customers (status = 'active' OR recent activity within 30 days)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const activeCustomers = customers.filter(c =>
+      c.status === 'active' ||
+      (c.last_activity_date && new Date(c.last_activity_date) >= thirtyDaysAgo)
+    ).length
+
+    // VIP customers (status = 'vip' OR lifecycle_stage = 'vip_customer')
+    const vipCustomers = customers.filter(c =>
+      c.status === 'vip' || c.lifecycle_stage === 'vip_customer'
+    ).length
+
+    // Inactive customers
     const inactiveCustomers = customers.filter(c => c.status === 'inactive').length
+
+    // New customers this month
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+    const newThisMonth = customers.filter(c =>
+      new Date(c.created_at) >= startOfMonth
+    ).length
 
     // Lifecycle stage distribution
     const lifecycleStages = {
+      prospect: customers.filter(c => c.lifecycle_stage === 'prospect').length,
       new_customer: customers.filter(c => c.lifecycle_stage === 'new_customer').length,
       repeat_customer: customers.filter(c => c.lifecycle_stage === 'repeat_customer').length,
       loyal_customer: customers.filter(c => c.lifecycle_stage === 'loyal_customer').length,
-      vip_customer: customers.filter(c => c.lifecycle_stage === 'vip_customer').length,
-      at_risk: customers.filter(c => c.lifecycle_stage === 'at_risk').length
+      vip_customer: customers.filter(c => c.lifecycle_stage === 'vip_customer').length
     }
 
     // Calculate average lifetime value
-    const totalLifetimeValue = customers.reduce((sum, c) => sum + parseFloat(c.total_lifetime_value || 0), 0)
-    const averageLifetimeValue = totalCustomers > 0 ? totalLifetimeValue / totalCustomers : 0
+    const totalLifetimeValue = customers.reduce((sum, c) =>
+      sum + parseFloat(c.total_lifetime_value || 0), 0
+    )
+    const avgLifetimeValue = totalCustomers > 0 ? totalLifetimeValue / totalCustomers : 0
 
-    // Growth metrics (simple calculation for demo)
-    const thisMonth = new Date()
-    thisMonth.setMonth(thisMonth.getMonth())
-    const lastMonth = new Date()
-    lastMonth.setMonth(lastMonth.getMonth() - 1)
+    // Calculate average engagement score
+    const totalEngagementScore = customers.reduce((sum, c) => {
+      try {
+        return sum + (c.getEngagementScore ? c.getEngagementScore() : 0)
+      } catch (err) {
+        return sum
+      }
+    }, 0)
+    const avgEngagementScore = totalCustomers > 0
+      ? Math.round(totalEngagementScore / totalCustomers)
+      : 0
 
-    const newCustomersThisMonth = customers.filter(c =>
-      new Date(c.created_at) >= lastMonth
+    // Customer growth rate (last 30 days vs previous 30 days)
+    const sixtyDaysAgo = new Date()
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+
+    const lastMonthCustomers = customers.filter(c =>
+      new Date(c.created_at) >= thirtyDaysAgo
     ).length
 
+    const previousMonthCustomers = customers.filter(c => {
+      const createdDate = new Date(c.created_at)
+      return createdDate >= sixtyDaysAgo && createdDate < thirtyDaysAgo
+    }).length
+
+    const customerGrowthRate = previousMonthCustomers > 0
+      ? ((lastMonthCustomers - previousMonthCustomers) / previousMonthCustomers) * 100
+      : (lastMonthCustomers > 0 ? 100 : 0)
+
     return {
-      totalCustomers,
-      activeCustomers,
-      vipCustomers,
-      inactiveCustomers,
-      lifecycleStages,
-      totalLifetimeValue,
-      averageLifetimeValue,
-      newCustomersThisMonth,
-      customerGrowthRate: totalCustomers > 0 ? (newCustomersThisMonth / totalCustomers) * 100 : 0
+      total_customers: totalCustomers,
+      active_customers: activeCustomers,
+      vip_customers: vipCustomers,
+      new_this_month: newThisMonth,
+      inactive_customers: inactiveCustomers,
+      lifecycle_stages: lifecycleStages,
+      total_lifetime_value: totalLifetimeValue,
+      avg_lifetime_value: avgLifetimeValue,
+      avg_engagement_score: avgEngagementScore,
+      customer_growth_rate: Math.round(customerGrowthRate * 10) / 10 // Round to 1 decimal
     }
   }
 

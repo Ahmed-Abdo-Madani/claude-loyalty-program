@@ -812,9 +812,11 @@ router.post('/customers/signup', async (req, res) => {
       offerId,
       offer.business_id,
       {
-        name: `${customerData.firstName || ''} ${customerData.lastName || ''}`.trim() || 'Guest Customer',
-        whatsapp: customerData.whatsapp || null,
-        birthday: customerData.birthday || null,
+        firstName: customerData.firstName || 'Guest',
+        lastName: customerData.lastName || 'Customer',
+        phone: customerData.whatsapp || null,
+        email: customerData.email || null,
+        date_of_birth: customerData.birthday || null,
         source: customerData.source || 'in_store',
         branch: customerData.branch || null
       }
