@@ -589,6 +589,126 @@ class RealGoogleWalletController {
     }
   }
 
+  /**
+   * Send custom message notification to Google Wallet pass
+   * Used by WalletNotificationService for offers, reminders, birthdays, etc.
+   *
+   * @param {string} objectId - Google Wallet object ID
+   * @param {string} header - Message header/title
+   * @param {string} body - Message body text
+   * @returns {Object} Result with success status
+   */
+  async sendCustomMessage(objectId, header, body) {
+    try {
+      // Check if Google Wallet is enabled
+      if (!this.isGoogleWalletEnabled) {
+        return {
+          success: false,
+          error: 'Google Wallet service not available',
+          message: 'Google Wallet credentials not configured'
+        }
+      }
+
+      console.log('📨 Google Wallet: Sending custom message', {
+        objectId,
+        header: header.substring(0, 50),
+        body: body.substring(0, 50)
+      })
+
+      const authClient = await this.auth.getClient()
+      const accessToken = await authClient.getAccessToken()
+
+      // First verify object exists
+      const checkResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!checkResponse.ok) {
+        const error = await checkResponse.text()
+        console.error('❌ Google Wallet object not found:', {
+          status: checkResponse.status,
+          objectId,
+          error
+        })
+
+        return {
+          success: false,
+          error: 'Wallet pass not found',
+          message: `Google Wallet object ${objectId} does not exist`,
+          status: checkResponse.status
+        }
+      }
+
+      // Send notification using addMessage API
+      const pushResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}/addMessage`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: {
+            messageType: 'TEXT_AND_NOTIFY',
+            header: header,
+            body: body,
+            actionUri: {
+              uri: process.env.BASE_URL || 'http://localhost:3001'
+            }
+          }
+        })
+      })
+
+      if (!pushResponse.ok) {
+        const error = await pushResponse.text()
+
+        // Check if it's a rate limit error
+        if (error.includes('QuotaExceededException')) {
+          const dailyLimit = parseInt(process.env.WALLET_NOTIFICATION_DAILY_LIMIT || '10')
+          console.warn('⚠️ Google Wallet: Rate limit exceeded for', objectId)
+          return {
+            success: false,
+            error: 'Rate limit exceeded',
+            message: `Wallet notification rate limit reached (${dailyLimit} notifications per pass per 24 hours)`,
+            quota_exceeded: true,
+            daily_limit: dailyLimit
+          }
+        }
+
+        console.error('❌ Google Wallet: Failed to send custom message:', error)
+        return {
+          success: false,
+          error: 'Failed to send notification',
+          message: error,
+          status: pushResponse.status
+        }
+      }
+
+      console.log('✅ Google Wallet: Custom message sent successfully')
+
+      return {
+        success: true,
+        objectId,
+        sent_at: new Date().toISOString(),
+        message: {
+          header,
+          body
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Google Wallet: sendCustomMessage error:', error)
+      return {
+        success: false,
+        error: 'Failed to send custom message',
+        message: error.message
+      }
+    }
+  }
+
   // Push updates to Google Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {

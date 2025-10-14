@@ -78,6 +78,22 @@ const WalletPass = sequelize.define('WalletPass', {
     type: DataTypes.DATE,
     allowNull: true,
     comment: 'Last time this pass was updated via push notification'
+  },
+  // Notification tracking
+  notification_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: 'Number of notifications sent today (resets daily)'
+  },
+  last_notification_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Last time a notification was sent'
+  },
+  notification_history: {
+    type: DataTypes.JSONB,
+    defaultValue: [],
+    comment: 'History of notifications sent (last 30 days)'
   }
 }, {
   tableName: 'wallet_passes',
@@ -163,6 +179,54 @@ WalletPass.hasWalletType = async function(customerId, offerId, walletType) {
     }
   })
   return count > 0
+}
+
+// Notification rate limiting - Check if can send notification
+WalletPass.prototype.canSendNotification = function() {
+  if (!this.last_notification_date) return true
+
+  const today = new Date().setHours(0, 0, 0, 0)
+  const lastNotificationDay = new Date(this.last_notification_date).setHours(0, 0, 0, 0)
+
+  // Reset count if new day
+  if (today > lastNotificationDay) return true
+
+  // Check daily notification limit (configurable via environment variable, default 10 for production)
+  const DAILY_NOTIFICATION_LIMIT = parseInt(process.env.WALLET_NOTIFICATION_DAILY_LIMIT || '10')
+  return this.notification_count < DAILY_NOTIFICATION_LIMIT
+}
+
+// Record notification sent
+WalletPass.prototype.recordNotification = async function(messageType, messageData) {
+  const now = new Date()
+  const today = now.setHours(0, 0, 0, 0)
+  const lastNotificationDay = this.last_notification_date
+    ? new Date(this.last_notification_date).setHours(0, 0, 0, 0)
+    : 0
+
+  // Reset count if new day
+  if (today > lastNotificationDay) {
+    this.notification_count = 0
+  }
+
+  this.notification_count += 1
+  this.last_notification_date = new Date()
+
+  // Add to history (keep last 30 days)
+  const history = this.notification_history || []
+  history.push({
+    type: messageType,
+    header: messageData.header,
+    body: messageData.body,
+    sent_at: new Date(),
+    count: this.notification_count
+  })
+
+  // Keep only last 30 days
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  this.notification_history = history.filter(h => new Date(h.sent_at) > thirtyDaysAgo)
+
+  await this.save()
 }
 
 export default WalletPass

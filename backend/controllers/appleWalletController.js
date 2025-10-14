@@ -390,6 +390,96 @@ class AppleWalletController {
     }
   }
 
+  /**
+   * Send custom message notification to Apple Wallet pass
+   * Used by WalletNotificationService for offers, reminders, birthdays, etc.
+   *
+   * IMPORTANT: Apple Wallet notifications require:
+   * 1. Production APNs certificate (.p12 file)
+   * 2. Pass Type ID certificate from Apple Developer account
+   * 3. WWDR (Worldwide Developer Relations) certificate
+   * 4. Production environment (sandbox doesn't support wallet push notifications)
+   *
+   * This method is currently a placeholder and will need to be implemented when
+   * deploying to production with proper Apple certificates.
+   *
+   * @param {string} serialNumber - Apple Wallet pass serial number
+   * @param {string} header - Message header/title
+   * @param {string} body - Message body text
+   * @returns {Object} Result with success status
+   */
+  async sendCustomMessage(serialNumber, header, body) {
+    try {
+      console.log('🍎 Apple Wallet: sendCustomMessage called', {
+        serialNumber,
+        header: header.substring(0, 50),
+        body: body.substring(0, 50)
+      })
+
+      // Check if Apple Wallet push notifications are configured
+      const apnsConfigured = process.env.APPLE_APNS_CERT_PATH && process.env.APPLE_APNS_KEY_PATH
+
+      if (!apnsConfigured) {
+        console.warn('⚠️ Apple Wallet: APNs not configured (requires production certificates)')
+        return {
+          success: false,
+          error: 'APNs not configured',
+          message: 'Apple Wallet push notifications require production APNs certificates',
+          requires: [
+            'APPLE_APNS_CERT_PATH environment variable',
+            'APPLE_APNS_KEY_PATH environment variable',
+            'Production APNs certificate (.p12)',
+            'Pass Type ID certificate',
+            'WWDR certificate'
+          ],
+          documentation: 'https://developer.apple.com/documentation/walletpasses/adding_a_web_service_to_update_passes'
+        }
+      }
+
+      // In production, this would:
+      // 1. Load APNs certificate and key
+      // 2. Connect to APNs (api.push.apple.com:443)
+      // 3. Send push notification with empty payload to trigger pass update
+      // 4. Device fetches updated pass from webServiceURL
+      // 5. Pass JSON would include the message in backFields or messageData
+
+      // Production implementation would use 'apn' npm package:
+      // const apn = require('apn')
+      // const options = {
+      //   cert: fs.readFileSync(process.env.APPLE_APNS_CERT_PATH),
+      //   key: fs.readFileSync(process.env.APPLE_APNS_KEY_PATH),
+      //   production: true
+      // }
+      // const apnProvider = new apn.Provider(options)
+      // const notification = new apn.Notification()
+      // notification.topic = 'pass.com.loyaltyplatform.storecard'
+      // notification.payload = {} // Empty payload for pass update
+      // const result = await apnProvider.send(notification, deviceToken)
+
+      console.log('⚠️ Apple Wallet: Push notification not sent (production environment required)')
+
+      return {
+        success: false,
+        error: 'Production environment required',
+        message: 'Apple Wallet push notifications only work in production with valid APNs certificates',
+        serialNumber,
+        notification_data: {
+          header,
+          body,
+          timestamp: new Date().toISOString()
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Apple Wallet: sendCustomMessage error:', error)
+      return {
+        success: false,
+        error: 'Failed to send custom message',
+        message: error.message
+      }
+    }
+  }
+
   // Push updates to Apple Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {

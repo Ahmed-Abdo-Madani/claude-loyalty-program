@@ -303,4 +303,34 @@ Customer.prototype.canReceiveNotification = function(channel) {
   }
 }
 
+// Auto-update lifecycle stage based on customer activity metrics
+Customer.prototype.updateLifecycleStage = async function() {
+  let newStage = this.lifecycle_stage
+
+  // Determine lifecycle stage based on activity
+  if (this.total_visits === 0) {
+    newStage = 'prospect'
+  } else if (this.total_visits === 1) {
+    newStage = 'new_customer'
+  } else if (this.total_visits <= 5) {
+    newStage = 'repeat_customer'
+  } else if (this.total_rewards_claimed >= 3 || this.total_visits >= 10) {
+    newStage = 'loyal_customer'
+  }
+
+  // VIP status overrides other stages
+  if (this.total_lifetime_value >= 500 || this.total_visits >= 20) {
+    newStage = 'vip_customer'
+  }
+
+  // Only update if stage has changed
+  if (newStage !== this.lifecycle_stage) {
+    this.lifecycle_stage = newStage
+    await this.save()
+    console.log(`✨ Customer ${this.customer_id} lifecycle updated: ${this.lifecycle_stage} → ${newStage}`)
+  }
+
+  return newStage
+}
+
 export default Customer

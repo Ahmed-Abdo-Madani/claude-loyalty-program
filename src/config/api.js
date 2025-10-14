@@ -58,6 +58,15 @@ export const endpoints = {
   notificationLogs: `${API_BASE_URL}/api/notifications/logs`,
   notificationAnalytics: `${API_BASE_URL}/api/notifications/analytics`,
 
+  // Wallet Notification APIs
+  walletNotificationOffer: `${API_BASE_URL}/api/notifications/wallet/offer`,
+  walletNotificationReminder: `${API_BASE_URL}/api/notifications/wallet/reminder`,
+  walletNotificationBirthday: `${API_BASE_URL}/api/notifications/wallet/birthday`,
+  walletNotificationMilestone: `${API_BASE_URL}/api/notifications/wallet/milestone`,
+  walletNotificationReengagement: `${API_BASE_URL}/api/notifications/wallet/reengagement`,
+  walletNotificationBulk: `${API_BASE_URL}/api/notifications/wallet/bulk`,
+  walletNotificationCustom: `${API_BASE_URL}/api/notifications/wallet/custom`,
+
   // Segmentation APIs
   segments: `${API_BASE_URL}/api/segments`,
   segmentsPredefined: `${API_BASE_URL}/api/segments/predefined`,

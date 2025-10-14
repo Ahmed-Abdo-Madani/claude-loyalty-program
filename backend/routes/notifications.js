@@ -581,4 +581,305 @@ router.post('/send-quick', requireBusinessAuth, async (req, res) => {
   }
 })
 
+// ===============================
+// WALLET NOTIFICATION ROUTES
+// ===============================
+
+// POST /api/notifications/wallet/offer - Send promotional offer to wallet passes
+router.post('/wallet/offer', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { customer_id, offer_id, offer_title, offer_description } = req.body
+
+    // Validate required fields
+    if (!customer_id || !offer_id || !offer_title) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: customer_id, offer_id, offer_title'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send offer notification
+    const result = await WalletNotificationService.sendOfferNotification(
+      customer_id,
+      offer_id,
+      {
+        title: offer_title,
+        description: offer_description
+      }
+    )
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Wallet offer notification sent successfully' : 'Failed to send wallet notification',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending wallet offer notification:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send wallet offer notification',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/wallet/reminder - Send progress reminder to wallet passes
+router.post('/wallet/reminder', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { customer_id, offer_id } = req.body
+
+    // Validate required fields
+    if (!customer_id || !offer_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: customer_id, offer_id'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send progress reminder
+    const result = await WalletNotificationService.sendProgressReminder(customer_id, offer_id)
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Wallet reminder sent successfully' : 'Failed to send wallet reminder',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending wallet reminder:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send wallet reminder',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/wallet/birthday - Send birthday notification to customer's wallet passes
+router.post('/wallet/birthday', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { customer_id } = req.body
+
+    // Validate required fields
+    if (!customer_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: customer_id'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send birthday notification
+    const result = await WalletNotificationService.sendBirthdayNotification(customer_id, businessId)
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Birthday notification sent successfully' : 'Failed to send birthday notification',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending wallet birthday notification:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send wallet birthday notification',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/wallet/milestone - Send milestone achievement notification
+router.post('/wallet/milestone', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { customer_id, milestone_title, milestone_message } = req.body
+
+    // Validate required fields
+    if (!customer_id || !milestone_title) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: customer_id, milestone_title'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send milestone notification
+    const result = await WalletNotificationService.sendMilestoneNotification(
+      customer_id,
+      businessId,
+      {
+        title: milestone_title,
+        message: milestone_message
+      }
+    )
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Milestone notification sent successfully' : 'Failed to send milestone notification',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending wallet milestone notification:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send wallet milestone notification',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/wallet/reengagement - Send re-engagement notification to inactive customer
+router.post('/wallet/reengagement', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { customer_id, incentive_header, incentive_body } = req.body
+
+    // Validate required fields
+    if (!customer_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: customer_id'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send re-engagement notification
+    const result = await WalletNotificationService.sendReengagementNotification(
+      customer_id,
+      businessId,
+      {
+        header: incentive_header,
+        body: incentive_body
+      }
+    )
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Re-engagement notification sent successfully' : 'Failed to send re-engagement notification',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending wallet re-engagement notification:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send wallet re-engagement notification',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/wallet/bulk - Send bulk notifications to multiple customers
+router.post('/wallet/bulk', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { customer_ids, message_header, message_body, message_type = 'bulk' } = req.body
+
+    // Validate required fields
+    if (!customer_ids || !Array.isArray(customer_ids) || customer_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: customer_ids (must be non-empty array)'
+      })
+    }
+
+    if (!message_header || !message_body) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: message_header, message_body'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send bulk notifications
+    const result = await WalletNotificationService.sendBulkNotifications(
+      businessId,
+      customer_ids,
+      {
+        header: message_header,
+        body: message_body
+      },
+      message_type
+    )
+
+    res.json({
+      success: result.success,
+      message: result.success
+        ? `Bulk notifications sent to ${result.successful_customers} customers`
+        : 'Failed to send bulk notifications',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending bulk wallet notifications:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send bulk wallet notifications',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/wallet/custom - Send custom message to specific wallet pass
+router.post('/wallet/custom', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { wallet_pass_id, message_header, message_body, message_type = 'custom' } = req.body
+
+    // Validate required fields
+    if (!wallet_pass_id || !message_header || !message_body) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: wallet_pass_id, message_header, message_body'
+      })
+    }
+
+    // Import WalletNotificationService
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+
+    // Send custom message
+    const result = await WalletNotificationService.sendCustomMessage(
+      wallet_pass_id,
+      {
+        header: message_header,
+        body: message_body
+      },
+      message_type
+    )
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Custom wallet notification sent successfully' : 'Failed to send custom notification',
+      data: result
+    })
+
+  } catch (error) {
+    console.error('Error sending custom wallet notification:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send custom wallet notification',
+      error: error.message
+    })
+  }
+})
+
 export default router

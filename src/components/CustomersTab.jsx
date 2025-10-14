@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { endpoints, secureApi } from '../config/api'
+import NotificationModal from './NotificationModal'
 
 function CustomersTab() {
   const [customers, setCustomers] = useState([])
@@ -10,10 +11,18 @@ function CustomersTab() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [selectedCustomers, setSelectedCustomers] = useState(new Set())
 
-  // Load customers and analytics on component mount
+  // Notification modal state
+  const [showNotificationModal, setShowNotificationModal] = useState(false)
+  const [notificationType, setNotificationType] = useState('custom')
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [offers, setOffers] = useState([])
+  const [successMessage, setSuccessMessage] = useState('')
+
+  // Load customers, analytics, and offers on component mount
   useEffect(() => {
     loadCustomers()
     loadCustomerAnalytics()
+    loadOffers()
   }, [])
 
   const loadCustomers = async () => {
@@ -92,6 +101,79 @@ function CustomersTab() {
         avgEngagementScore: 0
       })
     }
+  }
+
+  const loadOffers = async () => {
+    try {
+      console.log('🔒 Loading offers for notifications...')
+      const response = await secureApi.get(endpoints.myOffers)
+      const data = await response.json()
+
+      if (data.success && data.data && data.data.offers) {
+        setOffers(data.data.offers)
+        console.log('🔒 Offers loaded successfully:', data.data.offers.length)
+      } else {
+        console.warn('⚠️ No offers data received from API')
+        setOffers([])
+      }
+    } catch (err) {
+      console.error('Failed to load offers:', err)
+      setOffers([])
+    }
+  }
+
+  // Notification handlers
+  const handleSendNotificationClick = () => {
+    if (selectedCustomers.size === 0) {
+      setError('Please select at least one customer')
+      return
+    }
+    setNotificationType('custom')
+    setSelectedCustomer(null)
+    setShowNotificationModal(true)
+  }
+
+  const handleSendToCustomer = (customer) => {
+    setSelectedCustomer(customer)
+    setNotificationType('custom')
+    setShowNotificationModal(true)
+  }
+
+  const handleQuickAction = (type, filter = null) => {
+    let targetCustomers = customers
+
+    if (filter === 'vip') {
+      targetCustomers = customers.filter(c => c.status === 'vip' || c.lifecycle_stage === 'vip_customer')
+    } else if (filter === 'inactive') {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      targetCustomers = customers.filter(c => new Date(c.last_activity_date) < thirtyDaysAgo)
+    } else if (filter === 'birthday') {
+      // Filter customers with birthdays in the next 7 days (would need birth_date field)
+      targetCustomers = customers // For now, use all customers
+    }
+
+    if (targetCustomers.length === 0) {
+      setError(`No ${filter || ''} customers found`)
+      return
+    }
+
+    // Select the filtered customers
+    setSelectedCustomers(new Set(targetCustomers.map(c => c.customer_id)))
+    setNotificationType(type)
+    setShowNotificationModal(true)
+  }
+
+  const handleNotificationSuccess = (result) => {
+    setShowNotificationModal(false)
+    setSelectedCustomers(new Set())
+    setSelectedCustomer(null)
+
+    const message = `✅ Notification sent successfully to ${result.successful_customers} customer(s)!`
+    setSuccessMessage(message)
+
+    // Auto-hide success message after 5 seconds
+    setTimeout(() => setSuccessMessage(''), 5000)
   }
 
   const getStatusColor = (status) => {
@@ -186,6 +268,16 @@ function CustomersTab() {
         </div>
       )}
 
+      {/* Success Display */}
+      {successMessage && (
+        <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+          <div className="flex items-center">
+            <span className="text-green-600 dark:text-green-400 mr-3">✅</span>
+            <span className="text-green-800 dark:text-green-300">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-8">
         {/* Analytics Cards */}
         {analytics && (
@@ -255,6 +347,7 @@ function CustomersTab() {
             {/* Actions */}
             <div className="flex gap-2">
               <button
+                onClick={handleSendNotificationClick}
                 disabled={selectedCustomers.size === 0}
                 className="px-4 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center space-x-2"
               >
@@ -356,15 +449,22 @@ function CustomersTab() {
                     </td>
                     <td className="py-4 px-2">
                       <div className="flex items-center space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
+                        <button
+                          onClick={() => handleSendToCustomer(customer)}
+                          title="Send notification"
+                          className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          title="View details"
+                          className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                        >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
                         </button>
                       </div>
@@ -398,7 +498,10 @@ function CustomersTab() {
             Quick Actions
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left">
+            <button
+              onClick={() => handleQuickAction('birthday', 'birthday')}
+              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+            >
               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">🎂</span>
               </div>
@@ -407,7 +510,10 @@ function CustomersTab() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">Send to upcoming birthdays</div>
               </div>
             </button>
-            <button className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left">
+            <button
+              onClick={() => handleQuickAction('reengagement', 'inactive')}
+              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+            >
               <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">📧</span>
               </div>
@@ -416,7 +522,10 @@ function CustomersTab() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">Win back inactive customers</div>
               </div>
             </button>
-            <button className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left">
+            <button
+              onClick={() => handleQuickAction('offer', 'vip')}
+              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+            >
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">👑</span>
               </div>
@@ -428,6 +537,20 @@ function CustomersTab() {
           </div>
         </div>
       </div>
+
+      {/* Notification Modal */}
+      {showNotificationModal && (
+        <NotificationModal
+          customers={selectedCustomer ? [selectedCustomer] : customers.filter(c => selectedCustomers.has(c.customer_id))}
+          notificationType={notificationType}
+          offers={offers}
+          onClose={() => {
+            setShowNotificationModal(false)
+            setSelectedCustomer(null)
+          }}
+          onSuccess={handleNotificationSuccess}
+        />
+      )}
     </div>
   )
 }

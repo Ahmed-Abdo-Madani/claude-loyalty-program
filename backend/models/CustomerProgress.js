@@ -128,6 +128,36 @@ CustomerProgress.prototype.addStamp = async function(incrementBy = 1) {
   }
 
   await this.save()
+
+  // Update Customer table metrics
+  try {
+    const { Customer } = await import('./index.js')
+
+    // Increment total stamps and visits
+    await Customer.increment(
+      {
+        total_stamps_earned: incrementBy,
+        total_visits: 1  // Each scan = 1 visit
+      },
+      {
+        where: { customer_id: this.customer_id },
+        silent: true  // Don't trigger hooks
+      }
+    )
+
+    // Update last activity date
+    await Customer.update(
+      { last_activity_date: new Date() },
+      {
+        where: { customer_id: this.customer_id },
+        silent: true
+      }
+    )
+  } catch (error) {
+    console.error('⚠️ Failed to update Customer table metrics:', error.message)
+    // Don't throw - progress already saved successfully
+  }
+
   return this
 }
 
@@ -144,6 +174,33 @@ CustomerProgress.prototype.claimReward = async function() {
   this.completed_at = null
 
   await this.save()
+
+  // Update Customer table reward count
+  try {
+    const { Customer } = await import('./index.js')
+
+    // Increment total rewards claimed
+    await Customer.increment(
+      { total_rewards_claimed: 1 },
+      {
+        where: { customer_id: this.customer_id },
+        silent: true
+      }
+    )
+
+    // Update last activity date
+    await Customer.update(
+      { last_activity_date: new Date() },
+      {
+        where: { customer_id: this.customer_id },
+        silent: true
+      }
+    )
+  } catch (error) {
+    console.error('⚠️ Failed to update Customer table reward count:', error.message)
+    // Don't throw - progress already saved successfully
+  }
+
   return this
 }
 

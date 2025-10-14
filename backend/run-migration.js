@@ -1,17 +1,43 @@
 /**
  * Migration Runner Script
  *
- * Safely runs the customer name fields migration
+ * Safely runs database migrations
+ *
+ * Usage:
+ *   node run-migration.js                    - Run latest migration
+ *   node run-migration.js --rollback         - Rollback latest migration
+ *   node run-migration.js --migration=NAME   - Run specific migration
  */
 
-import { up, down } from './migrations/20250113-add-customer-name-fields.js'
 import sequelize from './config/database.js'
 import logger from './config/logger.js'
 
+// Available migrations
+const MIGRATIONS = {
+  'customer-name-fields': './migrations/20250113-add-customer-name-fields.js',
+  'wallet-notification-tracking': './migrations/20250114-add-wallet-notification-tracking.js'
+}
+
+// Default migration (latest)
+const DEFAULT_MIGRATION = 'wallet-notification-tracking'
+
 async function runMigration() {
+  // Parse command line arguments
+  const args = process.argv.slice(2)
+  const migrationArg = args.find(arg => arg.startsWith('--migration='))
+  const migrationName = migrationArg ? migrationArg.split('=')[1] : DEFAULT_MIGRATION
+
+  if (!MIGRATIONS[migrationName]) {
+    logger.error(`❌ Unknown migration: ${migrationName}`)
+    logger.info('Available migrations:', Object.keys(MIGRATIONS).join(', '))
+    process.exit(1)
+  }
+
+  const migrationPath = MIGRATIONS[migrationName]
+
   logger.info('╔════════════════════════════════════════════════════════════╗')
   logger.info('║  🗄️  Database Migration Runner                             ║')
-  logger.info('║  Migration: Add Customer Name Fields                      ║')
+  logger.info(`║  Migration: ${migrationName.padEnd(43)} ║`)
   logger.info('╚════════════════════════════════════════════════════════════╝')
 
   try {
@@ -20,46 +46,15 @@ async function runMigration() {
     await sequelize.authenticate()
     logger.info('✅ Database connection established')
 
-    // Check if first_name column already exists
-    logger.info('\n🔍 Checking if columns exist...')
-    const [results] = await sequelize.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns
-        WHERE table_name = 'customers'
-        AND column_name = 'first_name'
-      );
-    `)
-
-    const columnsExist = results[0].exists
-
-    if (columnsExist) {
-      logger.warn('⚠️  first_name column already exists')
-      logger.info('\n✅ Skipping migration (columns already added)')
-      process.exit(0)
-    }
+    // Import migration
+    logger.info(`\n📦 Loading migration: ${migrationName}`)
+    const { up } = await import(migrationPath)
 
     // Run migration
     logger.info('\n🚀 Running migration UP...')
     await up()
 
-    // Verify columns were created
-    logger.info('\n🔍 Verifying column creation...')
-    const [verifyResults] = await sequelize.query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'customers'
-      AND column_name IN ('first_name', 'last_name')
-      ORDER BY column_name;
-    `)
-
-    if (verifyResults.length === 2) {
-      logger.info('✅ Columns created successfully')
-      logger.info(`📊 Added columns: ${verifyResults.map(r => r.column_name).join(', ')}`)
-      logger.info('\n🎉 Migration completed successfully!')
-    } else {
-      logger.error('❌ Columns were not created. Check logs above for errors.')
-      process.exit(1)
-    }
+    logger.info('\n🎉 Migration completed successfully!')
 
   } catch (error) {
     logger.error('\n❌ Migration failed:', error)
@@ -72,12 +67,29 @@ async function runMigration() {
 
 // Check for rollback flag
 if (process.argv.includes('--rollback')) {
+  const args = process.argv.slice(2)
+  const migrationArg = args.find(arg => arg.startsWith('--migration='))
+  const migrationName = migrationArg ? migrationArg.split('=')[1] : DEFAULT_MIGRATION
+
+  if (!MIGRATIONS[migrationName]) {
+    logger.error(`❌ Unknown migration: ${migrationName}`)
+    logger.info('Available migrations:', Object.keys(MIGRATIONS).join(', '))
+    process.exit(1)
+  }
+
+  const migrationPath = MIGRATIONS[migrationName]
+
   logger.info('╔════════════════════════════════════════════════════════════╗')
   logger.info('║  ⏪ Rolling back migration                                  ║')
+  logger.info(`║  Migration: ${migrationName.padEnd(43)} ║`)
   logger.info('╚════════════════════════════════════════════════════════════╝')
 
   sequelize.authenticate()
-    .then(() => down())
+    .then(async () => {
+      logger.info(`\n📦 Loading migration: ${migrationName}`)
+      const { down } = await import(migrationPath)
+      return down()
+    })
     .then(() => {
       logger.info('\n✅ Migration rolled back successfully')
       return sequelize.close()
