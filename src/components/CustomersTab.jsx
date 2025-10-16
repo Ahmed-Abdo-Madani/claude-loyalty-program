@@ -48,7 +48,9 @@ function CustomersTab() {
           total_rewards_claimed: customer.total_rewards_claimed || 0,
           total_lifetime_value: parseFloat(customer.total_lifetime_value || 0),
           last_activity_date: customer.last_activity_date || customer.created_at,
-          created_at: customer.created_at
+          created_at: customer.created_at,
+          // Add customer progress/offers data
+          progress: customer.progress || []
         }))
 
         setCustomers(customersData)
@@ -385,7 +387,7 @@ function CustomersTab() {
                   <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Customer</th>
                   <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
                   <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Activity</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Value</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Offers</th>
                   <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
@@ -439,12 +441,30 @@ function CustomersTab() {
                     </td>
                     <td className="py-4 px-2">
                       <div className="text-sm space-y-1">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(customer.total_lifetime_value)}
-                        </div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          {customer.total_rewards_claimed} rewards
-                        </div>
+                        {customer.progress && customer.progress.length > 0 ? (
+                          <>
+                            {customer.progress.slice(0, 2).map((prog, idx) => (
+                              <div key={idx} className="flex items-center space-x-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900 dark:text-white truncate text-xs">
+                                    {prog.offer?.title || 'Unknown Offer'}
+                                  </div>
+                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                                    <span>{prog.current_stamps}/{prog.max_stamps}</span>
+                                    {prog.is_completed && <span className="text-green-500">✓</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            {customer.progress.length > 2 && (
+                              <div className="text-xs text-primary font-medium">
+                                +{customer.progress.length - 2} more
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-xs text-gray-400 dark:text-gray-500">No active offers</div>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 px-2">

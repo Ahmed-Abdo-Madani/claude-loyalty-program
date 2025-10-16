@@ -73,12 +73,26 @@ router.get('/', requireBusinessAuth, async (req, res) => {
     // Calculate offset
     const offset = (page - 1) * limit
 
-    // Get customers with pagination (simplified for now - without associations)
+    // Get customers with pagination including their progress/offers
     const { rows: customers, count: total } = await Customer.findAndCountAll({
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [[sort, order.toUpperCase()]]
+      order: [[sort, order.toUpperCase()]],
+      include: [
+        {
+          model: CustomerProgress,
+          as: 'progress',
+          include: [
+            {
+              model: Offer,
+              as: 'offer',
+              attributes: ['public_id', 'title', 'description', 'type']
+            }
+          ],
+          order: [['updated_at', 'DESC']]
+        }
+      ]
     })
 
     // Calculate pagination info
