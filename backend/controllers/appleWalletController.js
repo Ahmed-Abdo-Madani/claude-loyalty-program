@@ -251,11 +251,12 @@ class AppleWalletController {
 
       // Pass relevance and location
       relevantDate: new Date().toISOString(),
-      maxDistance: 1000,
+      maxDistance: 1000
 
-      // Demo URLs (in production, these would be real endpoints)
-      webServiceURL: `http://localhost:3001/api/passes/`,
-      authenticationToken: this.generateAuthToken(customerData.customerId, serialNumber)
+      // NOTE: webServiceURL and authenticationToken are omitted
+      // This creates a "static pass" that installs without requiring a backend web service
+      // Limitation: Pass won't auto-update when progress changes (user must re-download)
+      // Future enhancement: Add webServiceURL with proper /v1/passes endpoints for live updates
     }
     } catch (error) {
       console.error('❌ Error creating pass JSON:', error)
