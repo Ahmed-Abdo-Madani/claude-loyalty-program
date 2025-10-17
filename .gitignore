@@ -87,3 +87,6 @@ backend/certificates/*.pem
 backend/certificates/*.key
 backend/certificates/*.cer
 backend/certificates/*.csr
+
+# Certificate environment variables - SENSITIVE DATA!
+backend/scripts/certificate-env-vars.txt
