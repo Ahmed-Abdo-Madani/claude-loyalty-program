@@ -188,7 +188,7 @@ class AppleWalletController {
       description: `${offerData.businessName} Loyalty Card`,
 
       // Visual styling - Use custom colors or defaults
-      logoText: offerData.businessName,
+      // logoText: offerData.businessName, // REMOVED - Not present in working iOS 15.6 pass
       foregroundColor,
       backgroundColor,
       labelColor,
