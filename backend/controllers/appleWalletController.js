@@ -299,8 +299,8 @@ class AppleWalletController {
   }
 
   async generatePassImages(offerData, design = null) {
-    // Generate pass images - use custom logo or placeholder
-    let logoBuffer
+    // Generate pass images - icon is REQUIRED, logo and strip are optional
+    let baseImageBuffer
 
     // Try to use custom logo from design
     if (design?.logo_url) {
@@ -308,28 +308,23 @@ class AppleWalletController {
         console.log('🎨 Fetching custom logo for Apple Wallet:', design.logo_url)
         const response = await fetch(design.logo_url)
         if (response.ok) {
-          const imageBuffer = Buffer.from(await response.arrayBuffer())
-          // Resize to Apple Wallet logo size (58x58 for 1x, 116x116 for 2x)
-          logoBuffer = await sharp(imageBuffer)
-            .resize(58, 58, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-            .png()
-            .toBuffer()
-          console.log('✅ Custom logo processed successfully')
+          baseImageBuffer = Buffer.from(await response.arrayBuffer())
+          console.log('✅ Custom logo fetched successfully')
         } else {
           throw new Error(`Failed to fetch logo: ${response.status}`)
         }
       } catch (error) {
         console.warn('⚠️ Failed to fetch custom logo, using placeholder:', error.message)
-        logoBuffer = null
+        baseImageBuffer = null
       }
     }
 
-    // Fallback to placeholder logo if custom logo not available
-    if (!logoBuffer) {
-      logoBuffer = await sharp({
+    // Fallback to placeholder if custom logo not available
+    if (!baseImageBuffer) {
+      baseImageBuffer = await sharp({
         create: {
-          width: 58,
-          height: 58,
+          width: 200,
+          height: 200,
           channels: 4,
           background: { r: 59, g: 130, b: 246, alpha: 1 }
         }
@@ -337,6 +332,34 @@ class AppleWalletController {
       .png()
       .toBuffer()
     }
+
+    // Generate REQUIRED icon.png images (Apple Wallet won't install without these)
+    // icon.png is mandatory for ALL pass types
+    const icon1x = await sharp(baseImageBuffer)
+      .resize(29, 29, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer()
+
+    const icon2x = await sharp(baseImageBuffer)
+      .resize(58, 58, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer()
+
+    const icon3x = await sharp(baseImageBuffer)
+      .resize(87, 87, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer()
+
+    // Generate OPTIONAL logo.png images (for branding in pass header)
+    const logo1x = await sharp(baseImageBuffer)
+      .resize(160, 50, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer()
+
+    const logo2x = await sharp(baseImageBuffer)
+      .resize(320, 100, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer()
 
     // Generate strip/hero image
     let stripBuffer
@@ -375,9 +398,18 @@ class AppleWalletController {
       .toBuffer()
     }
 
+    // Return all images - icon.png is REQUIRED by Apple Wallet
     return {
-      'logo.png': logoBuffer,
-      'logo@2x.png': logoBuffer,
+      // REQUIRED: icon.png files (pass won't install without these!)
+      'icon.png': icon1x,          // 29x29 - shown on lock screen
+      'icon@2x.png': icon2x,       // 58x58 - Retina displays (required)
+      'icon@3x.png': icon3x,       // 87x87 - iPhone Plus/Pro (recommended)
+
+      // OPTIONAL: logo.png files (shown in pass header)
+      'logo.png': logo1x,          // 160x50 - standard display
+      'logo@2x.png': logo2x,       // 320x100 - Retina displays
+
+      // OPTIONAL: strip.png files (header image)
       'strip.png': stripBuffer,
       'strip@2x.png': stripBuffer
     }
