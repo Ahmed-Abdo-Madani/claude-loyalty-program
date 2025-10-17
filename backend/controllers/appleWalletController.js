@@ -147,10 +147,19 @@ class AppleWalletController {
     try {
       const serialNumber = `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
 
+      // Ensure required fields have default values
+      const stampsRequired = offerData.stampsRequired || 10
+      const stampsEarned = progressData.stampsEarned || 0
+      const rewardDescription = offerData.rewardDescription || offerData.title || 'Free Item'
+      const branchName = offerData.branchName || 'All Locations'
+
       // Convert design colors to RGB format (Apple Wallet requirement)
-      const backgroundColor = this.hexToRgb(design?.background_color) || 'rgb(59, 130, 246)'
-      const foregroundColor = this.hexToRgb(design?.text_color) || 'rgb(255, 255, 255)'
+      // Use hex format if available, fallback to rgb() format
+      const backgroundColor = design?.background_color || '#3b82f6' // Default blue
+      const foregroundColor = design?.text_color || '#ffffff' // Default white
       const labelColor = foregroundColor // Use same color for labels as text
+
+      console.log('🎨 Colors:', { backgroundColor, foregroundColor, labelColor })
 
       // Get real certificate credentials from validator
       console.log('📋 Loading Apple Wallet certificates...')
@@ -165,7 +174,8 @@ class AppleWalletController {
         teamId: certs.teamId
       })
 
-      return {
+      // Prepare pass data structure
+      const passData = {
       formatVersion: 1,
       passTypeIdentifier: certs.passTypeId, // Real Pass Type ID from certificates
       serialNumber,
@@ -185,7 +195,7 @@ class AppleWalletController {
           {
             key: 'progress',
             label: 'Progress',
-            value: `${progressData.stampsEarned || 0} of ${offerData.stampsRequired || 10}`,
+            value: `${stampsEarned} of ${stampsRequired}`,
             textAlignment: 'PKTextAlignmentCenter'
           }
         ],
@@ -194,13 +204,13 @@ class AppleWalletController {
           {
             key: 'reward',
             label: 'Reward',
-            value: offerData.rewardDescription || 'Free Item',
+            value: rewardDescription,
             textAlignment: 'PKTextAlignmentLeft'
           },
           {
             key: 'location',
             label: 'Location',
-            value: offerData.branchName || 'All Locations',
+            value: branchName,
             textAlignment: 'PKTextAlignmentRight'
           }
         ],
@@ -239,12 +249,12 @@ class AppleWalletController {
         ]
       },
 
-      // Barcode for POS scanning
+      // Barcode for POS scanning (UTF-8 encoding to support Arabic characters)
       barcodes: [
         {
           message: customerData.customerId,
           format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1',
+          messageEncoding: 'utf-8', // Changed from iso-8859-1 to support Unicode/Arabic
           altText: `Customer ID: ${customerData.customerId}`
         }
       ],
@@ -258,6 +268,26 @@ class AppleWalletController {
       // Limitation: Pass won't auto-update when progress changes (user must re-download)
       // Future enhancement: Add webServiceURL with proper /v1/passes endpoints for live updates
     }
+
+      // ==================== DEBUG LOGGING ====================
+      console.log('🔍 ========== PASS.JSON DEBUG ==========')
+      console.log('📋 Complete pass.json structure:')
+      console.log(JSON.stringify(passData, null, 2))
+      console.log('🔍 ======================================')
+      console.log('📊 Pass data analysis:')
+      console.log('  - organizationName:', passData.organizationName, '(length:', passData.organizationName.length, 'bytes)')
+      console.log('  - description:', passData.description)
+      console.log('  - logoText:', passData.logoText)
+      console.log('  - backgroundColor:', passData.backgroundColor)
+      console.log('  - foregroundColor:', passData.foregroundColor)
+      console.log('  - labelColor:', passData.labelColor)
+      console.log('  - serialNumber:', passData.serialNumber)
+      console.log('  - customerID:', customerData.customerId)
+      console.log('  - barcode message:', passData.barcodes[0].message)
+      console.log('  - barcode encoding:', passData.barcodes[0].messageEncoding)
+      console.log('🔍 ======================================')
+
+      return passData
     } catch (error) {
       console.error('❌ Error creating pass JSON:', error)
       throw new Error(`Failed to create pass data: ${error.message}`)
