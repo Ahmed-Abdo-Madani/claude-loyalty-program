@@ -12,6 +12,7 @@ import notificationRoutes from './routes/notifications.js'
 import segmentRoutes from './routes/segments.js'
 import locationRoutes from './routes/locations.js'
 import cardDesignRoutes from './routes/cardDesign.js'
+import appleCertificateValidator from './utils/appleCertificateValidator.js'
 
 dotenv.config()
 
@@ -245,6 +246,22 @@ async function initializeDatabase() {
   try {
     // Initialize database first
     await initializeDatabase()
+
+    // Initialize Apple Wallet certificates
+    try {
+      const certValidation = await appleCertificateValidator.validateAndLoad()
+      if (certValidation.isValid) {
+        logger.info('✅ Apple Wallet certificates loaded and validated')
+      } else {
+        logger.warn('⚠️ Apple Wallet certificate validation failed:', certValidation.errors)
+        logger.warn('   Apple Wallet passes will not work until certificates are properly configured')
+        // Continue startup - Apple Wallet is optional, Google Wallet still works
+      }
+    } catch (error) {
+      logger.warn('⚠️ Apple Wallet certificate loading failed:', error.message)
+      logger.warn('   Apple Wallet passes will not work until certificates are properly configured')
+      // Continue startup even if Apple Wallet certificates fail
+    }
 
     // Initialize location service
     try {

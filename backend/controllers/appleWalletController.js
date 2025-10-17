@@ -5,6 +5,8 @@ import sharp from 'sharp'
 import { PassGenerator } from '../utils/passGenerator.js'
 import WalletPassService from '../services/WalletPassService.js'
 import CardDesignService from '../services/CardDesignService.js'
+import appleCertificateValidator from '../utils/appleCertificateValidator.js'
+import applePassSigner from '../utils/applePassSigner.js'
 
 class AppleWalletController {
   constructor() {
@@ -55,9 +57,8 @@ class AppleWalletController {
       // Create manifest with file hashes
       const manifest = this.createManifest(passData, images)
 
-      // For demo purposes, we'll skip digital signing since it requires Apple certificates
-      // In production, you would call this.signManifest(manifest)
-      const signature = await this.createDemoSignature()
+      // Sign manifest with real Apple certificates
+      const signature = await applePassSigner.signManifest(manifest)
 
       // Create .pkpass ZIP file
       const pkpassBuffer = await this.createPkpassZip(passData, manifest, signature, images)
@@ -111,11 +112,14 @@ class AppleWalletController {
     const foregroundColor = this.hexToRgb(design?.text_color) || 'rgb(255, 255, 255)'
     const labelColor = foregroundColor // Use same color for labels as text
 
+    // Get real certificate credentials from validator
+    const certs = appleCertificateValidator.getCertificates()
+
     return {
       formatVersion: 1,
-      passTypeIdentifier: 'pass.com.loyaltyplatform.storecard',
+      passTypeIdentifier: certs.passTypeId, // Real Pass Type ID from certificates
       serialNumber,
-      teamIdentifier: 'DEMO123456', // Demo team ID
+      teamIdentifier: certs.teamId, // Real Team ID from certificates
       organizationName: offerData.businessName,
       description: `${offerData.businessName} Loyalty Card`,
 
@@ -305,14 +309,10 @@ class AppleWalletController {
     return manifest
   }
 
+  // DEPRECATED: No longer needed - using real certificates now
+  // Kept for backward compatibility but not used
   async createDemoSignature() {
-    // Demo signature for development
-    // In production, this would use real Apple certificates:
-    // - Pass Type ID Certificate (.p12)
-    // - Apple WWDR Certificate (.pem)
-    // - Private key for signing
-
-    return Buffer.from('DEMO_SIGNATURE_FOR_DEVELOPMENT_ONLY', 'utf8')
+    throw new Error('Demo signatures are no longer supported. Using real Apple certificates.')
   }
 
   async createPkpassZip(passData, manifest, signature, images) {

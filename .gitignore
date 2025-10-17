@@ -80,3 +80,10 @@ deployment/
 *.sql
 *.dump
 backup/
+
+# Apple Wallet Certificates - NEVER COMMIT THESE!
+backend/certificates/*.p12
+backend/certificates/*.pem
+backend/certificates/*.key
+backend/certificates/*.cer
+backend/certificates/*.csr
