@@ -154,9 +154,13 @@ class AppleWalletController {
       const branchName = offerData.branchName || 'All Locations'
 
       // Convert design colors to RGB format (Apple Wallet requirement)
-      // Use hex format if available, fallback to rgb() format
-      const backgroundColor = design?.background_color || '#3b82f6' // Default blue
-      const foregroundColor = design?.text_color || '#ffffff' // Default white
+      // CRITICAL: Apple Wallet (especially iOS 15) requires rgb(r,g,b) format, NOT hex #rrggbb
+      const backgroundColor = design?.background_color
+        ? this.hexToRgb(design.background_color)
+        : 'rgb(59, 130, 246)' // Default blue
+      const foregroundColor = design?.text_color
+        ? this.hexToRgb(design.text_color)
+        : 'rgb(255, 255, 255)' // Default white
       const labelColor = foregroundColor // Use same color for labels as text
 
       console.log('🎨 Colors:', { backgroundColor, foregroundColor, labelColor })
@@ -250,9 +254,15 @@ class AppleWalletController {
       },
 
       // Barcode for POS scanning
-      // CRITICAL: Apple Wallet requires iso-8859-1 for QR code validation during installation
+      // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
       // Customer ID contains only ASCII characters, so iso-8859-1 is correct
       // Arabic text in organizationName/logoText (display fields) is separate and supports UTF-8
+      barcode: {
+        message: customerData.customerId,
+        format: 'PKBarcodeFormatQR',
+        messageEncoding: 'iso-8859-1', // Required by Apple Wallet for barcode validation
+        altText: `Customer ID: ${customerData.customerId}`
+      },
       barcodes: [
         {
           message: customerData.customerId,
