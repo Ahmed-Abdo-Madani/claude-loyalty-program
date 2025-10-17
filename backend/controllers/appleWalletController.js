@@ -249,12 +249,15 @@ class AppleWalletController {
         ]
       },
 
-      // Barcode for POS scanning (UTF-8 encoding to support Arabic characters)
+      // Barcode for POS scanning
+      // CRITICAL: Apple Wallet requires iso-8859-1 for QR code validation during installation
+      // Customer ID contains only ASCII characters, so iso-8859-1 is correct
+      // Arabic text in organizationName/logoText (display fields) is separate and supports UTF-8
       barcodes: [
         {
           message: customerData.customerId,
           format: 'PKBarcodeFormatQR',
-          messageEncoding: 'utf-8', // Changed from iso-8859-1 to support Unicode/Arabic
+          messageEncoding: 'iso-8859-1', // Required by Apple Wallet for barcode validation
           altText: `Customer ID: ${customerData.customerId}`
         }
       ],
