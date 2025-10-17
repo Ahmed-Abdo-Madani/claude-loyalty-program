@@ -9,18 +9,36 @@ import logger from '../config/logger.js'
  * Validates and loads Apple Wallet Pass Type ID certificates and WWDR certificates
  * Used for signing .pkpass files with real Apple certificates
  *
- * Required environment variables:
+ * DUAL-MODE LOADING:
+ * ===================
+ * - Development: Loads from file system (APPLE_PASS_CERTIFICATE_PATH)
+ * - Production:  Loads from base64 environment variables (APPLE_CERT_P12_BASE64)
+ *
+ * Required environment variables (ALL ENVIRONMENTS):
  * - APPLE_PASS_TYPE_ID: Your Pass Type ID (e.g., pass.me.madna.api)
  * - APPLE_TEAM_ID: Your Apple Developer Team ID (10 characters)
- * - APPLE_PASS_CERTIFICATE_PATH: Path to .p12 certificate file
  * - APPLE_PASS_CERTIFICATE_PASSWORD: Password for .p12 file
+ *
+ * Required environment variables (DEVELOPMENT):
+ * - APPLE_PASS_CERTIFICATE_PATH: Path to .p12 certificate file
  * - APPLE_WWDR_CERTIFICATE_PATH: Path to WWDR .pem certificate
+ *
+ * Required environment variables (PRODUCTION):
+ * - APPLE_CERT_P12_BASE64: Base64-encoded .p12 certificate
+ * - APPLE_CERT_WWDR_BASE64: Base64-encoded WWDR .pem certificate
  */
 class AppleCertificateValidator {
   constructor() {
     this.certificates = null
     this.isValid = false
     this.validationErrors = []
+  }
+
+  /**
+   * Check if running in production environment
+   */
+  isProduction() {
+    return process.env.NODE_ENV === 'production'
   }
 
   /**
@@ -100,23 +118,46 @@ class AppleCertificateValidator {
   }
 
   /**
-   * Validate required environment variables
+   * Validate required environment variables (supports both development and production)
    */
   validateEnvironmentVariables() {
     const errors = []
-    const required = [
+
+    // Common required variables for all environments
+    const commonRequired = [
       'APPLE_PASS_TYPE_ID',
       'APPLE_TEAM_ID',
-      'APPLE_PASS_CERTIFICATE_PATH',
-      'APPLE_PASS_CERTIFICATE_PASSWORD',
-      'APPLE_WWDR_CERTIFICATE_PATH'
+      'APPLE_PASS_CERTIFICATE_PASSWORD'
     ]
 
-    required.forEach(varName => {
+    commonRequired.forEach(varName => {
       if (!process.env[varName]) {
         errors.push(`Missing environment variable: ${varName}`)
       }
     })
+
+    // Environment-specific validation
+    if (this.isProduction()) {
+      logger.info('📍 Production mode: Looking for base64-encoded certificates in environment variables')
+
+      // Production requires base64-encoded certificates
+      if (!process.env.APPLE_CERT_P12_BASE64) {
+        errors.push('Missing environment variable: APPLE_CERT_P12_BASE64 (required in production)')
+      }
+      if (!process.env.APPLE_CERT_WWDR_BASE64) {
+        errors.push('Missing environment variable: APPLE_CERT_WWDR_BASE64 (required in production)')
+      }
+    } else {
+      logger.info('📍 Development mode: Looking for certificate files')
+
+      // Development requires file paths
+      if (!process.env.APPLE_PASS_CERTIFICATE_PATH) {
+        errors.push('Missing environment variable: APPLE_PASS_CERTIFICATE_PATH (required in development)')
+      }
+      if (!process.env.APPLE_WWDR_CERTIFICATE_PATH) {
+        errors.push('Missing environment variable: APPLE_WWDR_CERTIFICATE_PATH (required in development)')
+      }
+    }
 
     // Validate Team ID format (should be 10 characters)
     if (process.env.APPLE_TEAM_ID && process.env.APPLE_TEAM_ID.length !== 10) {
@@ -130,9 +171,21 @@ class AppleCertificateValidator {
   }
 
   /**
-   * Load and validate .p12 certificate file
+   * Load and validate .p12 certificate (supports both file and base64)
    */
   async loadP12Certificate() {
+    // Use appropriate loading method based on environment
+    if (this.isProduction()) {
+      return await this.loadP12FromEnvironment()
+    } else {
+      return await this.loadP12FromFile()
+    }
+  }
+
+  /**
+   * Load .p12 certificate from file system (development)
+   */
+  async loadP12FromFile() {
     const errors = []
 
     try {
@@ -144,9 +197,61 @@ class AppleCertificateValidator {
         return { isValid: false, errors }
       }
 
+      logger.info(`📖 Loading .p12 certificate from file: ${certPath}`)
+
       // Read certificate file
       const p12Der = fs.readFileSync(certPath, 'binary')
 
+      return this.parseP12Certificate(p12Der, errors)
+
+    } catch (error) {
+      if (error.message.includes('Invalid password')) {
+        errors.push('Invalid certificate password (APPLE_PASS_CERTIFICATE_PASSWORD)')
+      } else {
+        errors.push(`Failed to load .p12 certificate from file: ${error.message}`)
+      }
+      return { isValid: false, errors }
+    }
+  }
+
+  /**
+   * Load .p12 certificate from base64 environment variable (production)
+   */
+  async loadP12FromEnvironment() {
+    const errors = []
+
+    try {
+      const p12Base64 = process.env.APPLE_CERT_P12_BASE64
+
+      if (!p12Base64) {
+        errors.push('APPLE_CERT_P12_BASE64 environment variable is empty')
+        return { isValid: false, errors }
+      }
+
+      logger.info('📖 Loading .p12 certificate from environment variable (base64)')
+
+      // Decode base64 to binary
+      const p12Der = Buffer.from(p12Base64, 'base64').toString('binary')
+
+      return this.parseP12Certificate(p12Der, errors)
+
+    } catch (error) {
+      if (error.message.includes('Invalid password')) {
+        errors.push('Invalid certificate password (APPLE_PASS_CERTIFICATE_PASSWORD)')
+      } else if (error.message.includes('base64')) {
+        errors.push('Invalid base64 encoding in APPLE_CERT_P12_BASE64')
+      } else {
+        errors.push(`Failed to load .p12 certificate from environment: ${error.message}`)
+      }
+      return { isValid: false, errors }
+    }
+  }
+
+  /**
+   * Parse .p12 certificate data (common logic for file and base64)
+   */
+  parseP12Certificate(p12Der, errors = []) {
+    try {
       // Convert to ASN.1 and decrypt with password
       const p12Asn1 = forge.asn1.fromDer(p12Der)
       const p12 = forge.pkcs12.pkcs12FromAsn1(
@@ -191,19 +296,26 @@ class AppleCertificateValidator {
       }
 
     } catch (error) {
-      if (error.message.includes('Invalid password')) {
-        errors.push('Invalid certificate password (APPLE_PASS_CERTIFICATE_PASSWORD)')
-      } else {
-        errors.push(`Failed to load .p12 certificate: ${error.message}`)
-      }
-      return { isValid: false, errors }
+      throw error // Re-throw to be caught by calling function
     }
   }
 
   /**
-   * Load and validate WWDR certificate
+   * Load and validate WWDR certificate (supports both file and base64)
    */
   async loadWWDRCertificate() {
+    // Use appropriate loading method based on environment
+    if (this.isProduction()) {
+      return await this.loadWWDRFromEnvironment()
+    } else {
+      return await this.loadWWDRFromFile()
+    }
+  }
+
+  /**
+   * Load WWDR certificate from file system (development)
+   */
+  async loadWWDRFromFile() {
     const errors = []
 
     try {
@@ -215,9 +327,55 @@ class AppleCertificateValidator {
         return { isValid: false, errors }
       }
 
+      logger.info(`📖 Loading WWDR certificate from file: ${certPath}`)
+
       // Read certificate file
       const wwdrPem = fs.readFileSync(certPath, 'utf8')
 
+      return this.parseWWDRCertificate(wwdrPem, errors)
+
+    } catch (error) {
+      errors.push(`Failed to load WWDR certificate from file: ${error.message}`)
+      return { isValid: false, errors }
+    }
+  }
+
+  /**
+   * Load WWDR certificate from base64 environment variable (production)
+   */
+  async loadWWDRFromEnvironment() {
+    const errors = []
+
+    try {
+      const wwdrBase64 = process.env.APPLE_CERT_WWDR_BASE64
+
+      if (!wwdrBase64) {
+        errors.push('APPLE_CERT_WWDR_BASE64 environment variable is empty')
+        return { isValid: false, errors }
+      }
+
+      logger.info('📖 Loading WWDR certificate from environment variable (base64)')
+
+      // Decode base64 to PEM string
+      const wwdrPem = Buffer.from(wwdrBase64, 'base64').toString('utf8')
+
+      return this.parseWWDRCertificate(wwdrPem, errors)
+
+    } catch (error) {
+      if (error.message.includes('base64')) {
+        errors.push('Invalid base64 encoding in APPLE_CERT_WWDR_BASE64')
+      } else {
+        errors.push(`Failed to load WWDR certificate from environment: ${error.message}`)
+      }
+      return { isValid: false, errors }
+    }
+  }
+
+  /**
+   * Parse WWDR certificate data (common logic for file and base64)
+   */
+  parseWWDRCertificate(wwdrPem, errors = []) {
+    try {
       // Parse PEM certificate
       const certificate = forge.pki.certificateFromPem(wwdrPem)
 
@@ -236,8 +394,7 @@ class AppleCertificateValidator {
       }
 
     } catch (error) {
-      errors.push(`Failed to load WWDR certificate: ${error.message}`)
-      return { isValid: false, errors }
+      throw error // Re-throw to be caught by calling function
     }
   }
 
