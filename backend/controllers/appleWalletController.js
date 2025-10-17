@@ -260,11 +260,12 @@ class AppleWalletController {
           messageEncoding: 'iso-8859-1', // Required by Apple Wallet for barcode validation
           altText: `Customer ID: ${customerData.customerId}`
         }
-      ],
+      ]
 
-      // Pass relevance and location
-      relevantDate: new Date().toISOString(),
-      maxDistance: 1000
+      // NOTE: relevantDate and maxDistance removed for iOS 15 compatibility
+      // maxDistance requires a locations array or causes validation failures on iOS 15
+      // relevantDate has strict format requirements that can fail on older iOS versions
+      // These can be added later with proper locations array for geolocation features
 
       // NOTE: webServiceURL and authenticationToken are omitted
       // This creates a "static pass" that installs without requiring a backend web service
