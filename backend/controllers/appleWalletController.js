@@ -21,12 +21,51 @@ class AppleWalletController {
     try {
       const { customerData, offerData, progressData } = req.body
 
+      console.log('🍎 Apple Wallet pass generation request:', {
+        customerData: customerData ? {
+          customerId: customerData.customerId,
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          joinedDate: customerData.joinedDate
+        } : 'missing',
+        offerData: offerData ? {
+          offerId: offerData.offerId,
+          businessName: offerData.businessName,
+          title: offerData.title
+        } : 'missing',
+        progressData: progressData ? {
+          stampsEarned: progressData.stampsEarned
+        } : 'missing'
+      })
+
       // Validate required data
       if (!customerData?.customerId || !offerData?.offerId || !offerData?.businessName) {
+        console.error('❌ Missing required data for Apple Wallet pass')
         return res.status(400).json({
           error: 'Missing required data',
-          required: ['customerData.customerId', 'offerData.offerId', 'offerData.businessName']
+          required: ['customerData.customerId', 'offerData.offerId', 'offerData.businessName'],
+          received: {
+            customerId: !!customerData?.customerId,
+            offerId: !!offerData?.offerId,
+            businessName: !!offerData?.businessName
+          }
         })
+      }
+
+      // Add default joinedDate if missing
+      if (!customerData.joinedDate) {
+        console.warn('⚠️ joinedDate missing, using current date')
+        customerData.joinedDate = new Date().toISOString()
+      }
+
+      // Add default firstName/lastName if missing
+      if (!customerData.firstName) {
+        console.warn('⚠️ firstName missing, using default')
+        customerData.firstName = 'Valued'
+      }
+      if (!customerData.lastName) {
+        console.warn('⚠️ lastName missing, using default')
+        customerData.lastName = 'Customer'
       }
 
       console.log('🍎 Generating Apple Wallet pass for:', {
@@ -105,17 +144,28 @@ class AppleWalletController {
   }
 
   createPassJson(customerData, offerData, progressData, design = null) {
-    const serialNumber = `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
+    try {
+      const serialNumber = `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
 
-    // Convert design colors to RGB format (Apple Wallet requirement)
-    const backgroundColor = this.hexToRgb(design?.background_color) || 'rgb(59, 130, 246)'
-    const foregroundColor = this.hexToRgb(design?.text_color) || 'rgb(255, 255, 255)'
-    const labelColor = foregroundColor // Use same color for labels as text
+      // Convert design colors to RGB format (Apple Wallet requirement)
+      const backgroundColor = this.hexToRgb(design?.background_color) || 'rgb(59, 130, 246)'
+      const foregroundColor = this.hexToRgb(design?.text_color) || 'rgb(255, 255, 255)'
+      const labelColor = foregroundColor // Use same color for labels as text
 
-    // Get real certificate credentials from validator
-    const certs = appleCertificateValidator.getCertificates()
+      // Get real certificate credentials from validator
+      console.log('📋 Loading Apple Wallet certificates...')
+      const certs = appleCertificateValidator.getCertificates()
 
-    return {
+      if (!certs) {
+        throw new Error('Apple Wallet certificates not loaded. Please check server startup logs.')
+      }
+
+      console.log('✅ Certificates loaded:', {
+        passTypeId: certs.passTypeId,
+        teamId: certs.teamId
+      })
+
+      return {
       formatVersion: 1,
       passTypeIdentifier: certs.passTypeId, // Real Pass Type ID from certificates
       serialNumber,
@@ -159,7 +209,7 @@ class AppleWalletController {
           {
             key: 'member_since',
             label: 'Member Since',
-            value: new Date(customerData.joinedDate).toLocaleDateString(),
+            value: customerData.joinedDate ? new Date(customerData.joinedDate).toLocaleDateString() : new Date().toLocaleDateString(),
             textAlignment: 'PKTextAlignmentLeft'
           },
           {
@@ -206,6 +256,10 @@ class AppleWalletController {
       // Demo URLs (in production, these would be real endpoints)
       webServiceURL: `http://localhost:3001/api/passes/`,
       authenticationToken: this.generateAuthToken(customerData.customerId, serialNumber)
+    }
+    } catch (error) {
+      console.error('❌ Error creating pass JSON:', error)
+      throw new Error(`Failed to create pass data: ${error.message}`)
     }
   }
 
