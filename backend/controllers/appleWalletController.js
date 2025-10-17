@@ -193,6 +193,10 @@ class AppleWalletController {
       backgroundColor,
       labelColor,
 
+      // iOS 15 compatibility fields (from working Loopy Loyalty pass structure)
+      sharingProhibited: true, // Prevents pass from being shared
+      suppressStripShine: false, // Allows glossy effect on strip image
+
       // Store Card structure
       storeCard: {
         primaryFields: [
@@ -238,17 +242,35 @@ class AppleWalletController {
           {
             key: 'customer_name',
             label: 'Customer',
-            value: `${customerData.firstName} ${customerData.lastName}`
+            value: `${customerData.firstName} ${customerData.lastName}`,
+            dataDetectorTypes: [
+              'PKDataDetectorTypePhoneNumber',
+              'PKDataDetectorTypeLink',
+              'PKDataDetectorTypeAddress',
+              'PKDataDetectorTypeCalendarEvent'
+            ]
           },
           {
             key: 'offer_details',
             label: 'Offer Details',
-            value: offerData.description || offerData.title
+            value: offerData.description || offerData.title,
+            dataDetectorTypes: [
+              'PKDataDetectorTypePhoneNumber',
+              'PKDataDetectorTypeLink',
+              'PKDataDetectorTypeAddress',
+              'PKDataDetectorTypeCalendarEvent'
+            ]
           },
           {
             key: 'terms',
             label: 'Terms & Conditions',
-            value: 'Valid at participating locations. Cannot be combined with other offers. Subject to availability.'
+            value: 'Valid at participating locations. Cannot be combined with other offers. Subject to availability.',
+            dataDetectorTypes: [
+              'PKDataDetectorTypePhoneNumber',
+              'PKDataDetectorTypeLink',
+              'PKDataDetectorTypeAddress',
+              'PKDataDetectorTypeCalendarEvent'
+            ]
           }
         ]
       },
