@@ -86,6 +86,11 @@ const OfferCardDesign = sequelize.define('OfferCardDesign', {
     defaultValue: '⭐',
     comment: 'Emoji or symbol representing each stamp'
   },
+  stamp_display_type: {
+    type: DataTypes.ENUM('icon', 'logo'),
+    defaultValue: 'icon',
+    comment: 'Whether to use emoji icon or business logo for stamps'
+  },
   progress_display_style: {
     type: DataTypes.ENUM('bar', 'grid', 'circular'),
     defaultValue: 'bar',

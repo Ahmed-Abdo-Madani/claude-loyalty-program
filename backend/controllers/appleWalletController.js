@@ -87,11 +87,43 @@ class AppleWalletController {
         console.warn('⚠️ Failed to load card design, using defaults:', error.message)
       }
 
-      // Generate pass data
-      const passData = this.createPassJson(customerData, offerData, progressData, design)
+      // Ensure we have actual customer progress for stamp visualization
+      let actualProgressData = progressData
+      if (!progressData || progressData.stampsEarned === undefined) {
+        console.warn('⚠️ No progressData provided, fetching actual stamps from database...')
 
-      // Generate pass images
-      const images = await this.generatePassImages(offerData, design)
+        try {
+          // Query customer_progress table for actual stamp count
+          const { default: sequelize } = await import('../config/database.js')
+          const [result] = await sequelize.query(`
+            SELECT stamps_earned
+            FROM customer_progress
+            WHERE customer_id = ? AND offer_id = ?
+            LIMIT 1
+          `, {
+            replacements: [customerData.customerId, offerData.offerId],
+            type: sequelize.QueryTypes.SELECT
+          })
+
+          actualProgressData = {
+            stampsEarned: result?.stamps_earned || 0
+          }
+
+          console.log('✅ Fetched actual progress from database:', actualProgressData)
+        } catch (error) {
+          console.error('❌ Failed to fetch progress from database:', error.message)
+          // Fallback to 0 stamps if query fails
+          actualProgressData = { stampsEarned: 0 }
+        }
+      } else {
+        console.log('✅ Using provided progressData:', actualProgressData)
+      }
+
+      // Generate pass data
+      const passData = this.createPassJson(customerData, offerData, actualProgressData, design)
+
+      // Generate pass images with progress data for stamp visualization
+      const images = await this.generatePassImages(offerData, design, actualProgressData)
 
       // Create manifest with file hashes
       const manifest = this.createManifest(passData, images)
@@ -116,6 +148,17 @@ class AppleWalletController {
         }
       )
       console.log('✨ Apple Wallet pass recorded in database successfully')
+
+      // Mark card design as applied (if design was used)
+      if (design) {
+        try {
+          await CardDesignService.markDesignAsApplied(offerData.offerId)
+          console.log('🎨 Card design marked as applied for offer:', offerData.offerId)
+        } catch (error) {
+          console.warn('⚠️ Failed to mark design as applied:', error.message)
+          // Non-critical error, don't fail the request
+        }
+      }
 
       // Set headers for .pkpass download
       res.setHeader('Content-Type', 'application/vnd.apple.pkpass')
@@ -143,25 +186,95 @@ class AppleWalletController {
       : null
   }
 
+  // Helper function to generate stamp visualization for Apple Wallet back fields
+  // Since Apple Wallet doesn't support visual stamps in main layout, show them as emoji
+  generateStampVisualization(earned, required) {
+    const stampIcon = '⭐'  // Filled stamp
+    const emptyIcon = '☆'   // Empty stamp
+
+    // Create visual representation (max 20 stamps to avoid text overflow)
+    const displayRequired = Math.min(required, 20)
+    const displayEarned = Math.min(earned, displayRequired)
+
+    // Build stamp grid
+    const filledStamps = stampIcon.repeat(displayEarned)
+    const emptyStamps = emptyIcon.repeat(displayRequired - displayEarned)
+    const stampGrid = filledStamps + emptyStamps
+
+    // Add text summary
+    let summary = `${stampGrid}\n\n${earned} of ${required} stamps collected`
+
+    // Add completion message if all stamps earned
+    if (earned >= required) {
+      summary += '\n\n🎉 Reward Ready! Show this card to redeem.'
+    } else {
+      const remaining = required - earned
+      summary += `\n${remaining} more ${remaining === 1 ? 'stamp' : 'stamps'} to earn reward`
+    }
+
+    // Show overflow indicator if more than 20 stamps
+    if (required > 20) {
+      summary += `\n\nShowing first 20 of ${required} total stamps`
+    }
+
+    return summary
+  }
+
   createPassJson(customerData, offerData, progressData, design = null) {
     try {
       const serialNumber = `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
 
-      // Ensure required fields have default values
+      // ==================== DATA VALIDATION & LOGGING ====================
+      console.log('📊 ========== PASS DATA RECEIVED ==========')
+      console.log('👤 Customer Data:', {
+        customerId: customerData.customerId,
+        firstName: customerData.firstName,
+        lastName: customerData.lastName
+      })
+      console.log('🎁 Offer Data:', {
+        offerId: offerData.offerId,
+        businessName: offerData.businessName,
+        title: offerData.title,
+        stampsRequired: offerData.stampsRequired,
+        rewardDescription: offerData.rewardDescription
+      })
+      console.log('📈 Progress Data:', progressData)
+      console.log('🎨 Design Data:', design ? {
+        hasLogo: !!design.logo_url,
+        hasHero: !!design.hero_image_url,
+        colors: {
+          background: design.background_color,
+          foreground: design.foreground_color
+        }
+      } : 'No design')
+      console.log('========================================')
+
+      // Ensure required fields have default values with better validation
       const stampsRequired = offerData.stampsRequired || 10
-      const stampsEarned = progressData.stampsEarned || 0
+      const stampsEarned = progressData?.stampsEarned || 0
       const rewardDescription = offerData.rewardDescription || offerData.title || 'Free Item'
       const branchName = offerData.branchName || 'All Locations'
+
+      // Validate and fix business name if needed
+      let businessName = offerData.businessName
+      if (!businessName || businessName.length < 3 || /^[^a-zA-Z0-9\u0600-\u06FF]/.test(businessName)) {
+        console.warn('⚠️ Invalid or missing businessName, using offer title as fallback')
+        businessName = offerData.title || 'Loyalty Program'
+      }
+      console.log('✅ Using business name:', businessName)
+      console.log('✅ Stamps: earned =', stampsEarned, ', required =', stampsRequired)
 
       // Convert design colors to RGB format (Apple Wallet requirement)
       // CRITICAL: Apple Wallet (especially iOS 15) requires rgb(r,g,b) format, NOT hex #rrggbb
       const backgroundColor = design?.background_color
         ? this.hexToRgb(design.background_color)
         : 'rgb(59, 130, 246)' // Default blue
-      const foregroundColor = design?.text_color
-        ? this.hexToRgb(design.text_color)
+      const foregroundColor = design?.foreground_color
+        ? this.hexToRgb(design.foreground_color)
         : 'rgb(255, 255, 255)' // Default white
-      const labelColor = foregroundColor // Use same color for labels as text
+      const labelColor = design?.label_color
+        ? this.hexToRgb(design.label_color)
+        : foregroundColor // Use foreground color as fallback
 
       console.log('🎨 Colors:', { backgroundColor, foregroundColor, labelColor })
 
@@ -184,8 +297,8 @@ class AppleWalletController {
       passTypeIdentifier: certs.passTypeId, // Real Pass Type ID from certificates
       serialNumber,
       teamIdentifier: certs.teamId, // Real Team ID from certificates
-      organizationName: offerData.businessName,
-      description: `${offerData.businessName} Loyalty Card`,
+      organizationName: businessName, // Use validated business name
+      description: `${businessName} Loyalty Card`,
 
       // Visual styling - Use custom colors or defaults
       // logoText: offerData.businessName, // REMOVED - Not present in working iOS 15.6 pass
@@ -197,100 +310,38 @@ class AppleWalletController {
       sharingProhibited: true, // Prevents pass from being shared
       suppressStripShine: false, // Allows glossy effect on strip image
 
-      // Store Card structure
+      // Store Card structure - EXACT match to working iOS 15.6 clone structure
+      // Working clone: ONLY secondaryFields (1 field) + backFields - NO primaryFields, NO auxiliaryFields
       storeCard: {
-        primaryFields: [
-          {
-            key: 'progress',
-            label: 'Progress',
-            value: `${stampsEarned} of ${stampsRequired}`,
-            textAlignment: 'PKTextAlignmentCenter'
-          }
-        ],
-
+        // ONLY secondaryFields - show progress on front of pass
         secondaryFields: [
           {
-            key: 'reward',
-            label: 'Reward',
-            value: rewardDescription,
-            textAlignment: 'PKTextAlignmentLeft'
-          },
-          {
-            key: 'location',
-            label: 'Location',
-            value: branchName,
-            textAlignment: 'PKTextAlignmentRight'
+            key: 's0', // Match working clone key naming
+            label: 'Progress',
+            textAlignment: 'PKTextAlignmentLeft', // Match working clone alignment
+            value: `${stampsEarned} of ${stampsRequired}`
           }
         ],
 
-        auxiliaryFields: [
-          {
-            key: 'member_since',
-            label: 'Member Since',
-            value: customerData.joinedDate ? new Date(customerData.joinedDate).toLocaleDateString() : new Date().toLocaleDateString(),
-            textAlignment: 'PKTextAlignmentLeft'
-          },
-          {
-            key: 'customer_id',
-            label: 'ID',
-            value: customerData.customerId.slice(-6),
-            textAlignment: 'PKTextAlignmentRight'
-          }
-        ],
-
-        backFields: [
-          {
-            key: 'customer_name',
-            label: 'Customer',
-            value: `${customerData.firstName} ${customerData.lastName}`,
-            dataDetectorTypes: [
-              'PKDataDetectorTypePhoneNumber',
-              'PKDataDetectorTypeLink',
-              'PKDataDetectorTypeAddress',
-              'PKDataDetectorTypeCalendarEvent'
-            ]
-          },
-          {
-            key: 'offer_details',
-            label: 'Offer Details',
-            value: offerData.description || offerData.title,
-            dataDetectorTypes: [
-              'PKDataDetectorTypePhoneNumber',
-              'PKDataDetectorTypeLink',
-              'PKDataDetectorTypeAddress',
-              'PKDataDetectorTypeCalendarEvent'
-            ]
-          },
-          {
-            key: 'terms',
-            label: 'Terms & Conditions',
-            value: 'Valid at participating locations. Cannot be combined with other offers. Subject to availability.',
-            dataDetectorTypes: [
-              'PKDataDetectorTypePhoneNumber',
-              'PKDataDetectorTypeLink',
-              'PKDataDetectorTypeAddress',
-              'PKDataDetectorTypeCalendarEvent'
-            ]
-          }
-        ]
+        // No back fields - all stamp visualization shown on dynamic hero image
+        backFields: []
       },
 
       // Barcode for POS scanning
       // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
-      // Customer ID contains only ASCII characters, so iso-8859-1 is correct
-      // Arabic text in organizationName/logoText (display fields) is separate and supports UTF-8
+      // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
       barcode: {
-        message: customerData.customerId,
+        altText: 'Customer ID',  // Match working clone - simple text only
         format: 'PKBarcodeFormatQR',
-        messageEncoding: 'iso-8859-1', // Required by Apple Wallet for barcode validation
-        altText: `Customer ID: ${customerData.customerId}`
+        message: customerData.customerId,
+        messageEncoding: 'iso-8859-1'
       },
       barcodes: [
         {
-          message: customerData.customerId,
+          altText: 'Customer ID',  // Match working clone - simple text only
           format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1', // Required by Apple Wallet for barcode validation
-          altText: `Customer ID: ${customerData.customerId}`
+          message: customerData.customerId,
+          messageEncoding: 'iso-8859-1'
         }
       ]
 
@@ -330,25 +381,41 @@ class AppleWalletController {
     }
   }
 
-  async generatePassImages(offerData, design = null) {
+  async generatePassImages(offerData, design = null, progressData = {}) {
+    // Import StampImageGenerator service for dynamic stamp visualization
+    const StampImageGenerator = (await import('../services/StampImageGenerator.js')).default
+
     // Generate pass images - icon is REQUIRED, logo and strip are optional
     let baseImageBuffer
 
     // Try to use custom logo from design
     if (design?.logo_url) {
       try {
-        console.log('🎨 Fetching custom logo for Apple Wallet:', design.logo_url)
+        console.log('🎨 Fetching custom logo for Apple Wallet from:', design.logo_url)
         const response = await fetch(design.logo_url)
+        console.log('📡 Logo fetch response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type')
+        })
+
         if (response.ok) {
           baseImageBuffer = Buffer.from(await response.arrayBuffer())
-          console.log('✅ Custom logo fetched successfully')
+          console.log('✅ Custom logo fetched successfully:', baseImageBuffer.length, 'bytes')
         } else {
-          throw new Error(`Failed to fetch logo: ${response.status}`)
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
       } catch (error) {
-        console.warn('⚠️ Failed to fetch custom logo, using placeholder:', error.message)
+        console.error('❌ Failed to fetch custom logo:', {
+          url: design.logo_url,
+          error: error.message,
+          stack: error.stack
+        })
+        console.warn('⚠️ Using placeholder logo instead')
         baseImageBuffer = null
       }
+    } else {
+      console.log('📝 No custom logo URL provided, using placeholder')
     }
 
     // Fallback to placeholder if custom logo not available
@@ -393,57 +460,27 @@ class AppleWalletController {
       .png()
       .toBuffer()
 
-    // Generate strip/hero image
-    let stripBuffer
-    if (design?.hero_image_url) {
-      try {
-        console.log('🎨 Fetching hero image for Apple Wallet:', design.hero_image_url)
-        const response = await fetch(design.hero_image_url)
-        if (response.ok) {
-          const imageBuffer = Buffer.from(await response.arrayBuffer())
-          // Resize to Apple Wallet strip size (624x168 for 2x)
-          stripBuffer = await sharp(imageBuffer)
-            .resize(624, 168, { fit: 'cover' })
-            .png()
-            .toBuffer()
-          console.log('✅ Hero image processed successfully')
-        } else {
-          throw new Error(`Failed to fetch hero image: ${response.status}`)
-        }
-      } catch (error) {
-        console.warn('⚠️ Failed to fetch hero image, using placeholder:', error.message)
-        stripBuffer = null
-      }
-    }
+    // Generate dynamic stamp visualization hero image using StampImageGenerator
+    console.log('🎨 Generating dynamic stamp visualization for hero image...')
+    const stampHeroImage = await StampImageGenerator.generateStampHeroImage({
+      stampsEarned: progressData.stampsEarned || 0,
+      stampsRequired: offerData.stampsRequired || 10,
+      stampIcon: design?.stamp_icon || '⭐',
+      stampDisplayType: design?.stamp_display_type || 'icon',
+      logoUrl: design?.logo_url,
+      heroImageUrl: design?.hero_image_url,
+      backgroundColor: design?.background_color || '#3B82F6',
+      foregroundColor: design?.foreground_color || '#FFFFFF',
+      progressDisplayStyle: design?.progress_display_style || 'grid'
+    })
+    console.log('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
 
-    // Fallback to placeholder strip if hero image not available
-    if (!stripBuffer) {
-      stripBuffer = await sharp({
-        create: {
-          width: 624,
-          height: 168,
-          channels: 4,
-          background: { r: 59, g: 130, b: 246, alpha: 1 }
-        }
-      })
-      .png()
-      .toBuffer()
-    }
-
-    // Return all images - icon.png is REQUIRED by Apple Wallet
+    // Return ONLY @2x images to match working iOS 15.6 clone structure
+    // Working clone only has: icon@2x.png, logo@2x.png, strip@2x.png (3 files total)
     return {
-      // REQUIRED: icon.png files (pass won't install without these!)
-      'icon.png': icon1x,          // 29x29 - shown on lock screen
-      'icon@2x.png': icon2x,       // 58x58 - Retina displays (required)
-      'icon@3x.png': icon3x,       // 87x87 - iPhone Plus/Pro (recommended)
-
-      // OPTIONAL: logo.png files (shown in pass header)
-      'logo.png': logo1x,          // 160x50 - standard display
-      'logo@2x.png': logo2x,       // 320x100 - Retina displays
-
-      // OPTIONAL: strip.png files (header image)
-      'strip.png': stripBuffer,
-      'strip@2x.png': stripBuffer
+      'icon@2x.png': icon2x,           // 58x58 - Retina displays
+      'logo@2x.png': logo2x,           // 320x100 - Retina displays
+      'strip@2x.png': stampHeroImage   // 624x168 - Dynamic hero image with stamps
     }
   }
 
@@ -477,11 +514,11 @@ class AppleWalletController {
       archive.on('end', () => resolve(Buffer.concat(chunks)))
       archive.on('error', reject)
 
-      // Add pass.json
-      archive.append(JSON.stringify(passData, null, 2), { name: 'pass.json' })
+      // Add pass.json - NO FORMATTING! iOS 15.6 requires compact JSON (no whitespace)
+      archive.append(JSON.stringify(passData), { name: 'pass.json' })
 
-      // Add manifest.json
-      archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' })
+      // Add manifest.json - NO FORMATTING! iOS 15.6 requires compact JSON (no whitespace)
+      archive.append(JSON.stringify(manifest), { name: 'manifest.json' })
 
       // Add signature
       archive.append(signature, { name: 'signature' })
