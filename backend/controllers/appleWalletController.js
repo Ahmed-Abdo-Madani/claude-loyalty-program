@@ -88,6 +88,49 @@ class AppleWalletController {
         console.warn('⚠️ Failed to load card design, using defaults:', error.message)
       }
 
+      // 🆕 DEFENSIVE FIX: Ensure offerData has all required fields
+      // If businessId or stampsRequired missing, fetch from database
+      if (!offerData.businessId || !offerData.stampsRequired) {
+        console.warn('⚠️ Missing required offer fields, fetching from database...')
+        console.warn('   Current offerData:', {
+          businessId: offerData.businessId,
+          stampsRequired: offerData.stampsRequired,
+          stamps_required: offerData.stamps_required
+        })
+
+        try {
+          const { default: sequelize } = await import('../config/database.js')
+          const [offerRecord] = await sequelize.query(`
+            SELECT business_id, stamps_required, title, description
+            FROM offers
+            WHERE public_id = ?
+            LIMIT 1
+          `, {
+            replacements: [offerData.offerId],
+            type: sequelize.QueryTypes.SELECT
+          })
+
+          if (offerRecord) {
+            // Populate missing fields from database
+            if (!offerData.businessId) {
+              offerData.businessId = offerRecord.business_id
+              console.log('✅ Populated businessId from database:', offerRecord.business_id)
+            }
+            if (!offerData.stampsRequired && !offerData.stamps_required) {
+              offerData.stampsRequired = offerRecord.stamps_required
+              console.log('✅ Populated stampsRequired from database:', offerRecord.stamps_required)
+            }
+          } else {
+            throw new Error(`Offer ${offerData.offerId} not found in database`)
+          }
+        } catch (error) {
+          console.error('❌ Failed to fetch offer data from database:', error.message)
+          throw new Error(`Cannot generate pass - missing required fields: ${error.message}`)
+        }
+      } else {
+        console.log('✅ offerData has required fields (businessId and stampsRequired)')
+      }
+
       // Ensure we have actual customer progress for stamp visualization
       let actualProgressData = progressData
       if (!progressData || progressData.stampsEarned === undefined) {
