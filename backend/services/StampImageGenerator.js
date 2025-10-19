@@ -7,9 +7,10 @@
  * Features:
  * - Supports emoji stamps (⭐, ☕, 🍕, etc.)
  * - Supports logo stamps (business logo repeated)
- * - Adaptive grid layouts based on stamp count
+ * - Fully dynamic & centered grid layouts based on actual stamp count
  * - Works with or without custom hero images
- * - Adds progress text overlay
+ * - Larger, proportional stamps for better visibility
+ * - NO text overlay (progress shown in pass fields)
  */
 
 import sharp from 'sharp'
@@ -66,6 +67,7 @@ class StampImageGenerator {
         stampDisplayType,
         logoUrl,
         foregroundColor,
+        backgroundColor,
         progressDisplayStyle
       })
 
@@ -128,7 +130,7 @@ class StampImageGenerator {
   }
 
   /**
-   * Generate stamp overlay with stamps and progress text
+   * Generate stamp overlay with stamps (including circular backgrounds)
    */
   static async generateStampOverlay(options) {
     const {
@@ -138,6 +140,7 @@ class StampImageGenerator {
       stampDisplayType,
       logoUrl,
       foregroundColor,
+      backgroundColor,
       progressDisplayStyle
     } = options
 
@@ -157,7 +160,7 @@ class StampImageGenerator {
     .png()
     .toBuffer()
 
-    // Generate SVG with stamps and text
+    // Generate SVG with stamps and circular backgrounds
     const svg = await this.generateStampSVG({
       stampsEarned,
       stampsRequired,
@@ -165,6 +168,7 @@ class StampImageGenerator {
       stampDisplayType,
       logoUrl,
       foregroundColor,
+      backgroundColor,
       layout
     })
 
@@ -177,71 +181,133 @@ class StampImageGenerator {
 
   /**
    * Determine grid layout based on stamp count
+   * Uses DYNAMIC sizing based on available hero image space
+   * Optimized for wider grids (fewer rows) with 100px max stamp size
    */
   static determineLayout(stampsRequired, style) {
+    // Hero image dimensions
+    const IMAGE_WIDTH = 624
+    const IMAGE_HEIGHT = 168
+    const HORIZONTAL_PADDING = 40  // 20px left + 20px right
+    const VERTICAL_PADDING = 30    // 15px top + 15px bottom
+    const MAX_STAMP_SIZE = 100     // Maximum stamp size cap
+
+    const availableWidth = IMAGE_WIDTH - HORIZONTAL_PADDING
+    const availableHeight = IMAGE_HEIGHT - VERTICAL_PADDING
+
     if (style === 'bar') {
-      // Simple horizontal bar
+      // Simple horizontal bar (single row)
+      const cols = Math.min(stampsRequired, 10)
+      const rows = 1
+
+      // Dynamic sizing for bar layout
+      const maxStampWidth = (availableWidth * 0.80) / cols
+      const stampSize = Math.min(Math.floor(maxStampWidth), MAX_STAMP_SIZE)
+      const spacing = Math.floor(stampSize * 0.20)
+
+      const totalWidth = (cols * stampSize) + ((cols - 1) * spacing)
+      const startX = Math.floor((IMAGE_WIDTH - totalWidth) / 2)
+      const startY = Math.floor((IMAGE_HEIGHT - stampSize) / 2)
+
       return {
-        rows: 1,
-        cols: Math.min(stampsRequired, 10),  // Max 10 in a row
-        stampSize: 30,
-        spacing: 5,
-        startX: 20,
-        startY: 70
+        rows,
+        cols,
+        stampSize,
+        spacing,
+        startX,
+        startY
       }
     }
 
-    // Grid layout
-    if (stampsRequired <= 4) {
-      return {
-        rows: 1,
-        cols: stampsRequired,
-        stampSize: 40,
-        spacing: 10,
-        startX: 20,
-        startY: 60
-      }
-    } else if (stampsRequired <= 10) {
-      return {
-        rows: 2,
-        cols: 5,
-        stampSize: 35,
-        spacing: 8,
-        startX: 20,
-        startY: 40
-      }
+    // === GRID LAYOUT - FULLY DYNAMIC ===
+
+    // STEP 1: Determine optimal grid dimensions (prefer wider grids)
+    const { rows, cols } = this.calculateOptimalGrid(stampsRequired)
+
+    // STEP 2: Dynamic stamp sizing based on available space
+    // Adjust fill ratio based on stamp count for optimal space utilization
+    let STAMP_FILL_RATIO
+    if (stampsRequired <= 5) {
+      STAMP_FILL_RATIO = 0.80  // 80% for very small counts (1-5 stamps)
     } else if (stampsRequired <= 12) {
-      return {
-        rows: 2,
-        cols: 6,
-        stampSize: 32,
-        spacing: 7,
-        startX: 15,
-        startY: 45
-      }
-    } else if (stampsRequired <= 15) {
-      return {
-        rows: 3,
-        cols: 5,
-        stampSize: 28,
-        spacing: 6,
-        startX: 15,
-        startY: 25
-      }
+      STAMP_FILL_RATIO = 0.90  // 90% for medium counts (6-12 stamps) - INCREASED for better sizing!
     } else {
-      return {
-        rows: 4,
-        cols: 5,
-        stampSize: 25,
-        spacing: 5,
-        startX: 15,
-        startY: 10
-      }
+      STAMP_FILL_RATIO = 0.75  // 75% for larger counts (13+ stamps)
+    }
+
+    const maxStampWidth = (availableWidth * STAMP_FILL_RATIO) / cols
+    const maxStampHeight = (availableHeight * STAMP_FILL_RATIO) / rows
+
+    // Use the smaller dimension to maintain circular stamps
+    // Apply 100px maximum cap
+    const calculatedSize = Math.min(maxStampWidth, maxStampHeight)
+    const stampSize = Math.floor(Math.min(calculatedSize, MAX_STAMP_SIZE))
+
+    // STEP 3: Calculate spacing (proportional to stamp size)
+    const spacing = Math.floor(stampSize * 0.20)  // 20% of stamp size
+
+    // STEP 4: Calculate actual grid dimensions
+    const totalWidth = (cols * stampSize) + ((cols - 1) * spacing)
+    const totalHeight = (rows * stampSize) + ((rows - 1) * spacing)
+
+    // STEP 5: Center the grid in the hero image
+    const startX = Math.floor((IMAGE_WIDTH - totalWidth) / 2)
+    const startY = Math.floor((IMAGE_HEIGHT - totalHeight) / 2)
+
+    // STEP 6: Calculate fill percentage for logging
+    const gridArea = totalWidth * totalHeight
+    const imageArea = IMAGE_WIDTH * IMAGE_HEIGHT
+    const fillPercentage = ((gridArea / imageArea) * 100).toFixed(1)
+
+    logger.info('📐 Dynamic stamp sizing calculated:', {
+      stampsRequired,
+      gridLayout: `${rows} rows × ${cols} cols`,
+      availableSpace: `${availableWidth}×${availableHeight}px`,
+      calculatedStampSize: `${Math.floor(calculatedSize)}px`,
+      appliedStampSize: `${stampSize}px (max: ${MAX_STAMP_SIZE}px)`,
+      spacing: `${spacing}px`,
+      gridDimensions: `${totalWidth}×${totalHeight}px`,
+      position: `(${startX}, ${startY})`,
+      fillPercentage: `${fillPercentage}%`
+    })
+
+    return {
+      rows,
+      cols,
+      stampSize,
+      spacing,
+      startX,
+      startY
     }
   }
 
   /**
-   * Generate SVG with stamp grid and progress text
+   * Calculate optimal grid dimensions (rows × cols)
+   * Prefers WIDER grids (fewer rows) for better visual flow
+   */
+  static calculateOptimalGrid(stampsRequired) {
+    // Prefer wider grids with fewer rows
+    if (stampsRequired <= 6) {
+      // Single row for 1-6 stamps
+      return { rows: 1, cols: stampsRequired }
+    } else if (stampsRequired <= 12) {
+      // Two rows for 7-12 stamps (wider grid)
+      return { rows: 2, cols: Math.ceil(stampsRequired / 2) }
+    } else if (stampsRequired <= 18) {
+      // Three rows for 13-18 stamps
+      return { rows: 3, cols: Math.ceil(stampsRequired / 3) }
+    } else if (stampsRequired <= 24) {
+      // Four rows for 19-24 stamps
+      return { rows: 4, cols: Math.ceil(stampsRequired / 4) }
+    } else {
+      // Five rows for 25+ stamps
+      return { rows: 5, cols: Math.ceil(stampsRequired / 5) }
+    }
+  }
+
+  /**
+   * Generate SVG with stamp grid including circular backgrounds
+   * Matches the "abbajava CAFE" reference design with circles and different icons
    */
   static async generateStampSVG(options) {
     const {
@@ -249,90 +315,87 @@ class StampImageGenerator {
       stampsRequired,
       stampIcon,
       foregroundColor,
+      backgroundColor,
       layout
     } = options
 
     const stamps = []
     let stampIndex = 0
 
-    // Generate stamp grid
-    for (let row = 0; row < layout.rows; row++) {
+    console.log('🔍 Generating stamp SVG with circular backgrounds:', {
+      stampsEarned,
+      stampsRequired,
+      stampIcon,
+      layoutRows: layout.rows,
+      layoutCols: layout.cols,
+      stampSize: layout.stampSize,
+      backgroundColor,
+      foregroundColor
+    })
+
+    // Generate EXACT number of stamps as stampsRequired
+    // Each stamp has: circular background + CENTERED emoji icon
+    for (let row = 0; row < layout.rows && stampIndex < stampsRequired; row++) {
       for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
-        const x = layout.startX + col * (layout.stampSize + layout.spacing)
-        const y = layout.startY + row * (layout.stampSize + layout.spacing)
         const filled = stampIndex < stampsEarned
 
-        // Use custom stamp icon for both filled and empty stamps
-        // Differentiate by opacity and stroke
-        const opacity = filled ? 1.0 : 0.5  // Increased from 0.3 to 0.5 for better visibility
+        // Determine which icon to display
+        const displayIcon = filled ? stampIcon : this.getEmptyStampIcon(stampIcon)
+        const iconOpacity = filled ? 1.0 : 0.4  // Filled: full opacity, Empty: 40%
+
+        // Calculate circle position and size
+        const circleRadius = layout.stampSize * 0.5  // Circle radius: 50% of stamp size
+
+        // Position circle at grid location
+        const circleCenterX = layout.startX + col * (layout.stampSize + layout.spacing) + circleRadius
+        const circleCenterY = layout.startY + row * (layout.stampSize + layout.spacing) + circleRadius
+
+        // Calculate emoji size (slightly smaller than circle for proper fit)
+        const emojiSize = layout.stampSize * 0.7  // Emoji at 70% of stamp size
 
         stamps.push(`
+          <!-- Circular background with stroke -->
+          <circle
+            cx="${circleCenterX}"
+            cy="${circleCenterY}"
+            r="${circleRadius}"
+            fill="${backgroundColor}"
+            fill-opacity="0.8"
+            stroke="${foregroundColor}"
+            stroke-width="3"
+          />
+          <!-- Stamp emoji - CENTERED in circle (with visual adjustment) -->
           <text
-            x="${x}"
-            y="${y}"
-            font-size="${layout.stampSize}"
+            x="${circleCenterX}"
+            y="${circleCenterY + (emojiSize * 0.3)}"
+            font-size="${emojiSize}"
             fill="${foregroundColor}"
-            opacity="${opacity}"
-            font-family="Arial, sans-serif"
-            filter="url(#textShadow)"
-          >${stampIcon}</text>
+            opacity="${iconOpacity}"
+            font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Arial, sans-serif"
+            filter="url(#stampShadow)"
+            text-anchor="middle"
+            dominant-baseline="central"
+          >${displayIcon}</text>
         `)
 
         stampIndex++
       }
     }
 
-    // Add progress text
-    const textX = layout.startX + (layout.cols * (layout.stampSize + layout.spacing)) + 15
-    const textY = layout.startY + (layout.rows * (layout.stampSize + layout.spacing)) / 2
+    console.log('✅ Generated', stampIndex, 'stamp SVG elements (with circles) out of', stampsRequired, 'required')
 
-    const progressText = `${stampsEarned}/${stampsRequired}`
-
+    // SVG with circular backgrounds + stamps - no text overlay
+    // The "X of Y" progress is already shown in the pass's secondaryFields
     const svg = `
       <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <!-- Stronger shadow for text on complex backgrounds -->
-          <filter id="shadow">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.7"/>
-          </filter>
-          <!-- Shadow for stamp icons -->
-          <filter id="textShadow">
-            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
+          <!-- Shadow for stamp emojis for better contrast -->
+          <filter id="stampShadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.5"/>
           </filter>
         </defs>
 
         ${stamps.join('\n')}
-
-        <!-- Semi-transparent background behind progress text for better readability -->
-        <rect
-          x="${textX - 5}"
-          y="${textY - 22}"
-          width="80"
-          height="40"
-          rx="5"
-          fill="#000000"
-          opacity="0.3"
-        />
-
-        <text
-          x="${textX}"
-          y="${textY}"
-          font-size="24"
-          font-weight="bold"
-          fill="${foregroundColor}"
-          filter="url(#shadow)"
-          font-family="Arial, sans-serif"
-        >${progressText}</text>
-
-        <text
-          x="${textX}"
-          y="${textY + 20}"
-          font-size="12"
-          fill="${foregroundColor}"
-          opacity="0.9"
-          filter="url(#shadow)"
-          font-family="Arial, sans-serif"
-        >Stamps</text>
       </svg>
     `
 
@@ -366,6 +429,26 @@ class StampImageGenerator {
       g: parseInt(cleanHex.substring(2, 4), 16),
       b: parseInt(cleanHex.substring(4, 6), 16)
     }
+  }
+
+  /**
+   * Get empty/hollow version of stamp icon
+   * Maps filled stamps to their hollow equivalents
+   */
+  static getEmptyStampIcon(filledIcon) {
+    const emptyIconMap = {
+      '☕': '☕',  // Coffee cup (same icon, will use opacity)
+      '⭐': '☆',  // Star → Hollow star
+      '⭐️': '☆',  // Star emoji variant → Hollow star
+      '🍕': '🍕', // Pizza (same, will use opacity)
+      '🎁': '🎁', // Gift (same, will use opacity)
+      '🍔': '🍔', // Burger (same, will use opacity)
+      '🍰': '🍰', // Cake (same, will use opacity)
+      '🎯': '🎯', // Target (same, will use opacity)
+      '💎': '💎', // Diamond (same, will use opacity)
+      '🏆': '🏆', // Trophy (same, will use opacity)
+    }
+    return emptyIconMap[filledIcon] || filledIcon
   }
 }
 

@@ -250,10 +250,17 @@ class AppleWalletController {
       console.log('========================================')
 
       // Ensure required fields have default values with better validation
-      const stampsRequired = offerData.stampsRequired || 10
+      // IMPORTANT: Don't default stampsRequired to 10 - use actual offer data!
+      const stampsRequired = offerData.stampsRequired || offerData.stamps_required || 10
       const stampsEarned = progressData?.stampsEarned || 0
       const rewardDescription = offerData.rewardDescription || offerData.title || 'Free Item'
       const branchName = offerData.branchName || 'All Locations'
+
+      // Validate stampsRequired value
+      if (!offerData.stampsRequired && !offerData.stamps_required) {
+        console.warn('⚠️ No stampsRequired provided in offerData, defaulting to 10. This may be incorrect!')
+        console.warn('   offerData:', JSON.stringify(offerData, null, 2))
+      }
 
       // Validate and fix business name if needed
       let businessName = offerData.businessName
@@ -262,7 +269,7 @@ class AppleWalletController {
         businessName = offerData.title || 'Loyalty Program'
       }
       console.log('✅ Using business name:', businessName)
-      console.log('✅ Stamps: earned =', stampsEarned, ', required =', stampsRequired)
+      console.log('✅ Stamps: earned =', stampsEarned, ', required =', stampsRequired, '(from offerData.stampsRequired =', offerData.stampsRequired, ', offerData.stamps_required =', offerData.stamps_required, ')')
 
       // Convert design colors to RGB format (Apple Wallet requirement)
       // CRITICAL: Apple Wallet (especially iOS 15) requires rgb(r,g,b) format, NOT hex #rrggbb
@@ -450,27 +457,57 @@ class AppleWalletController {
       .toBuffer()
 
     // Generate OPTIONAL logo.png images (for branding in pass header)
-    const logo1x = await sharp(baseImageBuffer)
-      .resize(160, 50, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer()
+    // Logo is LEFT-ALIGNED with small offset (matches "abbajava CAFE" reference)
+    // Strategy: Create smaller logo on left side with transparent padding on right
+    const logo1x = await sharp({
+      create: {
+        width: 160,
+        height: 50,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    })
+    .composite([{
+      input: await sharp(baseImageBuffer)
+        .resize(100, 45, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png()
+        .toBuffer(),
+      left: 10,  // 10px offset from left edge
+      top: 2     // Vertically centered: (50-45)/2 ≈ 2px
+    }])
+    .png()
+    .toBuffer()
 
-    const logo2x = await sharp(baseImageBuffer)
-      .resize(320, 100, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer()
+    const logo2x = await sharp({
+      create: {
+        width: 320,
+        height: 100,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    })
+    .composite([{
+      input: await sharp(baseImageBuffer)
+        .resize(200, 90, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png()
+        .toBuffer(),
+      left: 20,  // 20px offset from left edge (like abbajava reference)
+      top: 5     // Vertically centered: (100-90)/2 = 5px
+    }])
+    .png()
+    .toBuffer()
 
     // Generate dynamic stamp visualization hero image using StampImageGenerator
     console.log('🎨 Generating dynamic stamp visualization for hero image...')
     const stampHeroImage = await StampImageGenerator.generateStampHeroImage({
       stampsEarned: progressData.stampsEarned || 0,
-      stampsRequired: offerData.stampsRequired || 10,
+      stampsRequired: offerData.stampsRequired || offerData.stamps_required || 10,
       stampIcon: design?.stamp_icon || '⭐',
       stampDisplayType: design?.stamp_display_type || 'icon',
       logoUrl: design?.logo_url,
       heroImageUrl: design?.hero_image_url,
-      backgroundColor: design?.background_color || '#3B82F6',
-      foregroundColor: design?.foreground_color || '#FFFFFF',
+      backgroundColor: design?.background_color || '#3B82F6',  // Passed to circular backgrounds
+      foregroundColor: design?.foreground_color || '#FFFFFF',  // Used for circle stroke and text
       progressDisplayStyle: design?.progress_display_style || 'grid'
     })
     console.log('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
