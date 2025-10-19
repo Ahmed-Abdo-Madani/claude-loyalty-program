@@ -96,7 +96,7 @@ class AppleWalletController {
           // Query customer_progress table for actual stamp count
           const { default: sequelize } = await import('../config/database.js')
           const [result] = await sequelize.query(`
-            SELECT stamps_earned
+            SELECT current_stamps
             FROM customer_progress
             WHERE customer_id = ? AND offer_id = ?
             LIMIT 1
@@ -106,7 +106,7 @@ class AppleWalletController {
           })
 
           actualProgressData = {
-            stampsEarned: result?.stamps_earned || 0
+            stampsEarned: result?.current_stamps || 0
           }
 
           console.log('✅ Fetched actual progress from database:', actualProgressData)

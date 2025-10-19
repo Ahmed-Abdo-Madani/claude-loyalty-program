@@ -45,6 +45,15 @@ class StampImageGenerator {
       style: progressDisplayStyle
     })
 
+    // Debug: Log exact values being used
+    console.log('🔍 Stamp Image Generator - Input Values:', {
+      stampsEarned: stampsEarned,
+      stampsRequired: stampsRequired,
+      stampIcon: stampIcon,
+      stampDisplayType: stampDisplayType,
+      progressDisplayStyle: progressDisplayStyle
+    })
+
     try {
       // Step 1: Create or load background image
       const backgroundBuffer = await this.createBackground(heroImageUrl, backgroundColor)
@@ -253,9 +262,9 @@ class StampImageGenerator {
         const y = layout.startY + row * (layout.stampSize + layout.spacing)
         const filled = stampIndex < stampsEarned
 
-        // Use filled or empty version of stamp icon
-        const icon = filled ? stampIcon : '☆'
-        const opacity = filled ? 1.0 : 0.3
+        // Use custom stamp icon for both filled and empty stamps
+        // Differentiate by opacity and stroke
+        const opacity = filled ? 1.0 : 0.5  // Increased from 0.3 to 0.5 for better visibility
 
         stamps.push(`
           <text
@@ -265,7 +274,8 @@ class StampImageGenerator {
             fill="${foregroundColor}"
             opacity="${opacity}"
             font-family="Arial, sans-serif"
-          >${icon}</text>
+            filter="url(#textShadow)"
+          >${stampIcon}</text>
         `)
 
         stampIndex++
@@ -281,12 +291,28 @@ class StampImageGenerator {
     const svg = `
       <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg">
         <defs>
+          <!-- Stronger shadow for text on complex backgrounds -->
           <filter id="shadow">
-            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.3"/>
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.7"/>
+          </filter>
+          <!-- Shadow for stamp icons -->
+          <filter id="textShadow">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.4"/>
           </filter>
         </defs>
 
         ${stamps.join('\n')}
+
+        <!-- Semi-transparent background behind progress text for better readability -->
+        <rect
+          x="${textX - 5}"
+          y="${textY - 22}"
+          width="80"
+          height="40"
+          rx="5"
+          fill="#000000"
+          opacity="0.3"
+        />
 
         <text
           x="${textX}"
@@ -303,7 +329,8 @@ class StampImageGenerator {
           y="${textY + 20}"
           font-size="12"
           fill="${foregroundColor}"
-          opacity="0.8"
+          opacity="0.9"
+          filter="url(#shadow)"
           font-family="Arial, sans-serif"
         >Stamps</text>
       </svg>
