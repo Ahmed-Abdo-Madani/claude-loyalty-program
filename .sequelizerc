@@ -1,0 +1,25 @@
+/**
+ * Sequelize CLI Configuration
+ *
+ * This file tells sequelize-cli where to find migrations, models, and config.
+ * Enables standard Sequelize CLI commands like:
+ * - npx sequelize-cli db:migrate
+ * - npx sequelize-cli db:migrate:undo
+ * - npx sequelize-cli db:migrate:status
+ */
+
+const path = require('path');
+
+module.exports = {
+  // Database configuration file
+  'config': path.resolve('backend', 'config', 'database.js'),
+
+  // Models directory
+  'models-path': path.resolve('backend', 'models'),
+
+  // Seeders directory (for test data)
+  'seeders-path': path.resolve('backend', 'seeders'),
+
+  // Migrations directory
+  'migrations-path': path.resolve('backend', 'migrations')
+};

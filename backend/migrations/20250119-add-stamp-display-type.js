@@ -15,6 +15,15 @@ export const up = async (queryInterface, Sequelize) => {
   try {
     logger.info('🔄 Migration 007: Adding stamp_display_type column...')
 
+    // Check if column already exists (idempotent migration)
+    const tableDescription = await queryInterface.describeTable('offer_card_designs')
+
+    if (tableDescription.stamp_display_type) {
+      logger.info('✅ Column stamp_display_type already exists - migration already applied')
+      logger.info('   - Skipping column addition')
+      return
+    }
+
     // Add stamp_display_type column
     await queryInterface.addColumn('offer_card_designs', 'stamp_display_type', {
       type: Sequelize.STRING(10),

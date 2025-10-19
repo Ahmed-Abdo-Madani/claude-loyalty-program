@@ -15,11 +15,12 @@ import logger from './config/logger.js'
 // Available migrations
 const MIGRATIONS = {
   'customer-name-fields': './migrations/20250113-add-customer-name-fields.js',
-  'wallet-notification-tracking': './migrations/20250114-add-wallet-notification-tracking.js'
+  'wallet-notification-tracking': './migrations/20250114-add-wallet-notification-tracking.js',
+  'stamp-display-type': './migrations/20250119-add-stamp-display-type.js'
 }
 
 // Default migration (latest)
-const DEFAULT_MIGRATION = 'wallet-notification-tracking'
+const DEFAULT_MIGRATION = 'stamp-display-type'
 
 async function runMigration() {
   // Parse command line arguments
@@ -50,9 +51,13 @@ async function runMigration() {
     logger.info(`\n📦 Loading migration: ${migrationName}`)
     const { up } = await import(migrationPath)
 
+    // Get Sequelize QueryInterface and Sequelize constructor
+    const queryInterface = sequelize.getQueryInterface()
+    const Sequelize = (await import('sequelize')).default
+
     // Run migration
     logger.info('\n🚀 Running migration UP...')
-    await up()
+    await up(queryInterface, Sequelize)
 
     logger.info('\n🎉 Migration completed successfully!')
 
@@ -88,7 +93,12 @@ if (process.argv.includes('--rollback')) {
     .then(async () => {
       logger.info(`\n📦 Loading migration: ${migrationName}`)
       const { down } = await import(migrationPath)
-      return down()
+
+      // Get Sequelize QueryInterface and Sequelize constructor
+      const queryInterface = sequelize.getQueryInterface()
+      const Sequelize = (await import('sequelize')).default
+
+      return down(queryInterface, Sequelize)
     })
     .then(() => {
       logger.info('\n✅ Migration rolled back successfully')
