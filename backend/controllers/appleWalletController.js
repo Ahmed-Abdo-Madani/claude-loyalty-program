@@ -306,6 +306,23 @@ class AppleWalletController {
         teamId: certs.teamId
       })
 
+      // 🆕 ENHANCED QR CODE - Phase 1 Implementation
+      // Generate customer token and offer hash for complete scan data
+      // MUST be done BEFORE creating passData object
+      const customerToken = CustomerService.encodeCustomerToken(customerData.customerId, businessId)
+      const offerHash = CustomerService.generateOfferHash(offerData.offerId, businessId)
+
+      // QR Code message format: "customerToken:offerHash"
+      // This allows POS systems to scan once and get all needed data
+      const qrMessage = `${customerToken}:${offerHash}`
+
+      console.log('🔐 Generated QR code data:', {
+        customerToken: customerToken.substring(0, 20) + '...',
+        offerHash: offerHash,
+        fullMessage: qrMessage.substring(0, 30) + '...',
+        messageLength: qrMessage.length
+      })
+
       // Prepare pass data structure
       const passData = {
       formatVersion: 1,
@@ -345,23 +362,6 @@ class AppleWalletController {
       // Barcode for POS scanning
       // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
       // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
-
-      // 🆕 ENHANCED QR CODE - Phase 1 Implementation
-      // Generate customer token and offer hash for complete scan data
-      const customerToken = CustomerService.encodeCustomerToken(customerData.customerId, businessId)
-      const offerHash = CustomerService.generateOfferHash(offerData.offerId, businessId)
-
-      // QR Code message format: "customerToken:offerHash"
-      // This allows POS systems to scan once and get all needed data
-      const qrMessage = `${customerToken}:${offerHash}`
-
-      console.log('🔐 Generated QR code data:', {
-        customerToken: customerToken.substring(0, 20) + '...',
-        offerHash: offerHash,
-        fullMessage: qrMessage.substring(0, 30) + '...',
-        messageLength: qrMessage.length
-      })
-
       barcode: {
         altText: 'Scan to earn stamps',  // Updated alt text for better UX
         format: 'PKBarcodeFormatQR',
