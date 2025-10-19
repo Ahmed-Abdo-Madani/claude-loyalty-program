@@ -1853,12 +1853,39 @@ router.get('/categories', async (req, res) => {
 // ===============================
 
 // Scan customer progress QR code to update loyalty progress
-router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, async (req, res) => {
+// 🆕 ENHANCED QR CODE SCANNING - Phase 1 Implementation
+// Supports BOTH formats for backward compatibility:
+//   1. NEW FORMAT: POST /scan/progress/:qrCode (where qrCode = "customerToken:offerHash")
+//   2. OLD FORMAT: POST /scan/progress/:customerToken/:offerHash
+router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, async (req, res) => {
   try {
-    const { customerToken, offerHash } = req.params
+    let customerToken, offerHash
     const businessId = req.business.public_id  // Use secure ID directly
 
-    console.log('🔍 Progress scan attempt:', { customerToken, offerHash, businessId })
+    // 🆕 DETECT QR CODE FORMAT
+    const firstParam = req.params.customerToken
+    const secondParam = req.params.offerHash
+
+    // Check if this is the new enhanced format (customerToken:offerHash in first param)
+    if (!secondParam && firstParam.includes(':')) {
+      // NEW FORMAT: Single parameter with embedded colon
+      console.log('🔍 Detected ENHANCED QR code format (customerToken:offerHash)')
+      const parts = firstParam.split(':')
+      customerToken = parts[0]
+      offerHash = parts[1]
+    } else if (secondParam) {
+      // OLD FORMAT: Two separate parameters
+      console.log('🔍 Detected LEGACY QR code format (separate params)')
+      customerToken = firstParam
+      offerHash = secondParam
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid QR code format. Expected either "customerToken:offerHash" or separate parameters'
+      })
+    }
+
+    console.log('🔍 Progress scan attempt:', { customerToken: customerToken.substring(0, 20) + '...', offerHash, businessId })
 
     // Decode and validate customer token
     const tokenData = CustomerService.decodeCustomerToken(customerToken)
@@ -2110,10 +2137,32 @@ router.post('/scan/progress/:customerToken/:offerHash', requireBusinessAuth, asy
 })
 
 // Get customer progress by token (for verification before scanning)
-router.get('/scan/verify/:customerToken/:offerHash', requireBusinessAuth, async (req, res) => {
+// 🆕 ENHANCED QR CODE SCANNING - Phase 1 Implementation
+// Supports BOTH formats for backward compatibility
+router.get('/scan/verify/:customerToken/:offerHash?', requireBusinessAuth, async (req, res) => {
   try {
-    const { customerToken, offerHash } = req.params
+    let customerToken, offerHash
     const businessId = req.business.public_id  // Use secure ID directly
+
+    // 🆕 DETECT QR CODE FORMAT (same logic as scan endpoint)
+    const firstParam = req.params.customerToken
+    const secondParam = req.params.offerHash
+
+    if (!secondParam && firstParam.includes(':')) {
+      // NEW FORMAT: customerToken:offerHash
+      const parts = firstParam.split(':')
+      customerToken = parts[0]
+      offerHash = parts[1]
+    } else if (secondParam) {
+      // OLD FORMAT: separate parameters
+      customerToken = firstParam
+      offerHash = secondParam
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid QR code format'
+      })
+    }
 
     // Decode and validate customer token
     const tokenData = CustomerService.decodeCustomerToken(customerToken)

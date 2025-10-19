@@ -5,6 +5,7 @@ import sharp from 'sharp'
 import { PassGenerator } from '../utils/passGenerator.js'
 import WalletPassService from '../services/WalletPassService.js'
 import CardDesignService from '../services/CardDesignService.js'
+import CustomerService from '../services/CustomerService.js'
 import appleCertificateValidator from '../utils/appleCertificateValidator.js'
 import applePassSigner from '../utils/applePassSigner.js'
 
@@ -234,6 +235,7 @@ class AppleWalletController {
       console.log('🎁 Offer Data:', {
         offerId: offerData.offerId,
         businessName: offerData.businessName,
+        businessId: offerData.businessId,
         title: offerData.title,
         stampsRequired: offerData.stampsRequired,
         rewardDescription: offerData.rewardDescription
@@ -255,11 +257,17 @@ class AppleWalletController {
       const stampsEarned = progressData?.stampsEarned || 0
       const rewardDescription = offerData.rewardDescription || offerData.title || 'Free Item'
       const branchName = offerData.branchName || 'All Locations'
+      const businessId = offerData.businessId  // Required for QR code generation
 
       // Validate stampsRequired value
       if (!offerData.stampsRequired && !offerData.stamps_required) {
         console.warn('⚠️ No stampsRequired provided in offerData, defaulting to 10. This may be incorrect!')
         console.warn('   offerData:', JSON.stringify(offerData, null, 2))
+      }
+
+      // Validate business ID is present
+      if (!businessId) {
+        throw new Error('businessId is required for generating QR code tokens')
       }
 
       // Validate and fix business name if needed
@@ -337,17 +345,34 @@ class AppleWalletController {
       // Barcode for POS scanning
       // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
       // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
+
+      // 🆕 ENHANCED QR CODE - Phase 1 Implementation
+      // Generate customer token and offer hash for complete scan data
+      const customerToken = CustomerService.encodeCustomerToken(customerData.customerId, businessId)
+      const offerHash = CustomerService.generateOfferHash(offerData.offerId, businessId)
+
+      // QR Code message format: "customerToken:offerHash"
+      // This allows POS systems to scan once and get all needed data
+      const qrMessage = `${customerToken}:${offerHash}`
+
+      console.log('🔐 Generated QR code data:', {
+        customerToken: customerToken.substring(0, 20) + '...',
+        offerHash: offerHash,
+        fullMessage: qrMessage.substring(0, 30) + '...',
+        messageLength: qrMessage.length
+      })
+
       barcode: {
-        altText: 'Customer ID',  // Match working clone - simple text only
+        altText: 'Scan to earn stamps',  // Updated alt text for better UX
         format: 'PKBarcodeFormatQR',
-        message: customerData.customerId,
+        message: qrMessage,  // ✅ Enhanced: customerToken:offerHash
         messageEncoding: 'iso-8859-1'
       },
       barcodes: [
         {
-          altText: 'Customer ID',  // Match working clone - simple text only
+          altText: 'Scan to earn stamps',  // Updated alt text for better UX
           format: 'PKBarcodeFormatQR',
-          message: customerData.customerId,
+          message: qrMessage,  // ✅ Enhanced: customerToken:offerHash
           messageEncoding: 'iso-8859-1'
         }
       ]
