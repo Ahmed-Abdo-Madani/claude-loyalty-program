@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import logger from './config/logger.js'
 import sequelize from './config/database.js'
 import walletRoutes from './routes/wallet.js'
@@ -13,6 +15,14 @@ import segmentRoutes from './routes/segments.js'
 import locationRoutes from './routes/locations.js'
 import cardDesignRoutes from './routes/cardDesign.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Configure custom font path for Sharp/librsvg emoji rendering
+// This allows Noto-COLRv1.ttf (vector emoji) to be used for Apple Wallet stamp icons
+process.env.FONTCONFIG_PATH = path.join(__dirname, 'fonts')
 
 dotenv.config()
 
