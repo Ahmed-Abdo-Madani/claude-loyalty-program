@@ -5,12 +5,14 @@
  * with visual stamp representations overlaid on background images.
  *
  * Features:
- * - Supports emoji stamps (⭐, ☕, 🍕, etc.)
+ * - Uses SVG shapes (no font dependencies!) for universal compatibility
+ * - Supports icon stamps (⭐, ☕, 🍕, 🎁, 🍔, 🍰, 🎯, 💎, 🏆, etc.)
  * - Supports logo stamps (business logo repeated)
  * - Fully dynamic & centered grid layouts based on actual stamp count
  * - Works with or without custom hero images
  * - Larger, proportional stamps for better visibility
  * - NO text overlay (progress shown in pass fields)
+ * - Works reliably across all platforms (dev, production, any OS)
  */
 
 import sharp from 'sharp'
@@ -306,8 +308,86 @@ class StampImageGenerator {
   }
 
   /**
+   * Get SVG path for stamp icon
+   * Returns SVG shape instead of emoji (no font dependencies!)
+   */
+  static getStampIconSVG(iconChar, size, filled) {
+    const iconSize = size * 0.6  // Icon at 60% of circle size for better fit
+    const halfSize = iconSize / 2
+
+    // Map emoji characters to SVG shapes
+    const iconMap = {
+      '⭐': {
+        // Star shape (5-pointed star)
+        filled: `<path d="M ${halfSize} 0 L ${halfSize * 0.61} ${halfSize * 1.90} L 0 ${halfSize * 0.74} L ${halfSize * 1.61} ${halfSize * 0.74} L ${halfSize} ${halfSize * 1.90} Z" transform="translate(-${halfSize}, -${halfSize * 0.95})"/>`,
+        outline: `<path d="M ${halfSize} 0 L ${halfSize * 0.61} ${halfSize * 1.90} L 0 ${halfSize * 0.74} L ${halfSize * 1.61} ${halfSize * 0.74} L ${halfSize} ${halfSize * 1.90} Z" transform="translate(-${halfSize}, -${halfSize * 0.95})" fill="none" stroke-width="3"/>`
+      },
+      '☕': {
+        // Coffee cup shape
+        filled: `<rect x="${-halfSize * 0.7}" y="${-halfSize * 0.5}" width="${iconSize * 0.7}" height="${iconSize * 0.8}" rx="3"/>
+                <path d="M ${halfSize * 0.75} ${-halfSize * 0.3} Q ${halfSize * 1.3} ${-halfSize * 0.1} ${halfSize * 0.75} ${halfSize * 0.3}" fill="none" stroke-width="2.5"/>`,
+        outline: `<rect x="${-halfSize * 0.7}" y="${-halfSize * 0.5}" width="${iconSize * 0.7}" height="${iconSize * 0.8}" rx="3" fill="none" stroke-width="2.5"/>
+                 <path d="M ${halfSize * 0.75} ${-halfSize * 0.3} Q ${halfSize * 1.3} ${-halfSize * 0.1} ${halfSize * 0.75} ${halfSize * 0.3}" fill="none" stroke-width="2.5"/>`
+      },
+      '🍕': {
+        // Pizza slice shape
+        filled: `<path d="M 0 ${-halfSize} L ${halfSize * 0.9} ${halfSize * 0.9} L ${-halfSize * 0.9} ${halfSize * 0.9} Z"/>
+                <circle cx="${-halfSize * 0.3}" cy="${halfSize * 0.2}" r="${halfSize * 0.15}" fill="${'rgba(255,255,255,0.6)'}"/>
+                <circle cx="${halfSize * 0.3}" cy="${halfSize * 0.3}" r="${halfSize * 0.15}" fill="${'rgba(255,255,255,0.6)'}"/>`,
+        outline: `<path d="M 0 ${-halfSize} L ${halfSize * 0.9} ${halfSize * 0.9} L ${-halfSize * 0.9} ${halfSize * 0.9} Z" fill="none" stroke-width="3"/>`
+      },
+      '🎁': {
+        // Gift box shape
+        filled: `<rect x="${-halfSize * 0.7}" y="${-halfSize * 0.4}" width="${iconSize * 0.7}" height="${iconSize * 0.8}" rx="2"/>
+                <rect x="${-halfSize * 0.7}" y="${-halfSize * 0.4}" width="${iconSize * 0.7}" height="${iconSize * 0.25}" rx="2" fill="${'rgba(255,255,255,0.3)'}"/>
+                <line x1="0" y1="${-halfSize * 0.4}" x2="0" y2="${halfSize * 0.9}" stroke-width="3"/>`,
+        outline: `<rect x="${-halfSize * 0.7}" y="${-halfSize * 0.4}" width="${iconSize * 0.7}" height="${iconSize * 0.8}" rx="2" fill="none" stroke-width="2.5"/>`
+      },
+      '🍔': {
+        // Burger shape
+        filled: `<ellipse cx="0" cy="${-halfSize * 0.6}" rx="${halfSize * 0.9}" ry="${halfSize * 0.3}"/>
+                <rect x="${-halfSize * 0.9}" y="${-halfSize * 0.3}" width="${iconSize * 0.9}" height="${iconSize * 0.5}"/>
+                <ellipse cx="0" cy="${halfSize * 0.5}" rx="${halfSize * 0.9}" ry="${halfSize * 0.35}"/>`,
+        outline: `<path d="M ${-halfSize * 0.9} ${-halfSize * 0.6} Q 0 ${-halfSize} ${halfSize * 0.9} ${-halfSize * 0.6} L ${halfSize * 0.9} ${halfSize * 0.3} Q 0 ${halfSize * 0.7} ${-halfSize * 0.9} ${halfSize * 0.3} Z" fill="none" stroke-width="2.5"/>`
+      },
+      '🍰': {
+        // Cake slice shape
+        filled: `<path d="M ${-halfSize * 0.7} ${halfSize * 0.7} L ${-halfSize * 0.5} ${-halfSize * 0.7} L ${halfSize * 0.7} ${-halfSize * 0.5} L ${halfSize * 0.9} ${halfSize * 0.7} Z"/>
+                <line x1="${-halfSize * 0.1}" y1="${halfSize * 0.7}" x2="0" y2="${-halfSize * 0.2}" stroke-width="2" stroke="${'rgba(255,255,255,0.5)'}"/>`,
+        outline: `<path d="M ${-halfSize * 0.7} ${halfSize * 0.7} L ${-halfSize * 0.5} ${-halfSize * 0.7} L ${halfSize * 0.7} ${-halfSize * 0.5} L ${halfSize * 0.9} ${halfSize * 0.7} Z" fill="none" stroke-width="2.5"/>`
+      },
+      '🎯': {
+        // Target shape (concentric circles)
+        filled: `<circle cx="0" cy="0" r="${halfSize * 0.9}"/>
+                <circle cx="0" cy="0" r="${halfSize * 0.6}" fill="${'rgba(255,255,255,0.4)'}"/>
+                <circle cx="0" cy="0" r="${halfSize * 0.3}"/>`,
+        outline: `<circle cx="0" cy="0" r="${halfSize * 0.9}" fill="none" stroke-width="3"/>
+                 <circle cx="0" cy="0" r="${halfSize * 0.5}" fill="none" stroke-width="2"/>`
+      },
+      '💎': {
+        // Diamond shape
+        filled: `<path d="M 0 ${-halfSize} L ${halfSize * 0.5} ${-halfSize * 0.3} L ${halfSize * 0.7} ${halfSize * 0.9} L 0 ${halfSize * 0.5} L ${-halfSize * 0.7} ${halfSize * 0.9} L ${-halfSize * 0.5} ${-halfSize * 0.3} Z"/>
+                <path d="M ${-halfSize * 0.5} ${-halfSize * 0.3} L 0 ${halfSize * 0.5} L ${halfSize * 0.5} ${-halfSize * 0.3}" fill="${'rgba(255,255,255,0.3)'}"/>`,
+        outline: `<path d="M 0 ${-halfSize} L ${halfSize * 0.7} ${-halfSize * 0.2} L ${halfSize * 0.5} ${halfSize * 0.9} L 0 ${halfSize * 0.5} L ${-halfSize * 0.5} ${halfSize * 0.9} L ${-halfSize * 0.7} ${-halfSize * 0.2} Z" fill="none" stroke-width="2.5"/>`
+      },
+      '🏆': {
+        // Trophy shape
+        filled: `<rect x="${-halfSize * 0.4}" y="${-halfSize * 0.3}" width="${iconSize * 0.4}" height="${iconSize * 0.6}" rx="2"/>
+                <ellipse cx="0" cy="${-halfSize * 0.3}" rx="${halfSize * 0.5}" ry="${halfSize * 0.25}"/>
+                <rect x="${-halfSize * 0.15}" y="${halfSize * 0.3}" width="${iconSize * 0.15}" height="${iconSize * 0.35}"/>
+                <rect x="${-halfSize * 0.4}" y="${halfSize * 0.65}" width="${iconSize * 0.4}" height="${iconSize * 0.1}"/>`,
+        outline: `<path d="M ${-halfSize * 0.4} ${-halfSize * 0.3} L ${-halfSize * 0.4} ${halfSize * 0.2} L ${-halfSize * 0.15} ${halfSize * 0.3} L ${-halfSize * 0.15} ${halfSize * 0.65} L ${-halfSize * 0.4} ${halfSize * 0.65} L ${-halfSize * 0.4} ${halfSize * 0.75} L ${halfSize * 0.4} ${halfSize * 0.75} L ${halfSize * 0.4} ${halfSize * 0.65} L ${halfSize * 0.15} ${halfSize * 0.65} L ${halfSize * 0.15} ${halfSize * 0.3} L ${halfSize * 0.4} ${halfSize * 0.2} L ${halfSize * 0.4} ${-halfSize * 0.3} Z" fill="none" stroke-width="2.5"/>`
+      }
+    }
+
+    // Default to star if emoji not found
+    const icon = iconMap[iconChar] || iconMap['⭐']
+    return filled ? icon.filled : icon.outline
+  }
+
+  /**
    * Generate SVG with stamp grid including circular backgrounds
-   * Matches the "abbajava CAFE" reference design with circles and different icons
+   * Uses SVG shapes instead of emoji text (no font dependencies!)
    */
   static async generateStampSVG(options) {
     const {
@@ -334,13 +414,10 @@ class StampImageGenerator {
     })
 
     // Generate EXACT number of stamps as stampsRequired
-    // Each stamp has: circular background + CENTERED emoji icon
+    // Each stamp has: circular background + SVG shape icon
     for (let row = 0; row < layout.rows && stampIndex < stampsRequired; row++) {
       for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
         const filled = stampIndex < stampsEarned
-
-        // Determine which icon to display
-        const displayIcon = filled ? stampIcon : this.getEmptyStampIcon(stampIcon)
         const iconOpacity = filled ? 1.0 : 0.4  // Filled: full opacity, Empty: 40%
 
         // Calculate circle position and size
@@ -350,8 +427,8 @@ class StampImageGenerator {
         const circleCenterX = layout.startX + col * (layout.stampSize + layout.spacing) + circleRadius
         const circleCenterY = layout.startY + row * (layout.stampSize + layout.spacing) + circleRadius
 
-        // Calculate emoji size (slightly smaller than circle for proper fit)
-        const emojiSize = layout.stampSize * 0.7  // Emoji at 70% of stamp size
+        // Get SVG icon shape
+        const iconSVG = this.getStampIconSVG(stampIcon, layout.stampSize, filled)
 
         stamps.push(`
           <!-- Circular background with stroke -->
@@ -364,18 +441,12 @@ class StampImageGenerator {
             stroke="${foregroundColor}"
             stroke-width="3"
           />
-          <!-- Stamp emoji - CENTERED in circle (with visual adjustment) -->
-          <text
-            x="${circleCenterX}"
-            y="${circleCenterY + (emojiSize * 0.3)}"
-            font-size="${emojiSize}"
-            fill="${foregroundColor}"
-            opacity="${iconOpacity}"
-            font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Arial, sans-serif"
-            filter="url(#stampShadow)"
-            text-anchor="middle"
-            dominant-baseline="central"
-          >${displayIcon}</text>
+          <!-- Stamp icon - SVG shape (centered in circle) -->
+          <g transform="translate(${circleCenterX}, ${circleCenterY})" opacity="${iconOpacity}">
+            <g fill="${foregroundColor}" stroke="${foregroundColor}" filter="url(#stampShadow)">
+              ${iconSVG}
+            </g>
+          </g>
         `)
 
         stampIndex++
@@ -389,7 +460,7 @@ class StampImageGenerator {
     const svg = `
       <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <!-- Shadow for stamp emojis for better contrast -->
+          <!-- Shadow for stamp icons for better contrast -->
           <filter id="stampShadow">
             <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.5"/>
           </filter>
@@ -429,26 +500,6 @@ class StampImageGenerator {
       g: parseInt(cleanHex.substring(2, 4), 16),
       b: parseInt(cleanHex.substring(4, 6), 16)
     }
-  }
-
-  /**
-   * Get empty/hollow version of stamp icon
-   * Maps filled stamps to their hollow equivalents
-   */
-  static getEmptyStampIcon(filledIcon) {
-    const emptyIconMap = {
-      '☕': '☕',  // Coffee cup (same icon, will use opacity)
-      '⭐': '☆',  // Star → Hollow star
-      '⭐️': '☆',  // Star emoji variant → Hollow star
-      '🍕': '🍕', // Pizza (same, will use opacity)
-      '🎁': '🎁', // Gift (same, will use opacity)
-      '🍔': '🍔', // Burger (same, will use opacity)
-      '🍰': '🍰', // Cake (same, will use opacity)
-      '🎯': '🎯', // Target (same, will use opacity)
-      '💎': '💎', // Diamond (same, will use opacity)
-      '🏆': '🏆', // Trophy (same, will use opacity)
-    }
-    return emptyIconMap[filledIcon] || filledIcon
   }
 }
 
