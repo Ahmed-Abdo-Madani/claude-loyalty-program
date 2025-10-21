@@ -266,9 +266,10 @@ class AppleWalletController {
     return summary
   }
 
-  createPassJson(customerData, offerData, progressData, design = null) {
+  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null) {
     try {
-      const serialNumber = `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
+      // Use existing serial number if provided (for updates), otherwise generate new one
+      const serialNumber = existingSerialNumber || `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
 
       // ==================== DATA VALIDATION & LOGGING ====================
       console.log('📊 ========== PASS DATA RECEIVED ==========')
@@ -841,15 +842,7 @@ class AppleWalletController {
         console.warn('⚠️ Failed to load card design for push update:', error.message)
       }
 
-      // Generate updated pass data
-      const updatedPassData = this.createPassJson(
-        customerData,
-        offerData,
-        stampProgressData,
-        design
-      )
-
-      // Find the wallet pass record in database
+      // Find the wallet pass record in database FIRST to get existing serial number
       const WalletPass = (await import('../models/WalletPass.js')).default
       const walletPass = await WalletPass.findOne({
         where: {
@@ -867,6 +860,19 @@ class AppleWalletController {
           error: 'No active Apple Wallet pass found'
         }
       }
+
+      // CRITICAL: Use existing serial number from database (don't generate new one!)
+      const existingSerialNumber = walletPass.wallet_serial
+      console.log('🔄 Using existing serial number for update:', existingSerialNumber)
+
+      // Generate updated pass data with SAME serial number
+      const updatedPassData = this.createPassJson(
+        customerData,
+        offerData,
+        stampProgressData,
+        design,
+        existingSerialNumber  // Pass existing serial number!
+      )
 
       // Update pass data in database
       await walletPass.updatePassData(updatedPassData)
