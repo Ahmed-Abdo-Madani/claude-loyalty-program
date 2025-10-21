@@ -266,7 +266,7 @@ class AppleWalletController {
     return summary
   }
 
-  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null) {
+  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null) {
     try {
       // Use existing serial number if provided (for updates), otherwise generate new one
       const serialNumber = existingSerialNumber || `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
@@ -437,12 +437,14 @@ class AppleWalletController {
       : process.env.BASE_URL || 'http://localhost:3001'
 
     passData.webServiceURL = baseUrl
-    passData.authenticationToken = this.generateAuthToken(customerData.customerId, serialNumber)
+    // Use existing auth token if provided (for updates), otherwise generate new one
+    passData.authenticationToken = existingAuthToken || this.generateAuthToken(customerData.customerId, serialNumber)
 
     console.log('🔐 Apple Web Service Protocol enabled:', {
       webServiceURL: passData.webServiceURL,
       authenticationToken: passData.authenticationToken.substring(0, 16) + '...',
-      serialNumber: serialNumber
+      serialNumber: serialNumber,
+      usingExistingToken: !!existingAuthToken
     })
     // ===================================================
 
@@ -861,17 +863,20 @@ class AppleWalletController {
         }
       }
 
-      // CRITICAL: Use existing serial number from database (don't generate new one!)
+      // CRITICAL: Use existing serial number AND authentication token from database (don't generate new ones!)
       const existingSerialNumber = walletPass.wallet_serial
+      const existingAuthToken = walletPass.authentication_token
       console.log('🔄 Using existing serial number for update:', existingSerialNumber)
+      console.log('🔄 Using existing auth token for update:', existingAuthToken?.substring(0, 8) + '...')
 
-      // Generate updated pass data with SAME serial number
+      // Generate updated pass data with SAME serial number and SAME auth token
       const updatedPassData = this.createPassJson(
         customerData,
         offerData,
         stampProgressData,
         design,
-        existingSerialNumber  // Pass existing serial number!
+        existingSerialNumber,  // Pass existing serial number!
+        existingAuthToken      // Pass existing auth token!
       )
 
       // Update pass data in database

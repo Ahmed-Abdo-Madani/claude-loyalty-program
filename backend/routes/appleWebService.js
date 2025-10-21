@@ -288,12 +288,14 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
       logger.warn('⚠️ Failed to load card design:', error.message)
     }
 
-    // CRITICAL: Use existing serial number from database (don't generate new one!)
+    // CRITICAL: Use existing serial number AND authentication token from database (don't generate new ones!)
     const existingSerialNumber = walletPass.wallet_serial
+    const existingAuthToken = walletPass.authentication_token
     logger.info('🔄 Using existing serial number:', existingSerialNumber)
+    logger.info('🔄 Using existing auth token:', existingAuthToken?.substring(0, 8) + '...')
 
-    // Generate pass data (pass.json) with SAME serial number
-    const passData = appleWalletController.createPassJson(customerData, offerData, progressData, design, existingSerialNumber)
+    // Generate pass data (pass.json) with SAME serial number and SAME auth token
+    const passData = appleWalletController.createPassJson(customerData, offerData, progressData, design, existingSerialNumber, existingAuthToken)
 
     // Generate pass images
     const images = await appleWalletController.generatePassImages(offerData, design, progressData)
