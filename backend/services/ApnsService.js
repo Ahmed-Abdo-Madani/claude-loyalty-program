@@ -37,35 +37,63 @@ class ApnsService {
    */
   initialize() {
     try {
-      // Check if APNs is configured
-      const certPath = process.env.APNS_CERT_PATH
-      const certPassword = process.env.APNS_CERT_PASSWORD
+      // Check if APNs topic is configured
+      const topic = process.env.APNS_TOPIC || process.env.APPLE_PASS_TYPE_ID
+      const certPassword = process.env.APNS_CERT_PASSWORD || process.env.APPLE_PASS_CERTIFICATE_PASSWORD
       const isProduction = process.env.APNS_PRODUCTION === 'true'
-      const topic = process.env.APNS_TOPIC // Pass Type ID is the APNs topic
 
-      if (!certPath || !topic) {
-        logger.warn('⚠️ APNs not configured - missing APNS_CERT_PATH or APPLE_PASS_TYPE_ID')
+      if (!topic) {
+        logger.warn('⚠️ APNs not configured - missing APNS_TOPIC or APPLE_PASS_TYPE_ID')
         logger.info('   APNs push notifications will not be sent')
         return
       }
 
-      // Resolve certificate path relative to backend directory
-      const fullCertPath = path.resolve(path.join(__dirname, '..', certPath))
+      let options = null
+      let certSource = ''
 
-      // Check if certificate file exists
-      if (!fs.existsSync(fullCertPath)) {
-        logger.warn(`⚠️ APNs certificate not found at: ${fullCertPath}`)
+      // Option 1: Load from environment variable (base64 encoded) - for production/Render
+      // Reuse APPLE_PASS_CERTIFICATE_BASE64 since it's the same certificate
+      if (process.env.APPLE_PASS_CERTIFICATE_BASE64) {
+        try {
+          const certBuffer = Buffer.from(process.env.APPLE_PASS_CERTIFICATE_BASE64, 'base64')
+          options = {
+            pfx: certBuffer,
+            passphrase: certPassword || '',
+            production: isProduction
+          }
+          certSource = 'environment variable (APPLE_PASS_CERTIFICATE_BASE64)'
+          logger.info('✅ APNs certificate loaded from environment variable')
+        } catch (error) {
+          logger.error('❌ Failed to decode APNs certificate from environment variable:', error.message)
+          return
+        }
+      }
+      // Option 2: Load from file path - for local development
+      else if (process.env.APNS_CERT_PATH) {
+        const certPath = process.env.APNS_CERT_PATH
+        const fullCertPath = path.resolve(path.join(__dirname, '..', certPath))
+
+        if (fs.existsSync(fullCertPath)) {
+          options = {
+            pfx: fs.readFileSync(fullCertPath),
+            passphrase: certPassword || '',
+            production: isProduction
+          }
+          certSource = `file (${fullCertPath})`
+          logger.info('✅ APNs certificate loaded from file')
+        } else {
+          logger.warn(`⚠️ APNs certificate not found at: ${fullCertPath}`)
+          logger.info('   APNs push notifications will not be sent')
+          return
+        }
+      } else {
+        logger.warn('⚠️ APNs certificate not configured')
+        logger.info('   Set APPLE_PASS_CERTIFICATE_BASE64 (production) or APNS_CERT_PATH (local)')
         logger.info('   APNs push notifications will not be sent')
         return
       }
 
-      // Configure APNs provider options
-      const options = {
-        pfx: fs.readFileSync(fullCertPath),
-        passphrase: certPassword || '',
-        production: isProduction
-      }
-
+      // Initialize APNs provider
       this.provider = new apn.Provider(options)
       this.topic = topic
       this.isConfigured = true
@@ -73,7 +101,7 @@ class ApnsService {
       logger.info('✅ APNs service initialized successfully', {
         topic,
         production: isProduction,
-        certificatePath: fullCertPath
+        certificateSource: certSource
       })
 
     } catch (error) {
