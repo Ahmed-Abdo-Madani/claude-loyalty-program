@@ -88,5 +88,12 @@ backend/certificates/*.key
 backend/certificates/*.cer
 backend/certificates/*.csr
 
+# APNs Certificates (NEVER commit these!)
+backend/certificates/apns/*.key
+backend/certificates/apns/*.p12
+backend/certificates/apns/*.pem
+backend/certificates/apns/*.cer
+backend/certificates/apns/*.csr
+
 # Certificate environment variables - SENSITIVE DATA!
 backend/scripts/certificate-env-vars.txt

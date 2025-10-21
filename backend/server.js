@@ -7,6 +7,7 @@ import logger from './config/logger.js'
 import sequelize from './config/database.js'
 import walletRoutes from './routes/wallet.js'
 import passRoutes from './routes/passes.js'
+import appleWebServiceRoutes from './routes/appleWebService.js'
 import adminRoutes from './routes/admin.js'
 import businessRoutes from './routes/business.js'
 import customerRoutes from './routes/customers.js'
@@ -183,6 +184,7 @@ app.use('/uploads', express.static('uploads'))
 // API Routes
 app.use('/api/wallet', walletRoutes)
 app.use('/api/passes', passRoutes)
+app.use(appleWebServiceRoutes) // Apple Web Service Protocol (routes have /v1 prefix)
 app.use('/api/admin', adminRoutes)
 app.use('/api/business', businessRoutes)
 app.use('/api/customers', customerRoutes)

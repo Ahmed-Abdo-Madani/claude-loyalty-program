@@ -146,8 +146,26 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
           throw new Error('Invalid Wallet QR format. Missing customerId or offerId.')
         }
 
+      } else if (/^[A-Za-z0-9+/=]+:[a-f0-9]{8}$/.test(result.data)) {
+        // Format 3: Enhanced Apple Wallet format - "base64EncodedToken:offerHash"
+        // Example: Y3VzdF8xOWEwNjc1YjlmMThkMzE1ODJjOmJpel84OTI3YjVjZDQxN2ZkNDc3YTkyNzE4MTJkNDoxNzYxMDQ0OTcxMDg4:d1399b5d
+        console.log('🍎 Processing Enhanced Apple Wallet QR format (Phase 1)')
+
+        const [encodedToken, providedOfferHash] = result.data.split(':')
+
+        // The encodedToken is already in the format we need (customerToken)
+        // Backend will decode it using CustomerService.decodeCustomerToken()
+        customerToken = encodedToken
+        offerHash = providedOfferHash
+
+        console.log('✅ Enhanced QR format parsed:', {
+          customerToken: customerToken.substring(0, 20) + '...',
+          offerHash: offerHash,
+          fullLength: result.data.length
+        })
+
       } else if (/^\d+$/.test(result.data)) {
-        // Format 3: Apple Wallet simple customer ID format - "4"
+        // Format 4: Apple Wallet simple customer ID format - "4"
         console.log('🍎 Processing Apple Wallet customer ID format')
         customerToken = result.data
         // Note: Apple Wallet QRs don't contain offer info, may need to prompt user

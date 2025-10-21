@@ -94,6 +94,23 @@ const WalletPass = sequelize.define('WalletPass', {
     type: DataTypes.JSONB,
     defaultValue: [],
     comment: 'History of notifications sent (last 30 days)'
+  },
+  // Apple Web Service Protocol fields
+  authentication_token: {
+    type: DataTypes.STRING(64),
+    allowNull: true,
+    unique: true,
+    comment: 'Authentication token for Apple Web Service Protocol (Apple Wallet only)'
+  },
+  last_updated_tag: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Update tag for tracking pass changes (Unix timestamp)'
+  },
+  pass_data_json: {
+    type: DataTypes.JSONB,
+    allowNull: true,
+    comment: 'Complete pass.json structure for regeneration (Apple Wallet only)'
   }
 }, {
   tableName: 'wallet_passes',
@@ -126,6 +143,14 @@ const WalletPass = sequelize.define('WalletPass', {
     {
       fields: ['pass_status'],
       name: 'idx_wallet_passes_status'
+    },
+    {
+      fields: ['authentication_token'],
+      name: 'idx_wallet_passes_auth_token'
+    },
+    {
+      fields: ['last_updated_tag'],
+      name: 'idx_wallet_passes_updated_tag'
     }
   ]
 })
@@ -149,8 +174,163 @@ WalletPass.prototype.revoke = async function() {
 
 WalletPass.prototype.updateLastPush = async function() {
   this.last_updated_at = new Date()
+  // Also update the last_updated_tag for Apple Web Service Protocol
+  if (this.wallet_type === 'apple') {
+    this.last_updated_tag = Math.floor(Date.now() / 1000).toString()
+  }
   await this.save()
   return this
+}
+
+// ========== APPLE WEB SERVICE PROTOCOL METHODS ==========
+
+/**
+ * Generate authentication token for Apple Web Service Protocol
+ * Token is unique per pass and used for authentication in web service endpoints
+ * @returns {string} 32-character authentication token
+ */
+WalletPass.generateAuthToken = function(customerId, offerId) {
+  const crypto = require('crypto')
+  const data = `${customerId}:${offerId}:${Date.now()}`
+  return crypto.createHash('sha256').update(data).digest('hex').substring(0, 32)
+}
+
+/**
+ * Update the pass data and increment update tag
+ * This triggers push notifications to registered devices
+ * @param {object} passData - Complete pass.json structure
+ */
+WalletPass.prototype.updatePassData = async function(passData) {
+  if (this.wallet_type !== 'apple') {
+    throw new Error('updatePassData is only for Apple Wallet passes')
+  }
+
+  this.pass_data_json = passData
+  this.last_updated_tag = Math.floor(Date.now() / 1000).toString()
+  this.last_updated_at = new Date()
+
+  await this.save()
+  return this
+}
+
+/**
+ * Get authentication token (or generate if missing)
+ */
+WalletPass.prototype.getAuthenticationToken = async function() {
+  if (!this.authentication_token) {
+    this.authentication_token = WalletPass.generateAuthToken(this.customer_id, this.offer_id)
+    await this.save()
+  }
+  return this.authentication_token
+}
+
+/**
+ * Find pass by authentication token
+ * @param {string} authToken - Authentication token
+ * @returns {Promise<WalletPass|null>}
+ */
+WalletPass.findByAuthToken = async function(authToken) {
+  return await this.findOne({
+    where: {
+      authentication_token: authToken,
+      wallet_type: 'apple',
+      pass_status: 'active'
+    }
+  })
+}
+
+/**
+ * Find pass by serial number
+ * @param {string} serialNumber - Apple Wallet serial number
+ * @returns {Promise<WalletPass|null>}
+ */
+WalletPass.findBySerialNumber = async function(serialNumber) {
+  return await this.findOne({
+    where: {
+      wallet_serial: serialNumber,
+      wallet_type: 'apple',
+      pass_status: 'active'
+    }
+  })
+}
+
+/**
+ * Send APNs push notification to all registered devices for this pass
+ * This triggers iOS devices to fetch the updated pass from webServiceURL
+ * @returns {Promise<object>} - Result with success counts
+ */
+WalletPass.prototype.sendPushNotification = async function() {
+  try {
+    // Only Apple Wallet passes support push notifications
+    if (this.wallet_type !== 'apple') {
+      return {
+        success: false,
+        error: 'Push notifications only supported for Apple Wallet',
+        sent: 0,
+        failed: 0
+      }
+    }
+
+    // Import ApnsService and DeviceRegistration
+    const ApnsService = (await import('../services/ApnsService.js')).default
+    const DeviceRegistration = (await import('./DeviceRegistration.js')).default
+
+    // Check if APNs is configured
+    if (!ApnsService.isReady()) {
+      return {
+        success: false,
+        error: 'APNs not configured',
+        sent: 0,
+        failed: 0
+      }
+    }
+
+    // Get all registered devices for this pass
+    const devices = await DeviceRegistration.getDevicesForPass(this.id)
+
+    if (!devices || devices.length === 0) {
+      return {
+        success: true,
+        message: 'No registered devices',
+        sent: 0,
+        failed: 0
+      }
+    }
+
+    // Extract push tokens
+    const pushTokens = devices.map(device => device.push_token).filter(token => !!token)
+
+    if (pushTokens.length === 0) {
+      return {
+        success: false,
+        error: 'No valid push tokens found',
+        sent: 0,
+        failed: 0
+      }
+    }
+
+    // Send push notifications to all devices
+    const result = await ApnsService.sendPassUpdateNotificationBatch(pushTokens)
+
+    // Update last push timestamp
+    await this.updateLastPush()
+
+    return result
+
+  } catch (error) {
+    const logger = (await import('../config/logger.js')).default
+    logger.error('❌ Failed to send push notification for pass:', {
+      error: error.message,
+      passId: this.id,
+      serialNumber: this.wallet_serial
+    })
+    return {
+      success: false,
+      error: error.message,
+      sent: 0,
+      failed: 0
+    }
+  }
 }
 
 // Static methods

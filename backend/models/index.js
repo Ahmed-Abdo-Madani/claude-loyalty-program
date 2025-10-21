@@ -11,6 +11,8 @@ import NotificationLog from './NotificationLog.js'
 import CustomerSegment from './CustomerSegment.js'
 import WalletPass from './WalletPass.js'
 import OfferCardDesign from './OfferCardDesign.js'
+import Device from './Device.js'
+import DeviceRegistration from './DeviceRegistration.js'
 
 // Define SECURE model associations using public_id fields
 Business.hasMany(Offer, {
@@ -227,6 +229,33 @@ OfferCardDesign.belongsTo(Business, {
   as: 'business'
 })
 
+// Device and DeviceRegistration relationships (Apple Web Service Protocol)
+Device.hasMany(DeviceRegistration, {
+  foreignKey: 'device_id',
+  sourceKey: 'id',
+  as: 'registrations',
+  onDelete: 'CASCADE'
+})
+
+DeviceRegistration.belongsTo(Device, {
+  foreignKey: 'device_id',
+  targetKey: 'id',
+  as: 'device'
+})
+
+WalletPass.hasMany(DeviceRegistration, {
+  foreignKey: 'wallet_pass_id',
+  sourceKey: 'id',
+  as: 'deviceRegistrations',
+  onDelete: 'CASCADE'
+})
+
+DeviceRegistration.belongsTo(WalletPass, {
+  foreignKey: 'wallet_pass_id',
+  targetKey: 'id',
+  as: 'walletPass'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -239,7 +268,9 @@ export {
   NotificationLog,
   CustomerSegment,
   WalletPass,
-  OfferCardDesign
+  OfferCardDesign,
+  Device,
+  DeviceRegistration
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -354,6 +385,10 @@ export default {
   NotificationCampaign,
   NotificationLog,
   CustomerSegment,
+  WalletPass,
+  OfferCardDesign,
+  Device,
+  DeviceRegistration,
   syncDatabase,
   seedDatabase
 }

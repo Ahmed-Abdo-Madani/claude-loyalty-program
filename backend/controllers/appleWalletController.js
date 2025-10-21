@@ -185,13 +185,15 @@ class AppleWalletController {
         'apple',
         {
           wallet_serial: passData.serialNumber,
+          authentication_token: passData.authenticationToken,
+          pass_data_json: passData,
           device_info: {
             user_agent: req.headers['user-agent'],
             generated_at: new Date().toISOString()
           }
         }
       )
-      console.log('✨ Apple Wallet pass recorded in database successfully')
+      console.log('✨ Apple Wallet pass recorded in database successfully with web service protocol enabled')
 
       // Mark card design as applied (if design was used)
       if (design) {
@@ -424,12 +426,24 @@ class AppleWalletController {
       // maxDistance requires a locations array or causes validation failures on iOS 15
       // relevantDate has strict format requirements that can fail on older iOS versions
       // These can be added later with proper locations array for geolocation features
-
-      // NOTE: webServiceURL and authenticationToken are omitted
-      // This creates a "static pass" that installs without requiring a backend web service
-      // Limitation: Pass won't auto-update when progress changes (user must re-download)
-      // Future enhancement: Add webServiceURL with proper /v1/passes endpoints for live updates
     }
+
+    // ============ APPLE WEB SERVICE PROTOCOL ============
+    // Add webServiceURL and authenticationToken for dynamic pass updates
+    // This enables device registration and push notifications
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://api.madna.me'
+      : process.env.BASE_URL || 'http://localhost:3001'
+
+    passData.webServiceURL = baseUrl
+    passData.authenticationToken = this.generateAuthToken(customerData.customerId, serialNumber)
+
+    console.log('🔐 Apple Web Service Protocol enabled:', {
+      webServiceURL: passData.webServiceURL,
+      authenticationToken: passData.authenticationToken.substring(0, 16) + '...',
+      serialNumber: serialNumber
+    })
+    // ===================================================
 
       // ==================== DEBUG LOGGING ====================
       console.log('🔍 ========== PASS.JSON DEBUG ==========')
@@ -638,8 +652,9 @@ class AppleWalletController {
   }
 
   generateAuthToken(customerId, serialNumber) {
-    // Simple token generation for demo
-    return Buffer.from(`${customerId}:${serialNumber}:${Date.now()}`).toString('base64').substring(0, 32)
+    // Use SHA-256 for consistent, secure token generation (matches WalletPass.generateAuthToken)
+    const data = `${customerId}:${serialNumber}:${Date.now()}`
+    return crypto.createHash('sha256').update(data).digest('hex').substring(0, 32)
   }
 
   async downloadPass(req, res) {
@@ -784,29 +799,89 @@ class AppleWalletController {
         progress: progressData
       })
 
-      // In production, this would:
-      // 1. Find the pass by customer and offer IDs
-      // 2. Update the pass data with new progress
-      // 3. Generate new pass file
-      // 4. Send push notification to Apple's server
-      // 5. Apple Wallet on device would then update
+      // Extract customer name from progressData
+      const customerName = progressData.customer_name || 'Valued Customer'
+      const [firstName, ...lastNameParts] = customerName.split(' ')
+      const lastName = lastNameParts.join(' ') || ''
 
-      // For demo, we'll simulate the update
-      const serialNumber = `${customerId}-${offerId}-${Date.now()}`
+      // Extract real offer and business data from progressData
+      const offer = progressData.offer || {}
+      const business = progressData.business || {}
+
+      // Construct complete customerData object
+      const customerData = {
+        customerId: customerId,
+        firstName: firstName,
+        lastName: lastName,
+        joinedDate: progressData.created_at || new Date()
+      }
+
+      // Construct complete offerData object with businessId
+      const offerData = {
+        offerId: offerId,
+        businessId: business.public_id || progressData.business_id, // CRITICAL: Include businessId
+        businessName: business.business_name || 'Loyalty Program',
+        title: offer.title || 'Loyalty Offer',
+        stampsRequired: offer.stamps_required || progressData.max_stamps || 10,
+        rewardDescription: offer.description || 'Reward',
+        branchName: offer.branch || 'All Locations'
+      }
+
+      // Construct progress data for stamp visualization
+      const stampProgressData = {
+        stampsEarned: progressData.current_stamps || 0
+      }
+
+      // Load card design if available
+      let design = null
+      try {
+        const CardDesignService = (await import('../services/CardDesignService.js')).default
+        design = await CardDesignService.getDesignByOffer(offerId)
+      } catch (error) {
+        console.warn('⚠️ Failed to load card design for push update:', error.message)
+      }
+
+      // Generate updated pass data
       const updatedPassData = this.createPassJson(
-        { customerId, firstName: 'Customer', lastName: 'User', joinedDate: new Date() },
-        { offerId, title: 'Loyalty Offer', businessName: 'Demo Business', stampsRequired: 10 },
-        progressData
+        customerData,
+        offerData,
+        stampProgressData,
+        design
       )
 
-      // Simulate push notification success
-      console.log('✅ Apple Wallet push notification sent successfully')
+      // Find the wallet pass record in database
+      const WalletPass = (await import('../models/WalletPass.js')).default
+      const walletPass = await WalletPass.findOne({
+        where: {
+          customer_id: customerId,
+          offer_id: offerId,
+          wallet_type: 'apple',
+          pass_status: 'active'
+        }
+      })
+
+      if (!walletPass) {
+        console.warn('⚠️ No active Apple Wallet pass found for customer')
+        return {
+          success: false,
+          error: 'No active Apple Wallet pass found'
+        }
+      }
+
+      // Update pass data in database
+      await walletPass.updatePassData(updatedPassData)
+
+      // Send APNs push notification to trigger update on device
+      const pushResult = await walletPass.sendPushNotification()
+
+      console.log('✅ Apple Wallet pass updated and push notification sent')
 
       return {
         success: true,
-        serialNumber,
+        serialNumber: updatedPassData.serialNumber,
         updated: new Date().toISOString(),
-        progress: progressData
+        progress: stampProgressData,
+        pushNotification: pushResult
       }
     } catch (error) {
       console.error('❌ Apple Wallet push update failed:', error)

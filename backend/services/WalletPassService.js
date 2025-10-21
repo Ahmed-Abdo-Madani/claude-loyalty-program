@@ -57,7 +57,11 @@ class WalletPassService {
         wallet_serial: metadata.wallet_serial || null,
         wallet_object_id: metadata.wallet_object_id || null,
         pass_status: 'active',
-        device_info: metadata.device_info || {}
+        device_info: metadata.device_info || {},
+        // Apple Web Service Protocol fields
+        authentication_token: metadata.authentication_token || null,
+        last_updated_tag: walletType === 'apple' ? Math.floor(Date.now() / 1000).toString() : null,
+        pass_data_json: metadata.pass_data_json || null
       })
 
       logger.info(`✨ Created ${walletType} wallet pass for customer ${customerId} (Pass ID: ${walletPass.id})`)
