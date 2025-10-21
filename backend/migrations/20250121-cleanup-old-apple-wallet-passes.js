@@ -83,7 +83,7 @@ export async function up() {
     if (passIds.length > 0) {
       const [deleteResult] = await sequelize.query(`
         DELETE FROM device_registrations
-        WHERE wallet_pass_id = ANY(:passIds)
+        WHERE wallet_pass_id IN (:passIds)
         RETURNING id;
       `, {
         replacements: { passIds }
