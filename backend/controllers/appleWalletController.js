@@ -162,7 +162,12 @@ class AppleWalletController {
           actualProgressData = { stampsEarned: 0 }
         }
       } else {
-        logger.info('✅ Using provided progressData:', actualProgressData)
+        // Ensure stampsEarned is a numeric value with default 0
+        actualProgressData = {
+          ...progressData,
+          stampsEarned: typeof progressData.stampsEarned === 'number' ? progressData.stampsEarned : 0
+        }
+        logger.info('✅ Using provided progressData with normalized stampsEarned:', actualProgressData)
       }
 
       // Check if pass already exists to reuse authentication token and serial number
@@ -405,11 +410,23 @@ class AppleWalletController {
       // This allows POS systems to scan once and get all needed data
       const qrMessage = `${customerToken}:${offerHash}`
 
-      logger.info('🔐 Generated QR code data:', {
+      // Validate QR message is ASCII-safe (critical for barcode encoding)
+      if (!CustomerService.isAsciiSafe(qrMessage)) {
+        logger.error('❌ QR message contains non-ASCII characters, cannot create pass:', {
+          customerId: customerData.customerId.substring(0, 8) + '...',
+          businessId: businessId.substring(0, 8) + '...',
+          offerId: offerData.offerId.substring(0, 8) + '...',
+          messagePreview: qrMessage.substring(0, 50) + '...'
+        })
+        throw new Error('QR message encoding failed: contains non-ASCII characters')
+      }
+
+      logger.info('🔐 Generated QR code data (ASCII-safe validated):', {
         customerToken: customerToken.substring(0, 20) + '...',
         offerHash: offerHash,
         fullMessage: qrMessage.substring(0, 30) + '...',
-        messageLength: qrMessage.length
+        messageLength: qrMessage.length,
+        encoding: 'base64:hex (ASCII-safe)'
       })
 
       // Prepare pass data structure
@@ -451,18 +468,20 @@ class AppleWalletController {
       // Barcode for POS scanning
       // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
       // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
+      // Encoding: UTF-8 (safer for international characters, backward compatible with ASCII QR data)
+      // QR payload is base64:hex format (ASCII-safe), but UTF-8 provides future-proofing
       barcode: {
         altText: 'Scan to earn stamps',  // Updated alt text for better UX
         format: 'PKBarcodeFormatQR',
-        message: qrMessage,  // ✅ Enhanced: customerToken:offerHash
-        messageEncoding: 'iso-8859-1'
+        message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
+        messageEncoding: 'UTF-8'
       },
       barcodes: [
         {
           altText: 'Scan to earn stamps',  // Updated alt text for better UX
           format: 'PKBarcodeFormatQR',
-          message: qrMessage,  // ✅ Enhanced: customerToken:offerHash
-          messageEncoding: 'iso-8859-1'
+          message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
+          messageEncoding: 'UTF-8'
         }
       ]
 

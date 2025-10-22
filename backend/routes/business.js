@@ -825,7 +825,7 @@ router.post('/customers/signup', async (req, res) => {
     console.log('✅ Customer signup completed:', {
       customerId: customerData.customerId,
       progressId: progress.id,
-      stampsEarned: progress.stamps_earned
+      stampsEarned: progress.current_stamps || 0
     })
 
     res.json({
@@ -834,9 +834,9 @@ router.post('/customers/signup', async (req, res) => {
         customerId: customerData.customerId,
         progress: {
           id: progress.id,
-          stampsEarned: progress.stamps_earned,
-          stampsRequired: progress.stamps_required || offer.stamps_required,
-          status: progress.status
+          stampsEarned: progress.current_stamps || 0,
+          stampsRequired: progress.max_stamps || offer.stamps_required,
+          status: progress.is_completed ? 'completed' : 'active'
         }
       },
       message: 'Customer registered successfully'

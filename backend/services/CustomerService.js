@@ -193,7 +193,19 @@ class CustomerService {
   // Customer token management for QR code scanning
   static encodeCustomerToken(customerId, businessId, timestamp = Date.now()) {
     const tokenData = `${customerId}:${businessId}:${timestamp}`
-    return Buffer.from(tokenData).toString('base64')
+    const encoded = Buffer.from(tokenData).toString('base64')
+    
+    // Validate that encoded token is ASCII-safe (for QR code compatibility)
+    if (!this.isAsciiSafe(encoded)) {
+      logger.error('❌ Encoded customer token contains non-ASCII characters:', {
+        customerId: customerId.substring(0, 8) + '...',
+        businessId: businessId.substring(0, 8) + '...',
+        encoded: encoded.substring(0, 20) + '...'
+      })
+      throw new Error('Customer token encoding produced non-ASCII result')
+    }
+    
+    return encoded
   }
 
   static decodeCustomerToken(customerToken) {
@@ -221,7 +233,45 @@ class CustomerService {
   // Offer verification for QR code validation
   static generateOfferHash(offerId, businessId) {
     const data = `${offerId}:${businessId}:loyalty-platform`
-    return crypto.createHash('md5').update(data).digest('hex').substring(0, 8)
+    const hash = crypto.createHash('md5').update(data).digest('hex').substring(0, 8)
+    
+    // Validate that hash is ASCII-safe (hex is always ASCII-safe, but verify)
+    if (!this.isAsciiSafe(hash)) {
+      logger.error('❌ Offer hash contains non-ASCII characters:', {
+        offerId: offerId.substring(0, 8) + '...',
+        businessId: businessId.substring(0, 8) + '...',
+        hash
+      })
+      throw new Error('Offer hash generation produced non-ASCII result')
+    }
+    
+    return hash
+  }
+
+  /**
+   * Validate that a string contains only ASCII characters (0x00-0x7F)
+   * Critical for QR code barcode messages in Apple Wallet passes
+   * @param {string} str - String to validate
+   * @returns {boolean} True if string is ASCII-safe
+   */
+  static isAsciiSafe(str) {
+    if (typeof str !== 'string') return false
+    
+    // Check if all characters are in ASCII range (0-127)
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i)
+      if (code > 127) {
+        logger.warn('⚠️ Non-ASCII character detected:', {
+          char: str[i],
+          charCode: code,
+          position: i,
+          context: str.substring(Math.max(0, i - 5), Math.min(str.length, i + 6))
+        })
+        return false
+      }
+    }
+    
+    return true
   }
 
   static verifyOfferHash(offerId, businessId, providedHash) {
