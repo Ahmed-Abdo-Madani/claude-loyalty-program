@@ -11,10 +11,11 @@
  * - Works with or without custom hero images
  * - Larger, proportional stamps for better visibility
  * - NO text overlay (progress shown in pass fields)
+ * - Safe image fetching with timeout and size protection
  */
 
 import sharp from 'sharp'
-import fetch from 'node-fetch'
+import SafeImageFetcher from '../utils/SafeImageFetcher.js'
 import logger from '../config/logger.js'
 
 class StampImageGenerator {
@@ -98,9 +99,15 @@ class StampImageGenerator {
     if (heroImageUrl) {
       try {
         logger.info('📥 Loading hero image from:', heroImageUrl)
-        const response = await fetch(heroImageUrl)
-        if (response.ok) {
-          const imageBuffer = Buffer.from(await response.arrayBuffer())
+        
+        // Use SafeImageFetcher with 5s timeout and 3MB size cap
+        const imageBuffer = await SafeImageFetcher.fetchImage(heroImageUrl, {
+          timeoutMs: 5000,
+          maxSizeBytes: 3 * 1024 * 1024,
+          allowedContentTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+        })
+
+        if (imageBuffer) {
           // Resize to Apple Wallet strip size (624x168 @ 2x)
           const resized = await sharp(imageBuffer)
             .resize(624, 168, { fit: 'cover' })
@@ -108,6 +115,8 @@ class StampImageGenerator {
             .toBuffer()
           logger.info('✅ Hero image loaded and resized')
           return resized
+        } else {
+          throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
         }
       } catch (error) {
         logger.warn('⚠️ Failed to load hero image, using solid color:', error.message)

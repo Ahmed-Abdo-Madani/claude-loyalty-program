@@ -8,6 +8,7 @@ import CardDesignService from '../services/CardDesignService.js'
 import CustomerService from '../services/CustomerService.js'
 import appleCertificateValidator from '../utils/appleCertificateValidator.js'
 import applePassSigner from '../utils/applePassSigner.js'
+import SafeImageFetcher from '../utils/SafeImageFetcher.js'
 import logger from '../config/logger.js'
 
 class AppleWalletController {
@@ -209,6 +210,10 @@ class AppleWalletController {
       // Create manifest with file hashes
       const manifest = this.createManifest(passData, images)
 
+      // Compute ETag from manifest for HTTP caching
+      const manifestETag = this.computeManifestETag(manifest)
+      logger.info('🔖 Computed manifest ETag for new pass:', manifestETag)
+
       // Sign manifest with real Apple certificates
       const signature = await applePassSigner.signManifest(manifest)
 
@@ -223,6 +228,7 @@ class AppleWalletController {
         {
           wallet_serial: passData.serialNumber,
           authentication_token: passData.authenticationToken,
+          manifest_etag: manifestETag,
           pass_data_json: passData,
           device_info: {
             user_agent: req.headers['user-agent'],
@@ -521,22 +527,22 @@ class AppleWalletController {
     // Generate pass images - icon is REQUIRED, logo and strip are optional
     let baseImageBuffer
 
-    // Try to use custom logo from design
+    // Try to use custom logo from design with timeout and size protection
     if (design?.logo_url) {
       try {
         logger.info('🎨 Fetching custom logo for Apple Wallet from:', design.logo_url)
-        const response = await fetch(design.logo_url)
-        logger.info('📡 Logo fetch response:', {
-          status: response.status,
-          statusText: response.statusText,
-          contentType: response.headers.get('content-type')
+        
+        // Use SafeImageFetcher with 5s timeout and 3MB size cap
+        baseImageBuffer = await SafeImageFetcher.fetchImage(design.logo_url, {
+          timeoutMs: 5000,
+          maxSizeBytes: 3 * 1024 * 1024,
+          allowedContentTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
         })
 
-        if (response.ok) {
-          baseImageBuffer = Buffer.from(await response.arrayBuffer())
+        if (baseImageBuffer) {
           logger.info('✅ Custom logo fetched successfully:', baseImageBuffer.length, 'bytes')
         } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
         }
       } catch (error) {
         logger.error('❌ Failed to fetch custom logo:', {
@@ -660,6 +666,20 @@ class AppleWalletController {
     })
 
     return manifest
+  }
+
+  /**
+   * Compute ETag from manifest for HTTP caching
+   * ETag is more reliable than Last-Modified across servers/timezones
+   * @param {object} manifest - The manifest object containing file hashes
+   * @returns {string} - Strong ETag value (quoted)
+   */
+  computeManifestETag(manifest) {
+    // Create deterministic hash from sorted manifest entries
+    const manifestString = JSON.stringify(manifest, Object.keys(manifest).sort())
+    const hash = crypto.createHash('sha256').update(manifestString, 'utf8').digest('hex')
+    // Return first 16 characters as quoted strong ETag
+    return `"${hash.substring(0, 16)}"`
   }
 
   // DEPRECATED: No longer needed - using real certificates now

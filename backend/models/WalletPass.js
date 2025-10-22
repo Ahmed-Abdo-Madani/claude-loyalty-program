@@ -107,6 +107,11 @@ const WalletPass = sequelize.define('WalletPass', {
     allowNull: true,
     comment: 'Update tag for tracking pass changes (Unix timestamp)'
   },
+  manifest_etag: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    comment: 'ETag computed from manifest hash for HTTP caching (Apple Wallet only)'
+  },
   pass_data_json: {
     type: DataTypes.JSONB,
     allowNull: true,

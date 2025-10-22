@@ -14,9 +14,11 @@
 
 import express from 'express'
 import logger from '../config/logger.js'
+import metrics from '../utils/metrics.js'
 import WalletPass from '../models/WalletPass.js'
 import Device from '../models/Device.js'
 import DeviceRegistration from '../models/DeviceRegistration.js'
+import DeviceLog from '../models/DeviceLog.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import { CustomerProgress, Offer, Business, Customer } from '../models/index.js'
 import CardDesignService from '../services/CardDesignService.js'
@@ -198,17 +200,19 @@ router.get('/v1/devices/:deviceLibraryId/registrations/:passTypeId', async (req,
  * GET /v1/passes/{passTypeId}/{serialNumber}
  *
  * Device requests the latest .pkpass file
- * CRITICAL: Must support If-Modified-Since header and return 304 if unchanged
+ * CRITICAL: Must support If-Modified-Since AND If-None-Match headers and return 304 if unchanged
  */
 router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, res) => {
   try {
     const { passTypeId, serialNumber } = req.params
     const ifModifiedSince = req.headers['if-modified-since']
+    const ifNoneMatch = req.headers['if-none-match']
 
     logger.info('📥 Device requesting latest pass', {
       passTypeId,
       serialNumber,
-      ifModifiedSince: ifModifiedSince || 'none'
+      ifModifiedSince: ifModifiedSince || 'none',
+      ifNoneMatch: ifNoneMatch || 'none'
     })
 
     // Find wallet pass by serial number
@@ -237,17 +241,40 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Check If-Modified-Since header
+    // Check If-None-Match header (ETag - more reliable than Last-Modified)
+    if (ifNoneMatch && walletPass.manifest_etag) {
+      // Remove weak indicator if present and compare
+      const clientETag = ifNoneMatch.replace(/^W\//, '').trim()
+      const serverETag = walletPass.manifest_etag.trim()
+      
+      if (clientETag === serverETag) {
+        logger.info('✅ ETag match, returning 304 Not Modified', {
+          serialNumber,
+          etag: serverETag
+        })
+        res.setHeader('ETag', serverETag)
+        if (walletPass.last_updated_at) {
+          res.setHeader('Last-Modified', walletPass.last_updated_at.toUTCString())
+        }
+        return res.status(304).send()
+      }
+    }
+
+    // Fallback: Check If-Modified-Since header (less reliable across servers/timezones)
     if (ifModifiedSince && walletPass.last_updated_at) {
       const modifiedSinceDate = new Date(ifModifiedSince)
       const lastUpdatedDate = new Date(walletPass.last_updated_at)
 
       if (lastUpdatedDate <= modifiedSinceDate) {
-        logger.info('✅ Pass not modified, returning 304', {
+        logger.info('✅ Pass not modified (Last-Modified), returning 304', {
           serialNumber,
           lastUpdated: lastUpdatedDate.toISOString(),
           modifiedSince: modifiedSinceDate.toISOString()
         })
+        if (walletPass.manifest_etag) {
+          res.setHeader('ETag', walletPass.manifest_etag)
+        }
+        res.setHeader('Last-Modified', lastUpdatedDate.toUTCString())
         return res.status(304).send()
       }
     }
@@ -303,6 +330,10 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     // Create manifest
     const manifest = appleWalletController.createManifest(passData, images)
 
+    // Compute ETag from manifest (more reliable than Last-Modified)
+    const manifestETag = appleWalletController.computeManifestETag(manifest)
+    logger.info('🔖 Computed manifest ETag:', manifestETag)
+
     // Sign manifest
     const applePassSigner = (await import('../utils/applePassSigner.js')).default
     const signature = await applePassSigner.signManifest(manifest)
@@ -310,22 +341,27 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     // Create .pkpass ZIP
     const pkpassBuffer = await appleWalletController.createPkpassZip(passData, manifest, signature, images)
 
-    // Update pass data in database with current timestamp
+    // Update pass data in database with current timestamp AND manifest ETag
     const updateTimestamp = new Date()
     await walletPass.updatePassData(passData)
+    walletPass.manifest_etag = manifestETag
+    await walletPass.save()
     
     // Reload the record to get the updated last_updated_at value
     await walletPass.reload()
 
-    // Set response headers with correct Last-Modified
+    // Set response headers with ETag (primary) and Last-Modified (fallback)
     res.setHeader('Content-Type', 'application/vnd.apple.pkpass')
+    res.setHeader('ETag', manifestETag)
     res.setHeader('Last-Modified', (walletPass.last_updated_at || updateTimestamp).toUTCString())
+    res.setHeader('Cache-Control', 'private, must-revalidate')
     res.setHeader('Content-Disposition', `attachment; filename="${walletPass.offer?.title || 'loyalty-card'}.pkpass"`)
     res.setHeader('Content-Length', pkpassBuffer.length)
 
     logger.info('✅ Pass regenerated and sent', {
       serialNumber,
-      size: pkpassBuffer.length
+      size: pkpassBuffer.length,
+      etag: manifestETag
     })
 
     return res.send(pkpassBuffer)
@@ -413,6 +449,7 @@ router.delete('/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNum
  * POST /v1/log
  *
  * PassKit posts error logs to help debug issues
+ * Enhanced with central logging, metrics, and database storage
  */
 router.post('/v1/log', async (req, res) => {
   try {
@@ -422,25 +459,106 @@ router.post('/v1/log', async (req, res) => {
       return res.status(400).json({ error: 'logs array is required' })
     }
 
-    // Log each error from device
-    logs.forEach((logMessage, index) => {
-      logger.warn('📱 PassKit device log', {
+    const userAgent = req.headers['user-agent']
+    const ipAddress = req.ip || req.connection.remoteAddress
+
+    // Increment metrics counter for monitoring/alerting
+    metrics.increment('passkit.device_logs.received', logs.length)
+
+    // Extract device library ID if present in logs
+    let deviceId = null
+    try {
+      // Try to find device from user agent or other context
+      // This is best-effort; logs may not always have device context
+      const device = await Device.findOne({
+        where: { user_agent: userAgent },
+        order: [['last_seen_at', 'DESC']]
+      })
+      if (device) {
+        deviceId = device.id
+      }
+    } catch (error) {
+      logger.warn('⚠️ Could not identify device for log', { error: error.message })
+    }
+
+    // Process and store each log entry
+    const storedLogs = []
+    for (const [index, logMessage] of logs.entries()) {
+      // Forward to central logging with distinct label
+      logger.warn('📱 [PASSKIT-DEVICE-LOG] Device error', {
         logIndex: index,
         message: logMessage,
-        userAgent: req.headers['user-agent'],
-        ip: req.ip
+        userAgent,
+        ipAddress,
+        deviceId,
+        timestamp: new Date().toISOString()
       })
+
+      // Store in database for analysis
+      try {
+        const deviceLog = await DeviceLog.logMessage(logMessage, {
+          deviceId,
+          logLevel: 'error',
+          userAgent,
+          ipAddress,
+          metadata: {
+            logIndex: index,
+            totalLogs: logs.length,
+            receivedAt: new Date().toISOString()
+          }
+        })
+        storedLogs.push(deviceLog.id)
+      } catch (dbError) {
+        logger.error('❌ Failed to store device log in database', {
+          error: dbError.message,
+          logMessage: logMessage.substring(0, 100)
+        })
+        // Don't fail the request if DB storage fails
+      }
+
+      // Track specific error patterns for alerting
+      if (logMessage.includes('signature')) {
+        metrics.increment('passkit.errors.signature', 1)
+      } else if (logMessage.includes('certificate')) {
+        metrics.increment('passkit.errors.certificate', 1)
+      } else if (logMessage.includes('manifest')) {
+        metrics.increment('passkit.errors.manifest', 1)
+      } else if (logMessage.includes('image')) {
+        metrics.increment('passkit.errors.image', 1)
+      } else {
+        metrics.increment('passkit.errors.other', 1)
+      }
+    }
+
+    // Check for alert thresholds
+    const errorRate = metrics.getRate('passkit.device_logs.received', 60) // per second
+    if (errorRate > 10) {
+      logger.error('🚨 [ALERT] High PassKit error rate detected!', {
+        rate: errorRate,
+        threshold: 10,
+        recentLogs: logs.slice(0, 3)
+      })
+      metrics.increment('passkit.alerts.high_error_rate', 1)
+    }
+
+    logger.info('✅ Logged device errors', {
+      count: logs.length,
+      stored: storedLogs.length,
+      deviceId
     })
 
-    logger.info('✅ Logged device errors', { count: logs.length })
-
-    return res.status(200).json({ success: true })
+    return res.status(200).json({
+      success: true,
+      logsReceived: logs.length,
+      logsStored: storedLogs.length
+    })
 
   } catch (error) {
     logger.error('❌ Failed to log device errors', {
       error: error.message,
       stack: error.stack
     })
+    metrics.increment('passkit.device_logs.processing_errors', 1)
     return res.status(500).json({ error: 'Internal server error' })
   }
 })
