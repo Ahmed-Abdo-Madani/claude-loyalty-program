@@ -63,6 +63,7 @@ class WalletPassService {
         authentication_token: metadata.authentication_token || null,
         last_updated_tag: walletType === 'apple' ? Math.floor(now.getTime() / 1000).toString() : null,
         last_updated_at: walletType === 'apple' ? now : null, // Initialize on first generation
+        manifest_etag: metadata.manifest_etag || null,
         pass_data_json: metadata.pass_data_json || null
       })
 
