@@ -8,6 +8,7 @@ import CardDesignService from '../services/CardDesignService.js'
 import CustomerService from '../services/CustomerService.js'
 import appleCertificateValidator from '../utils/appleCertificateValidator.js'
 import applePassSigner from '../utils/applePassSigner.js'
+import logger from '../config/logger.js'
 
 class AppleWalletController {
   constructor() {
@@ -22,7 +23,7 @@ class AppleWalletController {
     try {
       const { customerData, offerData, progressData } = req.body
 
-      console.log('🍎 Apple Wallet pass generation request:', {
+      logger.info('🍎 Apple Wallet pass generation request:', {
         customerData: customerData ? {
           customerId: customerData.customerId,
           firstName: customerData.firstName,
@@ -41,7 +42,7 @@ class AppleWalletController {
 
       // Validate required data
       if (!customerData?.customerId || !offerData?.offerId || !offerData?.businessName) {
-        console.error('❌ Missing required data for Apple Wallet pass')
+        logger.error('❌ Missing required data for Apple Wallet pass')
         return res.status(400).json({
           error: 'Missing required data',
           required: ['customerData.customerId', 'offerData.offerId', 'offerData.businessName'],
@@ -55,21 +56,21 @@ class AppleWalletController {
 
       // Add default joinedDate if missing
       if (!customerData.joinedDate) {
-        console.warn('⚠️ joinedDate missing, using current date')
+        logger.warn('⚠️ joinedDate missing, using current date')
         customerData.joinedDate = new Date().toISOString()
       }
 
       // Add default firstName/lastName if missing
       if (!customerData.firstName) {
-        console.warn('⚠️ firstName missing, using default')
+        logger.warn('⚠️ firstName missing, using default')
         customerData.firstName = 'Valued'
       }
       if (!customerData.lastName) {
-        console.warn('⚠️ lastName missing, using default')
+        logger.warn('⚠️ lastName missing, using default')
         customerData.lastName = 'Customer'
       }
 
-      console.log('🍎 Generating Apple Wallet pass for:', {
+      logger.info('🍎 Generating Apple Wallet pass for:', {
         customer: customerData.customerId,
         offer: offerData.offerId,
         business: offerData.businessName
@@ -80,19 +81,19 @@ class AppleWalletController {
       try {
         design = await CardDesignService.getDesignByOffer(offerData.offerId)
         if (design) {
-          console.log('🎨 Using custom card design for Apple Wallet pass:', offerData.offerId)
+          logger.info('🎨 Using custom card design for Apple Wallet pass:', offerData.offerId)
         } else {
-          console.log('📝 No custom design found, using defaults for:', offerData.offerId)
+          logger.info('📝 No custom design found, using defaults for:', offerData.offerId)
         }
       } catch (error) {
-        console.warn('⚠️ Failed to load card design, using defaults:', error.message)
+        logger.warn('⚠️ Failed to load card design, using defaults:', error.message)
       }
 
       // 🆕 DEFENSIVE FIX: Ensure offerData has all required fields
       // If businessId or stampsRequired missing, fetch from database
       if (!offerData.businessId || !offerData.stampsRequired) {
-        console.warn('⚠️ Missing required offer fields, fetching from database...')
-        console.warn('   Current offerData:', {
+        logger.warn('⚠️ Missing required offer fields, fetching from database...')
+        logger.warn('   Current offerData:', {
           businessId: offerData.businessId,
           stampsRequired: offerData.stampsRequired,
           stamps_required: offerData.stamps_required
@@ -114,27 +115,27 @@ class AppleWalletController {
             // Populate missing fields from database
             if (!offerData.businessId) {
               offerData.businessId = offerRecord.business_id
-              console.log('✅ Populated businessId from database:', offerRecord.business_id)
+              logger.info('✅ Populated businessId from database:', offerRecord.business_id)
             }
             if (!offerData.stampsRequired && !offerData.stamps_required) {
               offerData.stampsRequired = offerRecord.stamps_required
-              console.log('✅ Populated stampsRequired from database:', offerRecord.stamps_required)
+              logger.info('✅ Populated stampsRequired from database:', offerRecord.stamps_required)
             }
           } else {
             throw new Error(`Offer ${offerData.offerId} not found in database`)
           }
         } catch (error) {
-          console.error('❌ Failed to fetch offer data from database:', error.message)
+          logger.error('❌ Failed to fetch offer data from database:', error.message)
           throw new Error(`Cannot generate pass - missing required fields: ${error.message}`)
         }
       } else {
-        console.log('✅ offerData has required fields (businessId and stampsRequired)')
+        logger.info('✅ offerData has required fields (businessId and stampsRequired)')
       }
 
       // Ensure we have actual customer progress for stamp visualization
       let actualProgressData = progressData
       if (!progressData || progressData.stampsEarned === undefined) {
-        console.warn('⚠️ No progressData provided, fetching actual stamps from database...')
+        logger.warn('⚠️ No progressData provided, fetching actual stamps from database...')
 
         try {
           // Query customer_progress table for actual stamp count
@@ -153,18 +154,54 @@ class AppleWalletController {
             stampsEarned: result?.current_stamps || 0
           }
 
-          console.log('✅ Fetched actual progress from database:', actualProgressData)
+          logger.info('✅ Fetched actual progress from database:', actualProgressData)
         } catch (error) {
-          console.error('❌ Failed to fetch progress from database:', error.message)
+          logger.error('❌ Failed to fetch progress from database:', error.message)
           // Fallback to 0 stamps if query fails
           actualProgressData = { stampsEarned: 0 }
         }
       } else {
-        console.log('✅ Using provided progressData:', actualProgressData)
+        logger.info('✅ Using provided progressData:', actualProgressData)
       }
 
-      // Generate pass data
-      const passData = this.createPassJson(customerData, offerData, actualProgressData, design)
+      // Check if pass already exists to reuse authentication token and serial number
+      let existingPass = null
+      let existingSerialNumber = null
+      let existingAuthToken = null
+      
+      try {
+        const WalletPass = (await import('../models/WalletPass.js')).default
+        existingPass = await WalletPass.findOne({
+          where: {
+            customer_id: customerData.customerId,
+            offer_id: offerData.offerId,
+            wallet_type: 'apple'
+          }
+        })
+        
+        if (existingPass) {
+          existingSerialNumber = existingPass.wallet_serial
+          existingAuthToken = existingPass.authentication_token
+          logger.info('🔄 Found existing Apple Wallet pass, reusing credentials:', {
+            serialNumber: existingSerialNumber,
+            authToken: existingAuthToken?.substring(0, 16) + '...',
+            passId: existingPass.id
+          })
+        }
+      } catch (error) {
+        logger.warn('⚠️ Failed to check for existing pass:', error.message)
+        // Continue with new pass generation
+      }
+
+      // Generate pass data (with existing serial/token if available)
+      const passData = this.createPassJson(
+        customerData,
+        offerData,
+        actualProgressData,
+        design,
+        existingSerialNumber,
+        existingAuthToken
+      )
 
       // Generate pass images with progress data for stamp visualization
       const images = await this.generatePassImages(offerData, design, actualProgressData)
@@ -193,15 +230,15 @@ class AppleWalletController {
           }
         }
       )
-      console.log('✨ Apple Wallet pass recorded in database successfully with web service protocol enabled')
+      logger.info('✨ Apple Wallet pass recorded in database successfully with web service protocol enabled')
 
       // Mark card design as applied (if design was used)
       if (design) {
         try {
           await CardDesignService.markDesignAsApplied(offerData.offerId)
-          console.log('🎨 Card design marked as applied for offer:', offerData.offerId)
+          logger.info('🎨 Card design marked as applied for offer:', offerData.offerId)
         } catch (error) {
-          console.warn('⚠️ Failed to mark design as applied:', error.message)
+          logger.warn('⚠️ Failed to mark design as applied:', error.message)
           // Non-critical error, don't fail the request
         }
       }
@@ -211,11 +248,11 @@ class AppleWalletController {
       res.setHeader('Content-Disposition', `attachment; filename="${offerData.businessName.replace(/[^a-zA-Z0-9]/g, '')}-loyalty-card.pkpass"`)
       res.setHeader('Content-Length', pkpassBuffer.length)
 
-      console.log('✅ Apple Wallet pass generated successfully')
+      logger.info('✅ Apple Wallet pass generated successfully')
       res.send(pkpassBuffer)
 
     } catch (error) {
-      console.error('❌ Apple Wallet generation failed:', error)
+      logger.error('❌ Apple Wallet generation failed:', error)
       res.status(500).json({
         error: 'Failed to generate Apple Wallet pass',
         message: error.message
@@ -272,13 +309,13 @@ class AppleWalletController {
       const serialNumber = existingSerialNumber || `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
 
       // ==================== DATA VALIDATION & LOGGING ====================
-      console.log('📊 ========== PASS DATA RECEIVED ==========')
-      console.log('👤 Customer Data:', {
+      logger.info('📊 ========== PASS DATA RECEIVED ==========')
+      logger.info('👤 Customer Data:', {
         customerId: customerData.customerId,
         firstName: customerData.firstName,
         lastName: customerData.lastName
       })
-      console.log('🎁 Offer Data:', {
+      logger.info('🎁 Offer Data:', {
         offerId: offerData.offerId,
         businessName: offerData.businessName,
         businessId: offerData.businessId,
@@ -286,8 +323,8 @@ class AppleWalletController {
         stampsRequired: offerData.stampsRequired,
         rewardDescription: offerData.rewardDescription
       })
-      console.log('📈 Progress Data:', progressData)
-      console.log('🎨 Design Data:', design ? {
+      logger.info('📈 Progress Data:', progressData)
+      logger.info('🎨 Design Data:', design ? {
         hasLogo: !!design.logo_url,
         hasHero: !!design.hero_image_url,
         colors: {
@@ -295,7 +332,7 @@ class AppleWalletController {
           foreground: design.foreground_color
         }
       } : 'No design')
-      console.log('========================================')
+      logger.info('========================================')
 
       // Ensure required fields have default values with better validation
       // IMPORTANT: Don't default stampsRequired to 10 - use actual offer data!
@@ -307,8 +344,8 @@ class AppleWalletController {
 
       // Validate stampsRequired value
       if (!offerData.stampsRequired && !offerData.stamps_required) {
-        console.warn('⚠️ No stampsRequired provided in offerData, defaulting to 10. This may be incorrect!')
-        console.warn('   offerData:', JSON.stringify(offerData, null, 2))
+        logger.warn('⚠️ No stampsRequired provided in offerData, defaulting to 10. This may be incorrect!')
+        logger.warn('   offerData:', JSON.stringify(offerData, null, 2))
       }
 
       // Validate business ID is present
@@ -319,11 +356,11 @@ class AppleWalletController {
       // Validate and fix business name if needed
       let businessName = offerData.businessName
       if (!businessName || businessName.length < 3 || /^[^a-zA-Z0-9\u0600-\u06FF]/.test(businessName)) {
-        console.warn('⚠️ Invalid or missing businessName, using offer title as fallback')
+        logger.warn('⚠️ Invalid or missing businessName, using offer title as fallback')
         businessName = offerData.title || 'Loyalty Program'
       }
-      console.log('✅ Using business name:', businessName)
-      console.log('✅ Stamps: earned =', stampsEarned, ', required =', stampsRequired, '(from offerData.stampsRequired =', offerData.stampsRequired, ', offerData.stamps_required =', offerData.stamps_required, ')')
+      logger.info('✅ Using business name:', businessName)
+      logger.info('✅ Stamps: earned =', stampsEarned, ', required =', stampsRequired, '(from offerData.stampsRequired =', offerData.stampsRequired, ', offerData.stamps_required =', offerData.stamps_required, ')')
 
       // Convert design colors to RGB format (Apple Wallet requirement)
       // CRITICAL: Apple Wallet (especially iOS 15) requires rgb(r,g,b) format, NOT hex #rrggbb
@@ -337,17 +374,17 @@ class AppleWalletController {
         ? this.hexToRgb(design.label_color)
         : foregroundColor // Use foreground color as fallback
 
-      console.log('🎨 Colors:', { backgroundColor, foregroundColor, labelColor })
+      logger.info('🎨 Colors:', { backgroundColor, foregroundColor, labelColor })
 
       // Get real certificate credentials from validator
-      console.log('📋 Loading Apple Wallet certificates...')
+      logger.info('📋 Loading Apple Wallet certificates...')
       const certs = appleCertificateValidator.getCertificates()
 
       if (!certs) {
         throw new Error('Apple Wallet certificates not loaded. Please check server startup logs.')
       }
 
-      console.log('✅ Certificates loaded:', {
+      logger.info('✅ Certificates loaded:', {
         passTypeId: certs.passTypeId,
         teamId: certs.teamId
       })
@@ -362,7 +399,7 @@ class AppleWalletController {
       // This allows POS systems to scan once and get all needed data
       const qrMessage = `${customerToken}:${offerHash}`
 
-      console.log('🔐 Generated QR code data:', {
+      logger.info('🔐 Generated QR code data:', {
         customerToken: customerToken.substring(0, 20) + '...',
         offerHash: offerHash,
         fullMessage: qrMessage.substring(0, 30) + '...',
@@ -440,37 +477,39 @@ class AppleWalletController {
     // Full path to Apple Web Service endpoints (mounted at /api/apple with /v1 routes)
     passData.webServiceURL = `${baseUrl}/api/apple`
     // Use existing auth token if provided (for updates), otherwise generate new one
-    passData.authenticationToken = existingAuthToken || this.generateAuthToken(customerData.customerId, serialNumber)
+    // CRITICAL: Must use same algorithm as WalletPass.generateAuthToken (customerId + offerId)
+    passData.authenticationToken = existingAuthToken || this.generateAuthToken(customerData.customerId, offerData.offerId)
 
-    console.log('🔐 Apple Web Service Protocol enabled:', {
+    logger.info('🔐 Apple Web Service Protocol enabled:', {
       webServiceURL: passData.webServiceURL,
       authenticationToken: passData.authenticationToken.substring(0, 16) + '...',
       serialNumber: serialNumber,
-      usingExistingToken: !!existingAuthToken
+      usingExistingToken: !!existingAuthToken,
+      generatedFrom: existingAuthToken ? 'database' : `customerId:${customerData.customerId} + offerId:${offerData.offerId}`
     })
     // ===================================================
 
       // ==================== DEBUG LOGGING ====================
-      console.log('🔍 ========== PASS.JSON DEBUG ==========')
-      console.log('📋 Complete pass.json structure:')
-      console.log(JSON.stringify(passData, null, 2))
-      console.log('🔍 ======================================')
-      console.log('📊 Pass data analysis:')
-      console.log('  - organizationName:', passData.organizationName, '(length:', passData.organizationName.length, 'bytes)')
-      console.log('  - description:', passData.description)
-      console.log('  - logoText:', passData.logoText)
-      console.log('  - backgroundColor:', passData.backgroundColor)
-      console.log('  - foregroundColor:', passData.foregroundColor)
-      console.log('  - labelColor:', passData.labelColor)
-      console.log('  - serialNumber:', passData.serialNumber)
-      console.log('  - customerID:', customerData.customerId)
-      console.log('  - barcode message:', passData.barcodes[0].message)
-      console.log('  - barcode encoding:', passData.barcodes[0].messageEncoding)
-      console.log('🔍 ======================================')
+      logger.info('🔍 ========== PASS.JSON DEBUG ==========')
+      logger.info('📋 Complete pass.json structure:')
+      logger.info(JSON.stringify(passData, null, 2))
+      logger.info('🔍 ======================================')
+      logger.info('📊 Pass data analysis:')
+      logger.info('  - organizationName:', passData.organizationName, '(length:', passData.organizationName.length, 'bytes)')
+      logger.info('  - description:', passData.description)
+      logger.info('  - logoText:', passData.logoText)
+      logger.info('  - backgroundColor:', passData.backgroundColor)
+      logger.info('  - foregroundColor:', passData.foregroundColor)
+      logger.info('  - labelColor:', passData.labelColor)
+      logger.info('  - serialNumber:', passData.serialNumber)
+      logger.info('  - customerID:', customerData.customerId)
+      logger.info('  - barcode message:', passData.barcodes[0].message)
+      logger.info('  - barcode encoding:', passData.barcodes[0].messageEncoding)
+      logger.info('🔍 ======================================')
 
       return passData
     } catch (error) {
-      console.error('❌ Error creating pass JSON:', error)
+      logger.error('❌ Error creating pass JSON:', error)
       throw new Error(`Failed to create pass data: ${error.message}`)
     }
   }
@@ -485,9 +524,9 @@ class AppleWalletController {
     // Try to use custom logo from design
     if (design?.logo_url) {
       try {
-        console.log('🎨 Fetching custom logo for Apple Wallet from:', design.logo_url)
+        logger.info('🎨 Fetching custom logo for Apple Wallet from:', design.logo_url)
         const response = await fetch(design.logo_url)
-        console.log('📡 Logo fetch response:', {
+        logger.info('📡 Logo fetch response:', {
           status: response.status,
           statusText: response.statusText,
           contentType: response.headers.get('content-type')
@@ -495,21 +534,21 @@ class AppleWalletController {
 
         if (response.ok) {
           baseImageBuffer = Buffer.from(await response.arrayBuffer())
-          console.log('✅ Custom logo fetched successfully:', baseImageBuffer.length, 'bytes')
+          logger.info('✅ Custom logo fetched successfully:', baseImageBuffer.length, 'bytes')
         } else {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
       } catch (error) {
-        console.error('❌ Failed to fetch custom logo:', {
+        logger.error('❌ Failed to fetch custom logo:', {
           url: design.logo_url,
           error: error.message,
           stack: error.stack
         })
-        console.warn('⚠️ Using placeholder logo instead')
+        logger.warn('⚠️ Using placeholder logo instead')
         baseImageBuffer = null
       }
     } else {
-      console.log('📝 No custom logo URL provided, using placeholder')
+      logger.info('📝 No custom logo URL provided, using placeholder')
     }
 
     // Fallback to placeholder if custom logo not available
@@ -585,7 +624,7 @@ class AppleWalletController {
     .toBuffer()
 
     // Generate dynamic stamp visualization hero image using StampImageGenerator
-    console.log('🎨 Generating dynamic stamp visualization for hero image...')
+    logger.info('🎨 Generating dynamic stamp visualization for hero image...')
     const stampHeroImage = await StampImageGenerator.generateStampHeroImage({
       stampsEarned: progressData.stampsEarned || 0,
       stampsRequired: offerData.stampsRequired || offerData.stamps_required || 10,
@@ -597,7 +636,7 @@ class AppleWalletController {
       foregroundColor: design?.foreground_color || '#FFFFFF',  // Used for circle stroke and text
       progressDisplayStyle: design?.progress_display_style || 'grid'
     })
-    console.log('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
+    logger.info('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
 
     // Return ONLY @2x images to match working iOS 15.6 clone structure
     // Working clone only has: icon@2x.png, logo@2x.png, strip@2x.png (3 files total)
@@ -656,9 +695,11 @@ class AppleWalletController {
     })
   }
 
-  generateAuthToken(customerId, serialNumber) {
-    // Use SHA-256 for consistent, secure token generation (matches WalletPass.generateAuthToken)
-    const data = `${customerId}:${serialNumber}:${Date.now()}`
+  generateAuthToken(customerId, offerId) {
+    // CRITICAL: Must match WalletPass.generateAuthToken algorithm exactly
+    // Use customerId + offerId for consistency with model
+    // This ensures tokens generated here match tokens in database
+    const data = `${customerId}:${offerId}:${Date.now()}`
     return crypto.createHash('sha256').update(data).digest('hex').substring(0, 32)
   }
 
@@ -684,7 +725,7 @@ class AppleWalletController {
       const { passId } = req.params
       const updateData = req.body
 
-      console.log(`🍎 Updating Apple Wallet pass ${passId}:`, updateData)
+      logger.info(`🍎 Updating Apple Wallet pass ${passId}:`, updateData)
 
       // In production:
       // 1. Update pass data in database
@@ -725,7 +766,7 @@ class AppleWalletController {
    */
   async sendCustomMessage(serialNumber, header, body) {
     try {
-      console.log('🍎 Apple Wallet: sendCustomMessage called', {
+      logger.info('🍎 Apple Wallet: sendCustomMessage called', {
         serialNumber,
         header: header.substring(0, 50),
         body: body.substring(0, 50)
@@ -735,7 +776,7 @@ class AppleWalletController {
       const apnsConfigured = process.env.APPLE_APNS_CERT_PATH && process.env.APPLE_APNS_KEY_PATH
 
       if (!apnsConfigured) {
-        console.warn('⚠️ Apple Wallet: APNs not configured (requires production certificates)')
+        logger.warn('⚠️ Apple Wallet: APNs not configured (requires production certificates)')
         return {
           success: false,
           error: 'APNs not configured',
@@ -771,7 +812,7 @@ class AppleWalletController {
       // notification.payload = {} // Empty payload for pass update
       // const result = await apnProvider.send(notification, deviceToken)
 
-      console.log('⚠️ Apple Wallet: Push notification not sent (production environment required)')
+      logger.info('⚠️ Apple Wallet: Push notification not sent (production environment required)')
 
       return {
         success: false,
@@ -786,7 +827,7 @@ class AppleWalletController {
       }
 
     } catch (error) {
-      console.error('❌ Apple Wallet: sendCustomMessage error:', error)
+      logger.error('❌ Apple Wallet: sendCustomMessage error:', error)
       return {
         success: false,
         error: 'Failed to send custom message',
@@ -798,7 +839,7 @@ class AppleWalletController {
   // Push updates to Apple Wallet when progress changes
   async pushProgressUpdate(customerId, offerId, progressData) {
     try {
-      console.log('🍎 Pushing progress update to Apple Wallet:', {
+      logger.info('🍎 Pushing progress update to Apple Wallet:', {
         customerId,
         offerId,
         progress: progressData
@@ -843,7 +884,7 @@ class AppleWalletController {
         const CardDesignService = (await import('../services/CardDesignService.js')).default
         design = await CardDesignService.getDesignByOffer(offerId)
       } catch (error) {
-        console.warn('⚠️ Failed to load card design for push update:', error.message)
+        logger.warn('⚠️ Failed to load card design for push update:', error.message)
       }
 
       // Find the wallet pass record in database FIRST to get existing serial number
@@ -858,7 +899,7 @@ class AppleWalletController {
       })
 
       if (!walletPass) {
-        console.warn('⚠️ No active Apple Wallet pass found for customer')
+        logger.warn('⚠️ No active Apple Wallet pass found for customer')
         return {
           success: false,
           error: 'No active Apple Wallet pass found'
@@ -868,8 +909,8 @@ class AppleWalletController {
       // CRITICAL: Use existing serial number AND authentication token from database (don't generate new ones!)
       const existingSerialNumber = walletPass.wallet_serial
       const existingAuthToken = walletPass.authentication_token
-      console.log('🔄 Using existing serial number for update:', existingSerialNumber)
-      console.log('🔄 Using existing auth token for update:', existingAuthToken?.substring(0, 8) + '...')
+      logger.info('🔄 Using existing serial number for update:', existingSerialNumber)
+      logger.info('🔄 Using existing auth token for update:', existingAuthToken?.substring(0, 8) + '...')
 
       // Generate updated pass data with SAME serial number and SAME auth token
       const updatedPassData = this.createPassJson(
@@ -887,7 +928,7 @@ class AppleWalletController {
       // Send APNs push notification to trigger update on device
       const pushResult = await walletPass.sendPushNotification()
 
-      console.log('✅ Apple Wallet pass updated and push notification sent')
+      logger.info('✅ Apple Wallet pass updated and push notification sent')
 
       return {
         success: true,
@@ -897,7 +938,7 @@ class AppleWalletController {
         pushNotification: pushResult
       }
     } catch (error) {
-      console.error('❌ Apple Wallet push update failed:', error)
+      logger.error('❌ Apple Wallet push update failed:', error)
       return {
         success: false,
         error: error.message

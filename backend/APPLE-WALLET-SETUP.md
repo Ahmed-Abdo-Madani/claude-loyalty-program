@@ -50,12 +50,14 @@ The Madna Loyalty Platform uses Apple Wallet to provide digital loyalty cards to
 - Valid `.pkpass` files that install on iOS devices
 - Integration with custom card designs
 - Database tracking of wallet passes
+- **Apple Web Service Protocol endpoints** (`/api/apple/v1/...`)
+- **Device registration and unregistration**
+- **Pass update fetching**
+- **APNs push notifications** (when configured)
 
-### ⚠️ Not Yet Configured
+### ⚠️ Configuration Required
 
-- APNs (Apple Push Notification service) for real-time updates
-- Pass update endpoint (webServiceURL)
-- Device registration handling
+- APNs certificate setup for production (optional but recommended)
 
 ---
 
@@ -100,6 +102,69 @@ Always verify before committing:
 ```bash
 git status
 # Ensure no certificate files appear
+```
+
+---
+
+## Apple Web Service Protocol
+
+### Endpoint Overview
+
+The platform implements the full Apple Web Service Protocol for pass updates mounted at `/api/apple`:
+
+| Endpoint | Method | Purpose | Response |
+|----------|--------|---------|----------|
+| `/api/apple/v1/devices/{deviceId}/registrations/{passTypeId}/{serial}` | POST | Register device for updates | 200/201 |
+| `/api/apple/v1/devices/{deviceId}/registrations/{passTypeId}` | GET | Get updated passes | 200 + JSON |
+| `/api/apple/v1/passes/{passTypeId}/{serial}` | GET | Fetch latest pass | 200 + pkpass |
+| `/api/apple/v1/devices/{deviceId}/registrations/{passTypeId}/{serial}` | DELETE | Unregister device | 200 |
+| `/api/apple/v1/log` | POST | Log errors from device | 200 |
+
+### Base URL Configuration
+
+The `webServiceURL` in passes points to:
+- **Production**: `https://api.madna.me/api/apple`
+- **Development**: `http://localhost:3001/api/apple`
+
+### CORS and Proxy Configuration
+
+All Apple Web Service endpoints:
+- ✅ Support OPTIONS preflight requests
+- ✅ Handle 204 No Content responses (when no updates)
+- ✅ Handle 304 Not Modified responses (for unchanged passes)
+- ✅ Require `Authorization: ApplePass {token}` header (except GET updates and log)
+
+**Important for Reverse Proxies**:
+- Do not strip `/api/apple` prefix
+- Preserve `If-Modified-Since` headers
+- Allow empty request/response bodies
+- Support all HTTP methods (GET, POST, DELETE)
+
+### Authentication
+
+Passes include an `authenticationToken` that devices must send:
+```
+Authorization: ApplePass abc123def456...
+```
+
+The token is validated on:
+- Device registration (POST)
+- Pass fetch (GET `/v1/passes/...`)
+- Device unregistration (DELETE)
+
+### Testing Endpoints
+
+```bash
+# Health check (no auth required)
+curl http://localhost:3001/health
+
+# Test device registration (requires valid token)
+curl -X POST \
+  -H "Authorization: ApplePass YOUR_TOKEN" \
+  http://localhost:3001/api/apple/v1/devices/test123/registrations/pass.me.madna.api/SERIAL123
+
+# Check for updates (no auth required)
+curl http://localhost:3001/api/apple/v1/devices/test123/registrations/pass.me.madna.api
 ```
 
 ---
@@ -212,6 +277,101 @@ ls -la backend/certificates/
 - Verify certificate files exist
 - Check certificate password is correct
 - Review server logs for specific error
+
+### Problem: 401 Unauthorized during device registration
+
+**Symptoms:**
+- Device cannot register for pass updates
+- Logs show: `❌ Invalid authentication token`
+- HTTP 401 response
+
+**Possible causes:**
+- `authenticationToken` in pass doesn't match database
+- Pass was regenerated with new token
+- Token not stored correctly in `wallet_passes` table
+
+**Solution:**
+```bash
+# Check database for pass
+psql -d loyalty_platform_dev -c "SELECT wallet_serial, authentication_token FROM wallet_passes WHERE wallet_serial='SERIAL_HERE';"
+
+# Regenerate pass if token missing
+# The pass will be created with a new authentication token
+```
+
+### Problem: 404 Not Found during device registration
+
+**Symptoms:**
+- POST to `/api/apple/v1/devices/...` returns 404
+- Device shows "Cannot Connect to Server"
+
+**Possible causes:**
+- `webServiceURL` in pass is incorrect
+- Reverse proxy stripping `/api/apple` prefix
+- Server not running or unreachable
+
+**Solution:**
+1. Verify `webServiceURL` in pass JSON:
+   ```json
+   {
+     "webServiceURL": "https://api.madna.me/api/apple"
+   }
+   ```
+
+2. Test endpoint directly:
+   ```bash
+   curl -X POST \
+     -H "Authorization: ApplePass test_token" \
+     https://api.madna.me/api/apple/v1/devices/abc123/registrations/pass.me.madna.api/serial123
+   ```
+
+3. Check server logs for request receipt
+
+4. Verify proxy configuration preserves path:
+   ```nginx
+   # Nginx example - correct
+   location /api/apple {
+     proxy_pass http://backend:3001/api/apple;
+   }
+   
+   # Wrong - strips prefix
+   location /api/apple/ {
+     proxy_pass http://backend:3001/;
+   }
+   ```
+
+### Problem: Pass doesn't auto-update
+
+**Symptoms:**
+- Stamps added but pass doesn't refresh automatically
+- Must manually open/close pass to see updates
+
+**Possible causes:**
+- APNs not configured
+- No push token stored for device
+- Device not registered
+
+**Solution:**
+1. Check APNs configuration in logs:
+   ```
+   ✅ APNs Service initialized successfully
+   ```
+
+2. Verify device registered:
+   ```sql
+   SELECT * FROM device_registrations 
+   WHERE wallet_pass_id IN (
+     SELECT id FROM wallet_passes WHERE wallet_serial='SERIAL_HERE'
+   );
+   ```
+
+3. Check push notifications sent:
+   ```
+   📤 Sending APNs pass update notification...
+   ✅ APNs notification sent successfully
+   ```
+
+4. Enable APNs if not configured (see `docs/APPLE-APNS-CERTIFICATE-SETUP.md`)
 
 **Note:** Server will continue to start even if Apple Wallet certificates fail to load. Google Wallet will still work.
 

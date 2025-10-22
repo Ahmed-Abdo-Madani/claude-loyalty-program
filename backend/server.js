@@ -285,6 +285,27 @@ async function initializeDatabase() {
       // Continue startup even if location service fails
     }
 
+    // Initialize and check APNs service
+    try {
+      const ApnsService = (await import('./services/ApnsService.js')).default
+      const isReady = ApnsService.isReady()
+      
+      if (isReady) {
+        logger.info('✅ APNs Service initialized successfully', {
+          topic: ApnsService.topic || 'N/A',
+          certificateSource: ApnsService.isConfigured ? 'configured' : 'not configured',
+          status: 'READY'
+        })
+      } else {
+        logger.warn('⚠️ APNs Service not configured - push notifications will not be sent')
+        logger.info('   Apple Wallet passes will work but will not auto-update')
+        logger.info('   Set APPLE_PASS_CERTIFICATE_BASE64 or APNS_CERT_PATH to enable')
+      }
+    } catch (error) {
+      logger.warn('⚠️ APNs Service initialization failed:', error.message)
+      // Continue startup even if APNs fails
+    }
+
     // Then start the server
     const server = app.listen(PORT, '0.0.0.0', () => {
       const baseUrl = process.env.NODE_ENV === 'production'

@@ -151,8 +151,10 @@ class WalletPassGenerator {
         relevantText: `${offerData.businessName} nearby - Show your loyalty card!`
       })) : [],
 
-      // Web service for updates
-      webServiceURL: `${this.baseUrl}/api/wallet/passes/`,
+      // Web service for updates - MUST match backend Apple Web Service router mount point
+      // Backend mounts appleWebServiceRoutes at /api/apple with /v1 routes
+      // NOTE: This frontend generator is deprecated - use backend controller instead
+      webServiceURL: `${this.baseUrl}/api/apple`,
       authenticationToken: this.generateAuthToken(customerData.customerId, offerData.offerId),
 
       // Pass relevance

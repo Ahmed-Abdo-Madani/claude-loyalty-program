@@ -310,12 +310,16 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     // Create .pkpass ZIP
     const pkpassBuffer = await appleWalletController.createPkpassZip(passData, manifest, signature, images)
 
-    // Update pass data in database
+    // Update pass data in database with current timestamp
+    const updateTimestamp = new Date()
     await walletPass.updatePassData(passData)
+    
+    // Reload the record to get the updated last_updated_at value
+    await walletPass.reload()
 
-    // Set response headers
+    // Set response headers with correct Last-Modified
     res.setHeader('Content-Type', 'application/vnd.apple.pkpass')
-    res.setHeader('Last-Modified', walletPass.last_updated_at.toUTCString())
+    res.setHeader('Last-Modified', (walletPass.last_updated_at || updateTimestamp).toUTCString())
     res.setHeader('Content-Disposition', `attachment; filename="${walletPass.offer?.title || 'loyalty-card'}.pkpass"`)
     res.setHeader('Content-Length', pkpassBuffer.length)
 

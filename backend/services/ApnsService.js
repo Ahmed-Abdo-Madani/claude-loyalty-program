@@ -37,14 +37,20 @@ class ApnsService {
    */
   initialize() {
     try {
-      // Check if APNs topic is configured
+      // APNs topic MUST equal Pass Type ID for Wallet passes
       const topic = process.env.APNS_TOPIC || process.env.APPLE_PASS_TYPE_ID
-      const certPassword = process.env.APNS_CERT_PASSWORD || process.env.APPLE_PASS_CERTIFICATE_PASSWORD
+      
+      // Support multiple env var names for certificate password
+      const certPassword = process.env.APNS_CERT_PASSWORD || 
+                          process.env.APPLE_PASS_CERTIFICATE_PASSWORD ||
+                          process.env.APPLE_APNS_CERT_PASSWORD
+      
       const isProduction = process.env.APNS_PRODUCTION === 'true'
 
       if (!topic) {
         logger.warn('⚠️ APNs not configured - missing APNS_TOPIC or APPLE_PASS_TYPE_ID')
         logger.info('   APNs push notifications will not be sent')
+        logger.info('   Set APNS_TOPIC equal to your Pass Type ID (e.g., pass.me.madna.api)')
         return
       }
 
@@ -52,16 +58,29 @@ class ApnsService {
       let certSource = ''
 
       // Option 1: Load from environment variable (base64 encoded) - for production/Render
-      // Reuse APPLE_PASS_CERTIFICATE_BASE64 since it's the same certificate
-      if (process.env.APPLE_PASS_CERTIFICATE_BASE64) {
+      // Support multiple env var names for certificate
+      const certBase64 = process.env.APPLE_PASS_CERTIFICATE_BASE64 || 
+                        process.env.APPLE_APNS_CERT_BASE64 ||
+                        process.env.APNS_CERT_BASE64
+      
+      if (certBase64) {
         try {
-          const certBuffer = Buffer.from(process.env.APPLE_PASS_CERTIFICATE_BASE64, 'base64')
+          const certBuffer = Buffer.from(certBase64, 'base64')
           options = {
             pfx: certBuffer,
             passphrase: certPassword || '',
             production: isProduction
           }
-          certSource = 'environment variable (APPLE_PASS_CERTIFICATE_BASE64)'
+          
+          // Determine which env var was used
+          if (process.env.APPLE_PASS_CERTIFICATE_BASE64) {
+            certSource = 'environment variable (APPLE_PASS_CERTIFICATE_BASE64)'
+          } else if (process.env.APPLE_APNS_CERT_BASE64) {
+            certSource = 'environment variable (APPLE_APNS_CERT_BASE64)'
+          } else {
+            certSource = 'environment variable (APNS_CERT_BASE64)'
+          }
+          
           logger.info('✅ APNs certificate loaded from environment variable')
         } catch (error) {
           logger.error('❌ Failed to decode APNs certificate from environment variable:', error.message)
@@ -69,28 +88,34 @@ class ApnsService {
         }
       }
       // Option 2: Load from file path - for local development
-      else if (process.env.APNS_CERT_PATH) {
-        const certPath = process.env.APNS_CERT_PATH
-        const fullCertPath = path.resolve(path.join(__dirname, '..', certPath))
+      else {
+        const certPath = process.env.APNS_CERT_PATH || 
+                        process.env.APPLE_APNS_CERT_PATH ||
+                        process.env.APPLE_PASS_CERTIFICATE_PATH
+        
+        if (certPath) {
+          const fullCertPath = path.resolve(path.join(__dirname, '..', certPath))
 
-        if (fs.existsSync(fullCertPath)) {
-          options = {
-            pfx: fs.readFileSync(fullCertPath),
-            passphrase: certPassword || '',
-            production: isProduction
+          if (fs.existsSync(fullCertPath)) {
+            options = {
+              pfx: fs.readFileSync(fullCertPath),
+              passphrase: certPassword || '',
+              production: isProduction
+            }
+            certSource = `file (${certPath})`
+            logger.info('✅ APNs certificate loaded from file')
+          } else {
+            logger.warn(`⚠️ APNs certificate not found at: ${fullCertPath}`)
+            logger.info('   APNs push notifications will not be sent')
+            return
           }
-          certSource = `file (${fullCertPath})`
-          logger.info('✅ APNs certificate loaded from file')
         } else {
-          logger.warn(`⚠️ APNs certificate not found at: ${fullCertPath}`)
+          logger.warn('⚠️ APNs certificate not configured')
+          logger.info('   Set one of: APPLE_PASS_CERTIFICATE_BASE64, APPLE_APNS_CERT_BASE64, APNS_CERT_BASE64 (production)')
+          logger.info('   Or: APNS_CERT_PATH, APPLE_APNS_CERT_PATH, APPLE_PASS_CERTIFICATE_PATH (local)')
           logger.info('   APNs push notifications will not be sent')
           return
         }
-      } else {
-        logger.warn('⚠️ APNs certificate not configured')
-        logger.info('   Set APPLE_PASS_CERTIFICATE_BASE64 (production) or APNS_CERT_PATH (local)')
-        logger.info('   APNs push notifications will not be sent')
-        return
       }
 
       // Initialize APNs provider
@@ -101,7 +126,16 @@ class ApnsService {
       logger.info('✅ APNs service initialized successfully', {
         topic,
         production: isProduction,
-        certificateSource: certSource
+        certificateSource: certSource,
+        environment: isProduction ? 'PRODUCTION' : 'SANDBOX'
+      })
+      
+      // Health log at startup
+      logger.info('🍎 APNs Configuration:', {
+        topic: `${topic} (MUST match Pass Type ID)`,
+        environment: isProduction ? 'PRODUCTION' : 'SANDBOX',
+        certificateType: certSource,
+        status: 'READY'
       })
 
     } catch (error) {
@@ -148,14 +182,16 @@ class ApnsService {
       // IMPORTANT: Apple Wallet requires EMPTY payload for pass updates
       // The device will fetch the updated pass from webServiceURL
       const notification = new apn.Notification()
-      notification.topic = this.topic
+      notification.topic = this.topic // Must equal Pass Type ID
       notification.payload = {} // Empty payload is required!
       notification.pushType = 'background' // Background update
       notification.priority = 5 // APNs priority (5 = normal, 10 = immediate)
 
       logger.info('📤 Sending APNs pass update notification...', {
         pushToken: pushToken.substring(0, 16) + '...',
-        topic: this.topic
+        topic: this.topic,
+        expectedTopic: process.env.APPLE_PASS_TYPE_ID,
+        topicMatch: this.topic === process.env.APPLE_PASS_TYPE_ID
       })
 
       // Send notification

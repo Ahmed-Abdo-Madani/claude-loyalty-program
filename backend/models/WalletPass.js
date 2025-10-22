@@ -286,9 +286,9 @@ WalletPass.prototype.sendPushNotification = async function() {
     }
 
     // Get all registered devices for this pass
-    const devices = await DeviceRegistration.getDevicesForPass(this.id)
+    const registrations = await DeviceRegistration.getDevicesForPass(this.id)
 
-    if (!devices || devices.length === 0) {
+    if (!registrations || registrations.length === 0) {
       return {
         success: true,
         message: 'No registered devices',
@@ -297,15 +297,18 @@ WalletPass.prototype.sendPushNotification = async function() {
       }
     }
 
-    // Extract push tokens
-    const pushTokens = devices.map(device => device.push_token).filter(token => !!token)
+    // Extract push tokens from device associations
+    const pushTokens = registrations
+      .map(reg => reg.device?.push_token)
+      .filter(token => !!token)
 
     if (pushTokens.length === 0) {
       return {
         success: false,
         error: 'No valid push tokens found',
         sent: 0,
-        failed: 0
+        failed: 0,
+        totalRegistrations: registrations.length
       }
     }
 

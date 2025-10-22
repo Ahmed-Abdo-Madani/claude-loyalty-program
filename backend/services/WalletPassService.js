@@ -48,6 +48,7 @@ class WalletPassService {
 
       // Create wallet pass
       logger.info(`🆕 Creating new wallet pass record in database...`)
+      const now = new Date()
       const walletPass = await WalletPass.create({
         customer_id: customerId,
         progress_id: progress.id,
@@ -60,7 +61,8 @@ class WalletPassService {
         device_info: metadata.device_info || {},
         // Apple Web Service Protocol fields
         authentication_token: metadata.authentication_token || null,
-        last_updated_tag: walletType === 'apple' ? Math.floor(Date.now() / 1000).toString() : null,
+        last_updated_tag: walletType === 'apple' ? Math.floor(now.getTime() / 1000).toString() : null,
+        last_updated_at: walletType === 'apple' ? now : null, // Initialize on first generation
         pass_data_json: metadata.pass_data_json || null
       })
 

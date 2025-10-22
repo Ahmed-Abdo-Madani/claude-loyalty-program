@@ -282,7 +282,80 @@ node backend/test-apns.js
 
 ---
 
-## 📚 Official Documentation
+## � Production Environment Configuration
+
+### Critical: APNs for Wallet Passes
+
+**IMPORTANT**: Apple Wallet passes **MUST** use production APNs, even during development and testing.
+
+```env
+# REQUIRED: Set to true for Wallet passes
+APNS_PRODUCTION=true
+
+# Topic MUST equal Pass Type ID
+APNS_TOPIC=pass.me.madna.api
+APPLE_PASS_TYPE_ID=pass.me.madna.api
+```
+
+### Why Production-Only?
+
+1. **Apple Wallet Requirement**: Sandbox APNs doesn't work with Wallet passes
+2. **Same Certificate**: Your Pass Type ID certificate is already a production certificate
+3. **No Separation**: Unlike app notifications, Wallet notifications don't have dev/prod split
+
+### Environment Variables Checklist
+
+```env
+# Base Configuration
+BASE_URL=https://api.madna.me
+NODE_ENV=production
+
+# Pass Type ID (for signing)
+APPLE_PASS_TYPE_ID=pass.me.madna.api
+APPLE_TEAM_ID=NFQ6M7TFY2
+APPLE_PASS_CERTIFICATE_PATH=./certificates/pass.p12
+APPLE_PASS_CERTIFICATE_PASSWORD=YourPassword
+APPLE_WWDR_CERTIFICATE_PATH=./certificates/AppleWWDRCAG4.pem
+
+# APNs Configuration (MUST match above)
+APNS_TOPIC=pass.me.madna.api
+APNS_CERT_PATH=./certificates/pass.p12
+APNS_CERT_PASSWORD=YourPassword
+APNS_PRODUCTION=true  # ← CRITICAL: Must be true!
+```
+
+### Verification at Startup
+
+When your server starts, look for these logs:
+
+```
+✅ APNs service initialized successfully
+🍎 APNs Configuration:
+   topic: pass.me.madna.api (MUST match Pass Type ID)
+   environment: PRODUCTION
+   certificateType: file (./certificates/pass.p12)
+   status: READY
+```
+
+### Health Check Endpoint
+
+Add this to verify configuration:
+
+```bash
+# Check APNs is configured correctly
+curl https://api.madna.me/health | jq .apns
+
+# Expected response:
+{
+  "configured": true,
+  "environment": "PRODUCTION",
+  "topic": "pass.me.madna.api"
+}
+```
+
+---
+
+## �📚 Official Documentation
 
 - APNs Provider API: https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/establishing_a_certificate-based_connection_to_apns
 - Wallet Push Notifications: https://developer.apple.com/documentation/walletpasses/adding_a_web_service_to_update_passes
