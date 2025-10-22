@@ -16,11 +16,13 @@ import logger from './config/logger.js'
 const MIGRATIONS = {
   'customer-name-fields': './migrations/20250113-add-customer-name-fields.js',
   'wallet-notification-tracking': './migrations/20250114-add-wallet-notification-tracking.js',
-  'stamp-display-type': './migrations/20250119-add-stamp-display-type.js'
+  'stamp-display-type': './migrations/20250119-add-stamp-display-type.js',
+  'apple-web-service-tables': './migrations/20250120-add-apple-web-service-tables.js',
+  'manifest-etag': './migrations/20250122-add-manifest-etag-to-wallet-passes.js'
 }
 
 // Default migration (latest)
-const DEFAULT_MIGRATION = 'stamp-display-type'
+const DEFAULT_MIGRATION = 'manifest-etag'
 
 async function runMigration() {
   // Parse command line arguments
