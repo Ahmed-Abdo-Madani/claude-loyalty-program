@@ -432,11 +432,13 @@ class AppleWalletController {
     // ============ APPLE WEB SERVICE PROTOCOL ============
     // Add webServiceURL and authenticationToken for dynamic pass updates
     // This enables device registration and push notifications
+    // Apple expects the full base path to PassKit endpoints
     const baseUrl = process.env.NODE_ENV === 'production'
       ? 'https://api.madna.me'
       : process.env.BASE_URL || 'http://localhost:3001'
 
-    passData.webServiceURL = baseUrl
+    // Full path to Apple Web Service endpoints (mounted at /api/apple with /v1 routes)
+    passData.webServiceURL = `${baseUrl}/api/apple`
     // Use existing auth token if provided (for updates), otherwise generate new one
     passData.authenticationToken = existingAuthToken || this.generateAuthToken(customerData.customerId, serialNumber)
 
