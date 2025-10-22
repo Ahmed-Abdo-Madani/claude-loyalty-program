@@ -166,7 +166,7 @@ DeviceRegistration.getDevicesForPass = async function(walletPassId) {
     include: [{
       model: sequelize.models.Device,
       as: 'device',
-      attributes: ['id', 'push_token', 'device_library_id', 'platform'] // Include push_token
+      attributes: ['id', 'push_token', 'device_library_identifier', 'device_info', 'last_seen_at']
     }],
     order: [['registered_at', 'DESC']]
   })
