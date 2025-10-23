@@ -12,9 +12,9 @@ A cost-effective and scalable loyalty program management platform designed for b
 - 🏪 **Multi-location support** - Manage multiple branches
 
 ### **For Customers**
-- 📱 **Mobile wallet integration** - Apple Wallet & Google Pay
+- 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with emoji stamp visualization
 - 🔍 **QR code scanning** - Instant program enrollment
-- ⭐ **Progress tracking** - Visual stamp/point collection
+- ⭐ **Progress tracking** - Visual stamp/point collection (⭐, ☕, 🍕, etc.)
 - 🎁 **Automatic rewards** - Seamless redemption process
 - 📧 **Smart notifications** - Birthday offers & reminders
 
@@ -68,6 +68,7 @@ claude-loyalty-program/
 - Node.js 18+
 - npm or yarn
 - Git
+- Docker (for production deployment with emoji font support)
 
 ### **Installation**
 
@@ -207,12 +208,25 @@ npm run build
 vercel --prod
 ```
 
-### **Backend (Railway/Render)**
+### **Backend (Render with Docker)**
+The backend uses **Docker deployment** to ensure reliable emoji font support for Apple Wallet stamp images.
+
 ```bash
 # Deploy API server
 git push origin main
-# Auto-deploys via webhook
+# Auto-deploys via webhook with Docker build
 ```
+
+**Key Features:**
+- Docker-based deployment (see `backend/Dockerfile`)
+- System-level emoji fonts (`fonts-noto-color-emoji`)
+- Ensures consistent emoji rendering in Apple Wallet passes
+- First deployment: 5-10 minutes (Docker build)
+- Subsequent deployments: 2-3 minutes (cached layers)
+
+**Note:** The `render.yaml` configuration uses `env: docker` instead of native Node.js runtime to install required system fonts for emoji stamp visualization.
+
+For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### **Database (PostgreSQL)**
 ```bash

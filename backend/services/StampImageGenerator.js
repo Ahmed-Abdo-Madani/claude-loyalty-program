@@ -380,7 +380,7 @@ class StampImageGenerator {
             font-size="${emojiSize}"
             fill="${foregroundColor}"
             opacity="${iconOpacity}"
-            font-family="Noto Emoji, Apple Color Emoji, Segoe UI Emoji, monospace, sans-serif"
+            font-family="Noto Color Emoji, Noto Emoji, Apple Color Emoji, Segoe UI Emoji, monospace, sans-serif"
             filter="url(#stampShadow)"
             text-anchor="middle"
             dominant-baseline="central"

@@ -22,8 +22,11 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 // Configure custom font path for Sharp/librsvg emoji rendering
-// This allows Noto-COLRv1.ttf (vector emoji) to be used for Apple Wallet stamp icons
-process.env.FONTCONFIG_PATH = path.join(__dirname, 'fonts')
+// Docker deployment: Uses system-installed Noto Color Emoji fonts (/etc/fonts)
+// Local development: Uses custom fonts.conf from ./fonts directory
+if (!process.env.FONTCONFIG_PATH) {
+  process.env.FONTCONFIG_PATH = path.join(__dirname, 'fonts')
+}
 
 dotenv.config()
 

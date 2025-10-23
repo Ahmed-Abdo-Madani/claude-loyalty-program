@@ -62,11 +62,13 @@ node deploy-database.js
 3. Connect your GitHub repository
 4. Configure:
    - **Name**: `madna-loyalty-backend`
-   - **Environment**: Node
+   - **Environment**: Docker (uses `backend/Dockerfile`)
    - **Root Directory**: `backend`
-   - **Build Command**: `npm install`
+   - **Dockerfile Path**: `./backend/Dockerfile`
    - **Start Command**: `npm start`
    - **Plan**: Starter ($7/month)
+
+**Note**: The service uses Docker deployment (not native Node.js) to ensure reliable system font installation for emoji rendering in Apple Wallet passes.
 
 ### Step 2: Environment Variables
 
@@ -86,13 +88,55 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.co
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 GOOGLE_PROJECT_ID=your-google-cloud-project
 
+# Font Configuration (automatically set by Docker)
+FONTCONFIG_PATH=/etc/fonts
+
 # Email (future)
 SENDGRID_API_KEY=your-sendgrid-key
 ```
 
-**Note**: `FRONTEND_URL` is used for generating customer-facing URLs in test endpoints and notifications.
+**Notes**:
+- `FRONTEND_URL` is used for generating customer-facing URLs in test endpoints and notifications.
+- `FONTCONFIG_PATH` is automatically set to `/etc/fonts` in Docker deployment for system font support. Local development uses `backend/fonts/fonts.conf`.
 
-### Step 3: Custom Domain
+### Step 3: Font Configuration for Emoji Rendering
+
+Apple Wallet stamp images require emoji font support for rendering stamp icons (⭐, ☕, 🍕, etc.).
+
+**Production Setup (Docker)**:
+- The backend uses **Docker deployment** to install system fonts
+- `fonts-noto-color-emoji` package is installed in the Docker image
+- Sharp image processing library uses librsvg which requires fontconfig
+- Emoji stamps are rendered as SVG text and converted to PNG
+
+**How It Works**:
+1. `render.yaml` specifies `env: docker` and references `backend/Dockerfile`
+2. Docker build installs `fonts-noto-color-emoji`, `fontconfig`, and `librsvg2-2`
+3. Font cache is rebuilt with `fc-cache -fv`
+4. `FONTCONFIG_PATH` is set to `/etc/fonts` to use system fonts
+5. First deployment takes 5-10 minutes due to Docker image build
+6. Subsequent deployments are faster (2-3 minutes) due to layer caching
+
+**Verification**:
+After deployment, verify fonts are installed correctly:
+```bash
+# SSH into Render container (if available)
+fc-list | grep -i emoji
+# Should show: Noto Color Emoji fonts
+
+# Test stamp generation endpoint
+curl https://api.madna.me/api/card-design/preview/stamp
+```
+
+**Alternative Deployment (Fallback)**:
+If Docker is not available, you can use native Node.js runtime with bundled fonts:
+1. Download Noto Color Emoji font files from Google Fonts
+2. Place them in `backend/fonts/` directory
+3. Commit font files to repository
+4. Update `render.yaml` to use `env: node`
+5. Note: This approach requires manual font updates
+
+### Step 4: Custom Domain
 
 1. In Render service settings, go to "Custom Domains"
 2. Add `api.madna.me`
@@ -243,6 +287,14 @@ Expected response:
 4. **SSL Certificate Issues**
    - Allow 24-48 hours for propagation
    - Check DNS configuration
+
+5. **Emoji Stamps Not Showing in Wallet Passes**
+   - **Verify Docker Deployment**: Check Render dashboard to ensure service is using Docker (not native Node.js)
+   - **Check Build Logs**: Look for successful font installation (`fonts-noto-color-emoji` package)
+   - **Verify Font Installation**: SSH into container and run `fc-list | grep -i emoji`
+   - **Check fonts.conf**: Ensure `backend/fonts/fonts.conf` points to `/usr/share/fonts`
+   - **Test Stamp Generation**: Use the stamp preview endpoint directly to verify rendering
+   - **Environment Variable**: Confirm `FONTCONFIG_PATH` is not overridden incorrectly
 
 ### Support Contacts
 - **Platform**: customer_support@madna.me

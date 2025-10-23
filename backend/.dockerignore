@@ -1,0 +1,51 @@
+# Dependencies (will be installed via npm ci)
+node_modules
+
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Environment files (secrets come from Render environment variables)
+.env
+.env.*
+
+# Test files
+test
+__tests__
+*.test.js
+*.spec.js
+coverage
+.nyc_output
+
+# Log files
+*.log
+logs
+
+# Temporary files
+_tmp_pkpass/*
+
+# Development tools
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist
+build
+
+# Uploads (production uses persistent disk)
+uploads/*
+
+# Keep necessary files
+!fonts/fonts.conf
+!data/*.json

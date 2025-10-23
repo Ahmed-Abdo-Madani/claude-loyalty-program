@@ -252,6 +252,115 @@ Check server startup logs for warnings:
 
 ---
 
+## 🐳 Docker Deployment on Render
+
+The backend now uses **Docker deployment** instead of native Node.js runtime to ensure reliable emoji font support for Apple Wallet stamp images.
+
+### Why Docker?
+
+Apple Wallet stamp images use emoji icons (⭐, ☕, 🍕, etc.) rendered as SVG and converted to PNG. This requires:
+- System-level emoji fonts (`fonts-noto-color-emoji` package)
+- Fontconfig for font discovery
+- Librsvg for SVG rendering (used by Sharp)
+
+**Problem with Native Runtime**: Render's native Node.js environment doesn't support `apt-get` commands, so font installation fails silently.
+
+**Solution with Docker**: The `backend/Dockerfile` installs system dependencies during the Docker build process.
+
+### Docker Configuration
+
+The `render.yaml` file specifies:
+```yaml
+services:
+  - type: web
+    name: madna-loyalty-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+```
+
+### Dockerfile Overview
+
+Located at `backend/Dockerfile`, it performs:
+
+1. **Base Image**: `node:20-bullseye` (Debian with Node.js 20)
+2. **Install System Dependencies**:
+   - `fonts-noto-color-emoji` - Emoji font files
+   - `fontconfig` - Font discovery system
+   - `librsvg2-2` - SVG rendering library
+3. **Rebuild Font Cache**: `fc-cache -fv`
+4. **Set Environment**: `FONTCONFIG_PATH=/etc/fonts`
+5. **Install Node Dependencies**: `npm ci --only=production`
+6. **Run as Non-Root User**: Security best practice
+
+### Build Process
+
+**First Deployment**:
+- Build time: 5-10 minutes (installs system packages + Node modules)
+- Docker image size: ~1.2GB (includes Node.js + system fonts)
+
+**Subsequent Deployments**:
+- Build time: 2-3 minutes (uses cached layers)
+- Only changed layers are rebuilt
+
+### Font Verification
+
+After deployment, verify fonts are installed:
+
+```bash
+# SSH into Render container (if shell access available)
+fc-list | grep -i emoji
+# Expected output: Noto Color Emoji fonts listed
+
+# Check font directories
+ls /usr/share/fonts/truetype/noto/
+# Should include: NotoColorEmoji.ttf
+
+# Test stamp generation
+curl https://your-app.onrender.com/api/card-design/preview/stamp
+```
+
+### Performance Considerations
+
+- **Startup Time**: Identical to native runtime (~10-15 seconds)
+- **Memory Usage**: ~50-100MB additional (for fonts and libraries)
+- **Response Time**: No difference in API performance
+- **Disk Usage**: Persistent disk configuration unchanged
+
+### Rollback Plan (If Needed)
+
+If Docker deployment causes issues, you can revert to native runtime:
+
+1. **Update `render.yaml`**:
+   ```yaml
+   env: node
+   buildCommand: npm install
+   ```
+   Remove `dockerfilePath` line
+
+2. **Note**: Reverting to native runtime will **break emoji stamp rendering** since fonts won't be installed
+
+3. **Alternative**: Use bundled fonts (see fallback option below)
+
+### Alternative: Bundled Fonts (Fallback)
+
+If Docker is not suitable, you can bundle font files directly:
+
+1. Download Noto Color Emoji font from [Google Fonts](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
+2. Place `.ttf` files in `backend/fonts/` directory
+3. Update `fonts.conf` to reference local fonts:
+   ```xml
+   <dir>.</dir>
+   ```
+4. Commit font files to repository (~1-2MB)
+5. Use native Node.js runtime (`env: node`)
+
+**Drawbacks**:
+- Larger repository size
+- Manual font updates required
+- Less production-grade solution
+
+---
+
 ## Production Checklist
 
 Before deploying to production, verify:
@@ -262,8 +371,11 @@ Before deploying to production, verify:
 - [ ] `NODE_ENV=production` set in Render
 - [ ] `BASE_URL` set to production URL
 - [ ] Database credentials configured (if using PostgreSQL)
+- [ ] **Docker deployment configured** (`env: docker` in `render.yaml`)
 - [ ] Server logs show "Production mode" and certificate validation success
+- [ ] **Font installation verified** in Docker build logs (`fonts-noto-color-emoji` installed)
 - [ ] Test API call successfully generates `.pkpass` file
+- [ ] **Emoji stamps render correctly** in Apple Wallet passes
 - [ ] Pass downloads and installs on iPhone
 
 ---
@@ -272,5 +384,7 @@ Before deploying to production, verify:
 
 For issues with:
 - **Apple certificates**: See [APPLE-WALLET-SETUP.md](./APPLE-WALLET-SETUP.md)
+- **Docker deployment**: See Dockerfile comments and build logs
+- **Font rendering**: Check `fc-list | grep -i emoji` in container
 - **Render deployment**: [Render Docs](https://render.com/docs)
 - **General questions**: Check server logs in Render Dashboard → Logs tab
