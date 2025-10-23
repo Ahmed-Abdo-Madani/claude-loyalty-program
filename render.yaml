@@ -41,4 +41,4 @@ databases:
   - name: madna-loyalty-db
     databaseName: madna_loyalty_platform
     user: madna_admin
-    plan: starter
+    plan: Basic-256mb
