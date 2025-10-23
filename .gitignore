@@ -68,7 +68,7 @@ wireframes-*.md
 SCALABILITY-ROADMAP.md
 
 # Production deployment files (keep local)
-render.yaml
+# render.yaml - COMMENTED OUT: Now using Blueprint deployment (render.yaml must be committed)
 .env.production
 deployment/
 
