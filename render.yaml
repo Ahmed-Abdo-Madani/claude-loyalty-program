@@ -2,8 +2,8 @@ services:
   - type: web
     name: madna-loyalty-backend-docker
     env: docker
-    rootDirectory: backend
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: starter
     # startCommand removed - Docker runtime uses CMD from Dockerfile
 
