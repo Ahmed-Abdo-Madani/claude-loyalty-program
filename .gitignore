@@ -21,8 +21,8 @@ google-credentials.json
 google wallet creds.md
 credentials/
 
-# Allow package.json but exclude other JSON files that might contain secrets
-package-lock.json
+# Allow package.json and package-lock.json (lock files must be committed per npm best practices)
+# package-lock.json - REMOVED: Lock files are required for reproducible builds
 
 # Wallet pass files (generated/test files)
 *.pkpass
