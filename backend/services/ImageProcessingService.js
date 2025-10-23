@@ -155,7 +155,7 @@ class ImageProcessingService {
 
       return {
         path: outputPath,
-        url: `${this.baseUrl}/uploads/designs/processed/${filename}`,
+        url: `${this.baseUrl}/designs/processed/${filename}`,
         size: stats.size,
         dimensions: { width: 660, height: 660 }
       }
@@ -204,7 +204,7 @@ class ImageProcessingService {
 
       return {
         path: outputPath,
-        url: `${this.baseUrl}/uploads/designs/processed/${filename}`,
+        url: `${this.baseUrl}/designs/processed/${filename}`,
         size: stats.size,
         dimensions: { width: 320, height: 100 }
       }
@@ -254,7 +254,7 @@ class ImageProcessingService {
 
       return {
         path: outputPath,
-        url: `${this.baseUrl}/uploads/designs/processed/${filename}`,
+        url: `${this.baseUrl}/designs/processed/${filename}`,
         size: stats.size,
         dimensions: { width: 1032, height: 336 }
       }
@@ -293,7 +293,7 @@ class ImageProcessingService {
       return {
         original: {
           path: originalPath,
-          url: `${this.baseUrl}/uploads/designs/logos/${originalFile}`,
+          url: `${this.baseUrl}/designs/logos/${originalFile}`,
           size: originalStats.size
         },
         google: googleLogo,
