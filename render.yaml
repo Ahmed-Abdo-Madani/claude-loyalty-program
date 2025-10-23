@@ -4,7 +4,7 @@ services:
     env: docker
     dockerfilePath: ./backend/Dockerfile
     plan: starter
-    startCommand: npm start
+    # startCommand removed - Docker runtime uses CMD from Dockerfile
 
     # Persistent disk for upload storage (prevents file loss on redeploy)
     disk:
