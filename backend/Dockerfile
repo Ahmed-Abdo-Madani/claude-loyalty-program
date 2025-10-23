@@ -31,6 +31,10 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
+# Create directories and set ownership for node user
+RUN mkdir -p logs _tmp_pkpass && \
+    chown -R node:node /app
+
 # Use non-root user for security
 USER node
 
