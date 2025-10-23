@@ -5,6 +5,13 @@ services:
     plan: starter
     buildCommand: apt-get update && apt-get install -y fonts-noto-color-emoji && npm install
     startCommand: npm start
+
+    # Persistent disk for upload storage (prevents file loss on redeploy)
+    disk:
+      name: madna-uploads-disk
+      mountPath: /opt/render/project/src/backend/uploads
+      sizeGB: 1
+
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,6 +19,11 @@ services:
         fromDatabase:
           name: madna-loyalty-db
           property: connectionString
+      # Upload storage environment variables
+      - key: UPLOADS_DIR
+        value: /opt/render/project/src/backend/uploads
+      - key: UPLOADS_BASE_URL
+        value: https://api.madna.me/uploads
       - key: JWT_SECRET
         generateValue: true
       - key: SESSION_SECRET

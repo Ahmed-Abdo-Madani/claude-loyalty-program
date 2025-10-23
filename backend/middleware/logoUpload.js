@@ -3,7 +3,10 @@ import path from 'path'
 import fs from 'fs'
 
 // Ensure uploads directory exists
-const uploadsDir = './uploads/logos'
+// Production: Uses UPLOADS_DIR env var pointing to persistent disk mount
+// Development: Falls back to ./uploads directory
+const uploadsRoot = process.env.UPLOADS_DIR || './uploads'
+const uploadsDir = path.join(uploadsRoot, 'logos')
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true })
 }

@@ -15,14 +15,18 @@ import crypto from 'crypto'
  */
 class ImageProcessingService {
   constructor() {
-    // Upload directories
-    this.uploadDir = path.join(process.cwd(), 'uploads', 'designs')
+    // Upload directories - Support for persistent disk storage
+    // Production: Uses UPLOADS_DIR env var pointing to persistent disk mount
+    // Development: Falls back to ./uploads directory
+    const uploadsRoot = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
+    this.uploadDir = path.join(uploadsRoot, 'designs')
     this.logoDir = path.join(this.uploadDir, 'logos')
     this.heroDir = path.join(this.uploadDir, 'heroes')
     this.processedDir = path.join(this.uploadDir, 'processed')
 
     // Base URL for absolute image URLs (Phase 4: Wallet Integration Fix)
-    this.baseUrl = process.env.BASE_URL || 'http://localhost:3001'
+    // UPLOADS_BASE_URL takes precedence to support CDN or separate upload domain
+    this.baseUrl = process.env.UPLOADS_BASE_URL || process.env.BASE_URL || 'http://localhost:3001'
 
     // Ensure directories exist
     this.initializeDirectories()

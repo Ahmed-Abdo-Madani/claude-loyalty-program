@@ -178,8 +178,16 @@ app.use((req, res, next) => {
 })
 
 // Static file serving for images
+// Production: Uses UPLOADS_DIR env var pointing to persistent disk mount
+// Development: Falls back to ./uploads directory
+const uploadsPath = process.env.UPLOADS_DIR || './uploads'
 app.use('/static', express.static('public'))
-app.use('/uploads', express.static('uploads'))
+app.use('/uploads', express.static(uploadsPath))
+
+// Warn if uploads are ephemeral in production
+if (!process.env.UPLOADS_DIR && process.env.NODE_ENV === 'production') {
+  logger.warn('⚠️ UPLOADS_DIR not set in production - uploads will be ephemeral and lost on redeploy!')
+}
 
 // API Routes
 app.use('/api/wallet', walletRoutes)
