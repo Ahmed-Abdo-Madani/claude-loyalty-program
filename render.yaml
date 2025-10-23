@@ -5,6 +5,7 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: starter
+    region: frankfurt
     # startCommand removed - Docker runtime uses CMD from Dockerfile
 
     # Persistent disk for upload storage (prevents file loss on redeploy)
@@ -43,3 +44,4 @@ databases:
     databaseName: madna_loyalty_platform
     user: madna_admin
     plan: Basic-256mb
+    region: frankfurt
