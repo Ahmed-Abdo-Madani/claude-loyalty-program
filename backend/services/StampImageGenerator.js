@@ -616,7 +616,7 @@ class StampImageGenerator {
         const circleCenterY = layout.startY + row * (layout.stampSize + layout.spacing) + circleRadius
 
         // Calculate emoji size (slightly smaller than circle for proper fit)
-        const emojiSize = layout.stampSize * 0.7  // Emoji at 70% of stamp size
+        const emojiSize = layout.stampSize * 0.8  // Emoji at 80% of stamp size
 
         stamps.push(`
           <!-- Circular background with stroke -->
@@ -627,14 +627,15 @@ class StampImageGenerator {
             fill="${backgroundColor}"
             fill-opacity="0.8"
             stroke="${foregroundColor}"
-            stroke-width="3"
+            stroke-width="1"
           />
           <!-- Stamp emoji - CENTERED in circle (with visual adjustment) -->
           <text
             x="${circleCenterX}"
-            y="${circleCenterY + (emojiSize * 0.3)}"
+            y="${circleCenterY + (emojiSize * 0.35)}"
             font-size="${emojiSize}"
             opacity="${iconOpacity}"
+            fill="${foregroundColor}"
             font-family="Noto Color Emoji, Noto Emoji, Apple Color Emoji, Segoe UI Emoji, monospace, sans-serif"
             filter="url(#stampShadow)"
             text-anchor="middle"
