@@ -38,6 +38,53 @@
 - ✅ Fetches actual stamps from `customer_progress` table when progressData missing
 - ✅ Ensures real stamp count is always displayed (no more hardcoded "0 of 10")
 
+## ✅ Completed Enhancements
+
+### 8. Layout Algorithm Refinement (Completed)
+
+**Improvements Made:**
+- ✅ Added comprehensive bounds checking to prevent stamp overflow
+- ✅ Implemented `validateGridBounds()` method with 10px safety margins
+- ✅ Enhanced `calculateOptimalGrid()` with aspect-ratio-aware calculations
+  - Target aspect ratio: ~3.71:1 (matches 624:168 image ratio)
+  - Optimized grid selection for 1-100+ stamps
+  - Graceful degradation for extreme counts
+- ✅ Refined fill ratios for optimal visual appearance across all stamp counts:
+  - 1-4 stamps: 75% (prevents oversized appearance)
+  - 5-8 stamps: 85% (good balance)
+  - 9-15 stamps: 90% (maximize space usage)
+  - 16-25 stamps: 80% (maintain readability)
+  - 26-35 stamps: 70% (prioritize fitting)
+  - 36+ stamps: 65% (ensure all stamps fit)
+- ✅ Added fallback strategy for edge cases (40+ stamps)
+  - Iteratively reduces stamp size if bounds exceeded (max 3 iterations)
+  - Logs warnings for large stamp counts
+  - Uses minimum safe size as last resort
+- ✅ Improved documentation with algorithm rationale and design principles
+  - Added comprehensive JSDoc comments
+  - Documented constraints and edge cases
+  - Explained visual design rationale
+- ✅ Created comprehensive unit tests (`test/StampImageGenerator.test.js`)
+  - 50+ test cases covering all scenarios
+  - Validates grid calculations, bounds checking, and layout properties
+  - Tests edge cases (0, 1, 100+ stamps)
+  - Uses Node.js built-in assert module (no external dependencies)
+- ✅ Tested with stamp counts from 1 to 100+ to ensure scalability
+
+**Files Modified:**
+- `backend/services/StampImageGenerator.js` - Enhanced layout algorithm
+- `backend/test/StampImageGenerator.test.js` - Created comprehensive unit tests
+- `backend/package.json` - Updated test script
+
+**Benefits:**
+- No more stamp overflow issues
+- Better visual appearance across all stamp counts
+- Handles extreme cases gracefully (1 stamp, 100+ stamps)
+- Improved maintainability with comprehensive documentation
+- Verified correctness with automated tests
+
+---
+
 ## 🚧 Remaining Tasks
 
 ### 7. Logo Stamp Support (Future Enhancement)
@@ -167,6 +214,27 @@ npm start
 - [ ] Verify Docker deployment is active on Render dashboard
 - [ ] Check build logs for successful font installation
 
+### Step 6: Run Unit Tests
+
+**Run layout calculation tests:**
+```bash
+# Run unit tests from backend directory
+cd backend
+npm test
+
+# Expected output:
+# ✅ All tests passed (50+ test cases)
+# ✅ Bounds validation working correctly
+# ✅ Grid calculations optimized for all stamp counts
+```
+
+**Test Results Should Show:**
+- All grid calculation tests passing (1-100+ stamps)
+- Bounds validation tests passing
+- Layout integration tests passing
+- Fill ratio tests passing
+- Edge case stress tests passing
+
 ---
 
 ## 📊 Expected vs Actual
@@ -197,9 +265,14 @@ npm start
    - Customer must re-download pass to see new progress
    - Requires `webServiceURL` implementation for live updates
 
-3. **Maximum 20 Stamps Display**
-   - Offers with >20 stamps will show first 20 only
-   - Can be increased but may affect readability
+3. **~~Maximum 20 Stamps Display~~ (RESOLVED)**
+   - ~~Offers with >20 stamps will show first 20 only~~
+   - ~~Can be increased but may affect readability~~
+   - ✅ **Fixed**: Layout algorithm now handles 1-100+ stamps gracefully
+   - ✅ Automatic sizing and grid optimization for any stamp count
+   - ✅ Bounds checking ensures stamps never overflow 624x168px image
+   - ✅ Tested with 1-100+ stamp counts
+   - ⚠️ Note: Offers with 40+ stamps will have smaller stamps but remain readable
 
 4. **~~SVG Text Rendering~~ (RESOLVED)**
    - ~~Emoji rendering depends on system fonts~~
@@ -226,11 +299,14 @@ node backend/scripts/apply-stamp-visualization-fix.js
 ### Created:
 - `backend/migrations/007-add-stamp-display-type.js`
 - `backend/services/StampImageGenerator.js`
+- `backend/test/StampImageGenerator.test.js` (unit tests for layout calculations)
 - `IMPLEMENTATION-STATUS-STAMP-VISUALIZATION.md` (this file)
 
 ### Modified:
 - `backend/models/OfferCardDesign.js` (added stamp_display_type field)
 - `backend/controllers/appleWalletController.js` (removed backFields, integrated StampImageGenerator, added progress data fallback)
+- `backend/services/StampImageGenerator.js` (enhanced layout algorithm with bounds checking and refined fill ratios)
+- `backend/package.json` (updated test script)
 
 ---
 
@@ -249,10 +325,14 @@ node backend/scripts/apply-stamp-visualization-fix.js
 
 ---
 
-**Status:** 100% Complete ✅
-**Implementation:** COMPLETE (including Docker font configuration)
+**Status:** 100% Complete + Enhanced ✅
+**Latest Enhancement:** Layout algorithm refined with bounds checking and unit tests
+**Implementation:** COMPLETE (including Docker font configuration and algorithm refinements)
 **Testing:** READY FOR PRODUCTION
 **Blocking Issues:** None
-**Ready for Production:** YES - Font issue resolved via Docker deployment
-**Notes:** Emoji stamps will now render correctly in production with Noto Color Emoji fonts installed via Docker
+**Ready for Production:** YES - Font issue resolved via Docker deployment, layout algorithm validated with 50+ unit tests
+**Notes:**
+- Emoji stamps render correctly in production with Noto Color Emoji fonts installed via Docker
+- Layout algorithm now handles 1-100+ stamps gracefully with comprehensive bounds checking
+- All layout calculations verified with automated unit tests
 
