@@ -75,8 +75,81 @@
 import sharp from 'sharp'
 import SafeImageFetcher from '../utils/SafeImageFetcher.js'
 import logger from '../config/logger.js'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+// Get current file directory for reading SVG icons
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 class StampImageGenerator {
+  // Cache SVG icon contents (loaded once, reused)
+  static filledStampSVG = null
+  static strokeStampSVG = null
+
+  /**
+   * Load stamp SVG icons from files (called once, then cached)
+   */
+  static loadStampIcons() {
+    if (!this.filledStampSVG) {
+      try {
+        const iconsPath = join(__dirname, '..', 'icons')
+        this.filledStampSVG = readFileSync(join(iconsPath, 'Filled-Stamp-Icon-01.svg'), 'utf-8')
+        this.strokeStampSVG = readFileSync(join(iconsPath, 'Stroke-Stamp-Icon-01.svg'), 'utf-8')
+        logger.info('✅ Loaded custom stamp SVG icons from', iconsPath)
+      } catch (error) {
+        logger.error('❌ Failed to load stamp SVG icons:', error.message)
+        throw error
+      }
+    }
+  }
+
+  /**
+   * Extract SVG style tags from SVG content
+   * @param {string} svgString - Full SVG file content
+   * @returns {string} All <style> tags concatenated
+   */
+  static extractSVGStyles(svgString) {
+    const styleMatches = svgString.match(/<style[^>]*>[\s\S]*?<\/style>/gi)
+    return styleMatches ? styleMatches.join('\n') : ''
+  }
+
+  /**
+   * Rename CSS classes in SVG content with a prefix
+   * @param {string} content - SVG content (styles or graphical elements)
+   * @param {string} prefix - Prefix to add to class names (e.g., 'filled-' or 'stroke-')
+   * @returns {string} Content with renamed classes
+   */
+  static renameClasses(content, prefix) {
+    // Rename class definitions in style tags: .st0 -> .filled-st0
+    let renamed = content.replace(/\.st(\d+)/g, `.${prefix}st$1`)
+    // Rename class references in elements: class="st0" -> class="filled-st0"
+    renamed = renamed.replace(/class="st(\d+)/g, `class="${prefix}st$1`)
+    return renamed
+  }
+
+  /**
+   * Extract SVG graphical content (removes <svg> wrapper, <style> tags, comments)
+   * @param {string} svgString - Full SVG file content
+   * @returns {string} Inner SVG graphical content only (no styles)
+   */
+  static extractSVGContent(svgString) {
+    // Remove XML declaration and comments
+    let content = svgString
+      .replace(/<\?xml[^?]*\?>/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+
+    // Extract content between <svg> tags
+    const match = content.match(/<svg[^>]*>([\s\S]*)<\/svg>/i)
+    content = match ? match[1] : content
+
+    // Remove <style> tags (they'll be placed at SVG root separately)
+    content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+
+    return content.trim()
+  }
+
   /**
    * Generate hero image with stamp visualization for Apple Wallet
    * @param {object} options - Configuration
@@ -598,68 +671,73 @@ class StampImageGenerator {
       logger.warn('⚠️ Applied fallback layout: single row, minimum safe size')
     }
 
+    // Load SVG stamp icons (first time only, then cached)
+    this.loadStampIcons()
+
+    // Extract and process styles from both SVG icons
+    // Styles must be at SVG root level, not inside <g> elements
+    const filledStyles = this.extractSVGStyles(this.filledStampSVG)
+    const strokeStyles = this.extractSVGStyles(this.strokeStampSVG)
+
+    logger.info('🔍 DEBUG: Filled styles length:', filledStyles.length)
+    logger.info('🔍 DEBUG: Stroke styles length:', strokeStyles.length)
+
+    // Rename CSS classes to avoid conflicts (both icons use .st0, .st1, etc.)
+    const filledStylesRenamed = this.renameClasses(filledStyles, 'filled-')
+    const strokeStylesRenamed = this.renameClasses(strokeStyles, 'stroke-')
+
+    logger.info('📐 Extracted and renamed SVG styles for stamps')
+
+    // Debug: Check a sample of content extraction
+    const testContent = this.extractSVGContent(this.filledStampSVG)
+    logger.info('🔍 DEBUG: Sample content length:', testContent.length, 'chars')
+    logger.info('🔍 DEBUG: Content preview:', testContent.substring(0, 200))
+
     // Generate EXACT number of stamps as stampsRequired
-    // Each stamp has: circular background + CENTERED emoji icon
+    // Each stamp uses custom SVG icon (filled or stroke version)
     for (let row = 0; row < layout.rows && stampIndex < stampsRequired; row++) {
       for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
         const filled = stampIndex < stampsEarned
 
-        // Determine which icon to display
-        const displayIcon = filled ? stampIcon : this.getEmptyStampIcon(stampIcon)
-        const iconOpacity = filled ? 1.0 : 0.4  // Filled: full opacity, Empty: 40%
+        // Choose which SVG icon to use and get its content
+        const iconSVG = filled ? this.filledStampSVG : this.strokeStampSVG
+        const iconContent = this.extractSVGContent(iconSVG)
 
-        // Calculate circle position and size
-        const circleRadius = layout.stampSize * 0.5  // Circle radius: 50% of stamp size
+        // Rename classes in the graphical content to match the renamed styles
+        const prefix = filled ? 'filled-' : 'stroke-'
+        const iconContentRenamed = this.renameClasses(iconContent, prefix)
 
-        // Position circle at grid location
-        const circleCenterX = layout.startX + col * (layout.stampSize + layout.spacing) + circleRadius
-        const circleCenterY = layout.startY + row * (layout.stampSize + layout.spacing) + circleRadius
+        const iconOpacity = filled ? 1.0 : 0.5  // Filled: full opacity, Unearned: 50%
 
-        // Calculate emoji size (slightly smaller than circle for proper fit)
-        const emojiSize = layout.stampSize * 0.8  // Emoji at 80% of stamp size
+        // Calculate stamp position and size
+        // SVG viewBox is "0 0 108.28 101.2", so we scale it to fit stampSize
+        const iconSize = layout.stampSize * 0.9  // Use 90% of available space
+        const scaleFactor = iconSize / 108.28  // Scale from SVG viewBox width to desired size
+
+        // Position stamp in grid (centered in its cell)
+        const iconX = layout.startX + col * (layout.stampSize + layout.spacing) + (layout.stampSize - iconSize) / 2
+        const iconY = layout.startY + row * (layout.stampSize + layout.spacing) + (layout.stampSize - iconSize) / 2
 
         stamps.push(`
-          <!-- Circular background with stroke -->
-          <circle
-            cx="${circleCenterX}"
-            cy="${circleCenterY}"
-            r="${circleRadius}"
-            fill="${backgroundColor}"
-            fill-opacity="0.8"
-            stroke="${foregroundColor}"
-            stroke-width="1"
-          />
-          <!-- Stamp emoji - CENTERED in circle (with visual adjustment) -->
-          <text
-            x="${circleCenterX}"
-            y="${circleCenterY + (emojiSize * 0.35)}"
-            font-size="${emojiSize}"
-            opacity="${iconOpacity}"
-            fill="${foregroundColor}"
-            font-family="Noto Color Emoji, Noto Emoji, Apple Color Emoji, Segoe UI Emoji, monospace, sans-serif"
-            filter="url(#stampShadow)"
-            text-anchor="middle"
-            dominant-baseline="central"
-          >${displayIcon}</text>
+          <!-- Stamp ${stampIndex + 1} (${filled ? 'Earned' : 'Unearned'}) -->
+          <g transform="translate(${iconX}, ${iconY}) scale(${scaleFactor})" opacity="${iconOpacity}">
+            ${iconContentRenamed}
+          </g>
         `)
 
         stampIndex++
       }
     }
 
-    console.log('✅ Generated', stampIndex, 'stamp SVG elements (with circles) out of', stampsRequired, 'required')
+    logger.info(`✅ Generated ${stampIndex} custom SVG stamp icons (${stampsEarned} filled, ${stampsRequired - stampsEarned} stroke)`)
 
-    // SVG with circular backgrounds + stamps - no text overlay
-    // The "X of Y" progress is already shown in the pass's secondaryFields
+    // SVG with custom stamp icons
+    // Styles are placed at root level, graphical content is in <g> elements
+    // xmlns:xlink is required because the stamp icons use xlink:href for embedded images
     const svg = `
-      <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <!-- Shadow for stamp emojis for better contrast -->
-          <filter id="stampShadow">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.5"/>
-          </filter>
-        </defs>
-
+      <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        ${filledStylesRenamed}
+        ${strokeStylesRenamed}
         ${stamps.join('\n')}
       </svg>
     `
