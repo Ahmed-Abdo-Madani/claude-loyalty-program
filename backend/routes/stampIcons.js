@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const router = express.Router()
-// Go up two levels from backend/routes to project root, then into uploads/icons/stamps
-const ICONS_BASE_PATH = process.env.ICONS_PATH || join(__dirname, '..', '..', 'uploads', 'icons', 'stamps')
+// Go up one level from routes/ to app root (Docker: /app/routes/ -> /app/)
+const ICONS_BASE_PATH = process.env.ICONS_PATH || join(__dirname, '..', 'uploads', 'icons', 'stamps')
 
 /**
  * GET /api/stamp-icons
