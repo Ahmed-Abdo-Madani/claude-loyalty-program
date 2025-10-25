@@ -111,7 +111,12 @@ router.get('/:id/preview', (req, res) => {
     const { id } = req.params
     const manifestPath = join(ICONS_BASE_PATH, 'manifest.json')
 
+    logger.info(`📥 Preview request for icon: ${id}`)
+    logger.info(`📁 Base path: ${ICONS_BASE_PATH}`)
+    logger.info(`📄 Manifest path: ${manifestPath}`)
+
     if (!existsSync(manifestPath)) {
+      logger.error(`❌ Manifest not found at: ${manifestPath}`)
       return res.status(500).json({
         success: false,
         error: 'Stamp icons manifest not found'
@@ -122,24 +127,37 @@ router.get('/:id/preview', (req, res) => {
     const icon = manifest.icons.find(i => i.id === id)
 
     if (!icon) {
+      logger.warn(`⚠️ Icon not found in manifest: ${id}`)
       return res.status(404).json({
         success: false,
         error: 'Icon not found'
       })
     }
 
+    logger.info(`✅ Icon found in manifest:`, { 
+      id: icon.id, 
+      name: icon.name,
+      previewFile: icon.previewFile,
+      filledFile: icon.filledFile
+    })
+
     const previewPath = join(ICONS_BASE_PATH, 'previews', icon.previewFile)
+    logger.info(`🔍 Looking for preview at: ${previewPath}`)
 
     if (!existsSync(previewPath)) {
-      logger.warn(`⚠️ Preview image not found: ${previewPath}`)
+      logger.warn(`⚠️ Preview image not found at: ${previewPath}`)
       // Return the filled SVG as fallback
       const filledSvgPath = join(ICONS_BASE_PATH, icon.filledFile)
+      logger.info(`🔍 Looking for SVG fallback at: ${filledSvgPath}`)
+      
       if (existsSync(filledSvgPath)) {
         logger.info(`🔄 Serving filled SVG as fallback for preview: ${id}`)
         res.setHeader('Content-Type', 'image/svg+xml')
+        res.setHeader('Cache-Control', 'public, max-age=86400')
         return res.sendFile(filledSvgPath)
       }
 
+      logger.error(`❌ Neither preview nor SVG found for: ${id}`)
       return res.status(404).json({
         success: false,
         error: 'Preview image not found',
@@ -147,7 +165,9 @@ router.get('/:id/preview', (req, res) => {
       })
     }
 
-    logger.info(`✅ Serving preview image: ${id}`)
+    logger.info(`✅ Serving preview image: ${id} from ${previewPath}`)
+    res.setHeader('Content-Type', 'image/png')
+    res.setHeader('Cache-Control', 'public, max-age=86400')
     res.sendFile(previewPath)
   } catch (error) {
     logger.error('❌ Failed to load preview:', error)
