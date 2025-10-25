@@ -33,7 +33,7 @@ const content = {
     male: 'ذكر',
     female: 'أنثى',
     countryCode: 'رمز الدولة',
-    joinAddToWallet: 'انضم وأوافق على تلقي العروض الترويجية',
+    joinAddToWallet: 'تسجيل',
     byJoining: 'بالانضمام، فإنك توافق على تلقي الرسائل والعروض الترويجية',
     required: '*',
 
@@ -67,7 +67,15 @@ const content = {
     goBack: 'ارجع',
     noOfferSelected: 'لم يتم اختيار عرض',
     selectValidOffer: 'يرجى اختيار عرض صالح للمتابعة.',
-    loadingOffer: 'جاري تحميل تفاصيل العرض...'
+    loadingOffer: 'جاري تحميل تفاصيل العرض...',
+    
+    // Wallet Integration
+    addedSuccessfully: 'تمت الإضافة بنجاح!',
+    addingToWallet: 'جاري الإضافة إلى المحفظة...',
+    addToAppleWallet: 'أضف إلى Apple Wallet',
+    addToGoogleWallet: 'أضف إلى Google Wallet',
+    walletError: 'فشلت إضافة البطاقة. يرجى المحاولة مرة أخرى.',
+    tryAgain: 'حاول مرة أخرى'
   },
   en: {
     // Header & Business Info
@@ -92,7 +100,7 @@ const content = {
     male: 'Male',
     female: 'Female',
     countryCode: 'Country Code',
-    joinAddToWallet: 'JOIN & AGREE TO PROMOTIONAL OFFERS',
+    joinAddToWallet: 'Register',
     byJoining: 'By joining, you agree to receive promotional messages and offers',
     required: '*',
 
@@ -126,7 +134,15 @@ const content = {
     goBack: 'Go Back',
     noOfferSelected: 'No Offer Selected',
     selectValidOffer: 'Please select a valid offer to continue.',
-    loadingOffer: 'Loading offer details...'
+    loadingOffer: 'Loading offer details...',
+    
+    // Wallet Integration
+    addedSuccessfully: 'Added Successfully!',
+    addingToWallet: 'Adding to Wallet...',
+    addToAppleWallet: 'Add to Apple Wallet',
+    addToGoogleWallet: 'Add to Google Wallet',
+    walletError: 'Failed to add card. Please try again.',
+    tryAgain: 'Try Again'
   }
 }
 
@@ -148,6 +164,9 @@ function CustomerSignup() {
   const [cardDesign, setCardDesign] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deviceCapabilities, setDeviceCapabilities] = useState(null)
+  const [isGeneratingWallet, setIsGeneratingWallet] = useState(false)
+  const [walletError, setWalletError] = useState(null)
 
   // Get current language content
   const t = content[selectedLanguage]
@@ -204,10 +223,39 @@ function CustomerSignup() {
     )
   }
 
+  // Helper function to get logo URL with fallback logic
+  const getLogoUrl = () => {
+    // Priority 1: Business profile logo
+    if (offer?.businessLogo?.url) {
+      console.log('🖼️ Using business profile logo')
+      return apiBaseUrl + offer.businessLogo.url
+    }
+    
+    // Priority 2: Card design logo (from offer response)
+    if (offer?.cardDesignLogo?.url) {
+      console.log('🖼️ Using card design logo from offer')
+      return apiBaseUrl + offer.cardDesignLogo.url
+    }
+    
+    // Priority 3: Card design logo (from separate fetch)
+    if (cardDesign?.logo_url) {
+      console.log('🖼️ Using card design logo from design fetch')
+      return apiBaseUrl + '/api/card-design/logo/' + cardDesign.logo_url
+    }
+    
+    // No logo available
+    console.log('⚠️ No logo available')
+    return null
+  }
+
   useEffect(() => {
     if (offerId) {
       loadOffer()
     }
+
+    // Get device capabilities
+    const capabilities = WalletPassGenerator.getDeviceCapabilities()
+    setDeviceCapabilities(capabilities)
 
     // Extract QR code parameters
     const source = searchParams.get('source')
@@ -299,6 +347,34 @@ function CustomerSignup() {
     })
   }
 
+  // Helper function to convert Arabic numerals to English numerals
+  const convertArabicToEnglishNumbers = (str) => {
+    const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']
+    const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    
+    let result = str
+    for (let i = 0; i < arabicNumbers.length; i++) {
+      result = result.replace(new RegExp(arabicNumbers[i], 'g'), englishNumbers[i])
+    }
+    return result
+  }
+
+  // Helper function to normalize phone number
+  const normalizePhoneNumber = (phone) => {
+    // Convert Arabic numerals to English
+    let normalized = convertArabicToEnglishNumbers(phone)
+    
+    // Remove all non-digit characters
+    normalized = normalized.replace(/\D/g, '')
+    
+    // If it's a 10-digit number starting with 0, remove the leading 0
+    if (normalized.length === 10 && normalized.startsWith('0')) {
+      normalized = normalized.substring(1)
+    }
+    
+    return normalized
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -310,9 +386,11 @@ function CustomerSignup() {
         throw new Error('Please enter a valid phone number')
       }
 
+      // Normalize phone number (convert Arabic numerals, remove leading 0 if 10 digits)
+      const normalizedPhone = normalizePhoneNumber(formData.phone)
+
       // Basic phone validation (7-15 digits)
-      const phoneDigits = formData.phone.replace(/\D/g, '')
-      if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      if (normalizedPhone.length < 7 || normalizedPhone.length > 15) {
         throw new Error('Please enter a valid phone number (7-15 digits)')
       }
 
@@ -337,7 +415,7 @@ function CustomerSignup() {
         customerId: generateSecureCustomerId(),
         firstName: firstName,
         lastName: lastName,
-        phone: formData.countryCode + formData.phone,
+        phone: formData.countryCode + normalizedPhone,
         gender: formData.gender,
         joinedDate: new Date().toISOString(),
         source: qrSource?.source,
@@ -406,6 +484,95 @@ function CustomerSignup() {
     }
   }
 
+  const handleAddToAppleWallet = async () => {
+    setIsGeneratingWallet(true)
+    setWalletError(null)
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/wallet/apple`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          customerData,
+          offerData: {
+            ...offer,
+            offerId
+          },
+          progressData: {
+            stampsEarned: 0,
+            totalStamps: offer.stamps_required || offer.stampsRequired
+          }
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Apple Wallet pass')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${offer.businessName}-loyalty.pkpass`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      handleWalletAdded('apple', { downloaded: true })
+    } catch (err) {
+      console.error('Apple Wallet generation error:', err)
+      setWalletError(t.walletError)
+    } finally {
+      setIsGeneratingWallet(false)
+    }
+  }
+
+  const handleAddToGoogleWallet = async () => {
+    setIsGeneratingWallet(true)
+    setWalletError(null)
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/wallet/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          customerData,
+          offerData: {
+            ...offer,
+            offerId
+          },
+          progressData: {
+            stampsEarned: 0,
+            totalStamps: offer.stamps_required || offer.stampsRequired
+          }
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Google Wallet pass')
+      }
+
+      const data = await response.json()
+      
+      if (data.saveUrl) {
+        window.location.href = data.saveUrl
+        handleWalletAdded('google', { success: true })
+      } else {
+        throw new Error('No save URL returned')
+      }
+    } catch (err) {
+      console.error('Google Wallet generation error:', err)
+      setWalletError(t.walletError)
+    } finally {
+      setIsGeneratingWallet(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -436,71 +603,140 @@ function CustomerSignup() {
   }
 
   if (isSubmitted && customerData && offer) {
-    const progressData = {
-      stampsEarned: 0, // New customer starts with 0 stamps
-      totalStamps: offer.stamps_required || offer.stampsRequired
-    }
-
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 py-12 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="max-w-md mx-auto">
-          {/* Logo Section - Centered at top */}
-          <div className="text-center pt-8 mb-12">
-            {offer.businessLogo && (
-              <div className="mb-6 flex justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col items-center justify-center py-20 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="max-w-md mx-auto w-full">
+          
+          {/* Business Logo with Brand Color Halo */}
+          {getLogoUrl() && (
+            <div className="mb-8 flex justify-center">
+              <div 
+                className="relative p-6 rounded-full"
+                style={{ 
+                  backgroundColor: getColors().label || `${getColors().background}20`
+                }}
+              >
                 <img
-                  src={apiBaseUrl + offer.businessLogo.url}
+                  src={getLogoUrl()}
                   alt={`${offer.businessName} Logo`}
-                  className="w-32 h-32 object-contain rounded-lg shadow-lg"
+                  className="w-32 h-32 object-contain drop-shadow-lg"
                 />
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Business Name (Bilingual, Brand Colors) */}
+          <div className="text-center mb-12">
             <h1 
               className="text-2xl font-bold mb-2"
               style={{ color: getColors().background }}
             >
               {offer.businessName}
             </h1>
-            <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
-              <span className="text-3xl">✓</span>
-              <p className="text-lg font-medium">{t.welcome}</p>
-            </div>
+            {offer.businessNameEn && offer.businessNameEn !== offer.businessName && (
+              <p 
+                className="text-sm font-medium uppercase tracking-wider"
+                style={{ color: getColors().label || getColors().background }}
+              >
+                {offer.businessNameEn}
+              </p>
+            )}
           </div>
 
-          {/* Wallet Card Preview - Prominent and centered */}
-          <div className="my-12">
-            <WalletCardPreview
-              customerData={customerData}
-              offerData={{
-                offerId: offerId,
-                businessId: offer.business_id || offer.Business?.public_id || offer.Business?.id,
-                businessName: offer.businessName,
-                title: offer.title,
-                description: offer.description,
-                rewardDescription: (offer.title || '').includes('FREE') ? 'Free Pizza' : 'Reward',
-                stamps_required: offer.stampsRequired || offer.stamps_required,
-                branchName: offer.branchName,
-                businessLogo: offer.businessLogo,
-                locations: [
-                  { lat: 40.7128, lng: -74.0060 }
-                ]
-              }}
-              progressData={progressData}
-              onAddToWallet={handleWalletAdded}
-            />
+          {/* Add to Wallet Button(s) with Brand Colors */}
+          <div className="space-y-4">
+            {/* Apple Wallet Button */}
+            {(deviceCapabilities?.supportsAppleWallet || !deviceCapabilities) && (
+              <div className="w-full max-w-sm mx-auto">
+                <button
+                  onClick={handleAddToAppleWallet}
+                  disabled={isGeneratingWallet}
+                  className="w-full py-4 px-6 rounded-full font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-200 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:brightness-90"
+                  style={{ 
+                    backgroundColor: getColors().background,
+                    color: getColors().foreground
+                  }}
+                >
+                  {isGeneratingWallet ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>{t.addingToWallet}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl">🍎</span>
+                      <span>{t.addToAppleWallet}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Google Wallet Button */}
+            {(deviceCapabilities?.supportsGoogleWallet || !deviceCapabilities) && (
+              <div className="w-full max-w-sm mx-auto">
+                <button
+                  onClick={handleAddToGoogleWallet}
+                  disabled={isGeneratingWallet}
+                  className="w-full py-4 px-6 rounded-full font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-200 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:brightness-90"
+                  style={{ 
+                    backgroundColor: getColors().background,
+                    color: getColors().foreground
+                  }}
+                >
+                  {isGeneratingWallet ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>{t.addingToWallet}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl">📱</span>
+                      <span>{t.addToGoogleWallet}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Success Indicator (subtle) */}
-          {walletAdded && (
-            <div className="text-center mt-8">
-              <div className="inline-flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full px-6 py-3">
-                <span className="text-green-600 dark:text-green-400 text-lg">✓</span>
-                <span className="text-green-600 dark:text-green-400 font-medium">
-                  {t.addedToWallet}
-                </span>
+          {/* Error Display */}
+          {walletError && (
+            <div className="mt-6 max-w-sm mx-auto">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-red-600 dark:text-red-400 text-xl">⚠️</span>
+                  <div className="flex-1">
+                    <p className="text-red-600 dark:text-red-400 text-sm">{walletError}</p>
+                    <button
+                      onClick={() => setWalletError(null)}
+                      className="mt-2 text-sm font-medium underline hover:no-underline"
+                      style={{ color: getColors().background }}
+                    >
+                      {t.tryAgain}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
+
+          {/* Success Indicator */}
+          {walletAdded && (
+            <div className="mt-6 text-center">
+              <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                <span style={{ color: getColors().background }}>✓</span>
+                <span style={{ color: getColors().background }}>{t.addedSuccessfully}</span>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     )
@@ -529,9 +765,9 @@ function CustomerSignup() {
         >
           {/* Business Info with Logo */}
           <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            {offer.businessLogo && (
+            {getLogoUrl() && (
               <img
-                src={apiBaseUrl + offer.businessLogo.url}
+                src={getLogoUrl()}
                 alt={`${offer.businessName} Logo`}
                 className="w-16 h-16 object-contain rounded-lg border-2 border-white/20 bg-white/10 shadow-lg flex-shrink-0"
               />

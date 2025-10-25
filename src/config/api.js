@@ -9,8 +9,8 @@ export const apiBaseUrl = API_BASE_URL
 
 export const endpoints = {
   baseURL: API_BASE_URL,
-  appleWallet: `${API_BASE_URL}/api/wallet/apple/generate`,
-  googleWallet: `${API_BASE_URL}/api/wallet/google/generate`,
+  appleWallet: `${API_BASE_URL}/api/wallet/apple`,
+  googleWallet: `${API_BASE_URL}/api/wallet/google`,
   health: `${API_BASE_URL}/health`,
 
   // Business Authentication APIs

@@ -773,6 +773,503 @@ Potential improvements for future releases:
 
 ---
 
-**Deployment Date**: January 26, 2025  
-**Version**: 2.0 - Customer Signup Redesign  
+## 🎨 Customer Signup Success Page Redesign
+
+### Overview
+Simplified success page to match minimalist design mockup with integrated brand colors for visual consistency across the customer journey.
+
+### 1. Design Changes
+
+**Removed Elements:**
+- Complex card preview component
+- Progress bars and stamp visualization
+- Welcome message and instructions
+- Customer details display
+- Action buttons (directions, call)
+- "What's Next?" section
+
+**New Minimalist Layout:**
+- **Logo**: Large, centered, with subtle brand color halo background
+- **Business Name**: Bilingual display with brand colors (Arabic primary, English secondary)
+- **Single Wallet Button**: Prominent, brand-colored call-to-action
+- **Generous White Space**: Clean, modern appearance following mockup design
+
+### 2. Brand Color Application
+
+**Visual Consistency Strategy:**
+- **Logo Background**: Subtle halo using `label_color` or `background_color` with 20% opacity
+- **Business Name**: `background_color` for primary text (matches signup page header)
+- **Wallet Button**: `background_color` background with `foreground_color` text (matches submit button)
+- **Success Indicator**: `background_color` for checkmark
+- **Retry Button**: `background_color` for text link
+- **Creates seamless visual flow** from signup page to success page
+
+**Color Hierarchy:**
+1. Primary: Business name uses brand's `background_color`
+2. Secondary: English name uses lighter `label_color`
+3. Interactive: Buttons use full brand color scheme with hover effects
+4. Feedback: Success/error states incorporate brand colors
+
+### 3. Technical Changes
+
+**New Inline Wallet Logic:**
+- Removed `WalletCardPreview` component dependency
+- Inline wallet generation handlers: `handleAddToAppleWallet()` and `handleAddToGoogleWallet()`
+- Direct API calls to `/api/wallet/apple` and `/api/wallet/google`
+- Device detection via `WalletPassGenerator.getDeviceCapabilities()`
+- Loading states with spinner (colored with `foreground_color`)
+- Error handling with inline error display (retry button uses brand color)
+
+**State Management:**
+- `deviceCapabilities`: Detects Apple/Google Wallet support
+- `isGeneratingWallet`: Loading state for button
+- `walletError`: Error message state with brand-colored retry option
+
+**Dynamic Styling:**
+- All colors pulled from `getColors()` helper
+- Buttons use `style={{ backgroundColor, color }}` for brand consistency
+- Hover effects with `brightness-90` filter
+- Fallback to default blue (#3B82F6) if no card design exists
+
+### 4. User Experience Improvements
+
+**Faster Performance:**
+- Fewer components to render (no card preview)
+- Simpler DOM structure
+- Faster page load time
+
+**Clearer Call-to-Action:**
+- Single prominent button (or two if both wallets supported)
+- Less cognitive load
+- Matches modern wallet app onboarding patterns
+
+**Stronger Brand Presence:**
+- Consistent colors reinforce brand identity
+- Logo-centric design puts brand first
+- Visual continuity from signup to success page
+
+**Better Mobile Experience:**
+- Simpler layout optimized for mobile
+- Larger touch targets (py-4 px-6 buttons)
+- Clearer hierarchy with generous spacing
+
+### 5. Bilingual Support
+
+**Arabic Name (Primary):**
+- Font size: `text-2xl` (1.5rem)
+- Font weight: `font-bold`
+- Color: `background_color` (brand color)
+- Display: First, most prominent
+
+**English Name (Secondary):**
+- Font size: `text-sm` (0.875rem)
+- Font weight: `font-medium`
+- Transform: `uppercase`
+- Letter spacing: `tracking-wider`
+- Color: `label_color` or `background_color` (lighter brand color)
+- Display: Below Arabic name
+
+**RTL/LTR Support:**
+- Container uses `dir={isRTL ? 'rtl' : 'ltr'}`
+- All content adapts to text direction
+- Maintains proper alignment in both languages
+
+### 6. Wallet Integration
+
+**Apple Wallet:**
+- Displays on iOS devices
+- Downloads `.pkpass` file
+- Button text: Arabic "أضف إلى Apple Wallet" or English "Add to Apple Wallet"
+- Icon: 🍎 emoji
+- Brand-colored background
+
+**Google Wallet:**
+- Displays on Android/other devices
+- Redirects to Google Wallet save URL
+- Button text: Arabic "أضف إلى Google Wallet" or English "Add to Google Wallet"
+- Icon: 📱 emoji
+- Brand-colored background
+
+**Both Platforms:**
+- Stacked vertically with `space-y-4` if both supported
+- Consistent styling with brand colors
+- Loading spinner uses `foreground_color` for visibility
+- Disabled state at 50% opacity
+
+**Error Handling:**
+- Red error box with warning icon
+- Error message in current language
+- Brand-colored retry button
+- Dismissable with click
+
+### 7. Testing Checklist
+
+**Device Testing:**
+- [ ] Test on iOS device (Apple Wallet button appears with brand colors)
+- [ ] Test on Android device (Google Wallet button appears with brand colors)
+- [ ] Test on desktop (appropriate button shown)
+
+**Visual Testing:**
+- [ ] Verify logo displays correctly (size, centering, aspect ratio, brand color halo)
+- [ ] Verify bilingual business name displays correctly with brand colors
+- [ ] Verify spacing matches mockup (generous white space)
+- [ ] Test in both Arabic and English languages
+- [ ] Verify dark mode support (if applicable)
+- [ ] Test with different brand colors (light, dark, vibrant) for readability
+- [ ] Verify color contrast meets accessibility standards (WCAG AA)
+- [ ] Test brand color consistency between signup and success pages
+
+**Functional Testing:**
+- [ ] Test wallet generation success flow
+- [ ] Test wallet generation error flow
+- [ ] Verify loading states work correctly
+- [ ] Test with businesses that have/don't have logos
+- [ ] Verify error retry functionality
+- [ ] Test with offers that have different card designs/colors
+
+**Integration Testing:**
+- [ ] Verify complete signup → success → wallet flow
+- [ ] Test QR parameter tracking through success page
+- [ ] Verify analytics tracking for wallet additions
+
+### 8. Color Contrast Considerations
+
+**Accessibility:**
+- Use `foreground_color` for text on `background_color` backgrounds
+- Fallback to white text if foreground color undefined
+- Test with WCAG AA contrast ratio (4.5:1 for normal text, 3:1 for large text)
+
+**Brand Color Scenarios:**
+- **Light backgrounds** (e.g., #E0F2FE): Use dark foreground (#1E40AF)
+- **Dark backgrounds** (e.g., #1E40AF): Use white/light foreground (#FFFFFF)
+- **Vibrant backgrounds** (e.g., #F43F5E): Ensure sufficient contrast
+
+**Visual Depth:**
+- Logo halo uses low opacity (20%) to avoid overwhelming
+- Buttons have `shadow-xl` for depth
+- Hover effects with `brightness-90` for feedback
+- Success/error states use appropriate semantic colors while incorporating brand
+
+### 9. Rollback Plan
+
+**Easy Reversion:**
+- Previous success page implementation in git history (commit before this change)
+- No database schema changes
+- No backend API changes required
+- Frontend-only modification
+
+**Rollback Steps:**
+```bash
+# Find previous commit
+git log --oneline -- src/pages/CustomerSignup.jsx
+
+# Revert to specific commit
+git checkout <commit-hash> -- src/pages/CustomerSignup.jsx
+
+# Or revert entire commit
+git revert <commit-hash>
+```
+
+**No Data Loss:**
+- Customer data unaffected
+- Wallet generation still works
+- Only UI presentation changes
+
+### 10. Future Enhancements
+
+**Potential Additions:**
+- Animated confetti effect on success
+- Share button for social media
+- Download QR code for printing
+- Email/SMS receipt option
+- Preview of wallet pass before adding
+- Personalized success message based on offer type
+
+---
+
+**Deployment Date**: January 27, 2025  
+**Version**: 2.1 - Success Page Redesign with Brand Colors  
 **Status**: Ready for Production
+
+---
+
+## 🖼️ Dual Logo System Architecture
+
+### Overview
+The platform implements two separate logo upload systems with automatic fallback logic to ensure customer-facing pages always display business logos, even when logos are only uploaded through the card design editor.
+
+### 1. Logo System Types
+
+#### **Business Profile Logos**
+- **Purpose**: Primary logo system for business profile
+- **Location**: `uploads/logos/`
+- **Database Table**: `businesses`
+- **Columns**: 
+  - `logo_filename` (VARCHAR) - Original filename
+  - `logo_url` (VARCHAR) - Path relative to uploads/logos/
+- **Upload Route**: `/api/business/logo/upload`
+- **Serving Route**: `/api/business/public/logo/:businessId/:filename`
+- **Authentication**: Required (business auth)
+- **Access**: Public serving (no auth for GET)
+
+#### **Card Design Logos**
+- **Purpose**: Logos for wallet passes (Apple & Google)
+- **Location**: `uploads/designs/logos/`
+- **Database Table**: `offer_card_designs`
+- **Column**: `logo_url` (VARCHAR) - Filename only
+- **Upload Route**: `/api/card-design/upload/logo`
+- **Serving Route**: `/api/card-design/logo/:filename` *(NEW)*
+- **Authentication**: Required (business auth for upload)
+- **Access**: Public serving (no auth for GET)
+
+### 2. Why Two Systems?
+
+**Historical Context:**
+- Card design system was built first for wallet pass generation
+- Business profile system added later for general business management
+- Many businesses only upload logos through card design editor
+- Leads to missing logos on customer signup page
+
+**Production Reality:**
+- `uploads/logos/` is mostly empty (business profile logos)
+- `uploads/designs/logos/` contains all uploaded logos (3 files in production)
+- Customer signup page only checked business profile logos → broken images
+
+### 3. Fallback Logic Implementation
+
+#### **Frontend Helper Function** (`CustomerSignup.jsx`)
+```javascript
+const getLogoUrl = () => {
+  // Priority 1: Business profile logo
+  if (offer?.businessLogo?.url) {
+    console.log('🖼️ Using business profile logo')
+    return apiBaseUrl + offer.businessLogo.url
+  }
+  
+  // Priority 2: Card design logo (from offer response)
+  if (offer?.cardDesignLogo?.url) {
+    console.log('🖼️ Using card design logo from offer')
+    return apiBaseUrl + offer.cardDesignLogo.url
+  }
+  
+  // Priority 3: Card design logo (from separate fetch)
+  if (cardDesign?.logo_url) {
+    console.log('🖼️ Using card design logo from design fetch')
+    return apiBaseUrl + '/api/card-design/logo/' + cardDesign.logo_url
+  }
+  
+  // No logo available
+  console.log('⚠️ No logo available')
+  return null
+}
+```
+
+**Usage:**
+```javascript
+{getLogoUrl() && (
+  <img src={getLogoUrl()} alt="Business Logo" />
+)}
+```
+
+### 4. Backend API Enhancement
+
+#### **Public Offer Endpoint** (`/api/business/public/offer/:id`)
+
+**Before (only business logo):**
+```javascript
+const offer = await Offer.findByPk(offerId, {
+  include: [{
+    model: Business,
+    as: 'business',
+    attributes: ['logo_filename', 'logo_url']
+  }]
+})
+
+// Response
+{
+  businessLogo: { url: '/api/business/public/logo/...', filename: '...' }
+}
+```
+
+**After (both logos with fallback):**
+```javascript
+const offer = await Offer.findByPk(offerId, {
+  include: [
+    {
+      model: Business,
+      as: 'business',
+      attributes: ['logo_filename', 'logo_url']
+    },
+    {
+      model: OfferCardDesign,
+      as: 'cardDesign',
+      attributes: ['logo_url', 'background_color', 'foreground_color']
+    }
+  ]
+})
+
+// Response
+{
+  businessLogo: { url: '/api/business/public/logo/...', filename: '...' } || null,
+  cardDesignLogo: { url: '/api/card-design/logo/...', filename: '...' } || null
+}
+```
+
+#### **New Public Logo Endpoint** (`/api/card-design/logo/:filename`)
+
+**Route**: `GET /api/card-design/logo/:filename`  
+**Authentication**: None (public endpoint)  
+**Purpose**: Serve card design logos for customer-facing pages
+
+**Security Features:**
+- Filename validation (no directory traversal)
+- Extension whitelist (jpg, jpeg, png, webp)
+- File existence check before serving
+- CORS headers for cross-origin requests
+- Cache headers (24-hour TTL)
+
+### 5. File Locations & Persistence
+
+**Development (Local):**
+- `uploads/logos/` - Business profile logos
+- `uploads/designs/logos/` - Card design logos
+
+**Production (Render):**
+- **Persistent Disk Required**: Yes
+- **Mount Path**: `/opt/render/project/src/backend/uploads`
+- **Environment Variable**: `UPLOADS_DIR=/opt/render/project/src/backend/uploads`
+- **Base URL**: `UPLOADS_BASE_URL=https://api.madna.me/uploads`
+
+**Critical**: Without persistent disk, logos will be wiped on every deployment!
+
+### 6. Database Schema
+
+**`businesses` Table:**
+```sql
+CREATE TABLE businesses (
+  public_id VARCHAR(255) PRIMARY KEY,  -- biz_*
+  logo_filename VARCHAR(255),
+  logo_url VARCHAR(255),
+  -- Relationship: logo_url = '/logos/' + logo_filename
+);
+```
+
+**`offer_card_designs` Table:**
+```sql
+CREATE TABLE offer_card_designs (
+  id SERIAL PRIMARY KEY,
+  offer_id VARCHAR(255) REFERENCES offers(public_id),
+  logo_url VARCHAR(255),  -- Just filename, not full path
+  background_color VARCHAR(7),
+  foreground_color VARCHAR(7),
+  label_color VARCHAR(7),
+  stamp_icon VARCHAR(100)
+);
+```
+
+### 7. Deployment Steps
+
+**Phase 1: Frontend Updates** ✅
+1. Add `getLogoUrl()` helper function to `CustomerSignup.jsx`
+2. Update logo rendering in signup form (line ~770)
+3. Update logo rendering in success page (line ~610)
+4. Replace `{offer.businessLogo && ...}` with `{getLogoUrl() && ...}`
+5. Replace `src={apiBaseUrl + offer.businessLogo.url}` with `src={getLogoUrl()}`
+
+**Phase 2: Backend Public Endpoint** ✅
+1. Add `path` import to `backend/routes/cardDesign.js`
+2. Create `GET /api/card-design/logo/:filename` route
+3. Implement filename validation (security)
+4. Set cache headers (24h TTL)
+5. Serve file with correct Content-Type
+
+**Phase 3: API Enhancement** ✅
+1. Import `OfferCardDesign` model in `backend/routes/business.js`
+2. Add `cardDesign` include to public offer endpoint query
+3. Add `cardDesignLogo` field to response object
+4. Maintain backward compatibility with `businessLogo`
+
+**Phase 4: Testing**
+```bash
+# Test public logo endpoint
+curl https://api.madna.me/api/card-design/logo/your-logo.png
+# Should return image data
+
+# Test public offer endpoint
+curl https://api.madna.me/api/business/public/offer/off_abc123
+# Should include both businessLogo and cardDesignLogo fields
+
+# Test customer signup page
+# Navigate to: https://app.madna.me/signup?offer=off_abc123
+# Verify logo displays correctly
+```
+
+### 8. Troubleshooting
+
+**Logo not displaying on customer signup:**
+- ✅ Check browser console for `getLogoUrl()` logs
+- ✅ Should see: "🖼️ Using card design logo from offer"
+- ✅ If "⚠️ No logo available" → Neither logo system has a logo
+- ✅ Verify logo exists in `uploads/designs/logos/`
+
+**404 on logo endpoint:**
+- ✅ Verify file exists: `ls uploads/designs/logos/`
+- ✅ Check `UPLOADS_DIR` env var is set correctly
+- ✅ Verify persistent disk is mounted in Render
+- ✅ Check filename matches exactly (case-sensitive)
+
+**Logo displays after upload but disappears after deploy:**
+- ❌ Persistent disk not configured
+- ✅ Add persistent disk in Render dashboard
+- ✅ Set `UPLOADS_DIR` environment variable
+- ✅ Redeploy backend service
+
+**Business uploaded logo through profile but not showing:**
+- ✅ Check `businesses.logo_url` is not null
+- ✅ Verify file exists in `uploads/logos/`
+- ✅ Check public logo serving route works
+- ✅ Frontend should prioritize this logo (Priority 1)
+
+**Card design logo not falling back:**
+- ✅ Verify `cardDesignLogo` field in API response
+- ✅ Check `offer_card_designs.logo_url` has value
+- ✅ Ensure frontend `getLogoUrl()` checks all 3 priorities
+- ✅ Test with `console.log()` to trace fallback logic
+
+### 9. Best Practices
+
+**For Developers:**
+- Always use `getLogoUrl()` helper for customer-facing pages
+- Never hardcode logo URLs or paths
+- Add console logging for debugging which logo source is used
+- Test with businesses that have only card design logos
+
+**For Businesses:**
+- Upload logos through card design editor (most common)
+- Logos will automatically appear on customer signup page
+- Can optionally upload separate business profile logo
+- Business profile logo takes priority if both exist
+
+**For DevOps:**
+- Ensure persistent disk is configured on Render
+- Set `UPLOADS_DIR` and `UPLOADS_BASE_URL` environment variables
+- Monitor disk usage (logos accumulate over time)
+- Implement backup strategy for uploads directory
+
+### 10. Future Improvements
+
+**Potential Enhancements:**
+- Merge both logo systems into one unified system
+- Add automatic logo format conversion (WebP optimization)
+- Implement CDN for logo serving (performance)
+- Add logo versioning (cache busting)
+- Provide admin UI to view/manage all logos
+- Add logo upload progress indicator
+- Implement logo compression on upload
+
+---
+
+**Deployment Date**: January 27, 2025  
+**Version**: 2.2 - Dual Logo System with Fallback Logic  
+**Status**: Ready for Production
+

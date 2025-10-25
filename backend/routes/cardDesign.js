@@ -1,4 +1,5 @@
 import express from 'express'
+import path from 'path'
 import multer from 'multer'
 import CardDesignService from '../services/CardDesignService.js'
 import ImageProcessingService from '../services/ImageProcessingService.js'
@@ -494,6 +495,71 @@ router.get('/stats/:businessId', requireBusinessAuth, async (req, res) => {
 // ============================================================================
 // Public Endpoints (No Authentication Required)
 // ============================================================================
+
+/**
+ * GET /api/card-design/logo/:filename
+ * Serve card design logo files (public endpoint for customer-facing pages)
+ * No authentication required - logos are public assets
+ */
+router.get('/logo/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params
+
+    // Validate filename format (prevent directory traversal)
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid filename format'
+      })
+    }
+
+    // Validate file extension
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp']
+    const hasValidExtension = allowedExtensions.some(ext => filename.toLowerCase().endsWith(ext))
+    
+    if (!hasValidExtension) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Only JPEG, PNG, and WebP are allowed.'
+      })
+    }
+
+    logger.debug(`🖼️ PUBLIC: Serving logo: ${filename}`)
+
+    // Construct file path
+    const uploadsDir = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
+    const logoPath = path.join(uploadsDir, 'designs', 'logos', filename)
+
+    // Check if file exists
+    const fs = await import('fs/promises')
+    try {
+      await fs.access(logoPath)
+    } catch {
+      logger.warn(`⚠️ Logo not found: ${filename}`)
+      return res.status(404).json({
+        success: false,
+        message: 'Logo not found'
+      })
+    }
+
+    // Set cache headers (logos don't change often)
+    res.set({
+      'Cache-Control': 'public, max-age=86400', // 24 hours
+      'Access-Control-Allow-Origin': '*', // Allow cross-origin requests
+      'Content-Type': `image/${filename.split('.').pop().toLowerCase()}`
+    })
+
+    // Serve the file
+    res.sendFile(logoPath)
+
+  } catch (error) {
+    logger.error('❌ Failed to serve logo:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to serve logo'
+    })
+  }
+})
 
 /**
  * GET /api/card-design/public/:offerId

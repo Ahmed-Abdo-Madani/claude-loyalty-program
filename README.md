@@ -231,6 +231,7 @@ git push origin main
 - Ensures consistent emoji rendering in Apple Wallet passes
 - First deployment: 5-10 minutes (Docker build)
 - Subsequent deployments: 2-3 minutes (cached layers)
+- **Dual Logo System**: Automatic fallback from business profile to card design logos for seamless customer experience (see [DEPLOYMENT.md](DEPLOYMENT.md#-dual-logo-system-architecture))
 
 **Note:** The `render.yaml` configuration uses `env: docker` instead of native Node.js runtime to install required system fonts for emoji stamp visualization.
 

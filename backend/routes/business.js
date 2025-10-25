@@ -5,7 +5,7 @@ import fs from 'fs'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
-import { Business, Offer, CustomerProgress, Branch } from '../models/index.js'
+import { Business, Offer, CustomerProgress, Branch, OfferCardDesign } from '../models/index.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
@@ -632,12 +632,20 @@ router.get('/public/offer/:id', async (req, res) => {
     const offerId = req.params.id // Now expects secure offer ID (off_*)
 
     // Find offer by secure public_id with business relationship including logo info
+    // ALSO include OfferCardDesign to get card design logo
     const offer = await Offer.findByPk(offerId, {
-      include: [{
-        model: Business,
-        as: 'business',
-        attributes: ['business_name', 'business_name_ar', 'phone', 'city', 'logo_filename', 'logo_url']
-      }]
+      include: [
+        {
+          model: Business,
+          as: 'business',
+          attributes: ['business_name', 'business_name_ar', 'phone', 'city', 'logo_filename', 'logo_url']
+        },
+        {
+          model: OfferCardDesign,
+          as: 'cardDesign',
+          attributes: ['logo_url', 'background_color', 'foreground_color', 'label_color', 'stamp_icon']
+        }
+      ]
     })
 
     if (!offer) {
@@ -672,6 +680,11 @@ router.get('/public/offer/:id', async (req, res) => {
       businessLogo: offer.business?.logo_url ? {
         url: `/api/business/public/logo/${offer.business_id}/${offer.business.logo_filename}`,
         filename: offer.business.logo_filename
+      } : null,
+      // Card design logo (fallback option)
+      cardDesignLogo: offer.cardDesign?.logo_url ? {
+        url: `/api/card-design/logo/${offer.cardDesign.logo_url}`,
+        filename: offer.cardDesign.logo_url
       } : null
     }
 
