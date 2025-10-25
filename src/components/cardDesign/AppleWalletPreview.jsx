@@ -5,6 +5,7 @@
  */
 
 import { hexToRgbString } from '../../utils/colorUtils'
+import { apiBaseUrl } from '../../config/api'
 
 function AppleWalletPreview({ design, offerData }) {
   const {
@@ -32,6 +33,32 @@ function AppleWalletPreview({ design, offerData }) {
   const bgRgb = hexToRgbString(background_color)
   const fgRgb = hexToRgbString(foreground_color)
   const labelRgb = hexToRgbString(label_color)
+
+  // Helper function to render stamp icon (emoji or icon ID)
+  const renderStampIcon = (stampIcon) => {
+    if (!stampIcon) return '⭐'
+    
+    // Check if it's an emoji (1-4 chars, no hyphen)
+    const isEmoji = stampIcon.length <= 4 && !stampIcon.includes('-')
+    
+    if (isEmoji) {
+      return stampIcon
+    }
+    
+    // It's an icon ID, render as image
+    return (
+      <img
+        src={`${apiBaseUrl}/api/stamp-icons/${stampIcon}/preview`}
+        alt="stamp icon"
+        className="inline-block w-4 h-4 object-contain"
+        onError={(e) => {
+          // Fallback to star emoji if image fails to load
+          e.target.style.display = 'none'
+          e.target.insertAdjacentHTML('afterend', '⭐')
+        }}
+      />
+    )
+  }
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -150,7 +177,7 @@ function AppleWalletPreview({ design, offerData }) {
                       />
                     ) : (
                       <span className="text-xl" style={{ color: foreground_color }}>
-                        {stamp_icon}
+                        {renderStampIcon(stamp_icon)}
                       </span>
                     )}
                   </div>

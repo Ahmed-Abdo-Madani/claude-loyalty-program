@@ -5,6 +5,8 @@ import { validateSecureOfferId } from '../utils/secureAuth'
 import QRCodeGenerator from '../utils/qrCodeGenerator'
 import WalletCardPreview from '../components/WalletCardPreview'
 import WalletPassGenerator from '../utils/walletPassGenerator'
+import CountryCodeSelector from '../components/CountryCodeSelector'
+import GenderSelector from '../components/GenderSelector'
 
 // Language content objects
 const content = {
@@ -23,15 +25,16 @@ const content = {
     english: 'English',
 
     // Form Fields
-    firstName: 'الاسم الأول',
-    firstNamePlaceholder: 'أدخل اسمك الأول',
-    lastName: 'الاسم الأخير',
-    lastNamePlaceholder: 'أدخل اسمك الأخير',
-    phoneNumber: 'رقم الهاتف',
-    phonePlaceholder: '+966 50 123 4567',
-    birthday: 'تاريخ الميلاد',
-    agreeToReceive: 'أوافق على تلقي الرسائل الترويجية',
-    joinAddToWallet: 'انضم وأضف إلى المحفظة',
+    fullName: 'الاسم الكامل',
+    fullNamePlaceholder: 'أدخل اسمك الكامل',
+    phoneNumber: 'رقم الهاتف (مطلوب)',
+    phonePlaceholder: '50 123 4567',
+    gender: 'الجنس',
+    male: 'ذكر',
+    female: 'أنثى',
+    countryCode: 'رمز الدولة',
+    joinAddToWallet: 'انضم وأوافق على تلقي العروض الترويجية',
+    byJoining: 'بالانضمام، فإنك توافق على تلقي الرسائل والعروض الترويجية',
     required: '*',
 
     // Security & Features
@@ -81,15 +84,16 @@ const content = {
     english: 'English',
 
     // Form Fields
-    firstName: 'First Name',
-    firstNamePlaceholder: 'Enter your first name',
-    lastName: 'Last Name',
-    lastNamePlaceholder: 'Enter your last name',
-    phoneNumber: 'Phone Number',
-    phonePlaceholder: '+966 50 123 4567',
-    birthday: 'Birthday',
-    agreeToReceive: 'I agree to receive promotional messages',
-    joinAddToWallet: 'JOIN & ADD TO WALLET',
+    fullName: 'Full Name',
+    fullNamePlaceholder: 'Enter your full name',
+    phoneNumber: 'Phone Number (Required)',
+    phonePlaceholder: '50 123 4567',
+    gender: 'Gender',
+    male: 'Male',
+    female: 'Female',
+    countryCode: 'Country Code',
+    joinAddToWallet: 'JOIN & AGREE TO PROMOTIONAL OFFERS',
+    byJoining: 'By joining, you agree to receive promotional messages and offers',
     required: '*',
 
     // Security & Features
@@ -131,22 +135,39 @@ function CustomerSignup() {
   const [searchParams] = useSearchParams()
   const [selectedLanguage, setSelectedLanguage] = useState('ar') // Arabic as primary
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    whatsapp: '',
-    birthday: ''
+    fullName: '',
+    countryCode: '+966',
+    phone: '',
+    gender: 'male'
   })
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [qrSource, setQrSource] = useState(null)
   const [customerData, setCustomerData] = useState(null)
   const [walletAdded, setWalletAdded] = useState(false)
   const [offer, setOffer] = useState(null)
+  const [cardDesign, setCardDesign] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   // Get current language content
   const t = content[selectedLanguage]
   const isRTL = selectedLanguage === 'ar'
+
+  // Helper function to get colors from card design or use defaults
+  const getColors = () => {
+    if (cardDesign) {
+      return {
+        background: cardDesign.background_color || '#3B82F6',
+        foreground: cardDesign.foreground_color || '#FFFFFF',
+        label: cardDesign.label_color || '#E0F2FE'
+      }
+    }
+    return {
+      background: '#3B82F6',
+      foreground: '#FFFFFF',
+      label: '#E0F2FE'
+    }
+  }
 
   // Helper function to replace placeholders in text
   const formatText = (text, replacements = {}) => {
@@ -155,6 +176,32 @@ function CustomerSignup() {
       formatted = formatted.replace(`{${key}}`, replacements[key])
     })
     return formatted
+  }
+
+  // Helper function to render stamp icon (emoji or icon ID)
+  const renderStampIcon = (stampIcon) => {
+    if (!stampIcon) return '⭐'
+    
+    // Check if it's an emoji (1-4 chars, no hyphen)
+    const isEmoji = stampIcon.length <= 4 && !stampIcon.includes('-')
+    
+    if (isEmoji) {
+      return stampIcon
+    }
+    
+    // It's an icon ID, render as image
+    return (
+      <img
+        src={`${apiBaseUrl}/api/stamp-icons/${stampIcon}/preview`}
+        alt="stamp icon"
+        className="inline-block w-12 h-12 object-contain"
+        onError={(e) => {
+          // Fallback to star emoji if image fails to load
+          e.target.style.display = 'none'
+          e.target.insertAdjacentHTML('afterend', '⭐')
+        }}
+      />
+    )
   }
 
   useEffect(() => {
@@ -208,6 +255,22 @@ function CustomerSignup() {
       
       console.log('✅ Public offer loaded successfully:', data.data)
       setOffer(data.data)
+
+      // Fetch card design for dynamic colors
+      try {
+        const designResponse = await fetch(`${apiBaseUrl}/api/card-design/public/${offerId}`)
+        if (designResponse.ok) {
+          const designData = await designResponse.json()
+          console.log('✅ Card design loaded:', designData.data)
+          setCardDesign(designData.data)
+        } else {
+          console.log('ℹ️ No card design found, using defaults')
+          setCardDesign(null)
+        }
+      } catch (designErr) {
+        console.log('ℹ️ Card design fetch failed, using defaults:', designErr)
+        setCardDesign(null)
+      }
     } catch (err) {
       console.error('❌ Error loading offer:', err)
       setError(err.message || 'Failed to load offer details')
@@ -242,6 +305,27 @@ function CustomerSignup() {
     setError('')
 
     try {
+      // Validate phone number
+      if (!formData.phone || formData.phone.trim() === '') {
+        throw new Error('Please enter a valid phone number')
+      }
+
+      // Basic phone validation (7-15 digits)
+      const phoneDigits = formData.phone.replace(/\D/g, '')
+      if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+        throw new Error('Please enter a valid phone number (7-15 digits)')
+      }
+
+      // Split full name into first and last name
+      const fullNameTrimmed = formData.fullName.trim()
+      if (!fullNameTrimmed || fullNameTrimmed.length < 2) {
+        throw new Error('Please enter your full name (at least 2 characters)')
+      }
+
+      const nameParts = fullNameTrimmed.split(' ')
+      const firstName = nameParts[0]
+      const lastName = nameParts.slice(1).join(' ') || ''
+
       // Generate customer data with secure ID format (cust_* + 20 hex chars)
       const generateSecureCustomerId = () => {
         const timestamp = Date.now().toString(16) // 12 chars
@@ -251,10 +335,10 @@ function CustomerSignup() {
 
       const newCustomerData = {
         customerId: generateSecureCustomerId(),
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        whatsapp: formData.whatsapp,
-        birthday: formData.birthday,
+        firstName: firstName,
+        lastName: lastName,
+        phone: formData.countryCode + formData.phone,
+        gender: formData.gender,
         joinedDate: new Date().toISOString(),
         source: qrSource?.source,
         branch: qrSource?.branch
@@ -289,10 +373,10 @@ function CustomerSignup() {
         QRCodeGenerator.trackQREvent(offerId, 'converted', {
           customerData: {
             customerId: newCustomerData.customerId,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            hasWhatsapp: !!formData.whatsapp,
-            hasBirthday: !!formData.birthday
+            firstName: firstName,
+            lastName: lastName,
+            hasPhone: !!formData.phone,
+            gender: formData.gender
           },
           source: qrSource?.source,
           branch: qrSource?.branch,
@@ -358,36 +442,47 @@ function CustomerSignup() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 py-8 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen bg-white dark:bg-gray-900 py-12 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="max-w-md mx-auto">
-          {/* Success Header */}
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">✅</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.welcome}</h1>
-            <h2 className="text-lg text-primary mb-2">
-              🎉 {formatText(t.joinedLoyalty, { businessName: offer.businessName })} 🎉
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              {t.cardReady}
-            </p>
+          {/* Logo Section - Centered at top */}
+          <div className="text-center pt-8 mb-12">
+            {offer.businessLogo && (
+              <div className="mb-6 flex justify-center">
+                <img
+                  src={apiBaseUrl + offer.businessLogo.url}
+                  alt={`${offer.businessName} Logo`}
+                  className="w-32 h-32 object-contain rounded-lg shadow-lg"
+                />
+              </div>
+            )}
+            <h1 
+              className="text-2xl font-bold mb-2"
+              style={{ color: getColors().background }}
+            >
+              {offer.businessName}
+            </h1>
+            <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+              <span className="text-3xl">✓</span>
+              <p className="text-lg font-medium">{t.welcome}</p>
+            </div>
           </div>
 
-          {/* Wallet Card Preview and Add Buttons */}
-          <div className="mb-8">
+          {/* Wallet Card Preview - Prominent and centered */}
+          <div className="my-12">
             <WalletCardPreview
               customerData={customerData}
               offerData={{
-                offerId: offerId, // This is now the secure offer ID
+                offerId: offerId,
                 businessId: offer.business_id || offer.Business?.public_id || offer.Business?.id,
                 businessName: offer.businessName,
                 title: offer.title,
                 description: offer.description,
-                rewardDescription: offer.title.includes('FREE') ? 'Free Pizza' : 'Reward',
-                stamps_required: offer.stampsRequired || offer.stamps_required, // Fixed: use snake_case for backend compatibility
+                rewardDescription: (offer.title || '').includes('FREE') ? 'Free Pizza' : 'Reward',
+                stamps_required: offer.stampsRequired || offer.stamps_required,
                 branchName: offer.branchName,
-                businessLogo: offer.businessLogo, // Include business logo for wallet passes
+                businessLogo: offer.businessLogo,
                 locations: [
-                  { lat: 40.7128, lng: -74.0060 } // NYC coordinates for demo
+                  { lat: 40.7128, lng: -74.0060 }
                 ]
               }}
               progressData={progressData}
@@ -395,59 +490,17 @@ function CustomerSignup() {
             />
           </div>
 
-          {/* Success Actions */}
-          <div className="space-y-4">
-            {walletAdded && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
-                <div className="text-green-600 dark:text-green-400 font-medium">🎉 {t.addedToWallet}</div>
-                <div className="text-sm text-green-600 dark:text-green-400 mt-1">
-                  {t.walletReady}
-                </div>
-              </div>
-            )}
-
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">🚀 {t.whatsNext}</h3>
-              <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                <li>• {formatText(t.visitBusiness, { businessName: offer.businessName })}</li>
-                <li>• {t.earnStamps}</li>
-                <li>• {formatText(t.getReward, { count: offer.stamps_required || offer.stampsRequired })}</li>
-                <li>• {t.receiveNotifications}</li>
-              </ul>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button className="bg-accent hover:bg-orange-600 text-white py-3 rounded-lg font-medium text-sm transition-colors duration-200 shadow-sm">
-                📍 {t.getDirections}
-              </button>
-              <button className="bg-primary hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-sm transition-colors duration-200 shadow-sm">
-                📞 {t.callRestaurant}
-              </button>
-            </div>
-
-            {/* Customer Info Summary */}
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-sm border border-gray-200 dark:border-gray-700">
-              <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t.accountDetails}</div>
-              <div className="space-y-1 text-gray-600 dark:text-gray-400">
-                <div>{t.customerId} {customerData.customerId}</div>
-                <div>{t.name} {customerData.firstName} {customerData.lastName}</div>
-                <div>{t.joined} {new Date(customerData.joinedDate).toLocaleDateString(selectedLanguage === 'ar' ? 'ar-SA' : 'en-US')}</div>
-                {qrSource && qrSource.source !== 'direct' && (
-                  <div>{t.source} {qrSource.source}</div>
-                )}
+          {/* Success Indicator (subtle) */}
+          {walletAdded && (
+            <div className="text-center mt-8">
+              <div className="inline-flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full px-6 py-3">
+                <span className="text-green-600 dark:text-green-400 text-lg">✓</span>
+                <span className="text-green-600 dark:text-green-400 font-medium">
+                  {t.addedToWallet}
+                </span>
               </div>
             </div>
-
-            {/* Call to Action */}
-            <div className="text-center pt-4">
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                {t.readyToEarn}
-              </p>
-              <button className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-700 hover:to-blue-800 text-white py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg transform hover:scale-[1.02]">
-                🍕 {formatText(t.visitNow, { businessName: offer.businessName })}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     )
@@ -469,16 +522,60 @@ function CustomerSignup() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
 
+        {/* Header */}
+        <div 
+          className="text-white p-6"
+          style={{ backgroundColor: getColors().background, color: getColors().foreground }}
+        >
+          {/* Business Info with Logo */}
+          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {offer.businessLogo && (
+              <img
+                src={apiBaseUrl + offer.businessLogo.url}
+                alt={`${offer.businessName} Logo`}
+                className="w-16 h-16 object-contain rounded-lg border-2 border-white/20 bg-white/10 shadow-lg flex-shrink-0"
+              />
+            )}
+            <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <h1 className="text-xl font-bold">{offer.businessName}</h1>
+              <p className="opacity-90">{offer.branchName}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Offer Display */}
+        <div 
+          className="p-6 text-white text-center"
+          style={{ backgroundColor: getColors().background, filter: 'brightness(0.9)' }}
+        >
+          <div className="text-xl font-bold mb-4">{offer.title}</div>
+
+          <div className={`flex flex-wrap justify-center items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''} max-w-[80%] mx-auto mb-4`}>
+            {Array.from({ length: offer.stamps_required || offer.stampsRequired }, (_, i) => (
+              <span key={i} className="text-5xl" role="img" aria-label="stamp">
+                {renderStampIcon(cardDesign?.stamp_icon || '⭐')}
+              </span>
+            ))}
+          </div>
+          <div className="text-sm opacity-90">
+            {formatText(t.collectStamps, { count: offer.stamps_required || offer.stampsRequired })}
+          </div>
+        </div>
+
         {/* Language Selection Tabs */}
-        <div className="bg-white dark:bg-gray-800 px-6 pt-6">
-          <div className="flex justify-center mb-4">
+        <div className="bg-white dark:bg-gray-800 px-6 py-4">
+          <div className="flex justify-center">
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               {/* Always show Arabic first, then English - regardless of current language */}
               <button
                 onClick={() => setSelectedLanguage('ar')}
+                style={{ 
+                  backgroundColor: selectedLanguage === 'ar' ? getColors().background : undefined,
+                  color: selectedLanguage === 'ar' ? getColors().foreground : undefined
+                }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   selectedLanguage === 'ar'
-                    ? 'bg-primary text-white shadow-sm'
+                    ? 'shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
@@ -486,9 +583,13 @@ function CustomerSignup() {
               </button>
               <button
                 onClick={() => setSelectedLanguage('en')}
+                style={{ 
+                  backgroundColor: selectedLanguage === 'en' ? getColors().background : undefined,
+                  color: selectedLanguage === 'en' ? getColors().foreground : undefined
+                }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   selectedLanguage === 'en'
-                    ? 'bg-primary text-white shadow-sm'
+                    ? 'shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
@@ -498,119 +599,70 @@ function CustomerSignup() {
           </div>
         </div>
 
-        {/* Header */}
-        <div className="bg-gradient-to-r from-primary to-blue-600 text-white p-6 text-center">
-          {/* Business Logo */}
-          {offer.businessLogo && (
-            <div className="mb-4 flex justify-center">
-              <img
-                src={offer.businessLogo.url}
-                alt={`${offer.businessName} Logo`}
-                className="w-16 h-16 object-contain rounded-lg border-2 border-white/20 bg-white/10 shadow-lg"
-              />
-            </div>
-          )}
-          <h1 className="text-xl font-bold">{offer.businessName}</h1>
-          <p className="text-blue-100">{offer.branchName}</p>
-        </div>
-
-        {/* Offer Display */}
-        <div className="p-6 bg-gradient-to-r from-accent to-orange-500 text-white text-center">
-          <div className="text-lg font-bold mb-2">🎉 {t.specialOffer} 🎉</div>
-          <div className="text-xl font-bold mb-4">{offer.title}</div>
-
-          <div className={`flex justify-center ${isRTL ? 'space-x-reverse space-x-1' : 'space-x-1'} mb-2`}>
-            {Array.from({ length: offer.stamps_required || offer.stampsRequired }, (_, i) => (
-              <span key={i} className="text-lg">⭐</span>
-            ))}
-          </div>
-          <div className="text-sm opacity-90">
-            {formatText(t.collectStamps, { count: offer.stamps_required || offer.stampsRequired })}
-          </div>
-        </div>
-
         {/* Form */}
         <div className="p-6">
           <div className="text-center mb-6">
             <p className="text-gray-700 dark:text-gray-300">{t.joinProgram}</p>
-            {qrSource && qrSource.source !== 'direct' && (
-              <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full inline-block border border-blue-200 dark:border-blue-800">
-                📱 {formatText(t.scannedFrom, { source: qrSource.source.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) })}
-              </div>
-            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Full Name Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.firstName} {t.required}
+                {t.fullName} {t.required}
               </label>
               <input
                 type="text"
-                name="firstName"
+                name="fullName"
                 required
-                value={formData.firstName}
+                value={formData.fullName}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                placeholder={t.firstNamePlaceholder}
+                placeholder={t.fullNamePlaceholder}
                 dir={isRTL ? 'rtl' : 'ltr'}
+                minLength={2}
+                maxLength={100}
               />
             </div>
 
+            {/* Phone Number Field with Country Code */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.lastName} {t.required}
+                {t.phoneNumber} {t.required}
               </label>
-              <input
-                type="text"
-                name="lastName"
-                required
-                value={formData.lastName}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                placeholder={t.lastNamePlaceholder}
-                dir={isRTL ? 'rtl' : 'ltr'}
-              />
+              <div className="flex gap-2" dir="ltr">
+                <CountryCodeSelector
+                  value={formData.countryCode}
+                  onChange={(code) => setFormData({ ...formData, countryCode: code })}
+                  language={selectedLanguage}
+                  className="w-auto"
+                />
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  placeholder={t.phonePlaceholder}
+                  pattern="[0-9]{7,15}"
+                  dir="ltr"
+                />
+              </div>
             </div>
 
+            {/* Gender Selector */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.phoneNumber}
+                {t.gender} {t.required}
               </label>
-              <input
-                type="tel"
-                name="whatsapp"
-                value={formData.whatsapp}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                placeholder={t.phonePlaceholder}
-                dir="ltr"
+              <GenderSelector
+                value={formData.gender}
+                onChange={(gender) => setFormData({ ...formData, gender })}
+                language={selectedLanguage}
+                required={true}
+                primaryColor={getColors().background}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.birthday}
-              </label>
-              <input
-                type="date"
-                name="birthday"
-                value={formData.birthday}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-              />
-            </div>
-
-            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <input
-                type="checkbox"
-                id="consent"
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                required
-              />
-              <label htmlFor="consent" className={`text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'mr-2' : 'ml-2'}`}>
-                {t.agreeToReceive}
-              </label>
             </div>
 
             {error && (
@@ -622,10 +674,11 @@ function CustomerSignup() {
             <button
               type="submit"
               disabled={loading}
+              style={{ backgroundColor: loading ? undefined : getColors().background }}
               className={`w-full py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/25 ${
                 loading
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-primary hover:bg-blue-700 text-white transform hover:scale-[1.02]'
+                  : 'text-white transform hover:scale-[1.02] hover:brightness-90'
               }`}
             >
               {loading ? (
@@ -640,6 +693,13 @@ function CustomerSignup() {
                 `📱 ${t.joinAddToWallet}`
               )}
             </button>
+
+            {/* Disclaimer text below button */}
+            <div className="text-center mt-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t.byJoining}
+              </p>
+            </div>
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400 space-y-1">

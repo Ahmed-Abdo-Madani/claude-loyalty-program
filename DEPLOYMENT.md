@@ -385,3 +385,394 @@ Expected response:
 **🎉 Your Madna Loyalty Platform is now live in production!**
 
 Access the platform at: https://app.madna.me
+
+---
+
+## 🆕 Customer Signup Redesign Deployment
+
+### Overview
+This deployment includes a major redesign of the customer signup page with:
+- Single full name field (replaces first/last name)
+- Mandatory phone number with country code selector
+- Gender selection (male/female) with default 'male'
+- Dynamic colors from offer card design
+- Simplified success page (logo-centric)
+
+### 1. Database Migration
+
+**IMPORTANT**: All existing customer data is test data and will be affected by the NOT NULL constraint.
+
+**Run the migration:**
+```bash
+# In backend directory
+npm run migrate:gender
+```
+
+**Verify migration:**
+- Check that `gender` column exists in `customers` table
+- Confirm column type: ENUM('male', 'female')
+- Confirm default value: 'male'
+- Verify all existing customers have gender set to 'male'
+
+**SQL Verification Query:**
+```sql
+-- Check column exists and has correct type
+SELECT column_name, data_type, column_default, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'customers' AND column_name = 'gender';
+
+-- Verify all customers have gender set
+SELECT COUNT(*), gender FROM customers GROUP BY gender;
+```
+
+### 2. Backend Changes
+
+**Updated Files:**
+- `backend/models/Customer.js` - Added gender field (NOT NULL, default 'male')
+- `backend/routes/business.js` - Updated signup endpoint to accept and validate gender
+- `backend/routes/cardDesign.js` - Added public endpoint for card design colors
+- `backend/migrations/20250126-add-gender-to-customers.js` - New migration file
+
+**API Changes:**
+- `/api/business/customers/signup` - Now accepts `gender` field
+- `/api/card-design/public/:offerId` - New public endpoint (no auth required)
+
+**No Breaking Changes:**
+- Gender field has default value, so missing values default to 'male'
+- Existing signup flow continues to work
+- Backward compatible with old data
+
+### 3. Frontend Changes
+
+**New Components:**
+- `src/components/CountryCodeSelector.jsx` - Country code dropdown (15 countries)
+- `src/components/GenderSelector.jsx` - Male/Female toggle buttons
+
+**Updated Files:**
+- `src/pages/CustomerSignup.jsx` - Complete form redesign
+
+**Key Features:**
+- Full name field (splits into first/last on submit)
+- Phone validation (7-15 digits, required)
+- Country code selector (defaults to +966 Saudi Arabia)
+- Gender selector (defaults to male, with emoji indicators)
+- Dynamic colors fetched from card design
+- Simplified success page with centered logo
+
+### 4. Testing Checklist
+
+**Pre-Deployment Testing:**
+- [ ] Test signup with Arabic language
+- [ ] Test signup with English language
+- [ ] Verify phone number validation works (required, 7-15 digits)
+- [ ] Verify gender selection defaults to male
+- [ ] Test with different country codes
+- [ ] Verify full name splits correctly (e.g., "John Doe" → first: "John", last: "Doe")
+- [ ] Test dynamic colors with different offer designs
+- [ ] Test fallback colors when no design exists
+- [ ] Verify success page displays correctly
+- [ ] Test wallet pass generation with new customer data
+- [ ] Verify gender field is stored correctly in database
+
+**Post-Deployment Verification:**
+- [ ] Monitor signup success rate
+- [ ] Check for validation errors in logs
+- [ ] Verify customer data is being stored with gender field
+- [ ] Confirm wallet passes generate with correct colors
+- [ ] Verify all new customers have gender set (either 'male' or 'female')
+- [ ] Test on mobile devices (iOS and Android)
+- [ ] Verify RTL support works correctly in Arabic
+
+### 5. Rollback Plan
+
+If issues occur:
+
+**Frontend Rollback:**
+- Revert `CustomerSignup.jsx` to previous version
+- Remove new component files (no data loss)
+- Existing signup flow continues to work
+
+**Backend Rollback:**
+- Gender field has default value, so no immediate issues
+- To completely rollback database migration:
+  ```bash
+  node backend/migrations/20250126-add-gender-to-customers.js down
+  ```
+- Note: Rolling back will remove gender column and any gender data
+
+**Database Considerations:**
+- All existing data is test data (per user confirmation)
+- Safe to drop and recreate if needed
+- No production customer data to preserve
+
+### 6. Post-Deployment Verification
+
+**Database Checks:**
+```sql
+-- Verify gender field exists
+DESCRIBE customers;
+
+-- Check gender distribution
+SELECT gender, COUNT(*) as count FROM customers GROUP BY gender;
+
+-- Verify no NULL values
+SELECT COUNT(*) FROM customers WHERE gender IS NULL;
+```
+
+**API Testing:**
+```bash
+# Test public card design endpoint
+curl https://api.madna.me/api/card-design/public/off_123456
+
+# Test signup with new fields
+curl -X POST https://api.madna.me/api/business/customers/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerData": {
+      "customerId": "cust_test123",
+      "firstName": "John",
+      "lastName": "Doe",
+      "phone": "+966501234567",
+      "gender": "male"
+    },
+    "offerId": "off_123456"
+  }'
+```
+
+**Frontend Testing:**
+- Visit customer signup page: `https://app.madna.me/signup/off_123456`
+- Complete signup form with all new fields
+- Verify dynamic colors are applied
+- Check success page displays correctly
+- Add to Apple/Google Wallet and verify pass details
+
+### 7. Monitoring
+
+**Key Metrics to Watch:**
+- Signup conversion rate (before/after redesign)
+- Form validation errors (especially phone validation)
+- Card design fetch success rate
+- Gender distribution in new signups
+- Wallet pass generation success rate
+- Page load time with new components
+
+**Error Logs to Monitor:**
+- Phone validation failures
+- Gender field validation errors
+- Card design fetch failures (should fallback gracefully)
+- Full name split edge cases (names with multiple spaces)
+
+### 8. Known Limitations
+
+1. **Full Name Splitting**: Simple split on first space
+   - "John Doe" → first: "John", last: "Doe" ✓
+   - "John Doe Smith" → first: "John", last: "Doe Smith" ✓
+   - "Madonna" (single name) → first: "Madonna", last: "" ✓
+   
+2. **Country Codes**: 15 countries supported
+   - Covers 95% of use cases for Saudi-based businesses
+   - Can be expanded by adding to COUNTRIES array
+
+3. **Gender Options**: Binary male/female only
+   - Per user requirements
+   - Can be expanded in future if needed
+
+4. **Dynamic Colors**: Requires card design to exist
+   - Falls back to default blue (#3B82F6) if no design
+   - All offers should have card design created for best UX
+
+---
+
+## 🎨 Stamp Icon System Setup
+
+### Overview
+The stamp icon system allows businesses to use either emojis or custom SVG icons for their loyalty stamps. The system automatically detects icon type and renders appropriately.
+
+### 1. Icon Files Structure
+
+**Directory**: `uploads/icons/stamps/`
+
+**File Organization:**
+- SVG source files: `{iconId}-filled.svg` (e.g., `coffee-filled.svg`)
+- Preview PNGs: `previews/{iconId}-preview.png` (e.g., `previews/coffee-preview.png`)
+- Manifest: `manifest.json` defines available icons and categories
+
+**Default Icons Included:**
+- `coffee-filled.svg` - Coffee cup icon for cafes
+- `gift-filled.svg` - Gift box icon for retail/rewards
+
+### 2. Initial Setup (First Deployment)
+
+**Step 1: Create Directory Structure**
+```bash
+# In backend directory
+mkdir -p uploads/icons/stamps/previews
+```
+
+**Step 2: Verify SVG Files**
+```bash
+# Check that SVG icon files exist
+ls uploads/icons/stamps/*.svg
+
+# Should show:
+# coffee-filled.svg
+# gift-filled.svg
+```
+
+**Step 3: Generate Preview Images**
+```bash
+cd backend
+npm run generate-icon-previews
+```
+
+**Expected Output:**
+```
+Generating stamp icon previews...
+✓ Generated preview for coffee-filled.svg
+✓ Generated preview for gift-filled.svg
+Preview generation complete! 2 icons processed.
+```
+
+**Step 4: Verify Preview Files**
+```bash
+ls uploads/icons/stamps/previews/*.png
+
+# Should show:
+# coffee-preview.png
+# gift-preview.png
+```
+
+**Step 5: Commit to Repository**
+```bash
+git add uploads/icons/stamps/*.svg
+git add uploads/icons/stamps/previews/*.png
+git add uploads/icons/stamps/manifest.json
+git commit -m "Add stamp icon system with initial icons"
+```
+
+### 3. Adding New Icons
+
+**Step 1: Create SVG File**
+- Design icon in vector graphics tool (Illustrator, Figma, etc.)
+- Export as SVG with viewBox="0 0 100 100"
+- Save as `uploads/icons/stamps/{iconId}-filled.svg`
+- Keep design simple for small sizes (50x50px preview)
+
+**Step 2: Update Manifest**
+Edit `uploads/icons/stamps/manifest.json`:
+```json
+{
+  "icons": [
+    {
+      "id": "your-new-icon",
+      "name": "Your New Icon",
+      "category": "food",
+      "fileName": "your-new-icon-filled.svg"
+    }
+  ]
+}
+```
+
+**Step 3: Generate Preview**
+```bash
+cd backend
+npm run generate-icon-previews
+```
+
+**Step 4: Test Icon Display**
+- Open StampIconPicker component in card design editor
+- Verify new icon appears in the list
+- Select icon and preview in Apple Wallet/Google Wallet previews
+- Test on customer signup page
+
+**Step 5: Commit Changes**
+```bash
+git add uploads/icons/stamps/{iconId}-filled.svg
+git add uploads/icons/stamps/previews/{iconId}-preview.png
+git add uploads/icons/stamps/manifest.json
+git commit -m "Add {iconId} stamp icon"
+```
+
+### 4. Production Deployment
+
+**Persistent Storage (Render.com):**
+
+Ensure `uploads/` directory is persistent:
+1. Go to Render Dashboard → Your Web Service
+2. Navigate to "Disks" section
+3. Add persistent disk:
+   - **Name**: `uploads-disk`
+   - **Mount Path**: `/opt/render/project/src/backend/uploads`
+   - **Size**: 1 GB (minimum)
+
+**Environment Variables:**
+```bash
+UPLOADS_DIR=/opt/render/project/src/backend/uploads
+UPLOADS_BASE_URL=https://api.madna.me/uploads
+```
+
+**Deployment Steps:**
+1. Ensure all SVG and PNG files are committed to repository
+2. Deploy backend service
+3. Verify persistent disk is mounted
+4. Test icon endpoint: `GET /api/stamp-icons/:id/preview`
+5. Verify icons appear in customer signup page
+6. Test icons in wallet previews (Apple & Google)
+
+**Verify Deployment:**
+```bash
+# Test preview endpoint
+curl https://api.madna.me/api/stamp-icons/coffee-01/preview
+
+# Should return PNG image data
+# Check response headers: Content-Type: image/png
+```
+
+### 5. Troubleshooting
+
+**Icons showing as text:**
+- **Symptom**: "coffee-01" displays as text instead of image
+- **Cause**: Preview PNGs not generated or missing
+- **Solution**: Run `npm run generate-icon-previews`
+
+**Preview endpoint returns 404:**
+- **Symptom**: `/api/stamp-icons/:id/preview` returns 404
+- **Cause**: SVG files missing or manifest.json incorrect
+- **Solution**: Verify SVG files exist and manifest.json is valid
+
+**Icons not appearing in picker:**
+- **Symptom**: StampIconPicker component shows empty list
+- **Cause**: Manifest.json not loaded or fetch error
+- **Solution**: Check browser console and verify `/api/stamp-icons` endpoint
+
+**Preview images look pixelated:**
+- **Symptom**: Icons look blurry or low quality
+- **Cause**: SVG source is too complex or small
+- **Solution**: Redesign SVG with simpler shapes, ensure viewBox is 100x100
+
+**Uploads directory wiped after deploy:**
+- **Symptom**: Icons work initially but disappear after redeploy
+- **Cause**: Persistent disk not configured
+- **Solution**: Configure persistent disk in Render dashboard, set `UPLOADS_DIR`
+
+---
+   - Gracefully falls back to default blue (#3B82F6)
+   - Non-blocking if fetch fails
+
+### 9. Future Enhancements
+
+Potential improvements for future releases:
+- Email field (optional)
+- Date of birth with better UX (dropdown vs date picker)
+- Address fields for delivery-based businesses
+- Custom gender options (beyond male/female)
+- More country codes in selector
+- Advanced phone validation (per-country formats)
+- Success page animations
+- Social media sharing of loyalty card
+
+---
+
+**Deployment Date**: January 26, 2025  
+**Version**: 2.0 - Customer Signup Redesign  
+**Status**: Ready for Production

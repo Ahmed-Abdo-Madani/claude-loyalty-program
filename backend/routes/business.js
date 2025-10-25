@@ -785,8 +785,36 @@ router.post('/customers/signup', async (req, res) => {
     console.log('📝 Customer signup request:', {
       customerId: customerData.customerId,
       offerId: offerId,
-      name: `${customerData.firstName} ${customerData.lastName}`
+      name: `${customerData.firstName} ${customerData.lastName}`,
+      gender: customerData.gender || 'male',
+      phone: customerData.phone || customerData.whatsapp || 'none'
     })
+
+    // Validate phone number (required field)
+    const phone = customerData.phone || customerData.whatsapp
+    if (!phone || phone.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
+      })
+    }
+
+    // Validate phone format (must contain 7-15 digits)
+    const phoneDigits = phone.replace(/\D/g, '')
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number. Must contain 7-15 digits'
+      })
+    }
+
+    // Validate gender if provided
+    if (customerData.gender && !['male', 'female'].includes(customerData.gender)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid gender value. Must be male or female'
+      })
+    }
 
     // Get offer to find business ID
     const offer = await Offer.findOne({
@@ -814,9 +842,10 @@ router.post('/customers/signup', async (req, res) => {
       {
         firstName: customerData.firstName || 'Guest',
         lastName: customerData.lastName || 'Customer',
-        phone: customerData.whatsapp || null,
+        phone: customerData.phone || customerData.whatsapp || null,
         email: customerData.email || null,
         date_of_birth: customerData.birthday || null,
+        gender: customerData.gender || 'male',
         source: customerData.source || 'in_store',
         branch: customerData.branch || null
       }

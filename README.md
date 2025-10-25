@@ -10,6 +10,7 @@ A cost-effective and scalable loyalty program management platform designed for b
 - 🎯 **Multiple program types** - Stamps, points, discounts
 - 📊 **Real-time analytics** - Track customer engagement
 - 🏪 **Multi-location support** - Manage multiple branches
+- 🎨 **Custom stamp icons** - SVG support with automatic PNG preview generation
 
 ### **For Customers**
 - 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with emoji stamp visualization
@@ -83,12 +84,19 @@ claude-loyalty-program/
    npm install
    ```
 
-3. **Start development server**
+3. **Generate stamp icon previews**
+   ```bash
+   cd backend
+   npm run generate-icon-previews
+   ```
+   Note: Sample icons (coffee, gift) are included by default.
+
+4. **Start development server**
    ```bash
    npm run dev
    ```
 
-4. **Open browser**
+5. **Open browser**
    ```
    http://localhost:3000
    ```

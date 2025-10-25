@@ -55,6 +55,12 @@ const Customer = sequelize.define('Customer', {
     type: DataTypes.DATEONLY,
     allowNull: true
   },
+  gender: {
+    type: DataTypes.ENUM('male', 'female'),
+    allowNull: false,
+    defaultValue: 'male',
+    comment: 'Customer gender (male or female)'
+  },
   // Customer Status and Lifecycle
   status: {
     type: DataTypes.ENUM('new', 'active', 'inactive', 'churning', 'vip'),

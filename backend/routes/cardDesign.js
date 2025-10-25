@@ -491,6 +491,58 @@ router.get('/stats/:businessId', requireBusinessAuth, async (req, res) => {
   }
 })
 
+// ============================================================================
+// Public Endpoints (No Authentication Required)
+// ============================================================================
+
+/**
+ * GET /api/card-design/public/:offerId
+ * Get card design for customer signup page (public endpoint)
+ */
+router.get('/public/:offerId', async (req, res) => {
+  try {
+    const { offerId } = req.params
+
+    // Validate offer ID format
+    if (!offerId || !offerId.startsWith('off_')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid offer ID format. Must start with off_'
+      })
+    }
+
+    logger.info(`🌐 PUBLIC: Get card design for offer: ${offerId}`)
+
+    const design = await CardDesignService.getDesignByOffer(offerId, false)
+
+    if (!design) {
+      return res.status(404).json({
+        success: false,
+        message: 'Card design not found for this offer'
+      })
+    }
+
+    // Return only public-safe fields (no sensitive data)
+    res.json({
+      success: true,
+      data: {
+        background_color: design.background_color,
+        foreground_color: design.foreground_color,
+        label_color: design.label_color,
+        logo_url: design.logo_url,
+        stamp_icon: design.stamp_icon
+      }
+    })
+
+  } catch (error) {
+    logger.error('❌ Failed to get public card design:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve card design'
+    })
+  }
+})
+
 // Error handler for multer errors
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
@@ -505,3 +557,4 @@ router.use((error, req, res, next) => {
 })
 
 export default router
+
