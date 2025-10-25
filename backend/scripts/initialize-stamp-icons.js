@@ -261,4 +261,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 // Export helper functions for testing
-export { ensureDirectoryExists, createSVGFile, generatePreviewFromSVG, verifyManifestExists }
+export { ensureDirectoryExists, createSVGFile, generatePreviewFromSVG, createOrVerifyManifest }
