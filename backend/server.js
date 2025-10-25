@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notifications.js'
 import segmentRoutes from './routes/segments.js'
 import locationRoutes from './routes/locations.js'
 import cardDesignRoutes from './routes/cardDesign.js'
+import stampIconsRoutes from './routes/stampIcons.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 
 // Get __dirname equivalent in ES modules
@@ -203,6 +204,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/segments', segmentRoutes)
 app.use('/api/locations', locationRoutes)
 app.use('/api/card-design', cardDesignRoutes)
+app.use('/api/stamp-icons', stampIconsRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

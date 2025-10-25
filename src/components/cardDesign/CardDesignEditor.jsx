@@ -10,6 +10,7 @@ import { useIsDesktop } from '../../hooks/useMediaQuery'
 import ColorPicker from './ColorPicker'
 import LogoUploader from './LogoUploader'
 import HeroImageUploader from './HeroImageUploader'
+import StampIconPicker from './StampIconPicker'
 import CardPreview from './CardPreview'
 import TemplateSelector from './TemplateSelector'
 import ValidationPanel from './ValidationPanel'
@@ -104,8 +105,6 @@ function CardDesignEditor({ offer, onClose, onSave }) {
   const handleHeroRemove = () => {
     updateDesignField('hero_image_url', null)
   }
-
-  const stampIcons = ['⭐', '☕', '🍽️', '🛍️', '💆', '💪', '🎁', '🎫', '💎', '🏆']
 
   if (loading && !currentDesign) {
     return (
@@ -274,52 +273,65 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   />
                 </div>
 
-                {/* Stamp Icon Section */}
+                {/* Stamp Display Configuration Section */}
                 <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
-                    Stamp Icon
+                    Stamp Display (Apple Wallet)
                   </h3>
-                  <div className="grid grid-cols-5 gap-2">
-                    {stampIcons.map((icon) => (
-                      <button
-                        key={icon}
-                        onClick={() => updateDesignField('stamp_icon', icon)}
-                        className={`aspect-square rounded-lg text-2xl flex items-center justify-center transition-all duration-200
-                          ${currentDesign?.stamp_icon === icon
-                            ? 'bg-primary text-white shadow-md scale-110'
-                            : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-                          }`}
-                      >
-                        {icon}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Stamp Display Type Section */}
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
-                    Stamp Display (Apple Wallet Grid Only)
-                  </h3>
-                  <div className="space-y-2">
-                    {[
-                      { value: 'icon', label: 'Use Icon', description: 'Show stamp icon in grid' },
-                      { value: 'logo', label: 'Use Logo', description: 'Show your logo in grid' }
-                    ].map((type) => (
-                      <button
-                        key={type.value}
-                        onClick={() => updateDesignField('stamp_display_type', type.value)}
-                        className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200
-                          ${(currentDesign?.stamp_display_type || 'icon') === type.value
-                            ? 'bg-primary text-white shadow-md'
-                            : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
-                          }`}
-                      >
-                        <div className="font-medium">{type.label}</div>
-                        <div className="text-xs opacity-75 mt-0.5">{type.description}</div>
-                      </button>
-                    ))}
+                  {/* Display Type Toggle */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      onClick={() => updateDesignField('stamp_display_type', 'logo')}
+                      disabled={uploading || saving}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all text-left
+                        ${(currentDesign?.stamp_display_type || 'logo') === 'logo'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-primary/50 text-gray-900 dark:text-white'
+                        }
+                        ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="font-medium">Business Logo</div>
+                      <div className="text-xs opacity-75 mt-1">
+                        Use uploaded logo as stamp
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => updateDesignField('stamp_display_type', 'svg')}
+                      disabled={uploading || saving}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all text-left
+                        ${currentDesign?.stamp_display_type === 'svg'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-primary/50 text-gray-900 dark:text-white'
+                        }
+                        ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="font-medium">SVG Icon</div>
+                      <div className="text-xs opacity-75 mt-1">
+                        Choose from icon library
+                      </div>
+                    </button>
                   </div>
+
+                  {/* Show icon picker only when SVG mode is selected */}
+                  {currentDesign?.stamp_display_type === 'svg' && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <StampIconPicker
+                        selectedIconId={currentDesign?.stamp_icon || 'coffee-01'}
+                        onChange={(iconId) => updateDesignField('stamp_icon', iconId)}
+                        disabled={uploading || saving}
+                      />
+                    </div>
+                  )}
+
+                  {/* Show logo requirement when logo mode is selected */}
+                  {(currentDesign?.stamp_display_type || 'logo') === 'logo' && !currentDesign?.logo_url && (
+                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        ⚠️ Logo stamp display requires a logo to be uploaded above
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Progress Style Section */}

@@ -1,0 +1,35 @@
+{
+  "icons": [
+    {
+      "id": "coffee-01",
+      "name": "Coffee Cup",
+      "category": "food-beverage",
+      "description": "Classic coffee shop stamp with decorative coffee cup design",
+      "filledFile": "coffee-filled.svg",
+      "strokeFile": "coffee-stroke.svg",
+      "previewFile": "coffee-preview.png",
+      "seasonal": false
+    },
+    {
+      "id": "gift-01",
+      "name": "Gift Box",
+      "category": "retail",
+      "description": "Gift box design perfect for rewards and retail programs",
+      "filledFile": "gift-filled.svg",
+      "strokeFile": "gift-stroke.svg",
+      "previewFile": "gift-preview.png",
+      "seasonal": false
+    }
+  ],
+  "categories": [
+    { "id": "food-beverage", "name": "Food & Beverage", "order": 1 },
+    { "id": "retail", "name": "Retail", "order": 2 },
+    { "id": "services", "name": "Services", "order": 3 },
+    { "id": "wellness", "name": "Health & Wellness", "order": 4 },
+    { "id": "entertainment", "name": "Entertainment", "order": 5 },
+    { "id": "seasonal", "name": "Seasonal", "order": 6 },
+    { "id": "generic", "name": "Generic", "order": 7 }
+  ],
+  "version": "1.0.0",
+  "lastUpdated": "2025-10-24T19:30:00.000Z"
+}

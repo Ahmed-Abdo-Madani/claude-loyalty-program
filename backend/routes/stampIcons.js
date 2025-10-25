@@ -1,0 +1,162 @@
+import express from 'express'
+import { readFileSync, existsSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import logger from '../config/logger.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const router = express.Router()
+// Go up two levels from backend/routes to project root, then into uploads/icons/stamps
+const ICONS_BASE_PATH = process.env.ICONS_PATH || join(__dirname, '..', '..', 'uploads', 'icons', 'stamps')
+
+/**
+ * GET /api/stamp-icons
+ * List all available stamp icons
+ * Query params:
+ *   - category: Filter by category (optional)
+ */
+router.get('/', (req, res) => {
+  try {
+    const { category } = req.query
+    const manifestPath = join(ICONS_BASE_PATH, 'manifest.json')
+
+    if (!existsSync(manifestPath)) {
+      logger.error('Stamp icons manifest not found at:', manifestPath)
+      return res.status(500).json({
+        success: false,
+        error: 'Stamp icons manifest not found',
+        message: 'Please ensure manifest.json exists in uploads/icons/stamps/'
+      })
+    }
+
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+
+    let icons = manifest.icons || []
+    if (category) {
+      icons = icons.filter(icon => icon.category === category)
+      logger.info(`📋 Filtered ${icons.length} icons for category: ${category}`)
+    }
+
+    logger.info(`✅ Served ${icons.length} stamp icon(s)`)
+
+    res.json({
+      success: true,
+      icons,
+      categories: manifest.categories || [],
+      version: manifest.version,
+      total: icons.length
+    })
+  } catch (error) {
+    logger.error('❌ Failed to load stamp icons:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load stamp icons',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/stamp-icons/:id
+ * Get specific icon metadata
+ */
+router.get('/:id', (req, res) => {
+  try {
+    const { id } = req.params
+    const manifestPath = join(ICONS_BASE_PATH, 'manifest.json')
+
+    if (!existsSync(manifestPath)) {
+      return res.status(500).json({
+        success: false,
+        error: 'Stamp icons manifest not found'
+      })
+    }
+
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+    const icon = manifest.icons.find(i => i.id === id)
+
+    if (!icon) {
+      logger.warn(`⚠️ Icon not found: ${id}`)
+      return res.status(404).json({
+        success: false,
+        error: 'Icon not found',
+        message: `No icon with ID '${id}' found in manifest`
+      })
+    }
+
+    logger.info(`✅ Served icon metadata: ${id}`)
+
+    res.json({
+      success: true,
+      icon
+    })
+  } catch (error) {
+    logger.error('❌ Failed to load icon:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load icon',
+      message: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/stamp-icons/:id/preview
+ * Serve icon preview image (PNG)
+ */
+router.get('/:id/preview', (req, res) => {
+  try {
+    const { id } = req.params
+    const manifestPath = join(ICONS_BASE_PATH, 'manifest.json')
+
+    if (!existsSync(manifestPath)) {
+      return res.status(500).json({
+        success: false,
+        error: 'Stamp icons manifest not found'
+      })
+    }
+
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+    const icon = manifest.icons.find(i => i.id === id)
+
+    if (!icon) {
+      return res.status(404).json({
+        success: false,
+        error: 'Icon not found'
+      })
+    }
+
+    const previewPath = join(ICONS_BASE_PATH, 'previews', icon.previewFile)
+
+    if (!existsSync(previewPath)) {
+      logger.warn(`⚠️ Preview image not found: ${previewPath}`)
+      // Return the filled SVG as fallback
+      const filledSvgPath = join(ICONS_BASE_PATH, icon.filledFile)
+      if (existsSync(filledSvgPath)) {
+        logger.info(`🔄 Serving filled SVG as fallback for preview: ${id}`)
+        res.setHeader('Content-Type', 'image/svg+xml')
+        return res.sendFile(filledSvgPath)
+      }
+
+      return res.status(404).json({
+        success: false,
+        error: 'Preview image not found',
+        message: `Preview file '${icon.previewFile}' does not exist`
+      })
+    }
+
+    logger.info(`✅ Serving preview image: ${id}`)
+    res.sendFile(previewPath)
+  } catch (error) {
+    logger.error('❌ Failed to load preview:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load preview',
+      message: error.message
+    })
+  }
+})
+
+export default router

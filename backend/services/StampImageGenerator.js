@@ -75,7 +75,7 @@
 import sharp from 'sharp'
 import SafeImageFetcher from '../utils/SafeImageFetcher.js'
 import logger from '../config/logger.js'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
@@ -84,25 +84,95 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 class StampImageGenerator {
-  // Cache SVG icon contents (loaded once, reused)
+  // Cache SVG icons by icon ID
+  static iconCache = new Map()
+  // Go up two levels from backend/services to project root, then into uploads/icons/stamps
+  static ICONS_BASE_PATH = process.env.ICONS_PATH || join(__dirname, '..', '..', 'uploads', 'icons', 'stamps')
+
+  // Current loaded icons (for backwards compatibility)
   static filledStampSVG = null
   static strokeStampSVG = null
 
   /**
-   * Load stamp SVG icons from files (called once, then cached)
+   * Load stamp SVG icons from persistent storage (cached per icon ID)
+   * @param {string} iconId - Icon identifier (e.g., 'coffee-01', 'gift-01')
    */
-  static loadStampIcons() {
-    if (!this.filledStampSVG) {
-      try {
-        const iconsPath = join(__dirname, '..', 'icons')
-        this.filledStampSVG = readFileSync(join(iconsPath, 'Filled-Stamp-Icon-01.svg'), 'utf-8')
-        this.strokeStampSVG = readFileSync(join(iconsPath, 'Stroke-Stamp-Icon-01.svg'), 'utf-8')
-        logger.info('✅ Loaded custom stamp SVG icons from', iconsPath)
-      } catch (error) {
-        logger.error('❌ Failed to load stamp SVG icons:', error.message)
-        throw error
+  static loadStampIcons(iconId = 'coffee-01') {
+    // Check cache first
+    if (this.iconCache.has(iconId)) {
+      const cached = this.iconCache.get(iconId)
+      this.filledStampSVG = cached.filled
+      this.strokeStampSVG = cached.stroke
+      logger.info(`✅ Using cached stamp icon: ${iconId}`)
+      return
+    }
+
+    try {
+      // Load manifest
+      const manifestPath = join(this.ICONS_BASE_PATH, 'manifest.json')
+
+      if (!existsSync(manifestPath)) {
+        logger.error(`❌ Manifest not found at: ${manifestPath}`)
+        throw new Error('Stamp icons manifest not found')
+      }
+
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+      const iconData = manifest.icons.find(i => i.id === iconId)
+
+      if (!iconData) {
+        logger.warn(`⚠️ Icon '${iconId}' not found in manifest, using default 'coffee-01'`)
+        // Fallback to default icon
+        if (iconId !== 'coffee-01') {
+          return this.loadStampIcons('coffee-01')
+        }
+        throw new Error(`Default icon 'coffee-01' not found in manifest`)
+      }
+
+      // Load SVG files
+      const filledPath = join(this.ICONS_BASE_PATH, iconData.filledFile)
+      const strokePath = join(this.ICONS_BASE_PATH, iconData.strokeFile)
+
+      if (!existsSync(filledPath)) {
+        throw new Error(`Filled icon file not found: ${filledPath}`)
+      }
+      if (!existsSync(strokePath)) {
+        throw new Error(`Stroke icon file not found: ${strokePath}`)
+      }
+
+      this.filledStampSVG = readFileSync(filledPath, 'utf-8')
+      this.strokeStampSVG = readFileSync(strokePath, 'utf-8')
+
+      // Cache for future use
+      this.iconCache.set(iconId, {
+        filled: this.filledStampSVG,
+        stroke: this.strokeStampSVG
+      })
+
+      logger.info(`✅ Loaded stamp SVG icon: ${iconId} from ${this.ICONS_BASE_PATH}`)
+    } catch (error) {
+      logger.error(`❌ Failed to load stamp icon '${iconId}':`, error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Extract SVG viewBox dimensions from SVG content
+   * @param {string} svgString - Full SVG file content
+   * @returns {object} Object with width and height from viewBox, or defaults
+   */
+  static extractViewBox(svgString) {
+    const viewBoxMatch = svgString.match(/viewBox=["']([^"']+)["']/i)
+    if (viewBoxMatch) {
+      const values = viewBoxMatch[1].split(/\s+/)
+      if (values.length === 4) {
+        return {
+          width: parseFloat(values[2]),
+          height: parseFloat(values[3])
+        }
       }
     }
+    // Default fallback if viewBox not found
+    return { width: 100, height: 100 }
   }
 
   /**
@@ -159,8 +229,8 @@ class StampImageGenerator {
     const {
       stampsEarned = 0,
       stampsRequired = 10,
-      stampIcon = '⭐',
-      stampDisplayType = 'icon',  // 'icon' or 'logo'
+      stampIcon = 'coffee-01',  // SVG icon ID (e.g., 'coffee-01', 'gift-01')
+      stampDisplayType = 'svg',  // 'svg' or 'logo'
       logoUrl = null,
       heroImageUrl = null,
       backgroundColor = '#3B82F6',
@@ -608,6 +678,50 @@ class StampImageGenerator {
   }
 
   /**
+   * Load logo image and convert to base64 for SVG embedding
+   * @param {string} logoUrl - URL to logo image
+   * @param {number} stampSize - Size of stamp (to resize logo)
+   * @returns {Promise<string|null>} Base64 data URL or null if failed
+   */
+  static async loadLogoAsBase64(logoUrl, stampSize) {
+    try {
+      logger.info('📥 Loading logo for stamps from:', logoUrl)
+
+      // Load logo using SafeImageFetcher
+      const imageBuffer = await SafeImageFetcher.fetchImage(logoUrl, {
+        timeoutMs: 5000,
+        maxSizeBytes: 3 * 1024 * 1024,
+        allowedContentTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+      })
+
+      if (!imageBuffer) {
+        throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
+      }
+
+      // Resize logo to fit stamp size (90% of stamp area for padding)
+      const logoSize = Math.floor(stampSize * 0.9)
+      const resizedBuffer = await sharp(imageBuffer)
+        .resize(logoSize, logoSize, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 }  // Transparent background
+        })
+        .png()
+        .toBuffer()
+
+      // Convert to base64 data URL
+      const base64 = resizedBuffer.toString('base64')
+      const dataUrl = `data:image/png;base64,${base64}`
+
+      logger.info(`✅ Logo loaded and resized to ${logoSize}x${logoSize}px`)
+      return dataUrl
+
+    } catch (error) {
+      logger.warn('⚠️ Failed to load logo for stamps:', error.message)
+      return null
+    }
+  }
+
+  /**
    * Generate SVG with stamp grid including circular backgrounds
    * Matches the "abbajava CAFE" reference design with circles and different icons
    */
@@ -616,6 +730,8 @@ class StampImageGenerator {
       stampsEarned,
       stampsRequired,
       stampIcon,
+      stampDisplayType,
+      logoUrl,
       foregroundColor,
       backgroundColor,
       layout
@@ -671,27 +787,76 @@ class StampImageGenerator {
       logger.warn('⚠️ Applied fallback layout: single row, minimum safe size')
     }
 
-    // Load SVG stamp icons (first time only, then cached)
-    this.loadStampIcons()
+    // Check if we should use logo or SVG icons
+    const useLogo = stampDisplayType === 'logo' && logoUrl
+
+    if (useLogo) {
+      // === LOGO STAMP MODE ===
+      logger.info('🖼️ Using business logo for stamps')
+
+      // Load logo and convert to base64
+      const logoBase64 = await this.loadLogoAsBase64(logoUrl, layout.stampSize)
+
+      if (!logoBase64) {
+        logger.warn('⚠️ Failed to load logo, falling back to SVG icons')
+        // Fallback: Use SVG icons if logo fails
+        this.loadStampIcons(stampIcon)
+      } else {
+        // Generate stamps using logo images
+        const logoSize = Math.floor(layout.stampSize * 0.9)
+
+        for (let row = 0; row < layout.rows && stampIndex < stampsRequired; row++) {
+          for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
+            const filled = stampIndex < stampsEarned
+            const logoOpacity = filled ? 1.0 : 0.5  // Earned: 100%, Unearned: 50%
+
+            // Position logo in grid (centered in its cell)
+            const logoX = layout.startX + col * (layout.stampSize + layout.spacing) + (layout.stampSize - logoSize) / 2
+            const logoY = layout.startY + row * (layout.stampSize + layout.spacing) + (layout.stampSize - logoSize) / 2
+
+            stamps.push(`
+              <!-- Logo Stamp ${stampIndex + 1} (${filled ? 'Earned' : 'Unearned'}) -->
+              <image
+                x="${logoX}"
+                y="${logoY}"
+                width="${logoSize}"
+                height="${logoSize}"
+                xlink:href="${logoBase64}"
+                opacity="${logoOpacity}"
+              />
+            `)
+
+            stampIndex++
+          }
+        }
+
+        logger.info(`✅ Generated ${stampIndex} logo stamps (${stampsEarned} filled, ${stampsRequired - stampsEarned} dimmed)`)
+
+        // SVG with logo stamps (no styles needed for logos)
+        const svg = `
+          <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            ${stamps.join('\n')}
+          </svg>
+        `
+
+        return svg
+      }
+    }
+
+    // === SVG ICON MODE (default or logo fallback) ===
+    logger.info('🎨 Using SVG icons for stamps:', stampIcon)
+
+    // Load SVG stamp icons (cached per icon ID)
+    this.loadStampIcons(stampIcon)
 
     // Extract and process styles from both SVG icons
     // Styles must be at SVG root level, not inside <g> elements
     const filledStyles = this.extractSVGStyles(this.filledStampSVG)
     const strokeStyles = this.extractSVGStyles(this.strokeStampSVG)
 
-    logger.info('🔍 DEBUG: Filled styles length:', filledStyles.length)
-    logger.info('🔍 DEBUG: Stroke styles length:', strokeStyles.length)
-
     // Rename CSS classes to avoid conflicts (both icons use .st0, .st1, etc.)
     const filledStylesRenamed = this.renameClasses(filledStyles, 'filled-')
     const strokeStylesRenamed = this.renameClasses(strokeStyles, 'stroke-')
-
-    logger.info('📐 Extracted and renamed SVG styles for stamps')
-
-    // Debug: Check a sample of content extraction
-    const testContent = this.extractSVGContent(this.filledStampSVG)
-    logger.info('🔍 DEBUG: Sample content length:', testContent.length, 'chars')
-    logger.info('🔍 DEBUG: Content preview:', testContent.substring(0, 200))
 
     // Generate EXACT number of stamps as stampsRequired
     // Each stamp uses custom SVG icon (filled or stroke version)
@@ -710,9 +875,14 @@ class StampImageGenerator {
         const iconOpacity = filled ? 1.0 : 0.5  // Filled: full opacity, Unearned: 50%
 
         // Calculate stamp position and size
-        // SVG viewBox is "0 0 108.28 101.2", so we scale it to fit stampSize
+        // Extract viewBox from the original SVG to get correct dimensions
+        const svgSource = filled ? this.filledStampSVG : this.strokeStampSVG
+        const viewBox = this.extractViewBox(svgSource)
+
         const iconSize = layout.stampSize * 0.9  // Use 90% of available space
-        const scaleFactor = iconSize / 108.28  // Scale from SVG viewBox width to desired size
+        // Scale based on the larger dimension to ensure icon fits in the square stamp area
+        const viewBoxMax = Math.max(viewBox.width, viewBox.height)
+        const scaleFactor = iconSize / viewBoxMax
 
         // Position stamp in grid (centered in its cell)
         const iconX = layout.startX + col * (layout.stampSize + layout.spacing) + (layout.stampSize - iconSize) / 2

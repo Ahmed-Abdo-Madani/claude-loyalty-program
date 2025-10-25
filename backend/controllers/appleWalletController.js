@@ -650,15 +650,33 @@ class AppleWalletController {
 
     // Generate dynamic stamp visualization hero image using StampImageGenerator
     logger.info('🎨 Generating dynamic stamp visualization for hero image...')
+
+    // Determine stamp display mode
+    let stampDisplayType = design?.stamp_display_type || 'logo'
+    const stampIconId = design?.stamp_icon || 'coffee-01'
+
+    // Validate stamp display configuration
+    if (stampDisplayType === 'logo' && !design?.logo_url) {
+      logger.warn('⚠️ Logo stamp display selected but no logo available, falling back to SVG icon')
+      // Override to use SVG icon as fallback
+      stampDisplayType = 'svg'
+    }
+
+    logger.info('🎨 Stamp configuration:', {
+      displayType: stampDisplayType,
+      iconId: stampDisplayType === 'svg' ? stampIconId : 'N/A (using logo)',
+      hasLogo: !!design?.logo_url
+    })
+
     const stampHeroImage = await StampImageGenerator.generateStampHeroImage({
       stampsEarned: progressData.stampsEarned || 0,
       stampsRequired: offerData.stampsRequired || offerData.stamps_required || 10,
-      stampIcon: design?.stamp_icon || '⭐',
-      stampDisplayType: design?.stamp_display_type || 'icon',
+      stampIcon: stampIconId,  // SVG icon ID (e.g., 'coffee-01')
+      stampDisplayType: stampDisplayType,  // 'svg' or 'logo'
       logoUrl: design?.logo_url,
       heroImageUrl: design?.hero_image_url,
-      backgroundColor: design?.background_color || '#3B82F6',  // Passed to circular backgrounds
-      foregroundColor: design?.foreground_color || '#FFFFFF',  // Used for circle stroke and text
+      backgroundColor: design?.background_color || '#3B82F6',
+      foregroundColor: design?.foreground_color || '#FFFFFF',
       progressDisplayStyle: design?.progress_display_style || 'grid'
     })
     logger.info('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
