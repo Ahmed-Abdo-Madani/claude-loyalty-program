@@ -123,7 +123,8 @@ const content = {
     passwordRequired: 'كلمة المرور مطلوبة',
     passwordMinLength: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
     passwordsNotMatch: 'كلمات المرور غير متطابقة',
-    termsRequired: 'يجب قبول الشروط والأحكام'
+    termsRequired: 'يجب قبول الشروط والأحكام',
+    arabicNumbersSupported: 'يمكنك استخدام الأرقام العربية'
   },
   en: {
     // Header & Navigation
@@ -230,7 +231,8 @@ const content = {
     passwordRequired: 'Password is required',
     passwordMinLength: 'Password must be at least 6 characters',
     passwordsNotMatch: 'Passwords do not match',
-    termsRequired: 'You must accept the terms and conditions'
+    termsRequired: 'You must accept the terms and conditions',
+    arabicNumbersSupported: 'Arabic numerals are supported'
   }
 }
 
@@ -278,6 +280,17 @@ function BusinessRegistrationPage() {
 
   // Get current language content
   const t = content[selectedLanguage]
+
+  // Convert Arabic numerals to English numerals
+  const convertArabicToEnglishNumbers = (str) => {
+    if (!str) return str
+    const arabicNumerals = '٠١٢٣٤٥٦٧٨٩'
+    const englishNumerals = '0123456789'
+    return str.split('').map(char => {
+      const index = arabicNumerals.indexOf(char)
+      return index !== -1 ? englishNumerals[index] : char
+    }).join('')
+  }
 
   // Extract region from location hierarchy
   const extractRegionFromHierarchy = (hierarchy) => {
@@ -476,8 +489,10 @@ function BusinessRegistrationPage() {
   }
 
   const validateSaudiPhone = (phone) => {
+    // Convert Arabic numerals before validation
+    const convertedPhone = convertArabicToEnglishNumbers(phone)
     const phonePattern = /^\+966\d{9}$/
-    return phonePattern.test(phone)
+    return phonePattern.test(convertedPhone)
   }
 
   const validateEmail = (email) => {
@@ -492,6 +507,10 @@ function BusinessRegistrationPage() {
       setFormData(prev => ({ ...prev, [name]: checked }))
     } else if (name === 'business_name' || name === 'owner_name') {
       handleLanguageSpecificInput(name, value)
+    } else if (name === 'phone' || name === 'owner_phone') {
+      // Convert Arabic numerals to English in real-time for phone fields
+      const convertedValue = convertArabicToEnglishNumbers(value)
+      setFormData(prev => ({ ...prev, [name]: convertedValue }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
@@ -913,6 +932,7 @@ function BusinessRegistrationPage() {
                   placeholder="+966551234567"
                   required
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t.arabicNumbersSupported}</p>
               </div>
 
               <div>
@@ -986,6 +1006,7 @@ function BusinessRegistrationPage() {
                     placeholder="+966501234567"
                     required
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t.arabicNumbersSupported}</p>
                 </div>
 
                 <div>

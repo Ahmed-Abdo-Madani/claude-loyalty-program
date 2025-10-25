@@ -18,6 +18,7 @@ A cost-effective and scalable loyalty program management platform designed for b
 - ⭐ **Progress tracking** - Visual stamp/point collection (⭐, ☕, 🍕, etc.)
 - 🎁 **Automatic rewards** - Seamless redemption process
 - 📧 **Smart notifications** - Birthday offers & reminders
+- ✨ **Bilingual support** - Arabic numeral conversion for phone inputs (see [DEPLOYMENT.md](DEPLOYMENT.md#-arabic-numeral-support-for-phone-numbers))
 
 ## 🏗️ **Architecture**
 

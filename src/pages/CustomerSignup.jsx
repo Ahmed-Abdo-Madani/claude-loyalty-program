@@ -75,7 +75,10 @@ const content = {
     addToAppleWallet: 'أضف إلى Apple Wallet',
     addToGoogleWallet: 'أضف إلى Google Wallet',
     walletError: 'فشلت إضافة البطاقة. يرجى المحاولة مرة أخرى.',
-    tryAgain: 'حاول مرة أخرى'
+    tryAgain: 'حاول مرة أخرى',
+    
+    // Phone Input
+    arabicNumbersSupported: 'يمكنك استخدام الأرقام العربية'
   },
   en: {
     // Header & Business Info
@@ -142,7 +145,10 @@ const content = {
     addToAppleWallet: 'Add to Apple Wallet',
     addToGoogleWallet: 'Add to Google Wallet',
     walletError: 'Failed to add card. Please try again.',
-    tryAgain: 'Try Again'
+    tryAgain: 'Try Again',
+    
+    // Phone Input
+    arabicNumbersSupported: 'Arabic numerals are supported'
   }
 }
 
@@ -366,10 +372,21 @@ function CustomerSignup() {
   }
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+    
+    // Apply Arabic-to-English conversion for phone field in real-time
+    if (name === 'phone') {
+      const convertedValue = convertArabicToEnglishNumbers(value)
+      setFormData({
+        ...formData,
+        [name]: convertedValue
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      })
+    }
   }
 
   // Helper function to convert Arabic numerals to English numerals
@@ -924,6 +941,9 @@ function CustomerSignup() {
                   dir="ltr"
                 />
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                ✓ {t.arabicNumbersSupported}
+              </p>
             </div>
 
             {/* Gender Selector */}
