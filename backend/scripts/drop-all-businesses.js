@@ -108,57 +108,50 @@ async function dropAllBusinesses() {
 
     await new Promise(resolve => setTimeout(resolve, 3000))
 
+    // Check which tables exist before starting transaction
+    console.log('� Checking which tables exist...')
+    const tablesToDelete = [
+      { name: 'device_registrations', description: 'device registrations' },
+      { name: 'device_logs', description: 'device logs' },
+      { name: 'wallet_passes', description: 'wallet passes' },
+      { name: 'customer_progress', description: 'customer progress' },
+      { name: 'customers', description: 'customers' },
+      { name: 'offer_card_designs', description: 'offer card designs' },
+      { name: 'offers', description: 'offers' },
+      { name: 'branches', description: 'branches' },
+      { name: 'devices', description: 'devices' },
+      { name: 'businesses', description: 'businesses' }
+    ]
+
+    const existingTables = []
+    for (const table of tablesToDelete) {
+      const [result] = await sequelize.query(
+        `SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = '${table.name}'
+        )`
+      )
+      if (result[0].exists) {
+        existingTables.push(table)
+      } else {
+        console.log(`   ⚠️  Table '${table.name}' does not exist, will skip`)
+      }
+    }
+
+    console.log(`✅ Found ${existingTables.length} tables to delete`)
+    console.log('')
+
     // Start deletion with transaction
     console.log('🗑️  Starting deletion process...')
     console.log('')
 
     await sequelize.transaction(async (transaction) => {
-      // Helper function to delete from table if it exists
-      const deleteFromTable = async (tableName, description) => {
-        try {
-          console.log(`🗑️  Deleting ${description}...`)
-          await sequelize.query(`DELETE FROM ${tableName}`, { transaction })
-        } catch (error) {
-          if (error.message.includes('does not exist')) {
-            console.log(`   ⚠️  Table '${tableName}' does not exist, skipping...`)
-          } else {
-            throw error
-          }
-        }
+      // Delete from existing tables only
+      for (const table of existingTables) {
+        console.log(`🗑️  Deleting ${table.description}...`)
+        await sequelize.query(`DELETE FROM ${table.name}`, { transaction })
       }
-
-      // Delete in correct order to respect foreign key constraints
-      
-      // 1. Delete device registrations (references wallet_passes and devices)
-      await deleteFromTable('device_registrations', 'device registrations')
-      
-      // 2. Delete device logs (may not exist in all schemas)
-      await deleteFromTable('device_logs', 'device logs')
-      
-      // 3. Delete wallet passes (references customers and offers)
-      await deleteFromTable('wallet_passes', 'wallet passes')
-      
-      // 4. Delete customer progress (references customers and offers)
-      await deleteFromTable('customer_progress', 'customer progress')
-      
-      // 5. Delete customers (references offers)
-      await deleteFromTable('customers', 'customers')
-      
-      // 6. Delete card designs (references offers)
-      await deleteFromTable('offer_card_designs', 'offer card designs')
-      
-      // 7. Delete offers (references businesses and branches)
-      await deleteFromTable('offers', 'offers')
-      
-      // 8. Delete branches (references businesses)
-      await deleteFromTable('branches', 'branches')
-      
-      // 9. Delete devices (no foreign key dependencies)
-      await deleteFromTable('devices', 'devices')
-      
-      // 10. Finally delete businesses
-      console.log('🗑️  Deleting businesses...')
-      await sequelize.query('DELETE FROM businesses', { transaction })
     })
 
     console.log('')
