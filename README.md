@@ -250,6 +250,91 @@ npm run seed
 - **Errors**: Sentry, LogRocket
 - **Uptime**: Pingdom, StatusPage
 
+## 🔧 **Troubleshooting**
+
+### **Common Issues**
+
+#### **Google Wallet Pass Generation Fails**
+
+**Error**: `null value in column "last_updated_tag" violates not-null constraint`
+
+**Solution**: Run the database migration to fix the schema:
+
+```bash
+cd backend
+node migrations/20250125-fix-last-updated-tag-nullable.js
+```
+
+**Root Cause**: The `last_updated_tag` column is Apple Wallet-specific and should allow NULL values for Google Wallet passes. This error indicates a schema drift issue in production.
+
+**Verification**:
+```bash
+# Check if the fix was applied
+psql $DATABASE_URL -c "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'wallet_passes' AND column_name = 'last_updated_tag';"
+# Expected: is_nullable = 'YES'
+```
+
+For detailed information, see [PRODUCTION-DEPLOYMENT.md](PRODUCTION-DEPLOYMENT.md).
+
+#### **Emoji Stamps Not Showing in Apple Wallet Passes**
+
+**Solution**: Ensure Docker deployment is configured properly
+
+1. Verify `render.yaml` uses `env: docker`
+2. Check Docker image includes `fonts-noto-color-emoji` package
+3. Verify `FONTCONFIG_PATH=/etc/fonts` is set
+4. Review build logs for font installation success
+
+For detailed font configuration, see [DEPLOYMENT.md](DEPLOYMENT.md#step-3-font-configuration-for-emoji-rendering).
+
+#### **Database Connection Issues in Production**
+
+**Error**: `ECONNREFUSED` when connecting to database
+
+**Solution**: Update migration scripts to support `DATABASE_URL` environment variable
+
+Check that your migration scripts support both connection formats:
+```javascript
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        // ... other parameters
+      }
+)
+```
+
+#### **Development Server Issues**
+
+**Port Already in Use**:
+```bash
+# Find process using port 3000/3001
+netstat -ano | findstr :3000
+# Kill the process
+taskkill /PID <process_id> /F
+```
+
+**Dependencies Not Installing**:
+```bash
+# Clear cache and reinstall
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### **Getting Help**
+
+For issues not covered here:
+
+1. Check existing issues: [GitHub Issues]()
+2. Review deployment guides: [DEPLOYMENT.md](DEPLOYMENT.md)
+3. Check production troubleshooting: [PRODUCTION-DEPLOYMENT.md](PRODUCTION-DEPLOYMENT.md)
+4. Contact support: support@loyaltyplatform.com
+
 ## 🤝 **Contributing**
 
 1. Fork the repository

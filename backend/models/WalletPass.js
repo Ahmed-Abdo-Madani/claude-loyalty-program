@@ -105,7 +105,7 @@ const WalletPass = sequelize.define('WalletPass', {
   last_updated_tag: {
     type: DataTypes.STRING(50),
     allowNull: true,
-    comment: 'Update tag for tracking pass changes (Unix timestamp)'
+    comment: 'Update tag for tracking pass changes (Unix timestamp). Apple Wallet only - NULL for Google Wallet passes. Used by Apple Web Service Protocol passesUpdatedSince endpoint.'
   },
   manifest_etag: {
     type: DataTypes.STRING(32),

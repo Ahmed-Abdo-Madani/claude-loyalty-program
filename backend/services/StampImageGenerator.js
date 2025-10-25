@@ -496,8 +496,8 @@ class StampImageGenerator {
     const stampSize = Math.floor(Math.min(calculatedSize, MAX_STAMP_SIZE))
 
     // STEP 3: Calculate spacing (proportional to stamp size)
-    // 20% of stamp size provides visual breathing room between stamps
-    const spacing = Math.floor(stampSize * 0.20)
+    // 10% of stamp size provides visual breathing room between stamps
+    const spacing = Math.floor(stampSize * 0.10)
 
     // STEP 4: Calculate actual grid dimensions
     let totalWidth = (cols * stampSize) + ((cols - 1) * spacing)

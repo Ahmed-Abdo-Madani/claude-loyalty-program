@@ -123,8 +123,12 @@ class RealGoogleWalletController {
       const saveUrl = `https://pay.google.com/gp/v/save/${jwt}`
 
       // ✨ Step 5: Record wallet pass in database (CRITICAL - don't skip!)
+      // Create wallet pass record in database
+      // Note: Only pass Google-specific fields (wallet_object_id, device_info)
+      // Apple-specific fields (authentication_token, last_updated_tag, manifest_etag, pass_data_json)
+      // are intentionally omitted and will be set to NULL by WalletPassService
       const WalletPassService = (await import('../services/WalletPassService.js')).default
-      await WalletPassService.createWalletPass(
+      const walletPass = await WalletPassService.createWalletPass(
         customerData.customerId,
         offerData.offerId,
         'google',
@@ -137,6 +141,20 @@ class RealGoogleWalletController {
         }
       )
       console.log('✨ Google Wallet pass recorded in database successfully')
+
+      // Verify the wallet pass was created with correct field values
+      if (walletPass.last_updated_tag !== null) {
+        logger.warn('⚠️ Unexpected: last_updated_tag is not NULL for Google Wallet pass', {
+          passId: walletPass.id,
+          last_updated_tag: walletPass.last_updated_tag
+        })
+      }
+      if (walletPass.authentication_token !== null) {
+        logger.warn('⚠️ Unexpected: authentication_token is not NULL for Google Wallet pass', {
+          passId: walletPass.id,
+          authentication_token: 'present (masked)'
+        })
+      }
 
       console.log('✅ Google Wallet: Pass generated successfully')
 
@@ -151,11 +169,27 @@ class RealGoogleWalletController {
 
     } catch (error) {
       console.error('❌ Real Google Wallet generation failed:', error)
-      res.status(500).json({
+
+      // Check if error is related to last_updated_tag constraint
+      const isConstraintError = error.message?.includes('last_updated_tag') ||
+                               error.message?.includes('not-null constraint') ||
+                               error.original?.column === 'last_updated_tag'
+
+      const errorResponse = {
         error: 'Failed to generate Google Wallet pass',
         message: error.message,
         details: error.response?.data || error.stack
-      })
+      }
+
+      // Add helpful information if it's a schema issue
+      if (isConstraintError) {
+        errorResponse.hint = 'Database schema issue detected. The last_updated_tag column may have an incorrect NOT NULL constraint.'
+        errorResponse.fix_available = true
+        errorResponse.migration = 'Run migration: backend/migrations/20250125-fix-last-updated-tag-nullable.js'
+        errorResponse.documentation = 'See PRODUCTION-DEPLOYMENT.md for details'
+      }
+
+      res.status(500).json(errorResponse)
     }
   }
 

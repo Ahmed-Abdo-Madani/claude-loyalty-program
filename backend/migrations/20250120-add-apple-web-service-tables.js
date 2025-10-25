@@ -17,6 +17,22 @@
  * - Update tag comparison for "passesUpdatedSince" queries
  * - Pass data storage for regeneration
  *
+ * ⚠️ IMPORTANT WARNING - Schema Drift Issue:
+ * This migration does NOT add NOT NULL constraints to Apple-specific fields,
+ * but production database may have them due to schema drift.
+ *
+ * The following fields are Apple Wallet-specific and MUST allow NULL for Google Wallet passes:
+ * - authentication_token: Used by Apple Web Service Protocol only
+ * - last_updated_tag: Used by Apple Web Service Protocol only
+ * - manifest_etag: Used by Apple pass generation only
+ * - pass_data_json: Used by Apple pass updates only
+ *
+ * If you encounter "null value in column violates not-null constraint" errors when
+ * generating Google Wallet passes, you need to run the fix migration:
+ *   backend/migrations/20250125-fix-last-updated-tag-nullable.js
+ *
+ * See PRODUCTION-DEPLOYMENT.md for detailed troubleshooting.
+ *
  * Usage:
  *   node migrations/20250120-add-apple-web-service-tables.js
  */
@@ -103,6 +119,9 @@ export async function up() {
     `)
 
     logger.info('🏷️  Adding last_updated_tag column to wallet_passes...')
+    // ⚠️ WARNING: This field is Apple Wallet-specific and MUST allow NULL for Google Wallet
+    // This migration correctly does NOT add a NOT NULL constraint
+    // If production has a NOT NULL constraint, run: backend/migrations/20250125-fix-last-updated-tag-nullable.js
     await sequelize.query(`
       ALTER TABLE wallet_passes
       ADD COLUMN IF NOT EXISTS last_updated_tag VARCHAR(50);
@@ -127,6 +146,9 @@ export async function up() {
     // ========== BACKFILL EXISTING DATA ==========
     logger.info('🔄 Backfilling authentication tokens for existing Apple Wallet passes...')
 
+    // ⚠️ IMPORTANT: This backfill only updates Apple Wallet passes
+    // Google Wallet passes should have authentication_token = NULL and last_updated_tag = NULL
+    // These fields are Apple-specific and not used by Google Wallet
     // Generate authentication tokens for existing Apple Wallet passes
     // Token format: base64(customer_id:offer_id:timestamp)[:16]
     await sequelize.query(`

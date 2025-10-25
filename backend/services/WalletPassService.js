@@ -46,6 +46,16 @@ class WalletPassService {
         return existing
       }
 
+      // Validate that Google Wallet passes don't have Apple-specific fields
+      if (walletType === 'google') {
+        if (metadata.last_updated_tag !== undefined && metadata.last_updated_tag !== null) {
+          logger.warn('⚠️ Ignoring last_updated_tag for Google Wallet pass - this field is Apple-specific')
+        }
+        if (metadata.authentication_token !== undefined && metadata.authentication_token !== null) {
+          logger.warn('⚠️ Ignoring authentication_token for Google Wallet pass - this field is Apple-specific')
+        }
+      }
+
       // Create wallet pass
       logger.info(`🆕 Creating new wallet pass record in database...`)
       const now = new Date()
@@ -59,7 +69,9 @@ class WalletPassService {
         wallet_object_id: metadata.wallet_object_id || null,
         pass_status: 'active',
         device_info: metadata.device_info || {},
-        // Apple Web Service Protocol fields
+        // Apple Web Service Protocol fields (Apple-specific, NULL for Google Wallet)
+        // last_updated_tag is used by Apple Web Service Protocol passesUpdatedSince endpoint
+        // Set to current Unix timestamp for Apple Wallet, NULL for Google Wallet
         authentication_token: metadata.authentication_token || null,
         last_updated_tag: walletType === 'apple' ? Math.floor(now.getTime() / 1000).toString() : null,
         last_updated_at: walletType === 'apple' ? now : null, // Initialize on first generation
@@ -71,14 +83,32 @@ class WalletPassService {
 
       return walletPass
     } catch (error) {
-      logger.error(`❌ CRITICAL: Failed to create wallet pass for ${customerId}:`, {
-        error: error.message,
-        stack: error.stack,
-        customerId,
-        offerId,
-        walletType,
-        sqlError: error.original?.message || 'N/A'
-      })
+      // Check for database constraint violations (especially NOT NULL constraint on last_updated_tag)
+      if (error.name === 'SequelizeDatabaseError' && error.original?.code === '23502') {
+        logger.error(`❌ CRITICAL: Database constraint violation when creating wallet pass:`, {
+          error: error.message,
+          constraint: error.original?.constraint || 'unknown',
+          column: error.original?.column || 'unknown',
+          customerId,
+          offerId,
+          walletType,
+          last_updated_tag: walletType === 'apple' ? 'Unix timestamp' : 'NULL',
+          authentication_token: metadata.authentication_token ? 'present (masked)' : 'NULL',
+          hint: 'This may indicate a schema mismatch. Check that last_updated_tag column allows NULL for Google Wallet passes.',
+          migration: 'Run migration: backend/migrations/20250125-fix-last-updated-tag-nullable.js'
+        })
+      } else {
+        logger.error(`❌ CRITICAL: Failed to create wallet pass for ${customerId}:`, {
+          error: error.message,
+          stack: error.stack,
+          customerId,
+          offerId,
+          walletType,
+          last_updated_tag_value: walletType === 'apple' ? 'Unix timestamp' : 'NULL',
+          authentication_token_present: !!metadata.authentication_token,
+          sqlError: error.original?.message || 'N/A'
+        })
+      }
       throw error
     }
   }

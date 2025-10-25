@@ -53,6 +53,70 @@ cd backend
 node deploy-database.js
 ```
 
+### Step 3: Critical Migration - Google Wallet Pass Generation Fix
+
+**Issue**: Google Wallet pass generation fails with "null value in column 'last_updated_tag' violates not-null constraint" error.
+
+**Root Cause**: The `last_updated_tag` column has a NOT NULL constraint in production, but this field is Apple Wallet-specific and should be NULL for Google Wallet passes.
+
+**Migration File**: `backend/migrations/20250125-fix-last-updated-tag-nullable.js`
+
+**When to Run**:
+- **Required for production**: If you encounter Google Wallet pass generation failures
+- Run immediately after initial database deployment
+- Can be run multiple times safely (idempotent)
+
+**How to Run**:
+
+```bash
+# Option 1: Using migration system
+cd backend
+node migrations/20250125-fix-last-updated-tag-nullable.js
+
+# Option 2: Manual execution
+psql $DATABASE_URL -c "ALTER TABLE wallet_passes ALTER COLUMN last_updated_tag DROP NOT NULL;"
+```
+
+**Verification Steps**:
+
+1. Check that the migration completed successfully (look for ✅ messages in logs):
+```bash
+# Expected output:
+# ✅ Migration complete: last_updated_tag is now nullable
+# ✅ Column comment updated
+```
+
+2. Verify column is nullable:
+```bash
+psql $DATABASE_URL -c "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'wallet_passes' AND column_name = 'last_updated_tag';"
+# Expected: is_nullable = 'YES'
+```
+
+3. Test Google Wallet pass generation:
+```bash
+# Should succeed without constraint errors
+curl -X POST https://api.madna.me/api/google-wallet/generate-pass \
+  -H "Content-Type: application/json" \
+  -d '{"customerId": "test-customer", "offerId": "test-offer"}'
+```
+
+**Rollback** (if needed):
+
+The migration includes a rollback function that:
+1. Backfills NULL values with '0' for Google Wallet passes
+2. Re-adds the NOT NULL constraint
+
+```bash
+# To rollback (not recommended)
+node migrations/20250125-fix-last-updated-tag-nullable.js --rollback
+```
+
+**Important Notes**:
+- This migration is critical for Google Wallet functionality
+- Apple Wallet passes are not affected (they always provide this field)
+- The field is used by Apple Web Service Protocol's `passesUpdatedSince` endpoint
+- See `PRODUCTION-DEPLOYMENT.md` for detailed troubleshooting
+
 ## 🔧 Backend Deployment
 
 ### Step 1: Create Web Service on Render
