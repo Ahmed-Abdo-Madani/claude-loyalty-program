@@ -21,8 +21,8 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Paths
-const ICONS_PATH = path.join(__dirname, '..', '..', 'uploads', 'icons', 'stamps')
+// Paths (go up one level from scripts/ to app root)
+const ICONS_PATH = path.join(__dirname, '..', 'uploads', 'icons', 'stamps')
 const PREVIEWS_PATH = path.join(ICONS_PATH, 'previews')
 const MANIFEST_PATH = path.join(ICONS_PATH, 'manifest.json')
 
