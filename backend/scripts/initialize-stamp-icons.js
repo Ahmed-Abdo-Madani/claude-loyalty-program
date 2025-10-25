@@ -146,13 +146,17 @@ function createOrVerifyManifest() {
             id: 'coffee-01',
             name: 'Coffee Cup',
             category: 'food',
-            fileName: 'coffee-filled.svg'
+            fileName: 'coffee-filled.svg',
+            filledFile: 'coffee-filled.svg',
+            previewFile: 'coffee-preview.png'
           },
           {
             id: 'gift-01',
             name: 'Gift Box',
             category: 'retail',
-            fileName: 'gift-filled.svg'
+            fileName: 'gift-filled.svg',
+            filledFile: 'gift-filled.svg',
+            previewFile: 'gift-preview.png'
           }
         ]
       }
