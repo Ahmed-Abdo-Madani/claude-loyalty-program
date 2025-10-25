@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { apiBaseUrl } from '../config/api'
+import { apiBaseUrl, endpoints } from '../config/api'
 import { validateSecureOfferId } from '../utils/secureAuth'
 import QRCodeGenerator from '../utils/qrCodeGenerator'
 import WalletCardPreview from '../components/WalletCardPreview'
@@ -514,7 +514,7 @@ function CustomerSignup() {
     setWalletError(null)
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/wallet/apple`, {
+      const response = await fetch(endpoints.appleWallet, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -523,17 +523,35 @@ function CustomerSignup() {
           customerData,
           offerData: {
             ...offer,
-            offerId
+            offerId,
+            stamps_required: offer.stamps_required || offer.stampsRequired
           },
           progressData: {
             stampsEarned: 0,
-            totalStamps: offer.stamps_required || offer.stampsRequired
+            totalStamps: offer.stamps_required || offer.stampsRequired,
+            current_stamps: 0,
+            max_stamps: offer.stamps_required || offer.stampsRequired
           }
         })
       })
 
       if (!response.ok) {
+        // Try to parse error response
+        const contentType = response.headers.get('Content-Type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || errorData.error || 'Failed to generate Apple Wallet pass')
+        }
         throw new Error('Failed to generate Apple Wallet pass')
+      }
+
+      // Verify Content-Type before treating as .pkpass
+      const contentType = response.headers.get('Content-Type')
+      if (contentType !== 'application/vnd.apple.pkpass') {
+        console.error('Invalid Content-Type:', contentType, 'Status:', response.status)
+        // Try to parse as JSON error
+        const errorData = await response.json()
+        throw new Error(errorData.message || errorData.error || 'Invalid response type from server')
       }
 
       const blob = await response.blob()
@@ -549,7 +567,7 @@ function CustomerSignup() {
       handleWalletAdded('apple', { downloaded: true })
     } catch (err) {
       console.error('Apple Wallet generation error:', err)
-      setWalletError(t.walletError)
+      setWalletError(err.message || t.walletError)
     } finally {
       setIsGeneratingWallet(false)
     }
@@ -560,7 +578,7 @@ function CustomerSignup() {
     setWalletError(null)
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/wallet/google`, {
+      const response = await fetch(endpoints.googleWallet, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -569,11 +587,14 @@ function CustomerSignup() {
           customerData,
           offerData: {
             ...offer,
-            offerId
+            offerId,
+            stamps_required: offer.stamps_required || offer.stampsRequired
           },
           progressData: {
             stampsEarned: 0,
-            totalStamps: offer.stamps_required || offer.stampsRequired
+            totalStamps: offer.stamps_required || offer.stampsRequired,
+            current_stamps: 0,
+            max_stamps: offer.stamps_required || offer.stampsRequired
           }
         })
       })

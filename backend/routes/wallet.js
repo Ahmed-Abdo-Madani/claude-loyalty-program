@@ -10,12 +10,20 @@ router.post('/apple/generate', async (req, res, next) => {
   // Pass through to controller, which will now also record wallet pass
   await AppleWalletController.generatePass(req, res, next)
 })
+// Backward compatibility alias
+router.post('/apple', async (req, res, next) => {
+  await AppleWalletController.generatePass(req, res, next)
+})
 router.get('/apple/download/:passId', AppleWalletController.downloadPass)
 router.post('/apple/update/:passId', AppleWalletController.updatePass)
 
 // Google Wallet routes - always use real API
 router.post('/google/generate', async (req, res, next) => {
   // Pass through to controller, which will now also record wallet pass
+  await RealGoogleWalletController.generatePass(req, res, next)
+})
+// Backward compatibility alias
+router.post('/google', async (req, res, next) => {
   await RealGoogleWalletController.generatePass(req, res, next)
 })
 router.get('/google/save/:token', RealGoogleWalletController.savePass)

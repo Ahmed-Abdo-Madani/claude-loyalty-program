@@ -5,25 +5,33 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 console.log('🔧 API Base URL:', API_BASE_URL)
 
 /**
- * API Asset URL Contract
+ * API Asset URL Contract (Standardized)
  * 
- * The backend returns two types of logo URLs with different semantics:
+ * The platform uses a MIXED URL contract for backward compatibility:
  * 
  * 1. Business Profile Logos (businessLogo.url):
  *    - Format: RELATIVE path (e.g., /api/business/public/logo/{businessId}/{filename})
+ *    - Source: Legacy business profile upload system
+ *    - Storage: uploads/logos/
  *    - Usage: Frontend MUST prepend apiBaseUrl
  *    - Example: apiBaseUrl + businessLogo.url
  * 
  * 2. Card Design Logos (cardDesignLogo.url):
  *    - Format: ABSOLUTE URL (e.g., https://api.madna.me/designs/logos/{filename})
  *    - Source: ImageProcessingService.processLogoComplete()
- *    - Usage: Frontend should use as-is (already includes domain)
+ *    - Storage: uploads/designs/logos/
+ *    - Usage: Use as-is (already includes domain)
  *    - Example: cardDesignLogo.url (no prefix needed)
  * 
- * Frontend Implementation:
- * - Check if URL starts with http:// or https://
- * - If absolute: use directly
- * - If relative: prepend apiBaseUrl
+ * Frontend Implementation (getLogoUrl):
+ * 1. Check if URL starts with http:// or https://
+ * 2. If absolute: return URL as-is
+ * 3. If relative: prepend apiBaseUrl
+ * 
+ * Backend Implementation:
+ * - Business logos: Return relative proxy paths (e.g., /api/business/public/logo/...)
+ * - Card design logos: Return absolute URLs directly from ImageProcessingService
+ * - Never wrap absolute URLs with proxy paths (causes double-prefixing)
  * 
  * See: src/pages/CustomerSignup.jsx → getLogoUrl() for reference implementation
  */
@@ -33,8 +41,8 @@ export const apiBaseUrl = API_BASE_URL
 
 export const endpoints = {
   baseURL: API_BASE_URL,
-  appleWallet: `${API_BASE_URL}/api/wallet/apple`,
-  googleWallet: `${API_BASE_URL}/api/wallet/google`,
+  appleWallet: `${API_BASE_URL}/api/wallet/apple/generate`,
+  googleWallet: `${API_BASE_URL}/api/wallet/google/generate`,
   health: `${API_BASE_URL}/health`,
 
   // Business Authentication APIs
