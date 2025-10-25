@@ -133,44 +133,65 @@ async function generatePreviewFromSVG(svgFilename, previewFilename) {
 
 /**
  * Create or verify manifest.json exists and is valid
+ * If manifest exists but is missing required fields, it will be updated
  */
 function createOrVerifyManifest() {
   try {
+    const expectedManifest = {
+      icons: [
+        {
+          id: 'coffee-01',
+          name: 'Coffee Cup',
+          category: 'food',
+          fileName: 'coffee-filled.svg',
+          filledFile: 'coffee-filled.svg',
+          previewFile: 'coffee-preview.png'
+        },
+        {
+          id: 'gift-01',
+          name: 'Gift Box',
+          category: 'retail',
+          fileName: 'gift-filled.svg',
+          filledFile: 'gift-filled.svg',
+          previewFile: 'gift-preview.png'
+        }
+      ]
+    }
+    
     // If manifest doesn't exist, create it
     if (!fs.existsSync(MANIFEST_PATH)) {
       console.log('📄 Creating manifest.json...')
-      
-      const manifest = {
-        icons: [
-          {
-            id: 'coffee-01',
-            name: 'Coffee Cup',
-            category: 'food',
-            fileName: 'coffee-filled.svg',
-            filledFile: 'coffee-filled.svg',
-            previewFile: 'coffee-preview.png'
-          },
-          {
-            id: 'gift-01',
-            name: 'Gift Box',
-            category: 'retail',
-            fileName: 'gift-filled.svg',
-            filledFile: 'gift-filled.svg',
-            previewFile: 'gift-preview.png'
-          }
-        ]
-      }
-      
-      fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8')
+      fs.writeFileSync(MANIFEST_PATH, JSON.stringify(expectedManifest, null, 2), 'utf8')
       console.log('✅ Created manifest.json')
       return true
     }
     
-    // Verify existing manifest is valid JSON
+    // Verify existing manifest has required fields, update if missing
     const manifestContent = fs.readFileSync(MANIFEST_PATH, 'utf8')
-    JSON.parse(manifestContent)
+    const existingManifest = JSON.parse(manifestContent)
     
-    console.log('✅ Manifest verified: manifest.json')
+    // Check if any icon is missing required fields
+    let needsUpdate = false
+    if (existingManifest.icons && existingManifest.icons.length > 0) {
+      for (const icon of existingManifest.icons) {
+        if (!icon.previewFile || !icon.filledFile) {
+          needsUpdate = true
+          console.log(`⚠️ Icon ${icon.id} missing required fields (previewFile or filledFile)`)
+          break
+        }
+      }
+    } else {
+      needsUpdate = true
+    }
+    
+    if (needsUpdate) {
+      console.log('🔄 Updating manifest.json with required fields...')
+      fs.writeFileSync(MANIFEST_PATH, JSON.stringify(expectedManifest, null, 2), 'utf8')
+      console.log('✅ Updated manifest.json')
+    } else {
+      console.log('✅ Manifest verified: manifest.json')
+    }
+    
     return true
   } catch (error) {
     console.error(`❌ Failed to create/verify manifest.json: ${error.message}`)
