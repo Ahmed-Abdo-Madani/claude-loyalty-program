@@ -223,29 +223,54 @@ function CustomerSignup() {
     )
   }
 
-  // Helper function to get logo URL with fallback logic
+  /**
+   * Get logo URL with 3-tier fallback logic and absolute/relative URL handling
+   * 
+   * Fallback Priority:
+   * 1. Business profile logo (businessLogo.url) - RELATIVE path
+   * 2. Card design logo from offer (cardDesignLogo.url) - ABSOLUTE URL
+   * 3. Card design logo from separate fetch (cardDesign.logo_url) - ABSOLUTE URL
+   * 
+   * URL Handling:
+   * - Absolute URLs (http://, https://): Returned as-is
+   * - Relative URLs (/api/...): Prepended with apiBaseUrl
+   * 
+   * This handles the mixed URL contract from the backend:
+   * - Business logos are relative proxy paths
+   * - Card design logos are absolute URLs from ImageProcessingService
+   */
   const getLogoUrl = () => {
+    let url = null
+    
     // Priority 1: Business profile logo
     if (offer?.businessLogo?.url) {
       console.log('🖼️ Using business profile logo')
-      return apiBaseUrl + offer.businessLogo.url
+      url = offer.businessLogo.url
     }
-    
     // Priority 2: Card design logo (from offer response)
-    if (offer?.cardDesignLogo?.url) {
+    else if (offer?.cardDesignLogo?.url) {
       console.log('🖼️ Using card design logo from offer')
-      return apiBaseUrl + offer.cardDesignLogo.url
+      url = offer.cardDesignLogo.url
     }
-    
     // Priority 3: Card design logo (from separate fetch)
-    if (cardDesign?.logo_url) {
+    else if (cardDesign?.logo_url) {
       console.log('🖼️ Using card design logo from design fetch')
-      return apiBaseUrl + '/api/card-design/logo/' + cardDesign.logo_url
+      url = cardDesign.logo_url
     }
     
     // No logo available
-    console.log('⚠️ No logo available')
-    return null
+    if (!url) {
+      console.log('⚠️ No logo available')
+      return null
+    }
+    
+    // If URL is absolute (starts with http:// or https://), return as-is
+    // Otherwise, prepend apiBaseUrl for relative URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url
+    }
+    
+    return apiBaseUrl + url
   }
 
   useEffect(() => {

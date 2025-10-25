@@ -4,6 +4,30 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 console.log('🔧 API Base URL:', API_BASE_URL)
 
+/**
+ * API Asset URL Contract
+ * 
+ * The backend returns two types of logo URLs with different semantics:
+ * 
+ * 1. Business Profile Logos (businessLogo.url):
+ *    - Format: RELATIVE path (e.g., /api/business/public/logo/{businessId}/{filename})
+ *    - Usage: Frontend MUST prepend apiBaseUrl
+ *    - Example: apiBaseUrl + businessLogo.url
+ * 
+ * 2. Card Design Logos (cardDesignLogo.url):
+ *    - Format: ABSOLUTE URL (e.g., https://api.madna.me/designs/logos/{filename})
+ *    - Source: ImageProcessingService.processLogoComplete()
+ *    - Usage: Frontend should use as-is (already includes domain)
+ *    - Example: cardDesignLogo.url (no prefix needed)
+ * 
+ * Frontend Implementation:
+ * - Check if URL starts with http:// or https://
+ * - If absolute: use directly
+ * - If relative: prepend apiBaseUrl
+ * 
+ * See: src/pages/CustomerSignup.jsx → getLogoUrl() for reference implementation
+ */
+
 // Export for components that need direct access
 export const apiBaseUrl = API_BASE_URL
 

@@ -191,6 +191,13 @@ router.get('/business/:businessId', requireBusinessAuth, async (req, res) => {
 /**
  * POST /api/card-design/upload/logo
  * Upload and process logo for wallet passes
+ * 
+ * Response Contract:
+ * - All URLs returned are ABSOLUTE URLs from ImageProcessingService
+ * - Format: {baseUrl}/designs/logos/{filename} or {baseUrl}/designs/processed/{filename}
+ * - Example: https://api.madna.me/designs/logos/logo-original-abc123.png
+ * - Frontend should use these URLs directly without apiBaseUrl prefix
+ * - Stored in database as-is (absolute URL, not just filename)
  */
 router.post('/upload/logo', requireBusinessAuth, upload.single('logo'), async (req, res) => {
   try {

@@ -627,6 +627,24 @@ router.get('/public/logo/:businessId/:filename', async (req, res) => {
 })
 
 // Get offer details for customer signup (public endpoint) - SECURE VERSION
+/**
+ * API Contract: Asset URL Semantics
+ * 
+ * Logo URL Response Format:
+ * - businessLogo.url: RELATIVE path (e.g., /api/business/public/logo/{businessId}/{filename})
+ *   → Frontend must prepend apiBaseUrl
+ * 
+ * - cardDesignLogo.url: ABSOLUTE URL (e.g., https://api.madna.me/designs/logos/{filename})
+ *   → Returned directly from ImageProcessingService.processLogoComplete()
+ *   → Frontend should NOT prepend apiBaseUrl (already includes base domain)
+ * 
+ * Frontend Implementation:
+ * - Check if URL starts with http:// or https://
+ * - If absolute: use as-is
+ * - If relative: prepend apiBaseUrl
+ * 
+ * See: src/pages/CustomerSignup.jsx → getLogoUrl() for reference implementation
+ */
 router.get('/public/offer/:id', async (req, res) => {
   try {
     const offerId = req.params.id // Now expects secure offer ID (off_*)
@@ -682,9 +700,10 @@ router.get('/public/offer/:id', async (req, res) => {
         filename: offer.business.logo_filename
       } : null,
       // Card design logo (fallback option)
+      // Note: logo_url from OfferCardDesign is already an absolute URL from ImageProcessingService
       cardDesignLogo: offer.cardDesign?.logo_url ? {
-        url: `/api/card-design/logo/${offer.cardDesign.logo_url}`,
-        filename: offer.cardDesign.logo_url
+        url: offer.cardDesign.logo_url,  // Already absolute URL, no prefix needed
+        filename: offer.cardDesign.logo_url.split('/').pop()  // Extract filename for reference
       } : null
     }
 

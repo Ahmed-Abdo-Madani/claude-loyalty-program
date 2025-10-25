@@ -12,6 +12,12 @@ import crypto from 'crypto'
  * - Resizing for Apple Wallet (rectangular)
  * - Image optimization and compression
  * - Format validation
+ * 
+ * API Contract: All processed image URLs returned by this service are ABSOLUTE URLs
+ * - Format: {baseUrl}/designs/{type}/{filename}
+ * - Example: https://api.madna.me/designs/logos/logo-abc123.png
+ * - baseUrl: Derived from UPLOADS_BASE_URL or BASE_URL environment variables
+ * - Consumers should use these URLs directly without additional prefixing
  */
 class ImageProcessingService {
   constructor() {
