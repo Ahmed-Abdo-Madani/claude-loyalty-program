@@ -29,13 +29,21 @@ dotenv.config({ path: join(__dirname, '..', '.env') })
 const { Pool } = pg
 
 // Database configuration
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'loyalty_platform',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-})
+// Support both DATABASE_URL (production) and individual variables (development)
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DB_SSL !== 'false' ? { rejectUnauthorized: false } : false
+      }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        database: process.env.DB_NAME || 'loyalty_platform',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+      }
+)
 
 async function runMigration() {
   const client = await pool.connect()
