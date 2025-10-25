@@ -113,43 +113,48 @@ async function dropAllBusinesses() {
     console.log('')
 
     await sequelize.transaction(async (transaction) => {
+      // Helper function to delete from table if it exists
+      const deleteFromTable = async (tableName, description) => {
+        try {
+          console.log(`🗑️  Deleting ${description}...`)
+          await sequelize.query(`DELETE FROM ${tableName}`, { transaction })
+        } catch (error) {
+          if (error.message.includes('does not exist')) {
+            console.log(`   ⚠️  Table '${tableName}' does not exist, skipping...`)
+          } else {
+            throw error
+          }
+        }
+      }
+
       // Delete in correct order to respect foreign key constraints
       
       // 1. Delete device registrations (references wallet_passes and devices)
-      console.log('🗑️  Deleting device registrations...')
-      await sequelize.query('DELETE FROM device_registrations', { transaction })
+      await deleteFromTable('device_registrations', 'device registrations')
       
-      // 2. Delete device logs
-      console.log('🗑️  Deleting device logs...')
-      await sequelize.query('DELETE FROM device_logs', { transaction })
+      // 2. Delete device logs (may not exist in all schemas)
+      await deleteFromTable('device_logs', 'device logs')
       
       // 3. Delete wallet passes (references customers and offers)
-      console.log('🗑️  Deleting wallet passes...')
-      await sequelize.query('DELETE FROM wallet_passes', { transaction })
+      await deleteFromTable('wallet_passes', 'wallet passes')
       
       // 4. Delete customer progress (references customers and offers)
-      console.log('🗑️  Deleting customer progress...')
-      await sequelize.query('DELETE FROM customer_progress', { transaction })
+      await deleteFromTable('customer_progress', 'customer progress')
       
       // 5. Delete customers (references offers)
-      console.log('🗑️  Deleting customers...')
-      await sequelize.query('DELETE FROM customers', { transaction })
+      await deleteFromTable('customers', 'customers')
       
       // 6. Delete card designs (references offers)
-      console.log('🗑️  Deleting offer card designs...')
-      await sequelize.query('DELETE FROM offer_card_designs', { transaction })
+      await deleteFromTable('offer_card_designs', 'offer card designs')
       
       // 7. Delete offers (references businesses and branches)
-      console.log('🗑️  Deleting offers...')
-      await sequelize.query('DELETE FROM offers', { transaction })
+      await deleteFromTable('offers', 'offers')
       
       // 8. Delete branches (references businesses)
-      console.log('🗑️  Deleting branches...')
-      await sequelize.query('DELETE FROM branches', { transaction })
+      await deleteFromTable('branches', 'branches')
       
       // 9. Delete devices (no foreign key dependencies)
-      console.log('🗑️  Deleting devices...')
-      await sequelize.query('DELETE FROM devices', { transaction })
+      await deleteFromTable('devices', 'devices')
       
       // 10. Finally delete businesses
       console.log('🗑️  Deleting businesses...')
