@@ -31,17 +31,17 @@
  * - Error logs: browser-console-output-11.log
  */
 
-import { getDatabase } from '../config/database.js'
+import sequelize from '../config/database.js'
 import logger from '../config/logger.js'
 
-export const up = async (queryInterface, Sequelize) => {
+export async function up() {
   try {
     logger.info('🔄 Migration: Fixing last_updated_tag column to allow NULL for Google Wallet passes')
     logger.info('   Background: This field is Apple Wallet-specific and should be NULL for Google Wallet passes')
 
     // Step 1: Remove NOT NULL constraint from last_updated_tag column
     logger.info('   Step 1/3: Removing NOT NULL constraint from last_updated_tag column...')
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       ALTER TABLE wallet_passes
       ALTER COLUMN last_updated_tag DROP NOT NULL;
     `)
@@ -49,7 +49,7 @@ export const up = async (queryInterface, Sequelize) => {
 
     // Step 2: Add column comment documenting Apple-specific usage
     logger.info('   Step 2/3: Adding documentation comment to column...')
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       COMMENT ON COLUMN wallet_passes.last_updated_tag IS
       'Update tag for tracking pass changes (Unix timestamp). Apple Wallet only - NULL for Google Wallet passes. Used by Apple Web Service Protocol passesUpdatedSince endpoint.';
     `)
@@ -57,7 +57,7 @@ export const up = async (queryInterface, Sequelize) => {
 
     // Step 3: Verify the change
     logger.info('   Step 3/3: Verifying column is now nullable...')
-    const [results] = await queryInterface.sequelize.query(`
+    const [results] = await sequelize.query(`
       SELECT is_nullable
       FROM information_schema.columns
       WHERE table_name = 'wallet_passes'
@@ -84,14 +84,14 @@ export const up = async (queryInterface, Sequelize) => {
   }
 }
 
-export const down = async (queryInterface, Sequelize) => {
+export async function down() {
   try {
     logger.info('🔄 Rolling back: Adding NOT NULL constraint back to last_updated_tag column')
     logger.warn('   ⚠️ WARNING: This will break Google Wallet pass generation!')
 
     // Step 1: Backfill NULL values for Google Wallet passes before adding NOT NULL constraint
     logger.info('   Step 1/2: Backfilling NULL values with default value for Google Wallet passes...')
-    const [updateResult] = await queryInterface.sequelize.query(`
+    const [updateResult] = await sequelize.query(`
       UPDATE wallet_passes
       SET last_updated_tag = '0'
       WHERE wallet_type = 'google' AND last_updated_tag IS NULL;
@@ -100,7 +100,7 @@ export const down = async (queryInterface, Sequelize) => {
 
     // Step 2: Add NOT NULL constraint back
     logger.info('   Step 2/2: Adding NOT NULL constraint back to column...')
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       ALTER TABLE wallet_passes
       ALTER COLUMN last_updated_tag SET NOT NULL;
     `)
@@ -124,16 +124,13 @@ if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
       logger.info('   Action: Remove NOT NULL constraint from last_updated_tag column')
       logger.info('')
 
-      // Get database connection
-      const { sequelize, queryInterface } = await getDatabase()
-
-      // Authenticate connection
+      // Authenticate database connection
       await sequelize.authenticate()
       logger.info('✅ Database connection established')
       logger.info('')
 
       // Run migration
-      await up(queryInterface, sequelize.Sequelize)
+      await up()
 
       logger.info('')
       logger.info('========================================')
