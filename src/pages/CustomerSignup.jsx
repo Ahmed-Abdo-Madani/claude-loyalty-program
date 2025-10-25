@@ -635,18 +635,11 @@ function CustomerSignup() {
           {/* Business Logo with Brand Color Halo */}
           {getLogoUrl() && (
             <div className="mb-8 flex justify-center">
-              <div 
-                className="relative p-6 rounded-full"
-                style={{ 
-                  backgroundColor: getColors().label || `${getColors().background}20`
-                }}
-              >
-                <img
-                  src={getLogoUrl()}
-                  alt={`${offer.businessName} Logo`}
-                  className="w-32 h-32 object-contain drop-shadow-lg"
-                />
-              </div>
+              <img
+                src={getLogoUrl()}
+                alt={`${offer.businessName} Logo`}
+                className="w-32 h-32 object-contain drop-shadow-lg"
+              />
             </div>
           )}
 
