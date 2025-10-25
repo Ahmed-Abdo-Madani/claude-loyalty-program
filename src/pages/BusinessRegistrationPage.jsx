@@ -21,7 +21,7 @@ const content = {
   ar: {
     // Header & Navigation
     businessRegistration: 'تسجيل الأعمال',
-    joinThousands: 'انضم إلى آلاف الشركات التي تبني ولاء العملاء مع منصة مدنا',
+    joinThousands: 'ابنِ علاقات قوية مع عملائك وامنحهم أفضل برنامج ولاء.',
     home: 'الرئيسية',
     features: 'الميزات',
     signIn: 'تسجيل الدخول',
@@ -129,7 +129,7 @@ const content = {
   en: {
     // Header & Navigation
     businessRegistration: 'Business Registration',
-    joinThousands: 'Join thousands of businesses building customer loyalty with Madna Platform',
+    joinThousands: 'Build Strong Relations With your Customers & give them the Best loyalty Program.',
     home: 'Home',
     features: 'Features',
     signIn: 'Sign In',
