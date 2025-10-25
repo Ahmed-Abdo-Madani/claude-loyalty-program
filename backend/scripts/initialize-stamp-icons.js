@@ -132,23 +132,44 @@ async function generatePreviewFromSVG(svgFilename, previewFilename) {
 }
 
 /**
- * Verify manifest.json exists and is valid
+ * Create or verify manifest.json exists and is valid
  */
-function verifyManifestExists() {
+function createOrVerifyManifest() {
   try {
+    // If manifest doesn't exist, create it
     if (!fs.existsSync(MANIFEST_PATH)) {
-      console.error(`❌ Manifest not found: ${MANIFEST_PATH}`)
-      return false
+      console.log('📄 Creating manifest.json...')
+      
+      const manifest = {
+        icons: [
+          {
+            id: 'coffee-01',
+            name: 'Coffee Cup',
+            category: 'food',
+            fileName: 'coffee-filled.svg'
+          },
+          {
+            id: 'gift-01',
+            name: 'Gift Box',
+            category: 'retail',
+            fileName: 'gift-filled.svg'
+          }
+        ]
+      }
+      
+      fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8')
+      console.log('✅ Created manifest.json')
+      return true
     }
     
-    // Try to parse JSON to verify validity
+    // Verify existing manifest is valid JSON
     const manifestContent = fs.readFileSync(MANIFEST_PATH, 'utf8')
     JSON.parse(manifestContent)
     
     console.log('✅ Manifest verified: manifest.json')
     return true
   } catch (error) {
-    console.error(`❌ Invalid manifest.json: ${error.message}`)
+    console.error(`❌ Failed to create/verify manifest.json: ${error.message}`)
     return false
   }
 }
@@ -165,13 +186,7 @@ export async function initializeStampIcons() {
   let svgCount = 0
   let previewCount = 0
   
-  // 1. Verify manifest exists
-  if (!verifyManifestExists()) {
-    errors.push('Manifest not found or invalid')
-    return { success: false, svgCount, previewCount, errors }
-  }
-  
-  // 2. Ensure directories exist
+  // 1. Ensure directories exist first (before manifest)
   if (!ensureDirectoryExists(ICONS_PATH)) {
     errors.push('Failed to create icons directory')
     return { success: false, svgCount, previewCount, errors }
@@ -179,6 +194,12 @@ export async function initializeStampIcons() {
   
   if (!ensureDirectoryExists(PREVIEWS_PATH)) {
     errors.push('Failed to create previews directory')
+    return { success: false, svgCount, previewCount, errors }
+  }
+  
+  // 2. Create or verify manifest exists
+  if (!createOrVerifyManifest()) {
+    errors.push('Failed to create/verify manifest')
     return { success: false, svgCount, previewCount, errors }
   }
   
