@@ -425,9 +425,9 @@ class StampImageGenerator {
     // Hero image dimensions
     const IMAGE_WIDTH = 624
     const IMAGE_HEIGHT = 168
-    const HORIZONTAL_PADDING = 40  // 20px left + 20px right
-    const VERTICAL_PADDING = 30    // 15px top + 15px bottom
-    const MAX_STAMP_SIZE = 80     // Maximum stamp size cap
+    const HORIZONTAL_PADDING = 20  // 10px left + 10px right
+    const VERTICAL_PADDING = 15    // 7.5px top + 7.5px bottom
+    const MAX_STAMP_SIZE = 100     // Maximum stamp size cap
 
     const availableWidth = IMAGE_WIDTH - HORIZONTAL_PADDING
     const availableHeight = IMAGE_HEIGHT - VERTICAL_PADDING
@@ -470,7 +470,7 @@ class StampImageGenerator {
     if (stampsRequired <= 4) {
       STAMP_FILL_RATIO = 0.70  // 70% for very small counts (1-4 stamps) - prevents oversized stamps
     } else if (stampsRequired <= 8) {
-      STAMP_FILL_RATIO = 0.95  // 95% for small grids (5-8 stamps) - good balance
+      STAMP_FILL_RATIO = 0.98  // 98% for small grids (5-8 stamps) - good balance
     } else if (stampsRequired <= 15) {
       STAMP_FILL_RATIO = 0.90  // 90% for medium grids (9-15 stamps) - maximize space usage
     } else if (stampsRequired <= 25) {
@@ -496,8 +496,8 @@ class StampImageGenerator {
     const stampSize = Math.floor(Math.min(calculatedSize, MAX_STAMP_SIZE))
 
     // STEP 3: Calculate spacing (proportional to stamp size)
-    // 10% of stamp size provides visual breathing room between stamps
-    const spacing = Math.floor(stampSize * 0.10)
+    // 5% of stamp size provides visual breathing room between stamps
+    const spacing = Math.floor(stampSize * 0.05)
 
     // STEP 4: Calculate actual grid dimensions
     let totalWidth = (cols * stampSize) + ((cols - 1) * spacing)
