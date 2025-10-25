@@ -85,12 +85,12 @@ claude-loyalty-program/
    npm install
    ```
 
-3. **Generate stamp icon previews**
+3. **Generate stamp icon previews** (first-time setup only)
    ```bash
    cd backend
    npm run generate-icon-previews
    ```
-   Note: Sample icons (coffee, gift) are included by default.
+   **Note**: This generates 50x50px PNG previews from SVG stamp icons. Sample icons (coffee, gift) are included. Preview generation is automatic in production Docker builds. See [DEPLOYMENT.md - Stamp Icon System Setup](DEPLOYMENT.md#-stamp-icon-system-setup) for detailed documentation.
 
 4. **Start development server**
    ```bash

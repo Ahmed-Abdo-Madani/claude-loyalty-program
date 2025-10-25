@@ -588,6 +588,115 @@ curl -X POST https://api.madna.me/api/business/customers/signup \
 ### Overview
 The stamp icon system allows businesses to use either emojis or custom SVG icons for their loyalty stamps. The system automatically detects icon type and renders appropriately.
 
+### 5. Production Deployment Checklist
+
+**Before deploying to production, verify these critical items:**
+
+#### Docker Configuration ✅
+- [ ] Verify `backend/.dockerignore` includes `!uploads/icons/` exception
+- [ ] This ensures stamp icon assets are bundled in Docker image (not user uploads)
+- [ ] Confirm `.dockerignore` line 47: `uploads/*` followed by `!uploads/icons/`
+
+#### Static Assets Present ✅
+- [ ] Verify `uploads/icons/stamps/coffee-filled.svg` exists
+- [ ] Verify `uploads/icons/stamps/gift-filled.svg` exists
+- [ ] Verify `uploads/icons/stamps/manifest.json` exists
+- [ ] All SVG files are clean (no Adobe Illustrator metadata)
+- [ ] SVG viewBox is `0 0 100 100` (square canvas)
+
+#### Preview Images Generated ✅
+- [ ] Verify `uploads/icons/stamps/previews/coffee-preview.png` exists
+- [ ] Verify `uploads/icons/stamps/previews/gift-preview.png` exists
+- [ ] PNG files are 50x50px
+- [ ] PNG files have transparent backgrounds
+
+#### After Deployment - Verify Endpoints
+
+1. **Test Stamp Icons Manifest**:
+   ```bash
+   curl https://api.madna.me/api/stamp-icons
+   ```
+   **Expected**: JSON array with `coffee-01` and `gift-01` icons
+
+2. **Test Icon Preview Endpoint**:
+   ```bash
+   curl https://api.madna.me/api/stamp-icons/coffee-01/preview
+   ```
+   **Expected**: PNG image data (Content-Type: image/png)
+
+3. **Test Card Design Editor**:
+   - Log in to business dashboard
+   - Navigate to Offer → Edit Card Design
+   - Open "Stamp Icon" section
+   - Verify `coffee-01` and `gift-01` icons display as images (not text)
+
+4. **Test Customer Signup Page**:
+   - Visit customer signup URL: `https://app.madna.me/signup?offer=off_123456`
+   - Verify stamp icons render correctly in stamp visualization
+   - Icons should display as images, not text like "coffee-01"
+
+5. **Test Wallet Previews**:
+   - Generate Apple Wallet preview
+   - Generate Google Wallet preview
+   - Verify stamp icons appear as images in both previews
+   - Check that 0/10 stamps show empty icons
+
+#### Troubleshooting Production Issues
+
+**Symptom**: Stamp icons showing as text ("coffee-01" instead of image)
+
+**Diagnosis Steps**:
+1. Check manifest endpoint returns data:
+   ```bash
+   curl https://api.madna.me/api/stamp-icons | jq
+   ```
+   
+2. Check preview endpoint returns PNG:
+   ```bash
+   curl -I https://api.madna.me/api/stamp-icons/coffee-01/preview
+   ```
+   Should show: `Content-Type: image/png`
+
+3. Check Docker image includes icons:
+   ```bash
+   # SSH into Render container
+   ls /opt/render/project/src/backend/uploads/icons/stamps/
+   ```
+   Should show: `coffee-filled.svg`, `gift-filled.svg`, `manifest.json`, `previews/`
+
+**Possible Causes & Fixes**:
+
+| Cause | Symptom | Fix |
+|-------|---------|-----|
+| `.dockerignore` excludes `uploads/` | Files missing in container | Add `!uploads/icons/` exception |
+| Preview PNGs not generated | 404 on preview endpoint | Run `npm run generate-icon-previews` before commit |
+| SVG files corrupted | XML parse errors | Recreate SVG files with clean, simple markup |
+| `manifest.json` invalid | Empty array from API | Validate JSON structure |
+
+### 6. Docker Build Verification
+
+Before deploying, test the Docker build locally:
+
+```bash
+# Build Docker image
+cd backend
+docker build -t madna-backend .
+
+# Run container
+docker run -p 3001:3001 madna-backend
+
+# Verify stamp icons
+docker exec <container_id> ls /opt/render/project/src/backend/uploads/icons/stamps/
+
+# Should output:
+# coffee-filled.svg
+# gift-filled.svg
+# manifest.json
+# previews/
+```
+
+### 7. Adding New Custom Icons
+
 ### 1. Icon Files Structure
 
 **Directory**: `uploads/icons/stamps/`

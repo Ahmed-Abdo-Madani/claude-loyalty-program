@@ -45,6 +45,7 @@ build
 
 # Uploads (production uses persistent disk)
 uploads/*
+!uploads/icons/
 
 # Keep necessary files
 !fonts/fonts.conf
