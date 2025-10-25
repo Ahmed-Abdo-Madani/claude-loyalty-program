@@ -17,6 +17,7 @@ import locationRoutes from './routes/locations.js'
 import cardDesignRoutes from './routes/cardDesign.js'
 import stampIconsRoutes from './routes/stampIcons.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
+import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -317,6 +318,23 @@ async function initializeDatabase() {
     } catch (error) {
       logger.warn('⚠️ APNs Service initialization failed:', error.message)
       // Continue startup even if APNs fails
+    }
+
+    // Initialize stamp icons system
+    try {
+      console.log('🎨 Initializing stamp icons...')
+      const result = await initializeStampIcons()
+      if (result.success) {
+        console.log(`✅ Stamp icons ready: ${result.svgCount} SVGs, ${result.previewCount} previews`)
+      } else {
+        console.warn('⚠️ Stamp icons initialization completed with warnings')
+        if (result.errors.length > 0) {
+          console.warn('   Errors:', result.errors.join(', '))
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize stamp icons:', error.message)
+      console.warn('⚠️ Server will start without custom stamp icons (emoji stamps will still work)')
     }
 
     // Then start the server

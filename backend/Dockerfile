@@ -32,7 +32,7 @@ RUN npm ci --only=production
 COPY . .
 
 # Create directories and set ownership for node user
-RUN mkdir -p logs _tmp_pkpass && \
+RUN mkdir -p logs _tmp_pkpass uploads/icons/stamps/previews && \
     chown -R node:node /app
 
 # Use non-root user for security

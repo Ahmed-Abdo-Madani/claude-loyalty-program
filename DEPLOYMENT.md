@@ -586,62 +586,134 @@ curl -X POST https://api.madna.me/api/business/customers/signup \
 ## 🎨 Stamp Icon System Setup
 
 ### Overview
-The stamp icon system allows businesses to use either emojis or custom SVG icons for their loyalty stamps. The system automatically detects icon type and renders appropriately.
+The stamp icon system allows businesses to use either emojis or custom SVG icons for their loyalty stamps. The system **automatically initializes** on server startup - no manual setup required.
+
+### How Automatic Initialization Works
+
+**On every server startup**, the backend automatically:
+1. ✅ Checks if `uploads/icons/stamps/` directory exists (creates if missing)
+2. ✅ Verifies `manifest.json` is present and valid
+3. ✅ Generates `coffee-filled.svg` if not present (programmatic SVG template)
+4. ✅ Generates `gift-filled.svg` if not present (programmatic SVG template)
+5. ✅ Creates PNG previews (50x50px, transparent) using Sharp
+6. ✅ Logs detailed status with emoji indicators
+7. ✅ Continues server startup even if errors occur (graceful degradation)
+
+**Key Benefits**:
+- 🚀 **Zero Manual Setup**: No need to create SVG files or run preview generation
+- 🔄 **Idempotent**: Safe to run multiple times (skips existing files)
+- 🛡️ **Fail-Safe**: Server starts even if icon generation fails
+- 📝 **Observable**: Clear logs show what was created/skipped
+- 🐳 **Docker-Friendly**: Directories created with proper permissions at build time
+
+**Technology**:
+- SVG generation: JavaScript string templates (no external dependencies)
+- PNG conversion: Sharp library (high-performance image processing)
+- Directory creation: Node.js fs module with recursive option
 
 ### 5. Production Deployment Checklist
 
-**Before deploying to production, verify these critical items:**
+**The stamp icon system now initializes automatically on server startup. No manual setup required.**
 
 #### Docker Configuration ✅
-- [ ] Verify `backend/.dockerignore` includes `!uploads/icons/` exception
-- [ ] This ensures stamp icon assets are bundled in Docker image (not user uploads)
-- [ ] Confirm `.dockerignore` line 47: `uploads/*` followed by `!uploads/icons/`
+- [x] `backend/.dockerignore` includes `!uploads/icons/` exception (line 47-48)
+- [x] `backend/Dockerfile` creates `uploads/icons/stamps/previews` directory (line 35)
+- [x] Directory created with proper ownership before USER switch (security best practice)
 
-#### Static Assets Present ✅
-- [ ] Verify `uploads/icons/stamps/coffee-filled.svg` exists
-- [ ] Verify `uploads/icons/stamps/gift-filled.svg` exists
-- [ ] Verify `uploads/icons/stamps/manifest.json` exists
-- [ ] All SVG files are clean (no Adobe Illustrator metadata)
-- [ ] SVG viewBox is `0 0 100 100` (square canvas)
+#### Automatic Initialization ✅
+- [x] `backend/scripts/initialize-stamp-icons.js` generates SVG files programmatically
+- [x] Runs automatically on server startup (integrated into `server.js`)
+- [x] Creates directories if missing (idempotent - safe to run multiple times)
+- [x] Generates PNG previews with Sharp (50x50px, transparent background)
+- [x] Validates `manifest.json` exists and is valid JSON
+- [x] Logs detailed status with emoji indicators (🎨, ✅, ❌, ⚠️)
 
-#### Preview Images Generated ✅
-- [ ] Verify `uploads/icons/stamps/previews/coffee-preview.png` exists
-- [ ] Verify `uploads/icons/stamps/previews/gift-preview.png` exists
-- [ ] PNG files are 50x50px
-- [ ] PNG files have transparent backgrounds
+#### What Gets Generated Automatically
+- Coffee Cup SVG: Simple geometric shapes (trapezoid body, curved handle, steam lines)
+- Gift Box SVG: Red box with gold ribbon and bow circles
+- PNG previews: 50x50px versions for frontend display
+- All files created in `uploads/icons/stamps/` and `uploads/icons/stamps/previews/`
 
 #### After Deployment - Verify Endpoints
 
-1. **Test Stamp Icons Manifest**:
+1. **Check Server Logs for Initialization**:
+   ```bash
+   # In Render dashboard, check logs for:
+   🎨 Initializing stamp icons...
+   ✅ Stamp icons ready: 2 SVGs, 2 previews
+   ```
+
+2. **Test Stamp Icons Manifest**:
    ```bash
    curl https://api.madna.me/api/stamp-icons
    ```
    **Expected**: JSON array with `coffee-01` and `gift-01` icons
 
-2. **Test Icon Preview Endpoint**:
+3. **Test Icon Preview Endpoint**:
    ```bash
    curl https://api.madna.me/api/stamp-icons/coffee-01/preview
    ```
    **Expected**: PNG image data (Content-Type: image/png)
 
-3. **Test Card Design Editor**:
+4. **Test Card Design Editor**:
    - Log in to business dashboard
    - Navigate to Offer → Edit Card Design
    - Open "Stamp Icon" section
    - Verify `coffee-01` and `gift-01` icons display as images (not text)
 
-4. **Test Customer Signup Page**:
+5. **Test Customer Signup Page**:
    - Visit customer signup URL: `https://app.madna.me/signup?offer=off_123456`
    - Verify stamp icons render correctly in stamp visualization
    - Icons should display as images, not text like "coffee-01"
 
-5. **Test Wallet Previews**:
+6. **Test Wallet Previews**:
    - Generate Apple Wallet preview
    - Generate Google Wallet preview
    - Verify stamp icons appear as images in both previews
    - Check that 0/10 stamps show empty icons
 
+#### Manual Operations (Optional)
+
+If you need to manually regenerate icons:
+
+```bash
+# Initialize/regenerate stamp icons
+npm run init-icons
+
+# Verify all files present
+npm run verify-icons
+```
+
 #### Troubleshooting Production Issues
+
+**Symptom**: Server logs show "Permission denied" during stamp icons initialization
+
+**Root Cause**: Directory not created at build time (before USER switch in Dockerfile)
+
+**Fix**:
+1. Verify `backend/Dockerfile` line 35 includes:
+   ```dockerfile
+   RUN mkdir -p logs _tmp_pkpass uploads/icons/stamps/previews && \
+   ```
+2. Redeploy with updated Dockerfile
+3. Check logs for: `✅ Stamp icons ready: 2 SVGs, 2 previews`
+
+---
+
+**Symptom**: Stamp icons initialization fails with ENOENT error
+
+**Root Cause**: Directory structure doesn't exist and `node` user can't create it
+
+**Fix**:
+1. SSH into Render container (or use Render Shell)
+2. Manually create directory:
+   ```bash
+   mkdir -p /opt/render/project/src/backend/uploads/icons/stamps/previews
+   ```
+3. Restart server (automatic re-initialization will run)
+4. If issue persists, update Dockerfile as described above
+
+---
 
 **Symptom**: Stamp icons showing as text ("coffee-01" instead of image)
 
@@ -657,21 +729,77 @@ The stamp icon system allows businesses to use either emojis or custom SVG icons
    ```
    Should show: `Content-Type: image/png`
 
-3. Check Docker image includes icons:
+3. Check initialization logs:
+   ```bash
+   # In Render dashboard logs, search for:
+   🎨 Initializing stamp icons...
+   ```
+
+4. Check files exist in container:
    ```bash
    # SSH into Render container
-   ls /opt/render/project/src/backend/uploads/icons/stamps/
+   ls -la /opt/render/project/src/backend/uploads/icons/stamps/
+   ls -la /opt/render/project/src/backend/uploads/icons/stamps/previews/
    ```
-   Should show: `coffee-filled.svg`, `gift-filled.svg`, `manifest.json`, `previews/`
+   Should show: `coffee-filled.svg`, `gift-filled.svg`, `manifest.json`, PNG files
 
-**Possible Causes & Fixes**:
+---
+
+**Symptom**: Sharp library fails to convert SVG to PNG
+
+**Root Cause**: librsvg2-2 not installed in Docker image
+
+**Fix**:
+1. Verify `backend/Dockerfile` line 5 includes:
+   ```dockerfile
+   RUN apt-get update && apt-get install -y \
+       fonts-noto-color-emoji \
+       fontconfig \
+       librsvg2-2 \
+   ```
+2. Redeploy if missing
+
+---
+
+**Possible Causes & Fixes Summary**:
 
 | Cause | Symptom | Fix |
 |-------|---------|-----|
-| `.dockerignore` excludes `uploads/` | Files missing in container | Add `!uploads/icons/` exception |
-| Preview PNGs not generated | 404 on preview endpoint | Run `npm run generate-icon-previews` before commit |
-| SVG files corrupted | XML parse errors | Recreate SVG files with clean, simple markup |
-| `manifest.json` invalid | Empty array from API | Validate JSON structure |
+| Directory not created at build time | Permission denied (EACCES) | Update Dockerfile line 35 |
+| `.dockerignore` excludes `uploads/` | Icons missing after deploy | Verify `!uploads/icons/` exception exists |
+| Sharp/librsvg missing | PNG conversion fails | Install librsvg2-2 in Dockerfile |
+| SVG generation fails | Empty manifest | Check server logs for detailed error |
+| `manifest.json` invalid | Empty array from API | Run `npm run init-icons` manually |
+
+---
+
+**Manual Recovery Steps**:
+
+If automatic initialization fails completely, you can manually regenerate:
+
+```bash
+# Option 1: Using npm script (recommended)
+cd /opt/render/project/src/backend
+npm run init-icons
+
+# Option 2: Direct execution
+node scripts/initialize-stamp-icons.js
+
+# Option 3: Verify files present
+npm run verify-icons
+```
+
+Expected output:
+```
+🎨 Starting stamp icons initialization...
+📁 Created directory: uploads/icons/stamps
+📁 Created directory: uploads/icons/stamps/previews
+📄 Created SVG file: coffee-filled.svg
+📄 Created SVG file: gift-filled.svg
+✅ Generated preview: coffee-preview.png (50x50px)
+✅ Generated preview: gift-preview.png (50x50px)
+✅ Stamp icons initialization complete
+```
 
 ### 6. Docker Build Verification
 

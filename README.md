@@ -10,7 +10,7 @@ A cost-effective and scalable loyalty program management platform designed for b
 - 🎯 **Multiple program types** - Stamps, points, discounts
 - 📊 **Real-time analytics** - Track customer engagement
 - 🏪 **Multi-location support** - Manage multiple branches
-- 🎨 **Custom stamp icons** - SVG support with automatic PNG preview generation
+- 🎨 **Custom stamp icons** - SVG icons generated automatically on server startup
 
 ### **For Customers**
 - 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with emoji stamp visualization
@@ -85,30 +85,41 @@ claude-loyalty-program/
    npm install
    ```
 
-3. **Generate stamp icon previews** (first-time setup only)
-   ```bash
-   cd backend
-   npm run generate-icon-previews
-   ```
-   **Note**: This generates 50x50px PNG previews from SVG stamp icons. Sample icons (coffee, gift) are included. Preview generation is automatic in production Docker builds. See [DEPLOYMENT.md - Stamp Icon System Setup](DEPLOYMENT.md#-stamp-icon-system-setup) for detailed documentation.
-
-4. **Start development server**
+3. **Start development server**
    ```bash
    npm run dev
    ```
+   
+   **Note**: Stamp icons (coffee, gift) are automatically generated on backend startup. No manual setup required. The system creates SVG files programmatically and generates PNG previews using Sharp.
 
-5. **Open browser**
+4. **Open browser**
    ```
    http://localhost:3000
    ```
 
 ### **Available Scripts**
 
+**Main Development**:
 ```bash
-npm run dev      # Start development server
+npm run dev      # Start development server (frontend + backend)
 npm run build    # Build for production
 npm run preview  # Preview production build
 npm run lint     # Run ESLint
+```
+
+**Stamp Icons System** (optional - automatic in normal operation):
+```bash
+cd backend
+npm run init-icons    # Manually generate/regenerate stamp icons
+npm run verify-icons  # Check all stamp icon files are present
+```
+
+**Other Backend Scripts**:
+```bash
+cd backend
+npm run dev                      # Start backend only
+npm run generate-icon-previews   # Legacy preview generation (deprecated)
+npm run migrate:gender           # Run gender field migration
 ```
 
 ## 🎨 **Wireframes & Design**

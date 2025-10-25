@@ -9,7 +9,9 @@
     "dev": "nodemon server.js",
     "test": "node test/StampImageGenerator.test.js",
     "migrate:gender": "node migrations/20250126-add-gender-to-customers.js",
-    "generate-icon-previews": "node utils/generateIconPreviews.js"
+    "generate-icon-previews": "node utils/generateIconPreviews.js",
+    "init-icons": "node scripts/initialize-stamp-icons.js",
+    "verify-icons": "node -e \"const fs = require('fs'); const path = require('path'); const iconsPath = path.join(__dirname, 'uploads', 'icons', 'stamps'); const files = ['manifest.json', 'coffee-filled.svg', 'gift-filled.svg', 'previews/coffee-preview.png', 'previews/gift-preview.png']; const missing = files.filter(f => !fs.existsSync(path.join(iconsPath, f))); if (missing.length > 0) { console.error('❌ Missing files:', missing); process.exit(1); } else { console.log('✅ All icon files present'); process.exit(0); }\""
   },
   "dependencies": {
     "@walletpass/pass-js": "^6.9.1",
