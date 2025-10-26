@@ -207,7 +207,7 @@ export function darkenColor(hex, percent) {
 /**
  * Generate a color palette from a base color
  * @param {string} baseColor - Base hex color
- * @returns {{primary: string, light: string, lighter: string, dark: string, darker: string}}
+ * @returns {{primary: string, light: string, lighter: string, dark: string, darker: string, suggestedForeground: string}}
  */
 export function generatePalette(baseColor) {
   return {
@@ -215,7 +215,8 @@ export function generatePalette(baseColor) {
     lighter: lightenColor(baseColor, 30),
     light: lightenColor(baseColor, 15),
     dark: darkenColor(baseColor, 15),
-    darker: darkenColor(baseColor, 30)
+    darker: darkenColor(baseColor, 30),
+    suggestedForeground: suggestContrastingColor(baseColor)
   }
 }
 
@@ -295,6 +296,113 @@ export const colorPresets = {
   }
 }
 
+/**
+ * Business-friendly color presets organized by use case
+ * For mobile-first color picker
+ */
+export const businessFriendlyPresets = {
+  popular: {
+    name: 'Popular',
+    colors: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#6366F1'],
+    description: 'Most commonly used colors'
+  },
+  bold: {
+    name: 'Bold',
+    colors: ['#DC2626', '#EA580C', '#D97706', '#059669', '#0891B2', '#7C3AED', '#DB2777'],
+    description: 'High contrast, vibrant colors'
+  },
+  subtle: {
+    name: 'Subtle',
+    colors: ['#9CA3AF', '#6B7280', '#A78BFA', '#F9A8D4', '#FCA5A5', '#FCD34D', '#86EFAC'],
+    description: 'Soft, muted tones'
+  },
+  professional: {
+    name: 'Professional',
+    colors: ['#1E3A8A', '#1E40AF', '#1F2937', '#374151', '#0F766E', '#0E7490'],
+    description: 'Corporate, trustworthy'
+  },
+  seasonal: {
+    name: 'Seasonal',
+    colors: ['#DC2626', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#F97316'],
+    description: 'Holiday-themed'
+  }
+}
+
+/**
+ * Quick preset categories mapping for easy access
+ */
+export const quickPresetCategories = Object.keys(businessFriendlyPresets).reduce((acc, key) => {
+  acc[key] = businessFriendlyPresets[key].colors
+  return acc
+}, {})
+
+/**
+ * Get simplified, business-friendly contrast message
+ * @param {string} bgColor - Background color (hex)
+ * @param {string} fgColor - Foreground/text color (hex)
+ * @returns {string} Business-friendly message
+ */
+export function getSimplifiedContrastMessage(bgColor, fgColor) {
+  const contrast = validateColorContrast(bgColor, fgColor)
+  
+  if (contrast.meetsAAA) {
+    return 'Perfect - easy to read'
+  } else if (contrast.meetsAA) {
+    return 'Good - readable'
+  } else if (contrast.ratio >= 3.0) {
+    return 'Warning - may be hard to read'
+  } else {
+    return 'Error - too similar'
+  }
+}
+
+/**
+ * Get contrast icon emoji based on ratio
+ * @param {number} ratio - Contrast ratio
+ * @returns {string} Emoji icon
+ */
+export function getContrastIcon(ratio) {
+  if (ratio >= 7.0) {
+    return '✅' // AAA level
+  } else if (ratio >= 4.5) {
+    return '✓' // AA level
+  } else if (ratio >= 3.0) {
+    return '⚠️' // Warning
+  } else {
+    return '❌' // Fail
+  }
+}
+
+/**
+ * Suggest a contrasting foreground color that meets AA standards
+ * @param {string} baseColor - Base background color (hex)
+ * @param {boolean|null} preferLight - Prefer light color (true), dark (false), or auto (null)
+ * @returns {string} Suggested hex color
+ */
+export function suggestContrastingColor(baseColor, preferLight = null) {
+  const whiteContrast = validateColorContrast(baseColor, '#FFFFFF')
+  const blackContrast = validateColorContrast(baseColor, '#000000')
+  
+  // If preference is specified, try that first
+  if (preferLight === true && whiteContrast.meetsAA) {
+    return '#FFFFFF'
+  } else if (preferLight === false && blackContrast.meetsAA) {
+    return '#000000'
+  }
+  
+  // Auto-select best option
+  if (whiteContrast.ratio > blackContrast.ratio && whiteContrast.meetsAA) {
+    return '#FFFFFF'
+  } else if (blackContrast.meetsAA) {
+    return '#000000'
+  } else if (whiteContrast.meetsAA) {
+    return '#FFFFFF'
+  }
+  
+  // Fallback to highest contrast
+  return whiteContrast.ratio > blackContrast.ratio ? '#FFFFFF' : '#000000'
+}
+
 export default {
   hexToRgb,
   rgbToHex,
@@ -309,5 +417,10 @@ export default {
   darkenColor,
   generatePalette,
   suggestAccessibleForeground,
-  colorPresets
+  colorPresets,
+  businessFriendlyPresets,
+  quickPresetCategories,
+  getSimplifiedContrastMessage,
+  getContrastIcon,
+  suggestContrastingColor
 }

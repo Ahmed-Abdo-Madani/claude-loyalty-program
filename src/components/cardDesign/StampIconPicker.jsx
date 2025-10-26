@@ -1,6 +1,7 @@
 /**
  * StampIconPicker Component
  * Allows businesses to select from a library of SVG stamp icons
+ * Phase 4 - Mobile Optimization
  */
 
 import { useState, useEffect } from 'react'
@@ -12,6 +13,7 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     loadIcons()
@@ -54,10 +56,24 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
     }
   }
 
+  // Filter icons by search query
+  const filteredIcons = icons.filter(icon => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return icon.name.toLowerCase().includes(query) || 
+           (icon.description && icon.description.toLowerCase().includes(query))
+  })
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex flex-col items-center justify-center py-8 space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        {/* Skeleton Grid */}
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 w-full opacity-30">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -80,38 +96,63 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
 
   return (
     <div className="space-y-4">
-      {/* Category Filter */}
+      {/* Search Input */}
+      <div>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search icons..."
+          disabled={disabled}
+          className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        />
+      </div>
+
+      {/* Category Filter - Horizontal Scrollable Pills */}
       {categories.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Category
-          </label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            disabled={disabled}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <option value="all">All Categories</option>
+        <div className="overflow-x-auto pb-2 -mx-1 px-1">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setSelectedCategory('all')}
+              disabled={disabled}
+              className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0
+                ${selectedCategory === 'all'
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }
+                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              All
+            </button>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                disabled={disabled}
+                className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0
+                  ${selectedCategory === cat.id
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }
+                  ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
                 {cat.name}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
       )}
 
-      {/* Icon Grid */}
-      <div className="grid grid-cols-5 gap-3">
-        {icons.map((icon) => (
+      {/* Icon Grid - Responsive */}
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+        {filteredIcons.map((icon) => (
           <button
             key={icon.id}
             onClick={() => onChange(icon.id)}
             disabled={disabled}
             title={`${icon.name}${icon.description ? ` - ${icon.description}` : ''}${icon.seasonal ? ' (Seasonal)' : ''}`}
             className={`
-              relative aspect-square rounded-lg p-2
+              relative aspect-square rounded-lg p-3
               transition-all duration-200
               border-2
               ${selectedIconId === icon.id
@@ -119,6 +160,7 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
                 : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-primary/50 hover:bg-gray-50 dark:hover:bg-gray-600'
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+              min-h-[44px] min-w-[44px]
             `}
           >
             {/* Icon Preview Image */}
@@ -167,15 +209,16 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
         <div className="text-sm text-center">
           <span className="text-gray-600 dark:text-gray-400">Selected: </span>
           <span className="font-medium text-gray-900 dark:text-gray-100">
-            {icons.find(i => i.id === selectedIconId)?.name || selectedIconId}
+            {filteredIcons.find(i => i.id === selectedIconId)?.name || selectedIconId}
           </span>
         </div>
       )}
 
       {/* Icon Count Info */}
       <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-        {icons.length} icon{icons.length !== 1 ? 's' : ''} available
-        {selectedCategory !== 'all' && ` in ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`}
+        {filteredIcons.length} icon{filteredIcons.length !== 1 ? 's' : ''} 
+        {searchQuery && ` matching "${searchQuery}"`}
+        {selectedCategory !== 'all' && !searchQuery && ` in ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`}
       </div>
     </div>
   )
