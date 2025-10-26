@@ -837,19 +837,19 @@ function CustomerSignup() {
 
         {/* Offer Display */}
         <div 
-          className="p-6 text-white text-center"
+          className="p-4 sm:p-6 text-white text-center"
           style={{ backgroundColor: getColors().background, filter: 'brightness(0.9)' }}
         >
-          <div className="text-xl font-bold mb-4">{offer.title}</div>
+          <div className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">{offer.title}</div>
 
-          <div className={`flex flex-wrap justify-center items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''} max-w-[80%] mx-auto mb-4`}>
+          <div className={`flex flex-wrap justify-center items-center gap-2 sm:gap-3 ${isRTL ? 'flex-row-reverse' : ''} max-w-full sm:max-w-[80%] mx-auto mb-3 sm:mb-4`}>
             {Array.from({ length: offer.stamps_required || offer.stampsRequired }, (_, i) => (
-              <span key={i} className="text-5xl" role="img" aria-label="stamp">
+              <span key={i} className="text-3xl sm:text-4xl md:text-5xl" role="img" aria-label="stamp">
                 {renderStampIcon(cardDesign?.stamp_icon || '⭐')}
               </span>
             ))}
           </div>
-          <div className="text-sm opacity-90">
+          <div className="text-xs sm:text-sm opacity-90">
             {formatText(t.collectStamps, { count: offer.stamps_required || offer.stampsRequired })}
           </div>
         </div>
@@ -894,14 +894,22 @@ function CustomerSignup() {
         {/* Form */}
         <div className="p-6">
           <div className="text-center mb-6">
-            <p className="text-gray-700 dark:text-gray-300">{t.joinProgram}</p>
+            <p 
+              className="font-medium"
+              style={{ color: getColors().background }}
+            >
+              {t.joinProgram}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.fullName} {t.required}
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: getColors().background }}
+              >
+                {t.fullName} <span style={{ color: getColors().background }}>{t.required}</span>
               </label>
               <input
                 type="text"
@@ -909,7 +917,10 @@ function CustomerSignup() {
                 required
                 value={formData.fullName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-200"
+                style={{ 
+                  '--tw-ring-color': getColors().background 
+                }}
                 placeholder={t.fullNamePlaceholder}
                 dir={isRTL ? 'rtl' : 'ltr'}
                 minLength={2}
@@ -919,8 +930,11 @@ function CustomerSignup() {
 
             {/* Phone Number Field with Country Code */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.phoneNumber} {t.required}
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: getColors().background }}
+              >
+                {t.phoneNumber} <span style={{ color: getColors().background }}>{t.required}</span>
               </label>
               <div className="flex gap-2" dir="ltr">
                 <CountryCodeSelector
@@ -935,21 +949,30 @@ function CustomerSignup() {
                   required
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-200"
+                  style={{ 
+                    '--tw-ring-color': getColors().background 
+                  }}
                   placeholder={t.phonePlaceholder}
                   pattern="[0-9]{7,15}"
                   dir="ltr"
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p 
+                className="text-xs mt-1"
+                style={{ color: getColors().label }}
+              >
                 ✓ {t.arabicNumbersSupported}
               </p>
             </div>
 
             {/* Gender Selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.gender} {t.required}
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: getColors().background }}
+              >
+                {t.gender} <span style={{ color: getColors().background }}>{t.required}</span>
               </label>
               <GenderSelector
                 value={formData.gender}
@@ -991,15 +1014,18 @@ function CustomerSignup() {
 
             {/* Disclaimer text below button */}
             <div className="text-center mt-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p 
+                className="text-xs"
+                style={{ color: getColors().label }}
+              >
                 {t.byJoining}
               </p>
             </div>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400 space-y-1">
-            <p>🔒 {t.secureInfo}</p>
-            <p>✨ {t.instantWallet}</p>
+          <div className="mt-6 text-center text-sm space-y-1">
+            <p style={{ color: getColors().label }}>🔒 {t.secureInfo}</p>
+            <p style={{ color: getColors().label }}>✨ {t.instantWallet}</p>
           </div>
         </div>
       </div>
