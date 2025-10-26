@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { endpoints } from '../config/api'
 import BusinessesTable from '../components/BusinessesTable'
+import IconLibraryManager from '../components/IconLibraryManager'
 
 function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -308,12 +309,40 @@ function AdminDashboard() {
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">⚙️</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Platform Settings</h2>
-            <p className="text-gray-600">
-              System configuration and platform settings coming soon
-            </p>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Platform Settings - إعدادات المنصة
+            </h2>
+            
+            {/* Settings Sections */}
+            <div className="space-y-6">
+              {/* Icon Library Section */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-4">
+                  <span className="text-2xl mr-3">🎨</span>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Icon Library - مكتبة الأيقونات
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Manage stamp icons for loyalty cards - إدارة أيقونات الطوابع لبطاقات الولاء
+                </p>
+                <IconLibraryManager />
+              </div>
+              
+              {/* Future Settings Sections */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-4">
+                  <span className="text-2xl mr-3">⚙️</span>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    System Configuration - إعدادات النظام
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Additional platform settings coming soon - إعدادات إضافية قريباً
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </main>

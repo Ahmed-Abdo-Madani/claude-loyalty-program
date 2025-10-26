@@ -18,6 +18,7 @@ import cardDesignRoutes from './routes/cardDesign.js'
 import stampIconsRoutes from './routes/stampIcons.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
+import ManifestService from './services/ManifestService.js'
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -335,6 +336,33 @@ async function initializeDatabase() {
     } catch (error) {
       console.error('❌ Failed to initialize stamp icons:', error.message)
       console.warn('⚠️ Server will start without custom stamp icons (emoji stamps will still work)')
+    }
+
+    // Normalize manifest on startup (auto-migration)
+    try {
+      console.log('📄 [Startup] Normalizing icons manifest...')
+      console.log('📄 [Startup] Calling ManifestService.readManifest()...')
+      
+      const manifest = await ManifestService.readManifest()
+      
+      console.log('📄 [Startup] Manifest received:', {
+        version: manifest.version,
+        iconsCount: (manifest.icons || []).length,
+        categoriesCount: (manifest.categories || []).length,
+        hasLastUpdated: !!manifest.lastUpdated,
+        lastUpdated: manifest.lastUpdated
+      })
+      
+      if (manifest.lastUpdated) {
+        const updatedDate = new Date(manifest.lastUpdated).toLocaleString()
+        console.log(`✅ [Startup] Icons manifest auto-migrated to v${manifest.version || 1} (${updatedDate})`)
+      } else {
+        console.log(`✅ [Startup] Icons manifest loaded: v${manifest.version || 1}, ${(manifest.icons || []).length} icons, ${(manifest.categories || []).length} categories`)
+      }
+    } catch (error) {
+      console.error('❌ [Startup] Failed to normalize icons manifest:', error.message)
+      console.error('❌ [Startup] Error stack:', error.stack)
+      console.warn('⚠️ [Startup] Server will start but icon management may have issues')
     }
 
     // Then start the server

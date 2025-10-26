@@ -14,8 +14,18 @@ const ICONS_BASE_PATH = process.env.ICONS_PATH || join(__dirname, '..', 'uploads
 /**
  * GET /api/stamp-icons
  * List all available stamp icons
+ * 
  * Query params:
  *   - category: Filter by category (optional)
+ * 
+ * Response format (CANONICAL - do not nest in data.data):
+ *   {
+ *     success: true,
+ *     icons: [...],           // Flat array of icon objects
+ *     categories: [...],      // Flat array of category objects
+ *     version: "1.0.0",       // Manifest version string
+ *     total: 12               // Total count of icons (filtered or all)
+ *   }
  */
 router.get('/', (req, res) => {
   try {
@@ -141,13 +151,26 @@ router.get('/:id/preview', (req, res) => {
       filledFile: icon.filledFile
     })
 
-    const previewPath = join(ICONS_BASE_PATH, 'previews', icon.previewFile)
+    // Check if icon has required fields (legacy format validation)
+    if (!icon.previewFile && !icon.filledFile && !icon.fileName) {
+      logger.error(`❌ Icon missing required file fields: ${id}`)
+      return res.status(404).json({
+        success: false,
+        error: 'Icon configuration incomplete',
+        message: `Icon '${id}' is missing file information (previewFile, filledFile, or fileName)`
+      })
+    }
+
+    // Try to find the preview file
+    const previewFileName = icon.previewFile || `${id}-preview.png`
+    const previewPath = join(ICONS_BASE_PATH, 'previews', previewFileName)
     logger.info(`🔍 Looking for preview at: ${previewPath}`)
 
     if (!existsSync(previewPath)) {
       logger.warn(`⚠️ Preview image not found at: ${previewPath}`)
       // Return the filled SVG as fallback
-      const filledSvgPath = join(ICONS_BASE_PATH, icon.filledFile)
+      const svgFileName = icon.filledFile || icon.fileName || `${id}-filled.svg`
+      const filledSvgPath = join(ICONS_BASE_PATH, svgFileName)
       logger.info(`🔍 Looking for SVG fallback at: ${filledSvgPath}`)
       
       if (existsSync(filledSvgPath)) {
@@ -161,7 +184,7 @@ router.get('/:id/preview', (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Preview image not found',
-        message: `Preview file '${icon.previewFile}' does not exist`
+        message: `Neither preview file '${previewFileName}' nor SVG file '${svgFileName}' exist for icon '${id}'`
       })
     }
 

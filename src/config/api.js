@@ -111,7 +111,15 @@ export const endpoints = {
   locations: `${API_BASE_URL}/api/locations`,
   locationSearch: `${API_BASE_URL}/api/locations/search`,
   locationRegions: `${API_BASE_URL}/api/locations/regions`,
-  locationValidate: `${API_BASE_URL}/api/locations/validate`
+  locationValidate: `${API_BASE_URL}/api/locations/validate`,
+
+  // Stamp Icons APIs (read-only)
+  stampIcons: `${API_BASE_URL}/api/stamp-icons`,
+
+  // Admin Icon Management APIs
+  adminIcons: `${API_BASE_URL}/api/admin/icons`,
+  adminIconsCategories: `${API_BASE_URL}/api/admin/icons/categories`,
+  adminIconsRegeneratePreviews: `${API_BASE_URL}/api/admin/icons/regenerate-previews`
 }
 
 // Secure API helper functions

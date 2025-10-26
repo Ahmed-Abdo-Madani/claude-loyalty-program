@@ -2,6 +2,7 @@ import express from 'express'
 import AdminAuthController from '../controllers/adminAuthController.js'
 import AdminBusinessController from '../controllers/adminBusinessController.js'
 import AdminAnalyticsController from '../controllers/adminAnalyticsController.js'
+import AdminIconsController from '../controllers/adminIconsController.js'
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -9,6 +10,7 @@ import {
   logAdminAction,
   handleAdminAuthError
 } from '../middleware/adminAuth.js'
+import { iconUpload, handleIconUploadError, validateUploadedSVGs } from '../middleware/iconUpload.js'
 
 const router = express.Router()
 
@@ -205,6 +207,64 @@ router.post('/system/maintenance', requireSuperAdmin, (req, res) => {
 })
 
 // =================
+// ICON MANAGEMENT ROUTES (Super Admin Only)
+// =================
+
+// Upload new icon
+router.post('/icons',
+  requireSuperAdmin,
+  logAdminAction('upload_icon', 'icon'),
+  iconUpload.fields([
+    { name: 'filled', maxCount: 1 },
+    { name: 'stroke', maxCount: 1 }
+  ]),
+  handleIconUploadError,
+  validateUploadedSVGs,
+  AdminIconsController.uploadIcon
+)
+
+// Update icon
+router.put('/icons/:id',
+  requireSuperAdmin,
+  logAdminAction('update_icon', 'icon'),
+  iconUpload.fields([
+    { name: 'filled', maxCount: 1 },
+    { name: 'stroke', maxCount: 1 }
+  ]),
+  handleIconUploadError,
+  validateUploadedSVGs,
+  AdminIconsController.updateIcon
+)
+
+// Delete icon
+router.delete('/icons/:id',
+  requireSuperAdmin,
+  logAdminAction('delete_icon', 'icon'),
+  AdminIconsController.deleteIcon
+)
+
+// Get categories
+router.get('/icons/categories',
+  requireSuperAdmin,
+  logAdminAction('view_icon_categories', 'icon'),
+  AdminIconsController.getCategories
+)
+
+// Add category
+router.post('/icons/categories',
+  requireSuperAdmin,
+  logAdminAction('add_icon_category', 'icon'),
+  AdminIconsController.addCategory
+)
+
+// Regenerate previews
+router.post('/icons/regenerate-previews',
+  requireSuperAdmin,
+  logAdminAction('regenerate_icon_previews', 'system'),
+  AdminIconsController.regeneratePreviews
+)
+
+// =================
 // SUPPORT ROUTES (future implementation)
 // =================
 
@@ -259,6 +319,9 @@ router.use('*', (req, res) => {
       'POST /api/admin/auth/login',
       'GET /api/admin/businesses',
       'GET /api/admin/analytics/overview',
+      'POST /api/admin/icons',
+      'PUT /api/admin/icons/:id',
+      'DELETE /api/admin/icons/:id',
       'GET /api/admin/health'
     ]
   })

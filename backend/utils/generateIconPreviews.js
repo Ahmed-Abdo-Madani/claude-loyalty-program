@@ -11,21 +11,57 @@ const ICONS_PATH = process.env.ICONS_PATH || join(__dirname, '..', '..', 'upload
 const PREVIEWS_PATH = join(ICONS_PATH, 'previews')
 
 /**
- * Generate PNG preview from SVG icon (50x50px)
+ * Normalize SVG dimensions for consistent rendering
+ * Ensures viewBox="0 0 100 100" and removes explicit width/height
+ * @param {string} svgContent - Raw SVG content
+ * @returns {string} - Normalized SVG content
+ */
+function normalizeSVGDimensions(svgContent) {
+  let normalized = svgContent
+
+  // Remove existing viewBox
+  normalized = normalized.replace(/viewBox="[^"]*"/gi, '')
+  
+  // Remove width and height attributes from <svg> tag
+  normalized = normalized.replace(/<svg([^>]*)\swidth="[^"]*"/gi, '<svg$1')
+  normalized = normalized.replace(/<svg([^>]*)\sheight="[^"]*"/gi, '<svg$1')
+  
+  // Add standard viewBox to the <svg> tag
+  normalized = normalized.replace(/<svg/i, '<svg viewBox="0 0 100 100"')
+  
+  return normalized
+}
+
+/**
+ * Generate PNG preview from SVG icon
  * @param {string} svgPath - Path to SVG file
  * @param {string} outputPath - Path for output PNG
+ * @param {Object} options - Generation options
+ * @param {number} options.size - Output size in pixels (default: 50)
+ * @returns {Promise<boolean>} - Success status
  */
-async function generatePreview(svgPath, outputPath) {
+async function generatePreview(svgPath, outputPath, options = {}) {
   try {
-    const svgBuffer = readFileSync(svgPath)
+    const { size = 50 } = options
+    
+    // Read and normalize SVG
+    const rawSVG = readFileSync(svgPath, 'utf-8')
+    const normalizedSVG = normalizeSVGDimensions(rawSVG)
+    
+    // Write normalized SVG back to disk
+    writeFileSync(svgPath, normalizedSVG, 'utf-8')
+    
+    // Generate preview with transparent background
+    const svgBuffer = Buffer.from(normalizedSVG, 'utf-8')
     await sharp(svgBuffer)
-      .resize(50, 50, {
+      .resize(size, size, {
         fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 0 }
+        background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
       })
       .png()
       .toFile(outputPath)
-    console.log(`✅ Generated preview: ${outputPath}`)
+    
+    console.log(`✅ Generated ${size}x${size} preview: ${outputPath}`)
     return true
   } catch (error) {
     console.error(`❌ Failed to generate preview for ${svgPath}:`, error.message)
@@ -57,12 +93,14 @@ async function generateAllPreviews() {
   let failCount = 0
 
   for (const iconFile of filledIcons) {
-    const iconName = iconFile.replace('-filled.svg', '')
+    // Extract icon ID by removing '-filled.svg' suffix
+    const iconId = iconFile.replace('-filled.svg', '')
     const svgPath = join(ICONS_PATH, iconFile)
-    const previewPath = join(PREVIEWS_PATH, `${iconName}-preview.png`)
+    // Use {id}.png naming convention (e.g., coffee-01.png)
+    const previewPath = join(PREVIEWS_PATH, `${iconId}.png`)
 
-    console.log(`🔄 Processing: ${iconFile}`)
-    const success = await generatePreview(svgPath, previewPath)
+    console.log(`🔄 Processing: ${iconFile} → ${iconId}.png`)
+    const success = await generatePreview(svgPath, previewPath, { size: 50 })
 
     if (success) {
       successCount++
@@ -99,4 +137,4 @@ if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
     })
 }
 
-export { generatePreview, generateAllPreviews }
+export { generatePreview, generateAllPreviews, normalizeSVGDimensions }

@@ -1,0 +1,59 @@
+{
+  "icons": [
+    {
+      "id": "gift-01",
+      "name": "Gift Box",
+      "category": "retail",
+      "fileName": "gift-filled.svg",
+      "filledFile": "gift-filled.svg",
+      "previewFile": "gift-preview.png"
+    },
+    {
+      "id": "crown",
+      "name": "Crown",
+      "category": "food",
+      "description": "",
+      "variants": [
+        "filled"
+      ],
+      "createdAt": "2025-10-26T10:52:31.695Z",
+      "updatedAt": "2025-10-26T10:52:31.695Z",
+      "fileName": "crown-filled.svg",
+      "filledFile": "crown-filled.svg",
+      "previewFile": "crown.png"
+    },
+    {
+      "id": "balloon",
+      "name": "Balloon",
+      "category": "food",
+      "description": "",
+      "variants": [
+        "filled"
+      ],
+      "createdAt": "2025-10-26T10:53:20.519Z",
+      "updatedAt": "2025-10-26T10:53:20.519Z",
+      "fileName": "balloon-filled.svg",
+      "filledFile": "balloon-filled.svg",
+      "previewFile": "balloon.png"
+    }
+  ],
+  "version": 7,
+  "categories": [
+    {
+      "id": "food",
+      "name": "Food",
+      "order": 1
+    },
+    {
+      "id": "retail",
+      "name": "Retail",
+      "order": 2
+    },
+    {
+      "id": "other",
+      "name": "Other",
+      "order": 3
+    }
+  ],
+  "lastUpdated": "2025-10-26T13:09:46.765Z"
+}

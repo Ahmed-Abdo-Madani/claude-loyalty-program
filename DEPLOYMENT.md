@@ -684,6 +684,304 @@ npm run init-icons
 npm run verify-icons
 ```
 
+---
+
+## 🎨 Icon Library Management
+
+### Overview
+Super admins can manage stamp icons through the admin dashboard Settings tab. This feature allows uploading, updating, and deleting custom SVG icons without manual file operations or code changes.
+
+### Access Requirements
+
+**Authentication:**
+- Only **super admin** role can access icon management
+- Regular admins have read-only access to icon library
+- Authentication required via admin login at `/admin/login`
+
+**Permissions:**
+- **Super Admin**: Full CRUD operations (Create, Read, Update, Delete)
+- **Regular Admin**: View icons only (through card design editor)
+- **Business Users**: Select from available icons (no management access)
+
+### Icon Upload Process
+
+**Step-by-Step:**
+
+1. **Navigate to Icon Library**
+   - Login to Admin Dashboard at `https://app.madna.me/admin/login`
+   - Click "Settings" tab in top navigation
+   - Scroll to "Icon Library - مكتبة الأيقونات" section
+
+2. **Click "Upload Icon" Button**
+   - Opens upload modal with form fields
+   - All fields marked with * are required
+
+3. **Fill in Icon Metadata**
+   - **Icon ID**: Unique identifier (lowercase, hyphens only)
+     - Format: `{category}-{number}` (e.g., `coffee-02`, `burger-01`)
+     - Must be unique across all icons
+     - Cannot be changed after upload
+   - **Icon Name**: Display name (e.g., "Coffee Cup", "Gift Box")
+   - **Category**: Select from dropdown (Food & Beverage, Retail, etc.)
+   - **Description**: Optional description for search/filtering
+
+4. **Upload SVG Files**
+   - **Filled Variant**: Required - solid/filled version of icon
+     - Must be valid SVG file (.svg extension)
+     - Maximum file size: 500KB
+     - Validated for malicious content (no scripts, iframes, etc.)
+   - **Stroke Variant**: Optional - outline version of icon
+     - Same validation rules as filled variant
+     - Can be added later via edit function
+
+5. **Submit Upload**
+   - Click "Upload Icon" button
+   - System automatically:
+     - Validates SVG content for security
+     - Saves files to `uploads/icons/stamps/`
+     - Generates PNG preview (50x50px) using Sharp
+     - Updates `manifest.json` atomically
+     - Logs action to audit trail
+   - Icon appears in library immediately
+   - Success message displays at top
+
+**File Naming Convention:**
+- Filled variant: `{icon-id}-filled.svg` (e.g., `coffee-02-filled.svg`)
+- Stroke variant: `{icon-id}-stroke.svg` (e.g., `coffee-02-stroke.svg`)
+- Preview: `{icon-id}.png` (e.g., `coffee-02.png`)
+
+### Icon Update Process
+
+**Step-by-Step:**
+
+1. **Locate Icon to Edit**
+   - Use category filter or search box to find icon
+   - Click "Edit" button on icon card
+
+2. **Update Modal Opens**
+   - Shows current icon preview and ID (read-only)
+   - Pre-filled with existing metadata
+
+3. **Modify Fields**
+   - Update name, category, or description as needed
+   - Optionally replace SVG files:
+     - Only upload if replacing existing variant
+     - Leave empty to keep current file
+
+4. **Save Changes**
+   - Click "Save Changes" button
+   - If new files uploaded:
+     - Old SVG files are deleted
+     - New files are saved with same filename
+     - Preview is regenerated automatically
+   - Manifest updated with new metadata
+   - Changes reflected immediately in card design editor
+
+**When to Update:**
+- Fix icon artwork or design
+- Change icon category or description
+- Add stroke variant to existing filled-only icon
+- Update icon name for better searchability
+
+### Icon Deletion
+
+**Step-by-Step:**
+
+1. **Locate Icon to Delete**
+   - Find icon using filters or search
+
+2. **Click "Delete" Button**
+   - Confirmation dialog appears
+   - Shows icon preview and name
+
+3. **Confirm Deletion**
+   - Read warning: "This action cannot be undone"
+   - Click "Confirm" to proceed or "Cancel" to abort
+
+4. **System Cleanup**
+   - Deletes SVG files (filled and stroke variants)
+   - Deletes PNG preview
+   - Removes entry from `manifest.json`
+   - Logs deletion to audit trail
+   - Icon removed from library immediately
+
+**Important Notes:**
+- Deleted icons are **permanently removed** - no undo
+- Existing offers using deleted icon will show fallback emoji
+- Consider updating offers to new icon before deleting old one
+- Deletion is logged with admin info and timestamp
+
+### Category Management
+
+**Viewing Categories:**
+- Categories display in dropdown during upload/edit
+- Organized by order property (Food & Beverage first, etc.)
+- Shows icon count per category in filters
+
+**Adding New Category:**
+- Use API endpoint: `POST /api/admin/icons/categories`
+- Requires super admin authentication
+- Provide: `id` (lowercase-hyphens), `name`, `order` (optional)
+- Example: `{ "id": "automotive", "name": "Automotive", "order": 6 }`
+
+**Default Categories:**
+1. Food & Beverage (`food-beverage`)
+2. Retail (`retail`)
+3. Services (`services`)
+4. Entertainment (`entertainment`)
+5. Health & Wellness (`health`)
+6. Other (`other`)
+
+### Preview Regeneration
+
+**Purpose:**
+- Regenerate all PNG previews from SVG source files
+- Useful after Sharp library update or preview corruption
+- Batch operation for all icons in library
+
+**How to Use:**
+1. Click "Regenerate Previews" button in Icon Library header
+2. Confirm action in dialog
+3. System processes all icons:
+   - Reads filled variant SVG
+   - Generates 50x50px PNG preview
+   - Saves to `previews/` directory
+   - Tracks success/failure count
+4. Summary displayed: "Regenerated X of Y previews"
+5. Failed icons listed with error reasons
+
+**When to Regenerate:**
+- After bulk SVG file updates
+- Preview images appear corrupted or missing
+- After server migration or disk restoration
+- Testing preview generation pipeline
+
+### Technical Details
+
+**File Storage:**
+- **SVG Files**: `uploads/icons/stamps/` (persistent disk in production)
+- **Preview PNGs**: `uploads/icons/stamps/previews/` (same disk)
+- **Manifest**: `uploads/icons/stamps/manifest.json` (atomic updates)
+
+**SVG Security:**
+- Content validation before save (checks for `<svg>` tag)
+- Malicious pattern detection:
+  - Script tags, JavaScript protocols, event handlers
+  - Iframes, embeds, object tags
+  - XLink with JavaScript
+- Files rejected if suspicious content found
+- Validation runs on both upload and edit
+
+**Manifest Operations:**
+- File locking prevents concurrent write conflicts
+- Atomic writes using temp file + rename
+- Version number auto-incremented on each update
+- Cache invalidation after modifications
+- Validation ensures schema integrity before write
+
+**Audit Logging:**
+- All icon operations logged with:
+  - Admin ID and username
+  - Action type (upload, update, delete)
+  - Timestamp (ISO format)
+  - Icon ID and metadata
+  - Success/failure status
+- Logs stored in database `admin_logs` table
+- Viewable in admin dashboard activity feed
+
+### Troubleshooting
+
+#### Issue: Upload fails with "Invalid file type"
+**Cause:** File is not a valid SVG or has wrong MIME type  
+**Solution:**
+- Ensure file has `.svg` extension
+- Open file in text editor - should start with `<?xml` or `<svg`
+- Re-export from design tool (Figma, Illustrator, Inkscape)
+- Check file MIME type is `image/svg+xml`
+
+#### Issue: Upload fails with "SVG contains potentially malicious content"
+**Cause:** SVG has embedded scripts or suspicious elements  
+**Solution:**
+- Clean SVG in design tool: remove scripts, animations, external refs
+- Use "Save as Optimized SVG" in Illustrator
+- Run through SVGO optimizer: `npx svgo input.svg -o output.svg`
+- Manually remove `<script>`, event handlers, `<iframe>` tags
+
+#### Issue: Preview not generated
+**Cause:** Sharp library error or invalid SVG syntax  
+**Solution:**
+- Check server logs: `docker logs <container-id> | grep "preview"`
+- Validate SVG syntax: `xmllint --noout file.svg`
+- Test locally: `npm run init-icons` to verify Sharp works
+- Ensure Sharp native dependencies installed (libvips)
+- Manually regenerate: Click "Regenerate Previews" button
+
+#### Issue: Icon not appearing in card design editor
+**Cause:** Manifest not updated or cache issue  
+**Solution:**
+- Refresh card design editor page (Ctrl+F5 / Cmd+Shift+R)
+- Check manifest: `curl https://api.madna.me/api/stamp-icons`
+- Verify icon ID in response JSON
+- Clear browser cache and localStorage
+- Use "Regenerate Previews" if preview missing
+
+#### Issue: Permission denied when uploading
+**Cause:** User is not super admin  
+**Solution:**
+- Verify role in admin dashboard (should show "Super Admin")
+- Contact platform administrator to upgrade role
+- Check `admin_users` table: `role` must be `super_admin`
+- Re-login after role change
+
+#### Issue: Deleted icon still appears in offers
+**Cause:** Offers reference icon by ID, not by file existence  
+**Solution:**
+- This is expected behavior - offers show fallback emoji
+- Edit affected offers: Select new icon from library
+- Or update offer to use emoji instead of icon
+- Run cleanup query: `UPDATE offers SET stamp_icon = 'emoji' WHERE stamp_icon_id = 'deleted-icon-id'`
+
+### Best Practices
+
+**Icon Design:**
+- Use simple, recognizable shapes (avoid fine details)
+- Keep file size under 100KB (500KB max enforced)
+- Use consistent artboard size: 64x64px or 128x128px
+- Center artwork with 8-10px padding
+- Use solid colors for filled variant (avoid gradients)
+- Use 2-3px stroke width for stroke variant
+- Test preview at 50x50px to ensure readability
+
+**Naming Conventions:**
+- Use descriptive IDs: `coffee-cup-01`, `gift-box-02`
+- Group related icons: `food-pizza-01`, `food-burger-01`
+- Use 2-digit numbers: `icon-01`, `icon-02` (allows up to 99)
+- Avoid special characters except hyphens
+- Keep names concise: "Coffee Cup" not "Delicious Hot Coffee Cup Icon"
+
+**Organization:**
+- Assign correct category for easy filtering
+- Add descriptions for ambiguous icons
+- Upload both filled and stroke variants together
+- Keep icon library curated (delete unused icons)
+- Communicate new icons to businesses via announcements
+
+**Maintenance:**
+- Backup `manifest.json` before bulk operations
+- Test new icons in card design editor before announcing
+- Document custom icons in platform wiki/docs
+- Monitor `uploads/icons/stamps/` disk usage
+- Periodically audit for unused or duplicate icons
+
+**Security:**
+- Only grant super admin role to trusted users
+- Review uploaded SVGs for appropriate content
+- Monitor audit logs for suspicious activity
+- Keep Sharp library updated for security patches
+- Validate SVG files from untrusted sources manually
+
+---
+
 #### Troubleshooting Production Issues
 
 **Symptom**: Server logs show "Permission denied" during stamp icons initialization
