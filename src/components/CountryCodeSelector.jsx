@@ -20,7 +20,17 @@ const COUNTRIES = [
   { code: '+63', country: 'Philippines', countryAr: 'الفلبين', flag: '🇵🇭', iso: 'PH' },
 ];
 
-const CountryCodeSelector = ({ value, onChange, className = '', disabled = false, language = 'en' }) => {
+const CountryCodeSelector = ({ 
+  value, 
+  onChange, 
+  className = '', 
+  disabled = false, 
+  language = 'en',
+  primaryColor = '#3B82F6',
+  backgroundColor = '#FFFFFF',
+  textColor = '#374151',
+  borderColor = '#D1D5DB'
+}) => {
   const isRTL = language === 'ar';
 
   return (
@@ -30,17 +40,21 @@ const CountryCodeSelector = ({ value, onChange, className = '', disabled = false
       disabled={disabled}
       className={`
         py-3 px-3 
-        border border-gray-300 dark:border-gray-600 
+        border
         rounded-lg 
-        bg-white dark:bg-gray-800 
-        text-gray-900 dark:text-white
-        focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+        focus:ring-2 focus:outline-none
         transition-colors
         cursor-pointer
         disabled:opacity-50 disabled:cursor-not-allowed
         ${isRTL ? 'text-right' : 'text-left'}
         ${className}
       `}
+      style={{
+        backgroundColor: backgroundColor,
+        color: textColor,
+        borderColor: borderColor,
+        '--tw-ring-color': primaryColor
+      }}
       aria-label={language === 'ar' ? 'رمز الدولة' : 'Country Code'}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -59,6 +73,10 @@ CountryCodeSelector.propTypes = {
   className: PropTypes.string,
   disabled: PropTypes.bool,
   language: PropTypes.string,
+  primaryColor: PropTypes.string,
+  backgroundColor: PropTypes.string,
+  textColor: PropTypes.string,
+  borderColor: PropTypes.string,
 };
 
 export default CountryCodeSelector;

@@ -27,7 +27,7 @@ const content = {
     // Form Fields
     fullName: 'الاسم الكامل',
     fullNamePlaceholder: 'أدخل اسمك الكامل',
-    phoneNumber: 'رقم الهاتف (مطلوب)',
+    phoneNumber: 'رقم الهاتف',
     phonePlaceholder: '50 123 4567',
     gender: 'الجنس',
     male: 'ذكر',
@@ -97,7 +97,7 @@ const content = {
     // Form Fields
     fullName: 'Full Name',
     fullNamePlaceholder: 'Enter your full name',
-    phoneNumber: 'Phone Number (Required)',
+    phoneNumber: 'Phone Number',
     phonePlaceholder: '50 123 4567',
     gender: 'Gender',
     male: 'Male',
@@ -182,15 +182,26 @@ function CustomerSignup() {
   const getColors = () => {
     if (cardDesign) {
       return {
-        background: cardDesign.background_color || '#3B82F6',
-        foreground: cardDesign.foreground_color || '#FFFFFF',
-        label: cardDesign.label_color || '#E0F2FE'
+        primary: cardDesign.background_color || '#3B82F6', // Main brand color (caramel)
+        secondary: cardDesign.foreground_color || '#FFFFFF', // Text on brand color (white)
+        accent: cardDesign.label_color || '#E0F2FE', // Accent/label color
+        // Derived colors for proper contrast
+        formBg: cardDesign.foreground_color || '#FFFFFF', // Form uses light background
+        labelText: cardDesign.background_color || '#3B82F6', // Labels use brand color
+        bodyText: '#374151', // Dark gray for body text on light background
+        inputBg: '#FFFFFF', // White input backgrounds
+        inputBorder: '#D1D5DB' // Light gray borders
       }
     }
     return {
-      background: '#3B82F6',
-      foreground: '#FFFFFF',
-      label: '#E0F2FE'
+      primary: '#3B82F6',
+      secondary: '#FFFFFF',
+      accent: '#E0F2FE',
+      formBg: '#FFFFFF',
+      labelText: '#3B82F6',
+      bodyText: '#374151',
+      inputBg: '#FFFFFF',
+      inputBorder: '#D1D5DB'
     }
   }
 
@@ -685,14 +696,14 @@ function CustomerSignup() {
           <div className="text-center mb-12">
             <h1 
               className="text-2xl font-bold mb-2"
-              style={{ color: getColors().background }}
+              style={{ color: getColors().primary }}
             >
               {offer.businessName}
             </h1>
             {offer.businessNameEn && offer.businessNameEn !== offer.businessName && (
               <p 
                 className="text-sm font-medium uppercase tracking-wider"
-                style={{ color: getColors().label || getColors().background }}
+                style={{ color: getColors().primary, opacity: 0.7 }}
               >
                 {offer.businessNameEn}
               </p>
@@ -709,8 +720,8 @@ function CustomerSignup() {
                   disabled={isGeneratingWallet}
                   className="w-full py-4 px-6 rounded-full font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-200 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:brightness-90"
                   style={{ 
-                    backgroundColor: getColors().background,
-                    color: getColors().foreground
+                    backgroundColor: getColors().primary,
+                    color: getColors().secondary
                   }}
                 >
                   {isGeneratingWallet ? (
@@ -739,8 +750,8 @@ function CustomerSignup() {
                   disabled={isGeneratingWallet}
                   className="w-full py-4 px-6 rounded-full font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-200 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:brightness-90"
                   style={{ 
-                    backgroundColor: getColors().background,
-                    color: getColors().foreground
+                    backgroundColor: getColors().primary,
+                    color: getColors().secondary
                   }}
                 >
                   {isGeneratingWallet ? (
@@ -773,7 +784,7 @@ function CustomerSignup() {
                     <button
                       onClick={() => setWalletError(null)}
                       className="mt-2 text-sm font-medium underline hover:no-underline"
-                      style={{ color: getColors().background }}
+                      style={{ color: getColors().primary }}
                     >
                       {t.tryAgain}
                     </button>
@@ -787,8 +798,8 @@ function CustomerSignup() {
           {walletAdded && (
             <div className="mt-6 text-center">
               <div className="flex items-center justify-center gap-2 text-sm font-medium">
-                <span style={{ color: getColors().background }}>✓</span>
-                <span style={{ color: getColors().background }}>{t.addedSuccessfully}</span>
+                <span style={{ color: getColors().primary }}>✓</span>
+                <span style={{ color: getColors().primary }}>{t.addedSuccessfully}</span>
               </div>
             </div>
           )}
@@ -812,12 +823,15 @@ function CustomerSignup() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div 
+        className="max-w-md w-full rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700"
+        style={{ backgroundColor: getColors().formBg }}
+      >
 
         {/* Header */}
         <div 
           className="text-white p-6"
-          style={{ backgroundColor: getColors().background, color: getColors().foreground }}
+          style={{ backgroundColor: getColors().primary, color: getColors().secondary }}
         >
           {/* Business Info with Logo */}
           <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -838,7 +852,7 @@ function CustomerSignup() {
         {/* Offer Display */}
         <div 
           className="p-4 sm:p-6 text-white text-center"
-          style={{ backgroundColor: getColors().background, filter: 'brightness(0.9)' }}
+          style={{ backgroundColor: getColors().primary, filter: 'brightness(0.9)' }}
         >
           <div className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">{offer.title}</div>
 
@@ -855,20 +869,26 @@ function CustomerSignup() {
         </div>
 
         {/* Language Selection Tabs */}
-        <div className="bg-white dark:bg-gray-800 px-6 py-4">
+        <div 
+          className="px-6 pt-4"
+          style={{ backgroundColor: getColors().formBg }}
+        >
           <div className="flex justify-center">
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            <div 
+              className="flex rounded-lg p-1"
+              style={{ backgroundColor: '#F3F4F6' }}
+            >
               {/* Always show Arabic first, then English - regardless of current language */}
               <button
                 onClick={() => setSelectedLanguage('ar')}
                 style={{ 
-                  backgroundColor: selectedLanguage === 'ar' ? getColors().background : undefined,
-                  color: selectedLanguage === 'ar' ? getColors().foreground : undefined
+                  backgroundColor: selectedLanguage === 'ar' ? getColors().primary : undefined,
+                  color: selectedLanguage === 'ar' ? getColors().secondary : getColors().bodyText
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   selectedLanguage === 'ar'
                     ? 'shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    : 'hover:opacity-80'
                 }`}
               >
                 العربية
@@ -876,13 +896,13 @@ function CustomerSignup() {
               <button
                 onClick={() => setSelectedLanguage('en')}
                 style={{ 
-                  backgroundColor: selectedLanguage === 'en' ? getColors().background : undefined,
-                  color: selectedLanguage === 'en' ? getColors().foreground : undefined
+                  backgroundColor: selectedLanguage === 'en' ? getColors().primary : undefined,
+                  color: selectedLanguage === 'en' ? getColors().secondary : getColors().bodyText
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   selectedLanguage === 'en'
                     ? 'shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    : 'hover:opacity-80'
                 }`}
               >
                 English
@@ -896,7 +916,7 @@ function CustomerSignup() {
           <div className="text-center mb-6">
             <p 
               className="font-medium"
-              style={{ color: getColors().background }}
+              style={{ color: getColors().labelText }}
             >
               {t.joinProgram}
             </p>
@@ -907,9 +927,9 @@ function CustomerSignup() {
             <div>
               <label 
                 className="block text-sm font-medium mb-2"
-                style={{ color: getColors().background }}
+                style={{ color: getColors().labelText }}
               >
-                {t.fullName} <span style={{ color: getColors().background }}>{t.required}</span>
+                {t.fullName} <span style={{ color: getColors().labelText }}>{t.required}</span>
               </label>
               <input
                 type="text"
@@ -917,9 +937,12 @@ function CustomerSignup() {
                 required
                 value={formData.fullName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-200"
+                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200"
                 style={{ 
-                  '--tw-ring-color': getColors().background 
+                  backgroundColor: getColors().inputBg,
+                  borderColor: getColors().inputBorder,
+                  color: getColors().bodyText,
+                  '--tw-ring-color': getColors().primary
                 }}
                 placeholder={t.fullNamePlaceholder}
                 dir={isRTL ? 'rtl' : 'ltr'}
@@ -932,54 +955,59 @@ function CustomerSignup() {
             <div>
               <label 
                 className="block text-sm font-medium mb-2"
-                style={{ color: getColors().background }}
+                style={{ color: getColors().labelText }}
               >
-                {t.phoneNumber} <span style={{ color: getColors().background }}>{t.required}</span>
+                {t.phoneNumber} <span style={{ color: getColors().labelText }}>{t.required}</span>
               </label>
               <div className="flex gap-2" dir="ltr">
-                <CountryCodeSelector
-                  value={formData.countryCode}
-                  onChange={(code) => setFormData({ ...formData, countryCode: code })}
-                  language={selectedLanguage}
-                  className="w-auto"
-                />
+                <div className="w-[120px] flex-shrink-0">
+                  <CountryCodeSelector
+                    value={formData.countryCode}
+                    onChange={(code) => setFormData({ ...formData, countryCode: code })}
+                    language={selectedLanguage}
+                    className=""
+                    primaryColor={getColors().primary}
+                    backgroundColor={getColors().inputBg}
+                    textColor={getColors().bodyText}
+                    borderColor={getColors().inputBorder}
+                  />
+                </div>
                 <input
                   type="tel"
                   name="phone"
                   required
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all duration-200"
+                  className="flex-1 min-w-0 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200"
                   style={{ 
-                    '--tw-ring-color': getColors().background 
+                    backgroundColor: getColors().inputBg,
+                    borderColor: getColors().inputBorder,
+                    color: getColors().bodyText,
+                    '--tw-ring-color': getColors().primary
                   }}
                   placeholder={t.phonePlaceholder}
                   pattern="[0-9]{7,15}"
                   dir="ltr"
                 />
               </div>
-              <p 
-                className="text-xs mt-1"
-                style={{ color: getColors().label }}
-              >
-                ✓ {t.arabicNumbersSupported}
-              </p>
             </div>
 
             {/* Gender Selector */}
             <div>
               <label 
                 className="block text-sm font-medium mb-2"
-                style={{ color: getColors().background }}
+                style={{ color: getColors().labelText }}
               >
-                {t.gender} <span style={{ color: getColors().background }}>{t.required}</span>
+                {t.gender} <span style={{ color: getColors().labelText }}>{t.required}</span>
               </label>
               <GenderSelector
                 value={formData.gender}
                 onChange={(gender) => setFormData({ ...formData, gender })}
                 language={selectedLanguage}
                 required={true}
-                primaryColor={getColors().background}
+                primaryColor={getColors().primary}
+                backgroundColor="#F3F4F6"
+                textColor={getColors().bodyText}
               />
             </div>
 
@@ -992,11 +1020,14 @@ function CustomerSignup() {
             <button
               type="submit"
               disabled={loading}
-              style={{ backgroundColor: loading ? undefined : getColors().background }}
+              style={{ 
+                backgroundColor: loading ? '#9CA3AF' : getColors().primary,
+                color: getColors().secondary
+              }}
               className={`w-full py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/25 ${
                 loading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'text-white transform hover:scale-[1.02] hover:brightness-90'
+                  ? 'cursor-not-allowed'
+                  : 'transform hover:scale-[1.02] hover:brightness-90'
               }`}
             >
               {loading ? (
@@ -1016,7 +1047,7 @@ function CustomerSignup() {
             <div className="text-center mt-3">
               <p 
                 className="text-xs"
-                style={{ color: getColors().label }}
+                style={{ color: getColors().bodyText, opacity: 0.7 }}
               >
                 {t.byJoining}
               </p>
@@ -1024,8 +1055,8 @@ function CustomerSignup() {
           </form>
 
           <div className="mt-6 text-center text-sm space-y-1">
-            <p style={{ color: getColors().label }}>🔒 {t.secureInfo}</p>
-            <p style={{ color: getColors().label }}>✨ {t.instantWallet}</p>
+            <p style={{ color: getColors().bodyText, opacity: 0.7 }}>🔒 {t.secureInfo}</p>
+            <p style={{ color: getColors().bodyText, opacity: 0.7 }}>✨ {t.instantWallet}</p>
           </div>
         </div>
       </div>

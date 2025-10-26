@@ -12,7 +12,9 @@ const GenderSelector = ({
   language = 'en', 
   required = false, 
   className = '',
-  primaryColor = '#3B82F6'
+  primaryColor = '#3B82F6',
+  backgroundColor = '#F3F4F6',
+  textColor = '#374151'
 }) => {
   const isRTL = language === 'ar';
   const options = isRTL ? [...GENDER_OPTIONS].reverse() : GENDER_OPTIONS;
@@ -38,13 +40,13 @@ const GenderSelector = ({
             ${
               value === option.value
                 ? 'text-white shadow-sm'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:scale-[1.02] hover:shadow'
+                : 'hover:scale-[1.02] hover:shadow'
             }
           `}
           style={
             value === option.value
               ? { backgroundColor: primaryColor, focusRingColor: primaryColor }
-              : {}
+              : { backgroundColor: backgroundColor, color: textColor }
           }
           aria-pressed={value === option.value}
           aria-label={`${language === 'ar' ? option.labelAr : option.labelEn}`}
@@ -70,6 +72,8 @@ GenderSelector.propTypes = {
   required: PropTypes.bool,
   className: PropTypes.string,
   primaryColor: PropTypes.string,
+  backgroundColor: PropTypes.string,
+  textColor: PropTypes.string,
 };
 
 export default GenderSelector;
