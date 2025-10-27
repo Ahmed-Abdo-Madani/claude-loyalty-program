@@ -149,21 +149,14 @@ function ScannerTab({ analytics: globalAnalytics }) {
 
       const { data } = verifyData
 
-      // Show verification results
-      setScanResult({
-        type: 'verification',
-        customer: data.customer,
-        offer: data.offer,
-        progress: data.progress,
-        canScan: data.canScan
-      })
-
-      // If customer can be scanned, proceed with progress update
+      // Comment 1 & 2: Auto-award without showing verification step
+      // If customer can be scanned, proceed with progress update immediately
       if (data.canScan) {
         const scanResponse = await secureApi.post(`${endpoints.scanProgress}/${customerToken}/${offerHash}`)
         const scanData = await scanResponse.json()
 
         if (scanData.success) {
+          // Set result directly to success without intermediate verification state
           setScanResult({
             type: 'success',
             ...scanData.data,
@@ -177,6 +170,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
           throw new Error(scanData.message)
         }
       } else {
+        // Show completed state when customer already finished program
         setScanResult({
           type: 'completed',
           ...data,
@@ -281,45 +275,6 @@ function ScannerTab({ analytics: globalAnalytics }) {
               <span className="mr-2">📊</span>
               Scan Results
             </h3>
-
-            {scanResult.type === 'verification' && (
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 rounded-xl p-6 border-l-4 border-blue-500">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mr-4">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-blue-900 dark:text-blue-100">Customer Verified</h4>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">Ready to award stamp</p>
-                  </div>
-                </div>
-
-                {/* Customer Summary */}
-                <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Offer</span>
-                    <span className="text-lg font-bold text-blue-900 dark:text-blue-100">{scanResult.offer?.title}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Progress</span>
-                    <span className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                      {scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <button
-                  onClick={handleConfirmStamp}
-                  disabled={!scanResult.canScan}
-                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl text-lg font-bold transition-all shadow-lg disabled:shadow-none"
-                >
-                  {scanResult.canScan ? '✅ Confirm & Award Stamp' : '🏆 Already Completed'}
-                </button>
-              </div>
-            )}
 
             {scanResult.type === 'success' && (
               <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-800/30 rounded-xl p-6 border-l-4 border-green-500">

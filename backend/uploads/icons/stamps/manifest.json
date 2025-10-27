@@ -6,7 +6,8 @@
       "category": "retail",
       "fileName": "gift-filled.svg",
       "filledFile": "gift-filled.svg",
-      "previewFile": "gift-preview.png"
+      "previewFile": "gift-preview.png",
+      "strokeFile": "gift-filled.svg"
     },
     {
       "id": "crown",
@@ -20,7 +21,8 @@
       "updatedAt": "2025-10-26T10:52:31.695Z",
       "fileName": "crown-filled.svg",
       "filledFile": "crown-filled.svg",
-      "previewFile": "crown.png"
+      "previewFile": "crown.png",
+      "strokeFile": "crown-filled.svg"
     },
     {
       "id": "balloon",
@@ -34,7 +36,8 @@
       "updatedAt": "2025-10-26T10:53:20.519Z",
       "fileName": "balloon-filled.svg",
       "filledFile": "balloon-filled.svg",
-      "previewFile": "balloon.png"
+      "previewFile": "balloon.png",
+      "strokeFile": "balloon-filled.svg"
     }
   ],
   "version": 15,
@@ -55,5 +58,5 @@
       "order": 3
     }
   ],
-  "lastUpdated": "2025-10-26T13:43:29.216Z"
+  "lastUpdated": "2025-10-27T21:36:01.799Z"
 }
