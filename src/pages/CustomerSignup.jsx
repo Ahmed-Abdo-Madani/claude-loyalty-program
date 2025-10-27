@@ -678,7 +678,11 @@ function CustomerSignup() {
 
   if (isSubmitted && customerData && offer) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col items-center justify-center py-20 px-4" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div 
+        className="min-h-screen dark:bg-gray-900 flex flex-col items-center justify-center py-20 px-4" 
+        style={{ backgroundColor: getColors().primary }}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
         <div className="max-w-md mx-auto w-full">
           
           {/* Business Logo with Brand Color Halo */}
@@ -696,14 +700,14 @@ function CustomerSignup() {
           <div className="text-center mb-12">
             <h1 
               className="text-2xl font-bold mb-2"
-              style={{ color: getColors().primary }}
+              style={{ color: getColors().secondary }}
             >
               {offer.businessName}
             </h1>
             {offer.businessNameEn && offer.businessNameEn !== offer.businessName && (
               <p 
                 className="text-sm font-medium uppercase tracking-wider"
-                style={{ color: getColors().primary, opacity: 0.7 }}
+                style={{ color: getColors().secondary, opacity: 0.7 }}
               >
                 {offer.businessNameEn}
               </p>
