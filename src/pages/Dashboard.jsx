@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import OffersTab from '../components/OffersTab'
 import BranchesTab from '../components/BranchesTab'
 import WalletAnalytics from '../components/WalletAnalytics'
@@ -7,6 +7,7 @@ import ScannerTab from '../components/ScannerTab'
 import CustomersTab from '../components/CustomersTab'
 import DashboardSidebar from '../components/DashboardSidebar'
 import DashboardHeader from '../components/DashboardHeader'
+import MobileBottomNav from '../components/MobileBottomNav'
 import StatsCardGrid from '../components/StatsCardGrid'
 import QuickActions from '../components/QuickActions'
 import ActivityFeed from '../components/ActivityFeed'
@@ -16,12 +17,27 @@ import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('overview')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  
+  // Initialize activeTab from URL query parameter (default to 'overview')
+  const [activeTab, setActiveTab] = useState(() => {
+    return searchParams.get('tab') || 'overview'
+  })
+  
   const [user, setUser] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
+
+  // Sync activeTab with URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') || 'overview'
+    if (tabParam !== activeTab) {
+      setActiveTab(tabParam)
+    }
+  }, [searchParams, location.search])
 
   useEffect(() => {
     // Check secure authentication
@@ -88,17 +104,23 @@ function Dashboard() {
     logout() // Uses secure logout function
   }
 
+  // Update URL when tab changes
+  const handleTabChange = (tabName) => {
+    setSearchParams({ tab: tabName }, { replace: true })
+    setActiveTab(tabName)
+  }
+
   // Quick Actions handlers - preserving existing functionality
   const handleNewOffer = () => {
-    setActiveTab('offers') // Switch to offers tab to create new offer
+    handleTabChange('offers') // Switch to offers tab to create new offer
   }
 
   const handleScanQR = () => {
-    setActiveTab('scanner') // Switch to scanner tab
+    handleTabChange('scanner') // Switch to scanner tab
   }
 
   const handleViewReports = () => {
-    setActiveTab('analytics') // Switch to analytics tab
+    handleTabChange('analytics') // Switch to analytics tab
   }
 
   if (!user || loading) {
@@ -113,30 +135,33 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      {/* Sidebar Navigation */}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 pb-20 lg:pb-0">
+      {/* Sidebar Navigation - Desktop Only */}
       <DashboardSidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         user={user}
         onSignOut={handleSignOut}
       />
 
+      {/* Mobile Bottom Navigation - Mobile Only */}
+      <MobileBottomNav />
+
       {/* Main Content Area */}
-      <div className="lg:ml-20 xl:ml-64">
+      <div className="ml-0 lg:ml-64">
         {/* Header */}
         <DashboardHeader user={user} />
 
         {/* Dashboard Content */}
-        <main className="p-6">
+        <main className="p-4 sm:p-6">
           {/* Stats Overview */}
           <StatsCardGrid analytics={analytics} />
 
           {/* Tab Content */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-colors duration-300">
-            {/* Tab Navigation - Horizontal for sub-navigation */}
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="flex space-x-8 px-6 overflow-x-auto">
+            {/* Tab Navigation - Hidden on mobile (use bottom nav), visible on tablet+ */}
+            <div className="hidden sm:block border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide">
+              <nav className="flex space-x-4 sm:space-x-8 px-4 sm:px-6">
                 {[
                   { id: 'overview', label: 'Overview', icon: '📊' },
                   { id: 'offers', label: 'My Offers', icon: '🎯' },
@@ -148,9 +173,9 @@ function Dashboard() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                    onClick={() => !tab.disabled && handleTabChange(tab.id)}
                     disabled={tab.disabled}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors duration-200 flex items-center ${
+                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors duration-200 flex items-center touch-target min-h-[44px] ${
                       tab.disabled
                         ? 'border-transparent text-gray-400 cursor-not-allowed opacity-50'
                         : activeTab === tab.id
@@ -159,7 +184,7 @@ function Dashboard() {
                     }`}
                   >
                     <span className="mr-2">{tab.icon}</span>
-                    {tab.label}
+                    <span>{tab.label}</span>
                     {tab.comingSoon && (
                       <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-300 dark:border-yellow-700">
                         Soon
@@ -171,13 +196,13 @@ function Dashboard() {
             </div>
 
             {/* Tab Content */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {activeTab === 'overview' && (
                 <div className="space-y-6">
                   {/* Top Row - Main Dashboard Items */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {/* Quick Actions - Left Column */}
-                    <div className="lg:col-span-1">
+                    <div className="md:col-span-1">
                       <QuickActions
                         onNewOffer={handleNewOffer}
                         onScanQR={handleScanQR}
@@ -186,20 +211,20 @@ function Dashboard() {
                     </div>
 
                     {/* Recent Activity - Middle Column */}
-                    <div className="lg:col-span-1">
+                    <div className="md:col-span-1">
                       <ActivityFeed recentActivity={recentActivity} />
                     </div>
 
                     {/* Monthly Performance - Right Column */}
-                    <div className="lg:col-span-1 xl:col-span-1">
+                    <div className="md:col-span-2 xl:col-span-1">
                       <MonthlyChart analytics={analytics} />
                     </div>
                   </div>
 
                   {/* Bottom Row - Business Settings */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {/* Business Logo Upload */}
-                    <div className="lg:col-span-1">
+                    <div className="md:col-span-1">
                       <LogoUpload
                         onLogoUpdate={(logoData) => {
                           // Refresh dashboard header when logo is updated
@@ -209,11 +234,11 @@ function Dashboard() {
                     </div>
 
                     {/* Future settings components can go here */}
-                    <div className="lg:col-span-1">
+                    <div className="md:col-span-1">
                       {/* Placeholder for additional business settings */}
                     </div>
 
-                    <div className="lg:col-span-1">
+                    <div className="md:col-span-2 xl:col-span-1">
                       {/* Placeholder for additional business settings */}
                     </div>
                   </div>

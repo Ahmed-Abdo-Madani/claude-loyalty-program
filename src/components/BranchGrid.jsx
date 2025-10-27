@@ -47,8 +47,8 @@ function BranchGrid({
 
   return (
     <>
-      {/* Branches Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      {/* Branches Grid - Mobile-first: Single column → 2 cols → 3 cols */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {branches.map((branch) => (
           <BranchCard
             key={branch.public_id || branch.id}
@@ -65,7 +65,7 @@ function BranchGrid({
 
       {/* Grid Summary */}
       <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 text-center">
           <div>
             <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               {branches.length}

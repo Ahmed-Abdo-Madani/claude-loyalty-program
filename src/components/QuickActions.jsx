@@ -24,19 +24,19 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports }) {
   ]
 
   return (
-    <div className="bg-gradient-to-br from-primary to-purple-600 dark:from-purple-900 dark:to-indigo-900 rounded-xl p-6 text-white">
-      <h3 className="text-lg font-semibold mb-6">Quick Actions</h3>
+    <div className="bg-gradient-to-br from-primary to-purple-600 dark:from-purple-900 dark:to-indigo-900 rounded-xl p-4 sm:p-6 text-white">
+      <h3 className="text-lg font-semibold mb-4 sm:mb-6">Quick Actions</h3>
 
-      <div className="space-y-3">
+      <div className="space-y-3 sm:space-y-4">
         {actions.map((action) => (
           <button
             key={action.id}
             onClick={action.action}
-            className="w-full flex items-center space-x-3 p-4 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 transition-all duration-200 text-left group touch-manipulation"
+            className="w-full flex items-center space-x-3 p-4 sm:p-5 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 active:scale-95 transition-all duration-200 text-left group touch-manipulation min-h-[44px]"
             title={action.description}
           >
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors duration-200">
-              <span className="text-xl">{action.icon}</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors duration-200">
+              <span className="text-xl sm:text-2xl">{action.icon}</span>
             </div>
             <div className="flex-1">
               <span className="font-medium text-white group-hover:text-white/90">
@@ -53,7 +53,7 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports }) {
       </div>
 
       {/* Quick Stats at bottom */}
-      <div className="mt-6 pt-4 border-t border-white/20">
+      <div className="mt-4 sm:mt-6 pt-4 border-t border-white/20">
         <div className="flex items-center justify-between text-sm">
           <span className="text-white/70">Quick Access</span>
           <span className="text-white/70">3 Actions</span>

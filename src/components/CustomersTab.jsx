@@ -111,9 +111,18 @@ function CustomersTab() {
       const response = await secureApi.get(endpoints.myOffers)
       const data = await response.json()
 
-      if (data.success && data.data && data.data.offers) {
-        setOffers(data.data.offers)
-        console.log('🔒 Offers loaded successfully:', data.data.offers.length)
+      if (data.success && data.data) {
+        // Handle both array and object shapes
+        let offersArray = []
+        
+        if (Array.isArray(data.data)) {
+          offersArray = data.data
+        } else if (data.data.offers && Array.isArray(data.data.offers)) {
+          offersArray = data.data.offers
+        }
+        
+        setOffers(offersArray)
+        console.log('🔒 Offers loaded successfully:', offersArray.length)
       } else {
         console.warn('⚠️ No offers data received from API')
         setOffers([])
@@ -254,10 +263,10 @@ function CustomersTab() {
 
   return (
     <div>
-      {/* Header Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Customer Management</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your customers and send targeted notifications</p>
+      {/* Header Section - Mobile-first */}
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Customer Management</h2>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your customers and send targeted notifications</p>
       </div>
 
       {/* Error Display */}
@@ -280,99 +289,184 @@ function CustomersTab() {
         </div>
       )}
 
-      <div className="space-y-8">
-        {/* Analytics Cards */}
+      <div className="space-y-6 sm:space-y-8">
+        {/* Analytics Cards - Mobile-first */}
         {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-4 md:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl md:text-2xl">👥</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">👥</span>
                 </div>
               </div>
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{analytics.totalCustomers}</div>
-              <div className="text-white/80 text-xs md:text-sm">Total Customers</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.totalCustomers}</div>
+              <div className="text-white/80 text-sm">Total Customers</div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-4 md:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl md:text-2xl">✅</span>
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">✅</span>
                 </div>
               </div>
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{analytics.activeCustomers}</div>
-              <div className="text-white/80 text-xs md:text-sm">Active Customers</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.activeCustomers}</div>
+              <div className="text-white/80 text-sm">Active Customers</div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-4 md:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl md:text-2xl">👑</span>
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">👑</span>
                 </div>
               </div>
-              <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{analytics.vipCustomers}</div>
-              <div className="text-white/80 text-xs md:text-sm">VIP Customers</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.vipCustomers}</div>
+              <div className="text-white/80 text-sm">VIP Customers</div>
             </div>
           </div>
         )}
 
         {/* Search and Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="space-y-4">
             {/* Search Input */}
-            <div className="flex-1 relative">
+            <div className="relative">
               <input
                 type="text"
-                placeholder="Search customers by name, email, or phone..."
+                placeholder="Search customers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary touch-target"
               />
               <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
 
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="vip">VIP</option>
-              <option value="inactive">Inactive</option>
-              <option value="churning">At Risk</option>
-            </select>
+            {/* Filters and Actions */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Status Filter */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary touch-target"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="vip">VIP</option>
+                <option value="inactive">Inactive</option>
+                <option value="churning">At Risk</option>
+              </select>
 
-            {/* Actions */}
-            <div className="flex gap-2">
+              {/* Actions */}
               <button
                 onClick={handleSendNotificationClick}
                 disabled={selectedCustomers.size === 0}
-                className="px-4 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center space-x-2"
+                className="px-4 py-3 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center space-x-2 w-full sm:w-auto touch-target"
               >
-                <span className="text-sm">📧</span>
+                <span>📧</span>
                 <span>Send Notification</span>
-              </button>
-              <button className="px-4 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition-colors duration-200">
-                Export
               </button>
             </div>
           </div>
 
           {/* Selected Count */}
           {selectedCustomers.size > 0 && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <span className="text-blue-800 dark:text-blue-300 text-sm">
                 {selectedCustomers.size} customer{selectedCustomers.size !== 1 ? 's' : ''} selected
               </span>
             </div>
           )}
 
-          {/* Customer Table */}
-          <div className="overflow-x-auto">
+          {/* Customer List - Mobile Cards, Desktop Table */}
+          
+          {/* Mobile: Card Layout */}
+          <div className="block md:hidden mt-6 space-y-3">
+            {filteredCustomers.map((customer) => (
+              <div key={customer.customer_id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start space-x-3 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.has(customer.customer_id)}
+                      onChange={() => toggleCustomerSelection(customer.customer_id)}
+                      className="mt-1 rounded border-gray-300 text-primary focus:ring-primary min-w-[20px] min-h-[20px]"
+                    />
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white truncate">{customer.name || 'Unknown'}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{customer.email || 'No email'}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone || 'No phone'}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}>
+                    {customer.status}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                    {getLifecycleIcon(customer.lifecycle_stage)} {customer.lifecycle_stage.replace('_', ' ')}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Visits:</span>
+                    <span className="ml-1 font-medium text-gray-900 dark:text-white">{customer.total_visits}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Stamps:</span>
+                    <span className="ml-1 font-medium text-gray-900 dark:text-white">{customer.total_stamps_earned}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 dark:text-gray-400">Last activity:</span>
+                    <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatDate(customer.last_activity_date)}</span>
+                  </div>
+                </div>
+
+                {customer.progress && customer.progress.length > 0 && (
+                  <div className="mb-3 space-y-1">
+                    {customer.progress.slice(0, 2).map((prog, idx) => (
+                      <div key={idx} className="text-xs">
+                        <span className="font-medium text-gray-900 dark:text-white">{prog.offer?.title || 'Unknown'}</span>
+                        <span className="ml-2 text-gray-500 dark:text-gray-400">
+                          {prog.current_stamps}/{prog.max_stamps}
+                          {prog.is_completed && <span className="ml-1 text-green-500">✓</span>}
+                        </span>
+                      </div>
+                    ))}
+                    {customer.progress.length > 2 && (
+                      <div className="text-xs text-primary font-medium">
+                        +{customer.progress.length - 2} more
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSendToCustomer(customer)}
+                    className="flex-1 px-3 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center space-x-2 touch-target"
+                  >
+                    <span>📧</span>
+                    <span>Notify</span>
+                  </button>
+                  <button className="px-3 py-2 min-h-[44px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-all active:scale-95 flex items-center justify-center touch-target">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table Layout */}
+          <div className="hidden md:block mt-6 overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">

@@ -11,9 +11,12 @@ function CollapsibleSection({
   onToggle,
   children,
   badge = null,
-  defaultOpen = false,
+  sectionId = null, // NEW: Explicit section ID for navigation
   completed = false
 }) {
+  // Generate stable ID from sectionId prop or fallback to title-based ID
+  const contentId = sectionId ? `section-${sectionId}` : `section-${title.replace(/\s+/g, '-').toLowerCase()}`
+  
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
       {/* Header - Clickable */}
@@ -21,7 +24,7 @@ function CollapsibleSection({
         onClick={onToggle}
         className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors min-h-[60px] sm:min-h-[44px]"
         aria-expanded={isOpen}
-        aria-controls={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        aria-controls={contentId}
         type="button"
       >
         <div className="flex items-center space-x-3">
@@ -74,7 +77,7 @@ function CollapsibleSection({
 
       {/* Content Area */}
       <div
-        id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
+        id={contentId}
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
           isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         }`}

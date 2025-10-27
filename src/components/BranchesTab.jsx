@@ -142,17 +142,17 @@ function BranchesTab() {
 
   return (
     <div>
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 space-y-3 md:space-y-0">
+      {/* Header Section - Mobile-first: Stack vertically */}
+      <div className="flex flex-col space-y-4 mb-6 sm:mb-8">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Branch Management</h2>
-          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your business locations and track performance</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Branch Management</h2>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your business locations and track performance</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl text-sm md:text-base font-medium transition-colors duration-200 flex items-center justify-center space-x-2 shadow-sm w-full md:w-auto"
+          className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm min-h-[44px] w-full sm:w-auto sm:self-start touch-target"
         >
-          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           <span>Add Branch</span>
@@ -176,16 +176,16 @@ function BranchesTab() {
       )}
 
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 md:mb-8">
-        <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 md:mb-4">Filter Branches</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      {/* Filters - Mobile-first touch targets */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 sm:mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Branches</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-3 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white touch-target"
             >
               <option>All Status</option>
               <option>Active</option>
@@ -194,11 +194,11 @@ function BranchesTab() {
             </select>
           </div>
           <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">City</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-3 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white touch-target"
             >
               <option>All Cities</option>
               {[...new Set(branches?.map(branch => branch.city))].map((city) => (
@@ -209,13 +209,13 @@ function BranchesTab() {
             </select>
           </div>
           <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">Search</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
             <input
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder="Search branches..."
-              className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              className="w-full px-4 py-3 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 touch-target"
             />
           </div>
         </div>
@@ -239,28 +239,30 @@ function BranchesTab() {
         }}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal - Full-screen on mobile */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Delete Branch</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this branch? This action cannot be undone.
-              All associated data will be lost.
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteBranch(showDeleteConfirm)}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Delete
-              </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Delete Branch</h3>
+              <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
+                Are you sure you want to delete this branch? This action cannot be undone.
+                All associated data will be lost.
+              </p>
+              <div className="flex flex-col-reverse sm:flex-row gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="w-full sm:flex-1 px-6 py-3 min-h-[44px] border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all touch-target"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteBranch(showDeleteConfirm)}
+                  className="w-full sm:flex-1 px-6 py-3 min-h-[44px] bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 active:scale-95 transition-all shadow-lg touch-target"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -542,21 +544,21 @@ function BranchModal({ branch, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-gray-200 dark:border-gray-700 flex flex-col">
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {branch ? '🏢 Edit Branch' : '🏪 Add New Branch'}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {branch ? 'Update your branch information and settings' : 'Create a new branch location for your business'}
+              {branch ? 'Update your branch information' : 'Create a new branch location'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center touch-target"
           >
             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -564,12 +566,12 @@ function BranchModal({ branch, onClose, onSave }) {
           </button>
         </div>
 
-        {/* Form Content */}
-        <div className="p-6">
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-6">
+        {/* Form Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <form id="branch-form" onSubmit={handleSubmit}>
+            <div className="space-y-4 sm:space-y-6">
                 {/* Branch Name and Manager */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       🏪 Branch Name *
@@ -579,7 +581,7 @@ function BranchModal({ branch, onClose, onSave }) {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                       placeholder="e.g., Downtown Branch"
                     />
                   </div>
@@ -591,7 +593,7 @@ function BranchModal({ branch, onClose, onSave }) {
                       type="text"
                       value={formData.manager_name}
                       onChange={(e) => setFormData({...formData, manager_name: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                       placeholder="Manager name"
                     />
                   </div>
@@ -644,16 +646,15 @@ function BranchModal({ branch, onClose, onSave }) {
                       🏘️ District (Neighborhood) *
                     </label>
                     {loadingDistricts ? (
-                      // Skeleton loader
                       <div className="animate-pulse">
-                        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                        <div className="h-[44px] bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                       </div>
                     ) : (
                       <select
                         value={formData.district}
                         onChange={handleDistrictSelect}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                        className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                       >
                         <option value="">Select a district...</option>
                         {districtOptions.map((district, index) => (
@@ -684,16 +685,16 @@ function BranchModal({ branch, onClose, onSave }) {
                     required
                     value={formData.street_name}
                     onChange={(e) => setFormData({...formData, street_name: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                    placeholder="e.g., King Fahd Road, Al Tahlia Street"
+                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    placeholder="e.g., King Fahd Road"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Enter the street name only (location is selected above)
+                    Enter the street name only
                   </p>
                 </div>
 
                 {/* Contact Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       📞 Phone Number
@@ -702,7 +703,7 @@ function BranchModal({ branch, onClose, onSave }) {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                       placeholder="(555) 123-4567"
                     />
                   </div>
@@ -714,21 +715,21 @@ function BranchModal({ branch, onClose, onSave }) {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                       placeholder="branch@business.com"
                     />
                   </div>
                 </div>
 
                 {/* Main Branch Setting */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                   <div className="flex items-center space-x-3">
                     <input
                       type="checkbox"
                       id="isMain"
                       checked={formData.isMain}
                       onChange={(e) => setFormData({...formData, isMain: e.target.checked})}
-                      className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                      className="h-5 w-5 min-h-[20px] min-w-[20px] text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                     />
                     <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
                       ⭐ Set as main branch
@@ -737,24 +738,27 @@ function BranchModal({ branch, onClose, onSave }) {
                   </div>
                 </div>
               </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
-              >
-                {branch ? '✨ Update Branch' : '🎉 Add Branch'}
-              </button>
-            </div>
           </form>
+        </div>
+
+        {/* Footer - Fixed with action buttons */}
+        <div className="flex-shrink-0 p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:flex-1 px-6 py-3 min-h-[44px] border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all touch-target"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="branch-form"
+              className="w-full sm:flex-1 px-6 py-3 min-h-[44px] bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all shadow-lg touch-target"
+            >
+              {branch ? '✨ Update Branch' : '🎉 Add Branch'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

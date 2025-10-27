@@ -1,7 +1,16 @@
 /**
  * CardDesignEditor Component
  * Main modal component for editing offer card designs
- * Phase 2 - Frontend Components
+ * Phase 2 - Mobile-First Optimization
+ * 
+ * Mobile Optimizations:
+ * - Collapsible sections with one open at a time on mobile
+ * - Floating preview button (FAB) for mobile
+ * - MobilePreviewSheet for full-screen preview
+ * - Progress indicator (X of Y sections complete)
+ * - Reordered sections for better mobile flow
+ * - Sticky tabs with completion badges
+ * - Larger touch targets throughout
  */
 
 import { useState, useEffect } from 'react'
@@ -14,6 +23,8 @@ import StampIconPicker from './StampIconPicker'
 import CardPreview from './CardPreview'
 import TemplateSelector from './TemplateSelector'
 import ValidationPanel from './ValidationPanel'
+import CollapsibleSection from './CollapsibleSection'
+import MobilePreviewSheet from './MobilePreviewSheet'
 
 function CardDesignEditor({ offer, onClose, onSave }) {
   const {
@@ -38,6 +49,45 @@ function CardDesignEditor({ offer, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState('design') // 'design', 'preview', 'validation'
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [showMobilePreview, setShowMobilePreview] = useState(false)
+  const [openSection, setOpenSection] = useState('colors') // Only one section open at a time on mobile
+
+  // Section completion tracking
+  const getSectionCompletion = () => {
+    const design = currentDesign || {}
+    return {
+      colors: !!(design.background_color && design.foreground_color),
+      logo: !!(design.logo_url || design.logo_google_url || design.logo_apple_url),
+      stamps: !!(design.stamp_display_type),
+      progress: !!(design.progress_display_style),
+      hero: true // Hero is optional, always counts as "complete"
+    }
+  }
+
+  const completion = getSectionCompletion()
+  const completedCount = Object.values(completion).filter(Boolean).length
+  const totalCount = Object.keys(completion).length
+
+  // Toggle section on mobile (only one open at a time)
+  const handleToggleSection = (sectionId) => {
+    if (isDesktop) {
+      // On desktop, allow multiple sections open (do nothing)
+      return
+    }
+    // On mobile, toggle section
+    setOpenSection(openSection === sectionId ? null : sectionId)
+  }
+
+  // Navigate to section from ValidationPanel "Fix This" buttons
+  const handleNavigateToSection = (sectionId) => {
+    setActiveTab('design')
+    setOpenSection(sectionId)
+    // Scroll to section after a brief delay
+    setTimeout(() => {
+      const element = document.getElementById(`section-${sectionId}`)
+      element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }
 
   useEffect(() => {
     if (offer?.public_id) {
@@ -120,12 +170,12 @@ function CardDesignEditor({ offer, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden my-8">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 shadow-2xl w-full max-w-full h-full sm:max-w-7xl sm:max-h-[95vh] sm:rounded-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               🎨 Design Card
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -134,7 +184,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
           </div>
           <button
             onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -160,95 +210,127 @@ function CardDesignEditor({ offer, onClose, onSave }) {
           </div>
         )}
 
-        {/* Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
-          {/* Left Panel - Design Controls */}
-          <div className={`space-y-6 ${isDesktop ? 'lg:col-span-1' : ''}`}>
+        {/* Content - Fixed height with independent scrolling panes */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6 lg:p-6 flex-1 overflow-hidden">
+          {/* Left Panel - Design Controls (Scrollable) */}
+          <div className={`overflow-y-auto p-4 sm:p-6 lg:p-0 ${isDesktop ? 'lg:col-span-1' : ''}`}>
+            <div className="space-y-3 sm:space-y-4">
+              {/* Progress Indicator */}
+              {activeTab === 'design' && (
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Setup Progress
+                    </span>
+                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                      {completedCount} of {totalCount} Complete
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
             {/* Tabs */}
-            <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
                 onClick={() => setActiveTab('design')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] relative
                   ${activeTab === 'design'
                     ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400'
                   }`}
               >
                 Design
+                {activeTab === 'design' && completedCount < totalCount && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></span>
+                )}
               </button>
-              {/* Mobile: Show Preview Tab */}
+              {/* Mobile: Show Preview Tab (opens bottom sheet) */}
               {!isDesktop && (
                 <button
-                  onClick={() => setActiveTab('preview')}
-                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
-                    ${activeTab === 'preview'
-                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400'
-                    }`}
+                  onClick={() => setShowMobilePreview(true)}
+                  className="flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-800/50"
                 >
                   Preview
                 </button>
               )}
               <button
                 onClick={() => setActiveTab('validation')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                className={`flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] relative
                   ${activeTab === 'validation'
                     ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-400'
                   }`}
               >
-                Validation
+                Check
+                {validation && !validation.isValid && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                )}
               </button>
             </div>
 
-            {/* Design Tab */}
-            {activeTab === 'design' && (
-              <div className="space-y-6">
-                {/* Templates Button */}
-                <button
-                  onClick={() => setShowTemplateSelector(true)}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
-                >
-                  <span>📋</span>
-                  <span>Browse Templates</span>
-                </button>
+              {/* Design Tab with Collapsible Sections */}
+              {activeTab === 'design' && (
+                <div className="space-y-3 sm:space-y-4">
+                  {/* Templates Button */}
+                  <button
+                    onClick={() => setShowTemplateSelector(true)}
+                    className="w-full px-4 py-3.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 min-h-[52px]"
+                  >
+                    <span>📋</span>
+                    <span>Browse Templates</span>
+                  </button>
 
-                {/* Colors Section */}
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide">
-                    Colors
-                  </h3>
+                  {/* 1. Colors Section - Collapsible */}
+                  <CollapsibleSection
+                    sectionId="colors"
+                    title="Colors"
+                    badge="Required"
+                    completed={completion.colors}
+                    isOpen={isDesktop || openSection === 'colors'}
+                    onToggle={() => handleToggleSection('colors')}
+                  >
+                  <div className="space-y-4">
+                    <ColorPicker
+                      label="Background Color"
+                      value={currentDesign?.background_color}
+                      onChange={(color) => updateDesignField('background_color', color)}
+                      contrastWith={currentDesign?.foreground_color}
+                      required
+                    />
 
-                  <ColorPicker
-                    label="Background Color"
-                    value={currentDesign?.background_color}
-                    onChange={(color) => updateDesignField('background_color', color)}
-                    contrastWith={currentDesign?.foreground_color}
-                    required
-                  />
+                    <ColorPicker
+                      label="Text Color"
+                      value={currentDesign?.foreground_color}
+                      onChange={(color) => updateDesignField('foreground_color', color)}
+                      contrastWith={currentDesign?.background_color}
+                      required
+                    />
 
-                  <ColorPicker
-                    label="Text Color"
-                    value={currentDesign?.foreground_color}
-                    onChange={(color) => updateDesignField('foreground_color', color)}
-                    contrastWith={currentDesign?.background_color}
-                    required
-                  />
+                    <ColorPicker
+                      label="Label Color"
+                      value={currentDesign?.label_color}
+                      onChange={(color) => updateDesignField('label_color', color)}
+                      contrastWith={currentDesign?.background_color}
+                      showPresets={false}
+                    />
+                  </div>
+                </CollapsibleSection>
 
-                  <ColorPicker
-                    label="Label Color"
-                    value={currentDesign?.label_color}
-                    onChange={(color) => updateDesignField('label_color', color)}
-                    contrastWith={currentDesign?.background_color}
-                    showPresets={false}
-                  />
-                </div>
-
-                {/* Logo Section */}
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-4">
-                    Logo
-                  </h3>
+                  {/* 2. Logo Section - Collapsible */}
+                  <CollapsibleSection
+                    sectionId="logo"
+                    title="Logo"
+                    badge="Required"
+                    completed={completion.logo}
+                    isOpen={isDesktop || openSection === 'logo'}
+                    onToggle={() => handleToggleSection('logo')}
+                  >
                   <LogoUploader
                     logoUrl={currentDesign?.logo_url}
                     googleLogoUrl={currentDesign?.logo_google_url}
@@ -258,124 +340,141 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     onApplySuggestedColor={handleApplySuggestedColor}
                     uploading={uploading}
                   />
-                </div>
+                </CollapsibleSection>
 
-                {/* Hero Image Section - NEW */}
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-4">
-                    Hero Image <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(Optional)</span>
-                  </h3>
-                  <HeroImageUploader
-                    heroImageUrl={currentDesign?.hero_image_url}
-                    onUpload={handleHeroUpload}
-                    onRemove={handleHeroRemove}
-                    uploading={uploading}
-                  />
-                </div>
-
-                {/* Stamp Display Configuration Section */}
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
-                    Stamp Display (Apple Wallet)
-                  </h3>
-
-                  {/* Display Type Toggle */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <button
-                      onClick={() => updateDesignField('stamp_display_type', 'logo')}
-                      disabled={uploading || saving}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all text-left
-                        ${(currentDesign?.stamp_display_type || 'logo') === 'logo'
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-primary/50 text-gray-900 dark:text-white'
-                        }
-                        ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <div className="font-medium">Business Logo</div>
-                      <div className="text-xs opacity-75 mt-1">
-                        Use uploaded logo as stamp
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => updateDesignField('stamp_display_type', 'svg')}
-                      disabled={uploading || saving}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all text-left
-                        ${currentDesign?.stamp_display_type === 'svg'
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-primary/50 text-gray-900 dark:text-white'
-                        }
-                        ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <div className="font-medium">SVG Icon</div>
-                      <div className="text-xs opacity-75 mt-1">
-                        Choose from icon library
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Show icon picker only when SVG mode is selected */}
-                  {currentDesign?.stamp_display_type === 'svg' && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <StampIconPicker
-                        selectedIconId={currentDesign?.stamp_icon || 'coffee-01'}
-                        onChange={(iconId) => updateDesignField('stamp_icon', iconId)}
+                  {/* 3. Stamps Section - Collapsible */}
+                  <CollapsibleSection
+                    sectionId="stamps"
+                    title="Stamp Display"
+                    badge="Optional"
+                    completed={completion.stamps}
+                    isOpen={isDesktop || openSection === 'stamps'}
+                    onToggle={() => handleToggleSection('stamps')}
+                  >
+                  <div className="space-y-4">
+                    {/* Display Type Toggle */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <button
+                        onClick={() => updateDesignField('stamp_display_type', 'logo')}
                         disabled={uploading || saving}
-                      />
+                        className={`px-3 sm:px-4 py-3 sm:py-3.5 rounded-lg border-2 transition-all text-left min-h-[60px]
+                          ${(currentDesign?.stamp_display_type || 'logo') === 'logo'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-gray-200 dark:border-gray-600 hover:border-primary/50 text-gray-900 dark:text-white'
+                          }
+                          ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="font-medium text-sm sm:text-base">Business Logo</div>
+                        <div className="text-xs opacity-75 mt-1">
+                          Use logo as stamp
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => updateDesignField('stamp_display_type', 'svg')}
+                        disabled={uploading || saving}
+                        className={`px-3 sm:px-4 py-3 sm:py-3.5 rounded-lg border-2 transition-all text-left min-h-[60px]
+                          ${currentDesign?.stamp_display_type === 'svg'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-gray-200 dark:border-gray-600 hover:border-primary/50 text-gray-900 dark:text-white'
+                          }
+                          ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="font-medium text-sm sm:text-base">SVG Icon</div>
+                        <div className="text-xs opacity-75 mt-1">
+                          Choose from library
+                        </div>
+                      </button>
                     </div>
-                  )}
 
-                  {/* Show logo requirement when logo mode is selected */}
-                  {(currentDesign?.stamp_display_type || 'logo') === 'logo' && !currentDesign?.logo_url && (
-                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        ⚠️ Logo stamp display requires a logo to be uploaded above
-                      </p>
-                    </div>
-                  )}
-                </div>
+                    {/* Show icon picker only when SVG mode is selected */}
+                    {currentDesign?.stamp_display_type === 'svg' && (
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <StampIconPicker
+                          selectedIconId={currentDesign?.stamp_icon || 'coffee-01'}
+                          onChange={(iconId) => updateDesignField('stamp_icon', iconId)}
+                          disabled={uploading || saving}
+                        />
+                      </div>
+                    )}
 
-                {/* Progress Style Section */}
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">
-                    Progress Display
-                  </h3>
+                    {/* Show logo requirement when logo mode is selected */}
+                    {(currentDesign?.stamp_display_type || 'logo') === 'logo' && !currentDesign?.logo_url && (
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">
+                          ⚠️ Logo stamp requires logo upload above
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleSection>
+
+                  {/* 4. Progress Style Section - Collapsible */}
+                  <CollapsibleSection
+                    sectionId="progress"
+                    title="Progress Display"
+                    badge="Optional"
+                    completed={completion.progress}
+                    isOpen={isDesktop || openSection === 'progress'}
+                    onToggle={() => handleToggleSection('progress')}
+                  >
                   <div className="space-y-2">
                     {[
-                      { value: 'bar', label: 'Progress Bar', icon: '━' },
-                      { value: 'grid', label: 'Stamp Grid', icon: '⊞' }
+                      { value: 'bar', label: 'Progress Bar', icon: '━', desc: 'Simple bar' },
+                      { value: 'grid', label: 'Stamp Grid', icon: '⊞', desc: 'Visual stamps' }
                     ].map((style) => (
                       <button
                         key={style.value}
                         onClick={() => updateDesignField('progress_display_style', style.value)}
-                        className={`w-full px-4 py-3 rounded-lg text-left transition-all duration-200 flex items-center space-x-3
+                        className={`w-full px-3 sm:px-4 py-3 sm:py-3.5 rounded-lg text-left transition-all duration-200 flex items-center gap-3 min-h-[56px]
                           ${currentDesign?.progress_display_style === style.value
                             ? 'bg-primary text-white shadow-md'
-                            : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white'
+                            : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600'
                           }`}
                       >
-                        <span className="text-xl">{style.icon}</span>
-                        <span className="font-medium">{style.label}</span>
+                        <span className="text-2xl">{style.icon}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm sm:text-base">{style.label}</div>
+                          <div className="text-xs opacity-75">{style.desc}</div>
+                        </div>
                       </button>
                     ))}
                   </div>
+                </CollapsibleSection>
+
+                  {/* 5. Hero Image Section - Collapsible */}
+                  <CollapsibleSection
+                    sectionId="hero"
+                    title="Hero Image"
+                    badge="Optional"
+                    completed={completion.hero}
+                    isOpen={isDesktop || openSection === 'hero'}
+                    onToggle={() => handleToggleSection('hero')}
+                  >
+                    <HeroImageUploader
+                      heroImageUrl={currentDesign?.hero_image_url}
+                      onUpload={handleHeroUpload}
+                      onRemove={handleHeroRemove}
+                      onSkip={() => handleToggleSection(null)}
+                      uploading={uploading}
+                    />
+                  </CollapsibleSection>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Validation Tab */}
-            {activeTab === 'validation' && (
-              <ValidationPanel validation={validation} design={currentDesign} />
-            )}
-
-            {/* Mobile Preview Tab */}
-            {!isDesktop && activeTab === 'preview' && (
-              <CardPreview design={currentDesign} offerData={offer} isMobile={true} />
-            )}
+              {/* Validation Tab */}
+              {activeTab === 'validation' && (
+                <ValidationPanel
+                  validation={validation}
+                  design={currentDesign}
+                  onNavigateToSection={handleNavigateToSection}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Right Panel - Preview (Desktop Only) */}
+          {/* Right Panel - Preview (Desktop Only) - Sticky within its container */}
           {isDesktop && (
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 overflow-y-auto p-6">
               <div className="sticky top-0">
                 <CardPreview design={currentDesign} offerData={offer} isMobile={false} />
               </div>
@@ -384,39 +483,39 @@ function CardDesignEditor({ offer, onClose, onSave }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-          <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
+          <div className="flex items-center gap-3 justify-center sm:justify-start">
             {isDirty && (
-              <span className="text-sm text-orange-600 dark:text-orange-400 flex items-center space-x-1">
+              <span className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
                 <span>Unsaved changes</span>
               </span>
             )}
             {validation && !validation.isValid && (
-              <span className="text-sm text-red-600 dark:text-red-400">
+              <span className="text-xs sm:text-sm text-red-600 dark:text-red-400">
                 ⚠️ Fix errors before saving
               </span>
             )}
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={resetDesign}
               disabled={!isDirty}
-              className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px]"
             >
               Reset
             </button>
             <button
               onClick={handleClose}
-              className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium text-sm min-h-[44px]"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving || (validation && !validation.isValid)}
-              className="px-8 py-2.5 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="flex-1 sm:flex-initial px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm min-h-[44px]"
             >
               {saving ? (
                 <>
@@ -433,6 +532,16 @@ function CardDesignEditor({ offer, onClose, onSave }) {
           </div>
         </div>
       </div>
+
+      {/* Mobile Preview Sheet */}
+      {!isDesktop && showMobilePreview && (
+        <MobilePreviewSheet
+          isOpen={showMobilePreview}
+          onClose={() => setShowMobilePreview(false)}
+        >
+          <CardPreview design={currentDesign} offerData={offer} isMobile={true} />
+        </MobilePreviewSheet>
+      )}
 
       {/* Template Selector Modal */}
       {showTemplateSelector && (

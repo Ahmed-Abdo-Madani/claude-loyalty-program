@@ -220,34 +220,34 @@ function ScannerTab() {
         onClose={stopCamera}
       />
 
-      {/* Header Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">QR Scanner</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Scan customer wallet pass QR codes to update loyalty progress</p>
+      {/* Header Section - Mobile-first */}
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">QR Scanner</h2>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Scan customer wallet pass QR codes to update loyalty progress</p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
 
         {/* Scanning Interface */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
             <span className="mr-2">🔍</span>
             QR Code Scanner
           </h3>
 
           {!isScanning ? (
-            <div className="text-center space-y-6">
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-8 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-4xl">📱</span>
+            <div className="text-center space-y-4 sm:space-y-6">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 sm:p-8 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <span className="text-3xl sm:text-4xl">📱</span>
                 </div>
-                <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to Scan</h4>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">Position the customer's QR code in front of your camera</p>
+                <h4 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to Scan</h4>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">Position the customer's QR code in front of your camera</p>
 
                 <div className="flex justify-center">
                   <button
                     onClick={startCamera}
-                    className="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-3 shadow-sm"
+                    className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center space-x-3 shadow-sm min-h-[44px] w-full sm:w-auto touch-target"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -397,114 +397,147 @@ function ScannerTab() {
           </div>
         )}
 
-        {/* Analytics Summary */}
+        {/* Analytics Summary - Mobile-first grid */}
         {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">📅</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">📅</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.scansToday || 0}</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.scansToday || 0}</div>
               <div className="text-white/80 text-sm">Scans Today</div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">🎁</span>
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">🎁</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.rewardsEarned || 0}</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.rewardsEarned || 0}</div>
               <div className="text-white/80 text-sm">Rewards Earned</div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">👥</span>
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">👥</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.uniqueCustomers || 0}</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.uniqueCustomers || 0}</div>
               <div className="text-white/80 text-sm">Unique Customers</div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-2xl">📊</span>
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl">📊</span>
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-2">{analytics.totalScans || 0}</div>
+              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.totalScans || 0}</div>
               <div className="text-white/80 text-sm">Total Scans</div>
             </div>
           </div>
         )}
 
 
-        {/* Recent Scan History */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+        {/* Recent Scan History - Mobile cards, desktop table */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
             <span className="mr-2">📋</span>
             Recent Scan History
           </h3>
 
           {scanHistory.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">📊</span>
+            <div className="text-center py-8 sm:py-12">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <span className="text-xl sm:text-2xl">📊</span>
               </div>
-              <h4 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No scans yet</h4>
-              <p className="text-gray-500 dark:text-gray-400">Start scanning customer QR codes to see history here.</p>
+              <h4 className="text-base sm:text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No scans yet</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Start scanning customer QR codes to see history here.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Time</th>
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Offer</th>
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Progress</th>
-                    <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Reward</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scanHistory.map((scan, index) => (
-                    <tr key={scan.public_id || scan.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 ${index === scanHistory.length - 1 ? 'border-b-0' : ''}`}>
-                      <td className="py-4 px-2">
-                        <div className="text-sm text-gray-900 dark:text-white font-medium">
-                          {formatDate(scan.scannedAt)}
-                        </div>
-                      </td>
-                      <td className="py-4 px-2">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{scan.offerTitle}</div>
+            <>
+              {/* Mobile: Card layout */}
+              <div className="block md:hidden space-y-3">
+                {scanHistory.map((scan) => (
+                  <div key={scan.public_id || scan.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">{scan.offerTitle}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{scan.offerType}</div>
-                      </td>
-                      <td className="py-4 px-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{scan.progressBefore}</span>
-                          <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                          </svg>
-                          <span className="text-sm font-medium text-primary">{scan.progressAfter}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-2">
-                        {scan.rewardEarned ? (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                            <span className="mr-1">🎉</span>
-                            Earned
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
-                        )}
-                      </td>
+                      </div>
+                      {scan.rewardEarned && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                          <span className="mr-1">🎉</span>
+                          Earned
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-gray-600 dark:text-gray-400">{scan.progressBefore}</span>
+                        <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        <span className="font-medium text-primary">{scan.progressAfter}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(scan.scannedAt)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Time</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Offer</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Progress</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Reward</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {scanHistory.map((scan, index) => (
+                      <tr key={scan.public_id || scan.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 ${index === scanHistory.length - 1 ? 'border-b-0' : ''}`}>
+                        <td className="py-4 px-2">
+                          <div className="text-sm text-gray-900 dark:text-white font-medium">
+                            {formatDate(scan.scannedAt)}
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{scan.offerTitle}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{scan.offerType}</div>
+                        </td>
+                        <td className="py-4 px-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{scan.progressBefore}</span>
+                            <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            <span className="text-sm font-medium text-primary">{scan.progressAfter}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-2">
+                          {scan.rewardEarned ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                              <span className="mr-1">🎉</span>
+                              Earned
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -5,10 +5,19 @@
 @layer base {
   html {
     font-family: 'Inter', sans-serif;
+    /* Smooth scrolling for mobile */
+    scroll-behavior: smooth;
   }
 
   body {
     @apply text-gray-900 bg-gray-50;
+    /* iOS safe area support */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Focus visible styles for better keyboard navigation */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
   }
 }
 
@@ -28,6 +37,16 @@
   .container-max {
     @apply max-w-7xl mx-auto;
   }
+
+  /* Minimum touch target size for mobile */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Safe area bottom padding for mobile nav */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 @layer utilities {
@@ -39,5 +58,22 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Chrome, Safari, Opera */
+  }
+
+  /* Touch action utilities for better mobile interaction */
+  .touch-none {
+    touch-action: none;
+  }
+
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+
+  .touch-pan-y {
+    touch-action: pan-y;
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
   }
 }

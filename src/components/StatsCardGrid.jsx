@@ -28,71 +28,14 @@ function StatsCardGrid({ analytics }) {
   ]
 
   return (
-    <div className="mb-8">
-      {/* Mobile: Horizontal scrolling layout */}
-      <div className="md:hidden">
-        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
-          {statsCards.map((stat) => (
-            <div
-              key={stat.id}
-              className={`
-                relative p-4 rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl
-                flex-none w-auto min-w-[160px] max-w-[240px] snap-start
-                ${stat.highlight
-                  ? 'bg-gradient-to-br from-primary to-purple-600 text-white'
-                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
-                }
-              `}
-            >
-              {/* Icon */}
-              <div className={`
-                w-10 h-10 rounded-lg flex items-center justify-center mb-3
-                ${stat.highlight
-                  ? 'bg-white/20'
-                  : `${stat.color} text-white`
-                }
-              `}>
-                <span className="text-xl">{stat.icon}</span>
-              </div>
-
-              {/* Content */}
-              <div>
-                <h3 className={`
-                  text-sm font-medium mb-1
-                  ${stat.highlight
-                    ? 'text-white/80'
-                    : 'text-gray-500 dark:text-gray-400'
-                  }
-                `}>
-                  {stat.title}
-                </h3>
-                <p className={`
-                  text-2xl font-bold
-                  ${stat.highlight
-                    ? 'text-white'
-                    : 'text-gray-900 dark:text-white'
-                  }
-                `}>
-                  {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
-                </p>
-              </div>
-
-              {/* Highlight border for active card */}
-              {stat.highlight && (
-                <div className="absolute inset-0 rounded-xl border-2 border-white/30"></div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Tablet and Desktop: Grid layout */}
-      <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="mb-6 sm:mb-8">
+      {/* Mobile-first: Vertical stack layout (no horizontal scroll) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {statsCards.map((stat) => (
           <div
             key={stat.id}
             className={`
-              relative p-6 rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl
+              relative p-5 sm:p-6 rounded-xl shadow-lg transition-all duration-200 hover:shadow-xl active:scale-[0.98]
               ${stat.highlight
                 ? 'bg-gradient-to-br from-primary to-purple-600 text-white'
                 : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
@@ -101,19 +44,19 @@ function StatsCardGrid({ analytics }) {
           >
             {/* Icon */}
             <div className={`
-              w-12 h-12 rounded-lg flex items-center justify-center mb-4
+              w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center mb-3 sm:mb-4
               ${stat.highlight
                 ? 'bg-white/20'
                 : `${stat.color} text-white`
               }
             `}>
-              <span className="text-2xl">{stat.icon}</span>
+              <span className="text-xl sm:text-2xl">{stat.icon}</span>
             </div>
 
             {/* Content */}
             <div>
               <h3 className={`
-                text-sm font-medium mb-2
+                text-sm font-medium mb-1 sm:mb-2
                 ${stat.highlight
                   ? 'text-white/80'
                   : 'text-gray-500 dark:text-gray-400'
@@ -122,7 +65,7 @@ function StatsCardGrid({ analytics }) {
                 {stat.title}
               </h3>
               <p className={`
-                text-3xl font-bold
+                text-2xl sm:text-3xl font-bold
                 ${stat.highlight
                   ? 'text-white'
                   : 'text-gray-900 dark:text-white'

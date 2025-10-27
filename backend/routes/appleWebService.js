@@ -22,6 +22,7 @@ import DeviceLog from '../models/DeviceLog.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import { CustomerProgress, Offer, Business, Customer } from '../models/index.js'
 import CardDesignService from '../services/CardDesignService.js'
+import { createContentDispositionHeader } from '../utils/passGenerator.js'
 
 const router = express.Router()
 
@@ -355,7 +356,18 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     res.setHeader('ETag', manifestETag)
     res.setHeader('Last-Modified', (walletPass.last_updated_at || updateTimestamp).toUTCString())
     res.setHeader('Cache-Control', 'private, must-revalidate')
-    res.setHeader('Content-Disposition', `attachment; filename="${walletPass.offer?.title || 'loyalty-card'}.pkpass"`)
+    
+    // Set Content-Disposition with sanitized filename (multi-level fallback)
+    const passFilename = walletPass.offer?.title || walletPass.business?.business_name || 'loyalty-card'
+    logger.debug('Setting Content-Disposition header', { 
+      filename: passFilename,
+      hasOfferTitle: !!walletPass.offer?.title,
+      hasBusinessName: !!walletPass.business?.business_name
+    })
+    res.setHeader('Content-Disposition', createContentDispositionHeader(
+      passFilename,
+      { extension: 'pkpass', fallback: 'loyalty-card', maxLength: 50 }
+    ))
     res.setHeader('Content-Length', pkpassBuffer.length)
 
     logger.info('✅ Pass regenerated and sent', {
@@ -468,14 +480,19 @@ router.post('/v1/log', async (req, res) => {
     // Extract device library ID if present in logs
     let deviceId = null
     try {
-      // Try to find device from user agent or other context
+      // Try to find device from user agent in device_info JSONB column
       // This is best-effort; logs may not always have device context
-      const device = await Device.findOne({
-        where: { user_agent: userAgent },
-        order: [['last_seen_at', 'DESC']]
-      })
-      if (device) {
-        deviceId = device.id
+      if (userAgent) {
+        const device = await Device.findOne({
+          where: sequelize.where(
+            sequelize.cast(sequelize.json('device_info.user_agent'), 'text'),
+            userAgent
+          ),
+          order: [['last_seen_at', 'DESC']]
+        })
+        if (device) {
+          deviceId = device.id
+        }
       }
     } catch (error) {
       logger.warn('⚠️ Could not identify device for log', { error: error.message })
@@ -494,7 +511,7 @@ router.post('/v1/log', async (req, res) => {
         timestamp: new Date().toISOString()
       })
 
-      // Store in database for analysis
+      // Store in database for analysis (if table exists)
       try {
         const deviceLog = await DeviceLog.logMessage(logMessage, {
           deviceId,
@@ -509,11 +526,18 @@ router.post('/v1/log', async (req, res) => {
         })
         storedLogs.push(deviceLog.id)
       } catch (dbError) {
-        logger.error('❌ Failed to store device log in database', {
-          error: dbError.message,
-          logMessage: logMessage.substring(0, 100)
-        })
-        // Don't fail the request if DB storage fails
+        // Log database errors but don't fail the request
+        // Table may not exist if migration hasn't been run yet
+        if (dbError.message?.includes('relation "device_logs" does not exist')) {
+          logger.debug('⚠️ device_logs table does not exist yet - run migration 20250127-add-device-logs-table.js')
+        } else {
+          logger.error('❌ Failed to store device log in database', {
+            error: dbError.message,
+            stack: dbError.stack,
+            logMessage: logMessage.substring(0, 100)
+          })
+        }
+        // Continue processing other logs even if DB storage fails
       }
 
       // Track specific error patterns for alerting

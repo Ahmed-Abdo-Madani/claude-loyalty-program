@@ -15,13 +15,13 @@ function MonthlyChart({ analytics }) {
   const maxValue = Math.max(...monthlyData.map(d => d.value))
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Monthly Performance</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-lg">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Monthly Performance</h3>
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 bg-primary rounded-full"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Customer Activity</span>
+            <div className="w-2 h-2 sm:w-3 sm:h-3 bg-primary rounded-full"></div>
+            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Customer Activity</span>
           </div>
         </div>
       </div>
@@ -29,7 +29,7 @@ function MonthlyChart({ analytics }) {
       {/* Chart Area */}
       <div className="relative">
         {/* Chart Grid */}
-        <div className="flex items-end justify-between h-48 space-x-2">
+        <div className="flex items-end justify-between h-32 sm:h-48 space-x-1 sm:space-x-2">
           {monthlyData.map((data, index) => {
             const height = (data.value / maxValue) * 100
             return (
@@ -63,22 +63,22 @@ function MonthlyChart({ analytics }) {
         </div>
 
         {/* Chart Stats */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="text-center sm:text-center">
+              <div className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                 {Math.round(monthlyData[monthlyData.length - 1]?.value || 0).toLocaleString()}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">This Month</div>
             </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+            <div className="text-center sm:text-center">
+              <div className="text-base sm:text-lg font-semibold text-green-600 dark:text-green-400">
                 +{((monthlyData[monthlyData.length - 1]?.value / monthlyData[0]?.value - 1) * 100).toFixed(0)}%
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Growth</div>
             </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-primary">
+            <div className="text-center sm:text-center hidden sm:block">
+              <div className="text-base sm:text-lg font-semibold text-primary">
                 {Math.round(monthlyData.reduce((sum, d) => sum + d.value, 0) / monthlyData.length).toLocaleString()}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Average</div>

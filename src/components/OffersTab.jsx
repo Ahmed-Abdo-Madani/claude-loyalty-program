@@ -168,17 +168,17 @@ function OffersTab() {
 
   return (
     <div>
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 space-y-3 md:space-y-0">
+      {/* Header Section - Mobile-first: Stack vertically */}
+      <div className="flex flex-col space-y-3 mb-6 sm:mb-8">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Active Offers</h2>
-          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your loyalty programs and track performance</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Active Offers</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage your loyalty programs and track performance</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-xl text-sm md:text-base font-medium transition-colors duration-200 flex items-center justify-center space-x-2 shadow-sm w-full md:w-auto"
+          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-2 shadow-lg min-h-[44px] active:scale-95"
         >
-          <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           <span>Create Offer</span>
@@ -201,16 +201,16 @@ function OffersTab() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 md:mb-8">
-        <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 md:mb-4">Filter Offers</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      {/* Filters - Mobile-first: Single column stack */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 sm:mb-8">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Offers</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option>All Status</option>
               <option>Active</option>
@@ -220,11 +220,11 @@ function OffersTab() {
             </select>
           </div>
           <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">Branch</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Branch</label>
             <select
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option>All Branches</option>
               {branches?.map((branch) => (
@@ -235,11 +235,11 @@ function OffersTab() {
             </select>
           </div>
           <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 md:mb-2">Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option>All Types</option>
               <option>Stamp Cards</option>
@@ -388,12 +388,12 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="relative w-full max-w-full h-full sm:w-auto sm:max-w-2xl sm:h-auto sm:max-h-[90vh] bg-white dark:bg-gray-800 sm:rounded-2xl shadow-2xl border-0 sm:border sm:border-gray-200 dark:sm:border-gray-700 flex flex-col overflow-hidden">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {offer ? 'Edit Offer' : 'Create New Offer'}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -402,7 +402,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
           >
             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -410,9 +410,9 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
           </button>
         </div>
 
-        {/* Form Content */}
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" id="offer-form">
             {/* Offer Title */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -423,7 +423,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 placeholder="e.g., Buy 10 Get 1 Free Coffee"
               />
             </div>
@@ -436,14 +436,14 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 resize-none"
+                className="w-full px-4 py-3 min-h-[88px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 resize-none"
                 rows="3"
                 placeholder="Describe your loyalty offer and its benefits..."
               />
             </div>
 
             {/* Branch and Program Type Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Branch Location
@@ -451,7 +451,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 <select
                   value={formData.branch}
                   onChange={(e) => setFormData({...formData, branch: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 >
                   <option value="All Branches">All Branches</option>
                   {branches?.map((branch) => (
@@ -521,7 +521,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                         required={formData.is_time_limited}
                         value={formData.start_date}
                         onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                        className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       />
                     </div>
                     <div>
@@ -533,31 +533,32 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                         required={formData.is_time_limited}
                         value={formData.end_date}
                         onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                        className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       />
                     </div>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
-              >
-                {offer ? '✨ Update Offer' : '🎉 Create Offer'}
-              </button>
-            </div>
           </form>
+        </div>
+
+        {/* Footer - Fixed on mobile */}
+        <div className="flex flex-col-reverse sm:flex-row gap-3 p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full sm:flex-1 px-6 py-3 min-h-[44px] border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 active:scale-95"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="offer-form"
+            className="w-full sm:flex-1 px-6 py-3 min-h-[44px] bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 transform hover:scale-[1.02] active:scale-95 shadow-lg"
+          >
+            {offer ? '✨ Update Offer' : '🎉 Create Offer'}
+          </button>
         </div>
       </div>
     </div>

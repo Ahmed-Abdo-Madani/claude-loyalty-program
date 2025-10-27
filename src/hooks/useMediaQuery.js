@@ -55,4 +55,20 @@ export function useIsMobile() {
   return useMediaQuery('(max-width: 767px)') // sm and below
 }
 
+/**
+ * Additional mobile-first breakpoint helpers for granular responsive control
+ */
+export function useIsSmallMobile() {
+  return useMediaQuery('(max-width: 479px)') // Very small phones
+}
+
+export function useIsMediumMobile() {
+  return useMediaQuery('(min-width: 480px) and (max-width: 767px)') // Medium phones
+}
+
+export function useIsLargeDesktop() {
+  return useMediaQuery('(min-width: 1280px)') // xl breakpoint and above
+}
+
 export default useMediaQuery
+

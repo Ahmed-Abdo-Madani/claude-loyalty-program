@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 
 function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { isDark, toggleTheme } = useTheme()
 
   // Navigation items with icons - preserving exact existing functionality
@@ -24,41 +22,21 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
     }
 
     setActiveTab(tabId) // Preserve existing state management
-    setIsMobileMenuOpen(false) // Close mobile menu
   }
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-lg bg-primary text-white shadow-lg"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Sidebar - Desktop Only (hidden on mobile, bottom nav used instead) */}
       <aside className={`
-        fixed left-0 top-0 z-40 h-screen w-20 lg:w-64
+        hidden lg:block
+        fixed left-0 top-0 z-40 h-screen w-64
         bg-gradient-to-b from-primary via-blue-600 to-purple-700
         dark:from-purple-900 dark:via-purple-800 dark:to-indigo-900
-        transform transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         flex flex-col overflow-y-auto
       `}>
 
         {/* Sidebar Header */}
-        <div className="p-4 lg:p-6 border-b border-white/20">
+        <div className="p-6 border-b border-white/20">
           <div className="flex items-center space-x-3">
             {/* App Icon */}
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -67,8 +45,8 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
               </svg>
             </div>
 
-            {/* Business Name - Hidden on mobile/collapsed */}
-            <div className="hidden lg:block">
+            {/* Business Name */}
+            <div>
               <h1 className="text-white font-bold text-lg">
                 {user?.businessName || 'Business'}
               </h1>
@@ -78,7 +56,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 lg:p-6">
+        <nav className="flex-1 p-6">
           <ul className="space-y-2">
             {navigationItems.map((item) => (
               <li key={item.id}>
@@ -96,7 +74,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
                   `}
                 >
                   <span className="text-xl flex-shrink-0">{item.icon}</span>
-                  <div className="hidden lg:block font-medium flex items-center space-x-2">
+                  <div className="font-medium flex items-center space-x-2">
                     <span>{item.label}</span>
                     {item.comingSoon && (
                       <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30">
@@ -111,7 +89,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 lg:p-6 border-t border-white/20">
+        <div className="p-6 border-t border-white/20">
           {/* User Profile */}
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -119,7 +97,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
                 {user?.businessName?.charAt(0)?.toUpperCase() || 'B'}
               </span>
             </div>
-            <div className="hidden lg:block min-w-0">
+            <div className="min-w-0">
               <p className="text-white font-medium truncate">{user?.businessName}</p>
               <p className="text-white/70 text-sm truncate">{user?.userEmail}</p>
             </div>
@@ -130,12 +108,12 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center space-x-3 p-2 lg:p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className="w-full flex items-center space-x-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
             >
               <span className="text-lg flex-shrink-0">
                 {isDark ? '☀️' : '🌙'}
               </span>
-              <span className="hidden lg:block font-medium">
+              <span className="font-medium">
                 {isDark ? 'Light Mode' : 'Dark Mode'}
               </span>
             </button>
@@ -143,10 +121,10 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
             {/* Sign Out */}
             <button
               onClick={onSignOut}
-              className="w-full flex items-center space-x-3 p-2 lg:p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className="w-full flex items-center space-x-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
             >
               <span className="text-lg flex-shrink-0">🚪</span>
-              <span className="hidden lg:block font-medium">Sign Out</span>
+              <span className="font-medium">Sign Out</span>
             </button>
           </div>
         </div>

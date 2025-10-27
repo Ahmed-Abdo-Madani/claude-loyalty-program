@@ -53,15 +53,15 @@ function WalletAnalytics() {
 
   return (
     <div>
-      {/* Header Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Mobile Wallets</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Track digital wallet adoption and customer engagement</p>
+      {/* Header Section - Mobile-first */}
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Mobile Wallets</h2>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Track digital wallet adoption and customer engagement</p>
       </div>
 
-      <div className="space-y-6 md:space-y-8">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div className="space-y-6 sm:space-y-8">
+        {/* Summary Stats - Mobile-first grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           <WalletCard
             title="Wallet Cards Added"
             value={analytics.totalWalletAdds}
@@ -87,29 +87,29 @@ function WalletAnalytics() {
         </div>
 
         {/* Wallet Type Distribution */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
             <span className="mr-2">📱</span>
             Wallet Type Distribution
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {Object.entries(analytics.byType).map(([type, count]) => (
-              <div key={type} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+              <div key={type} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg sm:rounded-xl gap-3 sm:gap-0">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-lg">
                       {type === 'apple' ? '🍎' : type === 'google' ? '📱' : '❓'}
                     </span>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-900 dark:text-white capitalize">{type} Wallet</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900 dark:text-white capitalize block">{type} Wallet</span>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
                       {analytics.totalWalletAdds > 0 ? Math.round((count / analytics.totalWalletAdds) * 100) : 0}% of total
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-32 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="flex-1 sm:w-32 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${
                         type === 'apple' ? 'bg-gray-800 dark:bg-gray-300' : 'bg-blue-500'
@@ -119,17 +119,17 @@ function WalletAnalytics() {
                       }}
                     ></div>
                   </div>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white w-8">{count}</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white w-8 text-right">{count}</span>
                 </div>
               </div>
             ))}
 
             {analytics.totalWalletAdds === 0 && (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">📱</span>
+              <div className="text-center py-6 sm:py-8">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <span className="text-xl sm:text-2xl">📱</span>
                 </div>
-                <div className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-1">No wallet cards yet</div>
+                <div className="text-base sm:text-lg font-medium text-gray-600 dark:text-gray-400 mb-1">No wallet cards yet</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Share your QR codes to get started!</div>
               </div>
             )}
@@ -137,12 +137,12 @@ function WalletAnalytics() {
         </div>
 
         {/* Source Performance */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
             <span className="mr-2">📊</span>
             Wallet Adds by Source
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {Object.entries(analytics.bySource).map(([source, count]) => (
               <div key={source} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                 <div className="flex items-center space-x-3">
@@ -190,41 +190,41 @@ function WalletAnalytics() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
             <span className="mr-2">🕐</span>
             Recent Wallet Activity
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {analytics.recentWalletAdds.map((event, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 flex items-center justify-center">
+              <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 gap-2 sm:gap-0">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-lg">
                       {event.walletType === 'apple' ? '🍎' : '📱'}
                     </span>
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">
                       Customer added {event.walletType} wallet card
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       From: {event.source || 'direct'} • Customer: {event.customerId}
                     </div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 pl-13 sm:pl-0">
                   {new Date(event.timestamp).toLocaleDateString()}
                 </div>
               </div>
             ))}
 
             {analytics.recentWalletAdds.length === 0 && (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🕐</span>
+              <div className="text-center py-6 sm:py-8">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                  <span className="text-xl sm:text-2xl">🕐</span>
                 </div>
-                <div className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-1">No recent activity</div>
+                <div className="text-base sm:text-lg font-medium text-gray-600 dark:text-gray-400 mb-1">No recent activity</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Activity will appear when customers add cards to their wallets</div>
               </div>
             )}
@@ -232,13 +232,13 @@ function WalletAnalytics() {
         </div>
 
         {/* Tips and Insights */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-6">
           <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-4 flex items-center">
             <span className="mr-2">💡</span>
             Wallet Optimization Tips
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3 text-sm text-blue-700 dark:text-blue-300">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2 sm:space-y-3 text-sm text-blue-700 dark:text-blue-300">
               <div className="flex items-start space-x-2">
                 <span className="text-blue-500 mt-0.5">•</span>
                 <span>Higher wallet adoption rates indicate stronger customer engagement</span>

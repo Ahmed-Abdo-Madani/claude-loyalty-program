@@ -38,30 +38,30 @@ function DashboardHeader({ user }) {
   }
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-      <div className="lg:ml-20 xl:ml-64">
-        <div className="px-6 py-4">
+    <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+      <div className="ml-0 lg:ml-64">
+        <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             {/* Business Title with Logo */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Business Logo */}
               {logoInfo && (
                 <div className="flex-shrink-0">
                   <img
                     src={`/api/business${logoInfo.logo_url}`}
                     alt={`${user?.businessName} Logo`}
-                    className="w-12 h-12 lg:w-16 lg:h-16 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-white shadow-sm"
+                    className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-white shadow-sm"
                   />
                 </div>
               )}
 
               {/* Business Name and Dashboard Text */}
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 dark:text-gray-200">
-                  {user?.businessName?.toUpperCase() || 'BUSINESS'} <span className="font-normal">DASHBOARD</span>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-200">
+                  {user?.businessName?.toUpperCase() || 'BUSINESS'} <span className="font-normal hidden sm:inline">DASHBOARD</span>
                 </h1>
                 {logoInfo && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 hidden sm:block">
                     🏢 Business Logo Active
                   </p>
                 )}
@@ -69,11 +69,11 @@ function DashboardHeader({ user }) {
             </div>
 
             {/* Header Actions */}
-            <div className="flex items-center space-x-4">
-              {/* Dark Mode Toggle - Desktop only (mobile has it in sidebar) */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Dark Mode Toggle - Visible on mobile since sidebar is hidden */}
               <button
                 onClick={toggleTheme}
-                className="hidden lg:flex p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+                className="flex p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 min-h-[44px] min-w-[44px] items-center justify-center touch-target"
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 {isDark ? (
@@ -86,33 +86,6 @@ function DashboardHeader({ user }) {
                   </svg>
                 )}
               </button>
-
-              {/* User Info - Desktop only */}
-              <div className="hidden lg:flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {user?.businessName}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user?.userEmail}
-                  </p>
-                </div>
-                {logoInfo ? (
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 bg-white">
-                    <img
-                      src={`/api/business${logoInfo.logo_url}`}
-                      alt={`${user?.businessName} Logo`}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold">
-                      {user?.businessName?.charAt(0)?.toUpperCase() || 'B'}
-                    </span>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>

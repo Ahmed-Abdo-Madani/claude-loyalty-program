@@ -42,8 +42,8 @@ function OfferGrid({
 
   return (
     <>
-      {/* Offers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      {/* Offers Grid - Mobile-first: Single column → 2 cols → 3 cols */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {offers.map((offer) => (
           <OfferCard
             key={offer.public_id || offer.id}
