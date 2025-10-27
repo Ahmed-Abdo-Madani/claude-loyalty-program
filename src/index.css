@@ -47,6 +47,113 @@
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  /* Compact design utilities for space-efficient mobile layouts */
+  .compact-card {
+    @apply p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700;
+  }
+
+  .compact-section {
+    @apply mb-4 space-y-3;
+  }
+
+  .mobile-compact {
+    @apply p-2 sm:p-4;
+  }
+
+  .compact-header {
+    @apply mb-3 sm:mb-4;
+  }
+
+  .compact-spacing {
+    @apply space-y-3 sm:space-y-4;
+  }
+
+  .compact-gap {
+    @apply gap-3 sm:gap-4;
+  }
+
+  /* Compact typography */
+  .text-compact-title {
+    @apply text-base sm:text-lg font-semibold;
+  }
+
+  .text-compact-subtitle {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-compact-label {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-compact-value {
+    @apply text-base sm:text-lg font-bold;
+  }
+
+  /* Collapsible sections */
+  .filter-collapsed {
+    @apply max-h-0 overflow-hidden opacity-0;
+  }
+
+  .filter-expanded {
+    @apply max-h-[500px] overflow-visible opacity-100;
+  }
+
+  .filter-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Compact buttons */
+  .btn-compact {
+    @apply px-3 py-1.5 text-sm min-h-[36px];
+  }
+
+  .btn-compact-mobile {
+    @apply px-2 py-1 text-xs min-h-[44px];
+  }
+
+  .icon-btn-compact {
+    @apply w-8 h-8 sm:w-9 sm:h-9;
+  }
+
+  /* Inline stats components */
+  .stat-inline {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg border;
+  }
+
+  .stat-icon-compact {
+    @apply w-6 h-6 flex items-center justify-center rounded-md;
+  }
+
+  .stat-value-compact {
+    @apply text-base sm:text-lg font-bold;
+  }
+
+  .stat-label-compact {
+    @apply text-xs text-gray-600 dark:text-gray-400;
+  }
+
+  /* Touch-friendly on mobile, compact on desktop */
+  .touch-target-responsive {
+    @apply min-h-[44px] sm:min-h-[36px];
+  }
+
+  .touch-target-icon-responsive {
+    @apply min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px];
+  }
+
+  /* Optimized card layouts */
+  .card-compact {
+    @apply p-3 sm:p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow;
+  }
+
+  .card-header-compact {
+    @apply mb-2 sm:mb-3;
+  }
+
+  .card-section-compact {
+    @apply mb-3 sm:mb-4;
+  }
 }
 
 @layer utilities {

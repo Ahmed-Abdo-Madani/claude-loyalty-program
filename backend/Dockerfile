@@ -18,6 +18,7 @@ RUN fc-cache -fv
 # Set environment variables
 ENV NODE_ENV=production
 ENV FONTCONFIG_PATH=/etc/fonts
+ENV ICONS_PATH=/app/uploads/icons/stamps
 
 # Create app directory
 WORKDIR /app
@@ -31,7 +32,11 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
+# Verify icons manifest exists (build-time check)
+RUN test -f /app/uploads/icons/stamps/manifest.json && echo "✅ Icons manifest found" || echo "⚠️ Warning: manifest.json not found - stamp visualization will be disabled"
+
 # Create directories and set ownership for node user
+# Explicitly create stamps directory structure to ensure proper permissions
 RUN mkdir -p logs _tmp_pkpass uploads/icons/stamps/previews && \
     chown -R node:node /app
 

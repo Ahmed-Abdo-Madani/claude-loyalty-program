@@ -147,6 +147,11 @@ SESSION_SECRET=[Generate random 64-char string]
 ENCRYPTION_KEY=[Generate random 32-char string]
 FRONTEND_URL=https://app.madna.me
 
+# File System Paths (CRITICAL)
+ICONS_PATH=/app/uploads/icons/stamps
+UPLOADS_DIR=/opt/render/project/src/backend/uploads
+UPLOADS_BASE_URL=https://api.madna.me/uploads
+
 # Optional (for wallet integration)
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
@@ -160,6 +165,7 @@ SENDGRID_API_KEY=your-sendgrid-key
 ```
 
 **Notes**:
+- `ICONS_PATH` **MUST** be set to `/app/uploads/icons/stamps` for stamp card generation (Dockerfile ENV may not be inherited at runtime)
 - `FRONTEND_URL` is used for generating customer-facing URLs in test endpoints and notifications.
 - `FONTCONFIG_PATH` is automatically set to `/etc/fonts` in Docker deployment for system font support. Local development uses `backend/fonts/fonts.conf`.
 

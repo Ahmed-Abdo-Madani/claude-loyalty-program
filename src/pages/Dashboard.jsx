@@ -75,7 +75,17 @@ function Dashboard() {
       const activityData = await activityResponse.json()
 
       if (analyticsData.success) {
-        setAnalytics(analyticsData.data)
+        // Fetch customer analytics to get VIP count
+        const customerAnalyticsResponse = await secureApi.get(endpoints.customerAnalytics)
+        const customerAnalyticsData = await customerAnalyticsResponse.json()
+        
+        // Add VIP customers to analytics data
+        const enrichedAnalytics = {
+          ...analyticsData.data,
+          vipCustomers: customerAnalyticsData.success ? (customerAnalyticsData.data.vip_customers || 0) : 0
+        }
+        
+        setAnalytics(enrichedAnalytics)
       }
 
       if (activityData.success) {
@@ -91,7 +101,8 @@ function Dashboard() {
         totalCustomers: 0,
         cardsIssued: 0,
         rewardsRedeemed: 0,
-        growthPercentage: '+0%'
+        growthPercentage: '+0%',
+        vipCustomers: 0
       })
       setRecentActivity([])
     } finally {
@@ -153,10 +164,7 @@ function Dashboard() {
         <DashboardHeader user={user} />
 
         {/* Dashboard Content */}
-        <main className="p-4 sm:p-6">
-          {/* Stats Overview */}
-          <StatsCardGrid analytics={analytics} />
-
+        <main className="p-3 sm:p-6">
           {/* Tab Content */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-colors duration-300">
             {/* Tab Navigation - Hidden on mobile (use bottom nav), visible on tablet+ */}
@@ -196,9 +204,12 @@ function Dashboard() {
             </div>
 
             {/* Tab Content */}
-            <div className="p-4 sm:p-6">
+            <div className="p-3 sm:p-5">
               {activeTab === 'overview' && (
                 <div className="space-y-6">
+                  {/* Stats Overview - Only on Overview Tab */}
+                  <StatsCardGrid analytics={analytics} />
+                  
                   {/* Top Row - Main Dashboard Items */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {/* Quick Actions - Left Column */}
@@ -246,19 +257,19 @@ function Dashboard() {
               )}
 
               {activeTab === 'offers' && (
-                <OffersTab />
+                <OffersTab analytics={analytics} />
               )}
 
               {activeTab === 'scanner' && (
-                <ScannerTab />
+                <ScannerTab analytics={analytics} />
               )}
 
               {activeTab === 'branches' && (
-                <BranchesTab />
+                <BranchesTab analytics={analytics} />
               )}
 
               {activeTab === 'customers' && (
-                <CustomersTab />
+                <CustomersTab analytics={analytics} />
               )}
 
               {activeTab === 'wallet' && (

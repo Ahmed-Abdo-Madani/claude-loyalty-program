@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import QRCodeModal from './QRCodeModal'
 import OfferGrid from './OfferGrid'
+import CompactStatsBar from './CompactStatsBar'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureOfferId } from '../utils/secureAuth'
 import { CardDesignProvider } from '../contexts/CardDesignContext'
 import CardDesignEditor from './cardDesign/CardDesignEditor'
 
-function OffersTab() {
+function OffersTab({ analytics }) {
   const [offers, setOffers] = useState([])
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -22,6 +23,19 @@ function OffersTab() {
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [branchFilter, setBranchFilter] = useState('All Branches')
   const [typeFilter, setTypeFilter] = useState('All Types')
+  const [filtersExpanded, setFiltersExpanded] = useState(() => {
+    const saved = localStorage.getItem('offersFiltersExpanded')
+    return saved ? JSON.parse(saved) : false
+  })
+
+  // Persist filters expanded state
+  const toggleFiltersExpanded = () => {
+    setFiltersExpanded(prev => {
+      const newValue = !prev
+      localStorage.setItem('offersFiltersExpanded', JSON.stringify(newValue))
+      return newValue
+    })
+  }
 
   // Load offers and branches on component mount
   useEffect(() => {
@@ -167,9 +181,12 @@ function OffersTab() {
   }
 
   return (
-    <div>
+    <div className="compact-spacing">
+      {/* Compact Stats Bar - Space-efficient metrics */}
+      {analytics && <CompactStatsBar analytics={analytics} />}
+      
       {/* Header Section - Mobile-first: Stack vertically */}
-      <div className="flex flex-col space-y-3 mb-6 sm:mb-8">
+      <div className="flex flex-col space-y-3 compact-header">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Active Offers</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage your loyalty programs and track performance</p>
@@ -187,7 +204,7 @@ function OffersTab() {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center">
             <span className="text-red-600 mr-2">⚠️</span>
             <span className="text-red-800">{error}</span>
@@ -201,51 +218,123 @@ function OffersTab() {
         </div>
       )}
 
-      {/* Filters - Mobile-first: Single column stack */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 sm:mb-8">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Offers</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      {/* Collapsible Filters */}
+      <div className="mb-4">
+        {/* Filter Toggle Button with Quick Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={toggleFiltersExpanded}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
+          >
+            <span>🔍</span>
+            <span className="font-medium text-gray-900 dark:text-white">Filters</span>
+            {(statusFilter !== 'All Status' || branchFilter !== 'All Branches' || typeFilter !== 'All Types') && (
+              <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full">
+                {[statusFilter !== 'All Status', branchFilter !== 'All Branches', typeFilter !== 'All Types'].filter(Boolean).length}
+              </span>
+            )}
+            <svg 
+              className={`w-4 h-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
             >
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Paused</option>
-              <option>Scheduled</option>
-              <option>Expired</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Branch</label>
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option>All Branches</option>
-              {branches?.map((branch) => (
-                <option key={branch.id} value={branch.name}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option>All Types</option>
-              <option>Stamp Cards</option>
-              <option>Discounts</option>
-              <option>Points</option>
-            </select>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Quick Filter Pills */}
+          <button
+            onClick={() => { setStatusFilter('All Status'); setBranchFilter('All Branches'); setTypeFilter('All Types'); }}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              statusFilter === 'All Status' && branchFilter === 'All Branches' && typeFilter === 'All Types'
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setStatusFilter('Active')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              statusFilter === 'Active'
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setStatusFilter('Inactive')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              statusFilter === 'Inactive'
+                ? 'bg-yellow-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            Inactive
+          </button>
+        </div>
+
+        {/* Expandable Filter Panel */}
+        <div className={`filter-transition ${filtersExpanded ? 'filter-expanded mt-3' : 'filter-collapsed'}`}>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value)
+                    if (window.innerWidth < 640) {
+                      setFiltersExpanded(false)
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option>All Status</option>
+                  <option>Active</option>
+                  <option>Inactive</option>
+                  <option>Scheduled</option>
+                  <option>Expired</option>
+                </select>
+              </div>
+              <div>
+                <select
+                  value={branchFilter}
+                  onChange={(e) => {
+                    setBranchFilter(e.target.value)
+                    if (window.innerWidth < 640) {
+                      setFiltersExpanded(false)
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option>All Branches</option>
+                  {branches?.map((branch) => (
+                    <option key={branch.id} value={branch.name}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => {
+                    setTypeFilter(e.target.value)
+                    if (window.innerWidth < 640) {
+                      setFiltersExpanded(false)
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option>All Types</option>
+                  <option>Stamp Cards</option>
+                  <option>Discounts</option>
+                  <option>Points</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import BranchGrid from './BranchGrid'
 import LocationAutocomplete from './LocationAutocomplete'
+import CompactStatsBar from './CompactStatsBar'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
 
-function BranchesTab() {
+function BranchesTab({ analytics }) {
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -46,10 +47,14 @@ function BranchesTab() {
   }
 
 
-  const toggleBranchStatus = async (secureBranchId) => {
+  const toggleBranchStatus = async (secureBranchId, currentStatus) => {
     try {
-      console.log('🔒 Toggling branch status:', secureBranchId)
-      const response = await secureApi.patch(`${endpoints.myBranches}/${secureBranchId}/status`)  // Use /status not /toggle-status
+      console.log('🔒 Toggling branch status:', { secureBranchId, currentStatus })
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+      
+      const response = await secureApi.patch(`${endpoints.myBranches}/${secureBranchId}/status`, {
+        status: newStatus
+      })
       const data = await response.json()
       
       if (data.success) {
@@ -141,9 +146,12 @@ function BranchesTab() {
   }
 
   return (
-    <div>
+    <div className="compact-spacing">
+      {/* Compact Stats Bar - Space-efficient metrics */}
+      {analytics && <CompactStatsBar analytics={analytics} />}
+      
       {/* Header Section - Mobile-first: Stack vertically */}
-      <div className="flex flex-col space-y-4 mb-6 sm:mb-8">
+      <div className="flex flex-col space-y-4 compact-header">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Branch Management</h2>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your business locations and track performance</p>
@@ -161,7 +169,7 @@ function BranchesTab() {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center">
             <span className="text-red-600 mr-2">⚠️</span>
             <span className="text-red-800">{error}</span>
@@ -176,47 +184,72 @@ function BranchesTab() {
       )}
 
 
-      {/* Filters - Mobile-first touch targets */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 sm:mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Branches</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-3 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white touch-target"
-            >
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Inactive</option>
-              <option>Maintenance</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+      {/* Search Bar - Always Visible */}
+      <div className="mb-3">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            placeholder="Search branches..."
+            className="w-full pl-10 pr-4 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+          />
+          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Inline Filters - Always Visible */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Filter Pills */}
+          <button
+            onClick={() => { setStatusFilter('All Status'); setCityFilter('All Cities'); }}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
+              statusFilter === 'All Status' && cityFilter === 'All Cities'
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setStatusFilter('Active')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
+              statusFilter === 'Active'
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setStatusFilter('Inactive')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
+              statusFilter === 'Inactive'
+                ? 'bg-red-500 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            Inactive
+          </button>
+
+          {/* City Filter Dropdown */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full min-h-[44px]">
+            <span className="text-lg">📍</span>
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="w-full px-4 py-3 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white touch-target"
+              className="text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-0 text-gray-900 dark:text-white pr-6"
             >
-              <option>All Cities</option>
-              {[...new Set(branches?.map(branch => branch.city))].map((city) => (
+              <option value="All Cities">All Cities</option>
+              {[...new Set(branches?.map(branch => branch.city).filter(Boolean))].map((city) => (
                 <option key={city} value={city}>
                   {city}
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
-            <input
-              type="text"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search branches..."
-              className="w-full px-4 py-3 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 touch-target"
-            />
           </div>
         </div>
       </div>

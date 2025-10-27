@@ -2,14 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { endpoints, secureApi } from '../config/api'
 import { getSecureBusinessId } from '../utils/secureAuth'
 import EnhancedQRScanner from './EnhancedQRScanner'
+import CompactStatsBar from './CompactStatsBar'
 
-function ScannerTab() {
+function ScannerTab({ analytics: globalAnalytics }) {
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [scanHistory, setScanHistory] = useState([])
-  const [analytics, setAnalytics] = useState(null)
+  const [scanAnalytics, setScanAnalytics] = useState(null)
 
   // Load scan history and analytics on component mount
   useEffect(() => {
@@ -39,7 +40,7 @@ function ScannerTab() {
       const data = await response.json()
       
       if (data.success) {
-        setAnalytics(data.data || {})
+        setScanAnalytics(data.data || {})
         console.log('🔒 Scan analytics loaded successfully')
       }
     } catch (err) {
@@ -124,15 +125,6 @@ function ScannerTab() {
       } else {
         throw new Error('Test endpoint failed: ' + testResponse.message)
       }
-
-      console.log('🔧 Generated demo tokens:', {
-        businessId,
-        customerId: demoCustomerId,
-        token: demoCustomerToken,
-        hash: demoOfferHash
-      })
-
-      await processScan(demoCustomerToken, demoOfferHash)
     } catch (err) {
       console.error('Demo scan failed:', err)
       setError('Demo scan failed: ' + err.message)
@@ -211,7 +203,7 @@ function ScannerTab() {
   }
 
   return (
-    <div>
+    <div className="compact-spacing">
       {/* Enhanced QR Scanner Overlay */}
       <EnhancedQRScanner
         isActive={isScanning}
@@ -220,37 +212,37 @@ function ScannerTab() {
         onClose={stopCamera}
       />
 
+      {/* Compact Stats Bar - Global analytics from Dashboard */}
+      {globalAnalytics && <CompactStatsBar analytics={globalAnalytics} />}
+
       {/* Header Section - Mobile-first */}
-      <div className="mb-6 sm:mb-8">
+      <div className="compact-header">
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">QR Scanner</h2>
         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Scan customer wallet pass QR codes to update loyalty progress</p>
       </div>
 
-      <div className="space-y-6 sm:space-y-8">
+      <div className="compact-spacing">
 
         {/* Scanning Interface */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
+        <div className="compact-card mobile-compact">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white compact-header flex items-center">
             <span className="mr-2">🔍</span>
             QR Code Scanner
           </h3>
 
           {!isScanning ? (
-            <div className="text-center space-y-4 sm:space-y-6">
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 sm:p-8 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                  <span className="text-3xl sm:text-4xl">📱</span>
-                </div>
-                <h4 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">Ready to Scan</h4>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">Position the customer's QR code in front of your camera</p>
+            <div className="text-center space-y-3 sm:space-y-4">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-5 hover:border-primary/30 hover:shadow-md transition-all">
+                <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">Ready to Scan</h4>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">Position the customer's QR code in front of your camera</p>
 
                 <div className="flex justify-center">
                   <button
                     onClick={startCamera}
-                    className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center space-x-3 shadow-sm min-h-[44px] w-full sm:w-auto touch-target"
+                    className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 sm:px-8 py-3 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center space-x-3 shadow-sm min-h-[44px] w-full sm:w-auto touch-target hover:shadow-lg"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
                     <span>Start Camera Scanner</span>
                   </button>
@@ -291,153 +283,181 @@ function ScannerTab() {
             </h3>
 
             {scanResult.type === 'verification' && (
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 rounded-xl p-6 border-l-4 border-blue-500">
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mr-4">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h4 className="text-xl font-semibold text-blue-900 dark:text-blue-100">Customer Information Verified</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-blue-700 dark:text-blue-300 font-medium">Customer:</span>
-                    <div className="text-blue-900 dark:text-blue-100 font-semibold">{scanResult.customer?.id}</div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-blue-700 dark:text-blue-300 font-medium">Offer:</span>
-                    <div className="text-blue-900 dark:text-blue-100 font-semibold">{scanResult.offer?.title}</div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-blue-700 dark:text-blue-300 font-medium">Progress:</span>
-                    <div className="text-blue-900 dark:text-blue-100 font-semibold">{scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps} stamps</div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-blue-700 dark:text-blue-300 font-medium">Status:</span>
-                    <div className="text-blue-900 dark:text-blue-100 font-semibold">
-                      {scanResult.canScan ? '✅ Ready to scan' : '❌ Already completed'}
-                    </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-blue-900 dark:text-blue-100">Customer Verified</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Ready to award stamp</p>
                   </div>
                 </div>
+
+                {/* Customer Summary */}
+                <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Offer</span>
+                    <span className="text-lg font-bold text-blue-900 dark:text-blue-100">{scanResult.offer?.title}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Current Progress</span>
+                    <span className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      {scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <button
+                  onClick={handleConfirmStamp}
+                  disabled={!scanResult.canScan}
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-4 rounded-xl text-lg font-bold transition-all shadow-lg disabled:shadow-none"
+                >
+                  {scanResult.canScan ? '✅ Confirm & Award Stamp' : '🏆 Already Completed'}
+                </button>
               </div>
             )}
 
             {scanResult.type === 'success' && (
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-800/30 rounded-xl p-6 border border-green-200 dark:border-green-800">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-800/30 rounded-xl p-6 border-l-4 border-green-500">
+                <div className="text-center mb-4">
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h4 className="text-xl font-semibold text-green-900 dark:text-green-100">Progress Updated Successfully!</h4>
+                  <h4 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-1">Stamp Awarded!</h4>
+                  <p className="text-sm text-green-700 dark:text-green-300">{scanResult.offer?.title}</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-green-700 dark:text-green-300 font-medium">Customer:</span>
-                    <div className="text-green-900 dark:text-green-100 font-semibold">{scanResult.customer?.id}</div>
+
+                {/* Transaction Summary */}
+                <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">New Progress</span>
+                    <span className="text-3xl font-bold text-green-900 dark:text-green-100">
+                      {scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps}
+                    </span>
                   </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-green-700 dark:text-green-300 font-medium">Offer:</span>
-                    <div className="text-green-900 dark:text-green-100 font-semibold">{scanResult.offer?.title}</div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-green-700 dark:text-green-300 font-medium">New Progress:</span>
-                    <div className="text-green-900 dark:text-green-100 font-semibold">{scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps} stamps</div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <span className="text-green-700 dark:text-green-300 font-medium">Scan Time:</span>
-                    <div className="text-green-900 dark:text-green-100 font-semibold">{formatDate(scanResult.scan?.timestamp)}</div>
+                  <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-green-600 dark:bg-green-400 h-full transition-all duration-500"
+                      style={{ width: `${(scanResult.progress?.current_stamps / scanResult.progress?.max_stamps) * 100}%` }}
+                    />
                   </div>
                 </div>
+
+                {/* Reward Earned Banner */}
                 {scanResult.rewardEarned && (
-                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl p-4 mb-4">
-                    <div className="flex items-center">
-                      <span className="text-2xl mr-3">🎉</span>
-                      <div>
-                        <div className="font-bold text-lg">REWARD EARNED!</div>
-                        <div className="text-yellow-100">Customer completed loyalty program!</div>
+                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl p-4 mb-4 shadow-xl">
+                    <div className="flex items-center justify-center">
+                      <span className="text-3xl mr-3">🎉</span>
+                      <div className="text-center">
+                        <div className="font-bold text-xl">REWARD COMPLETED!</div>
+                        <div className="text-yellow-100 text-sm">Customer earned their reward</div>
                       </div>
+                      <span className="text-3xl ml-3">🎉</span>
                     </div>
                   </div>
                 )}
-                <div className="text-green-800 dark:text-green-200 font-medium bg-white/30 dark:bg-gray-800/30 rounded-lg p-3">
-                  {scanResult.message}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => startCamera()}
+                    className="flex-1 bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
+                  >
+                    Scan Next Customer
+                  </button>
+                  <button
+                    onClick={clearResults}
+                    className="px-4 py-3 bg-white/50 hover:bg-white/70 dark:bg-gray-800/50 dark:hover:bg-gray-800/70 text-green-700 dark:text-green-300 rounded-xl font-medium transition-all"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             )}
 
             {scanResult.type === 'completed' && (
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-100 dark:from-yellow-900/20 dark:to-orange-800/30 rounded-xl p-6 border border-yellow-200 dark:border-yellow-800">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mr-4">
-                    <span className="text-2xl">🏆</span>
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-100 dark:from-yellow-900/20 dark:to-orange-800/30 rounded-xl p-6 border-l-4 border-yellow-500">
+                <div className="text-center mb-4">
+                  <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                    <span className="text-3xl">🏆</span>
                   </div>
-                  <h4 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100">Already Completed</h4>
+                  <h4 className="text-2xl font-bold text-yellow-900 dark:text-yellow-100 mb-1">Already Completed!</h4>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">This reward has been earned</p>
                 </div>
-                <div className="text-yellow-800 dark:text-yellow-200 bg-white/30 dark:bg-gray-800/30 rounded-lg p-4">
-                  This customer has already completed the loyalty program and earned their reward!
+
+                <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
+                  <div className="text-center text-yellow-800 dark:text-yellow-200 font-medium">
+                    Customer has already completed this loyalty program and claimed their reward
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => startCamera()}
+                    className="flex-1 bg-yellow-600 hover:bg-yellow-700 active:scale-[0.98] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
+                  >
+                    Scan Next Customer
+                  </button>
+                  <button
+                    onClick={clearResults}
+                    className="px-4 py-3 bg-white/50 hover:bg-white/70 dark:bg-gray-800/50 dark:hover:bg-gray-800/70 text-yellow-700 dark:text-yellow-300 rounded-xl font-medium transition-all"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             )}
-
-            {/* Clear Results Button */}
-            <div className="mt-6 text-center">
-              <button
-                onClick={clearResults}
-                className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center space-x-2 mx-auto"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>Clear Results</span>
-              </button>
-            </div>
           </div>
         )}
 
-        {/* Analytics Summary - Mobile-first grid */}
-        {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">📅</span>
-                </div>
+        {/* Scanner Analytics - Compact Horizontal Layout */}
+        {scanAnalytics && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500">
+              <div className="w-8 h-8 bg-blue-500/20 rounded-md flex items-center justify-center flex-shrink-0">
+                <span className="text-base">📅</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.scansToday || 0}</div>
-              <div className="text-white/80 text-sm">Scans Today</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100 truncate">{scanAnalytics.scansToday || 0}</div>
+                <div className="text-xs text-blue-700 dark:text-blue-300 truncate">Scans Today</div>
+              </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">🎁</span>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/10 border-l-4 border-green-500">
+              <div className="w-8 h-8 bg-green-500/20 rounded-md flex items-center justify-center flex-shrink-0">
+                <span className="text-base">🎁</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.rewardsEarned || 0}</div>
-              <div className="text-white/80 text-sm">Rewards Earned</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-100 truncate">{scanAnalytics.rewardsEarned || 0}</div>
+                <div className="text-xs text-green-700 dark:text-green-300 truncate">Rewards Earned</div>
+              </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">👥</span>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/10 border-l-4 border-indigo-500">
+              <div className="w-8 h-8 bg-indigo-500/20 rounded-md flex items-center justify-center flex-shrink-0">
+                <span className="text-base">👥</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.uniqueCustomers || 0}</div>
-              <div className="text-white/80 text-sm">Unique Customers</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg sm:text-xl font-bold text-indigo-900 dark:text-indigo-100 truncate">{scanAnalytics.uniqueCustomers || 0}</div>
+                <div className="text-xs text-indigo-700 dark:text-indigo-300 truncate">Unique Customers</div>
+              </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">📊</span>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/10 border-l-4 border-purple-500">
+              <div className="w-8 h-8 bg-purple-500/20 rounded-md flex items-center justify-center flex-shrink-0">
+                <span className="text-base">📊</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.totalScans || 0}</div>
-              <div className="text-white/80 text-sm">Total Scans</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg sm:text-xl font-bold text-purple-900 dark:text-purple-100 truncate">{scanAnalytics.totalScans || 0}</div>
+                <div className="text-xs text-purple-700 dark:text-purple-300 truncate">Total Scans</div>
+              </div>
             </div>
           </div>
         )}

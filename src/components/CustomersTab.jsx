@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
 import { endpoints, secureApi } from '../config/api'
+import CompactStatsBar from './CompactStatsBar'
 import NotificationModal from './NotificationModal'
 
-function CustomersTab() {
+function CustomersTab({ analytics: globalAnalytics }) {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [analytics, setAnalytics] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [selectedCustomers, setSelectedCustomers] = useState(new Set())
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   // Notification modal state
   const [showNotificationModal, setShowNotificationModal] = useState(false)
@@ -18,10 +22,14 @@ function CustomersTab() {
   const [offers, setOffers] = useState([])
   const [successMessage, setSuccessMessage] = useState('')
 
-  // Load customers, analytics, and offers on component mount
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterStatus])
+
+  // Load customers and offers on component mount
   useEffect(() => {
     loadCustomers()
-    loadCustomerAnalytics()
     loadOffers()
   }, [])
 
@@ -67,41 +75,6 @@ function CustomersTab() {
       setCustomers([])
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadCustomerAnalytics = async () => {
-    try {
-      console.log('🔒 Loading customer analytics...')
-
-      const response = await secureApi.get(endpoints.customerAnalytics)
-      const data = await response.json()
-
-      if (data.success) {
-        const analyticsData = data.data.analytics
-        setAnalytics({
-          totalCustomers: analyticsData.total_customers || 0,
-          activeCustomers: analyticsData.active_customers || 0,
-          newThisMonth: analyticsData.new_this_month || 0,
-          vipCustomers: analyticsData.vip_customers || 0,
-          avgLifetimeValue: parseFloat(analyticsData.avg_lifetime_value || 0),
-          avgEngagementScore: analyticsData.avg_engagement_score || 0
-        })
-        console.log('🔒 Customer analytics loaded successfully')
-      } else {
-        throw new Error(data.message || 'Failed to load analytics')
-      }
-    } catch (err) {
-      console.error('Failed to load customer analytics:', err)
-      // Use fallback data on error
-      setAnalytics({
-        totalCustomers: 0,
-        activeCustomers: 0,
-        newThisMonth: 0,
-        vipCustomers: 0,
-        avgLifetimeValue: 0,
-        avgEngagementScore: 0
-      })
     }
   }
 
@@ -234,6 +207,37 @@ function CustomersTab() {
     return matchesSearch && matchesStatus
   })
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex)
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(Number(value))
+    setCurrentPage(1)
+  }
+
   const toggleCustomerSelection = (customerId) => {
     const newSelected = new Set(selectedCustomers)
     if (newSelected.has(customerId)) {
@@ -262,16 +266,19 @@ function CustomersTab() {
   }
 
   return (
-    <div>
+    <div className="compact-spacing">
+      {/* Compact Stats Bar - Global analytics from Dashboard */}
+      {globalAnalytics && <CompactStatsBar analytics={globalAnalytics} />}
+      
       {/* Header Section - Mobile-first */}
-      <div className="mb-6 sm:mb-8">
+      <div className="compact-header">
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Customer Management</h2>
         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your customers and send targeted notifications</p>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+        <div className="mb-4 sm:mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
           <div className="flex items-center">
             <span className="text-red-600 dark:text-red-400 mr-3">⚠️</span>
             <span className="text-red-800 dark:text-red-300">{error}</span>
@@ -281,7 +288,7 @@ function CustomersTab() {
 
       {/* Success Display */}
       {successMessage && (
-        <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+        <div className="mb-4 sm:mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
           <div className="flex items-center">
             <span className="text-green-600 dark:text-green-400 mr-3">✅</span>
             <span className="text-green-800 dark:text-green-300">{successMessage}</span>
@@ -289,47 +296,12 @@ function CustomersTab() {
         </div>
       )}
 
-      <div className="space-y-6 sm:space-y-8">
-        {/* Analytics Cards - Mobile-first */}
-        {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="bg-gradient-to-br from-primary to-blue-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">👥</span>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.totalCustomers}</div>
-              <div className="text-white/80 text-sm">Total Customers</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">✅</span>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.activeCustomers}</div>
-              <div className="text-white/80 text-sm">Active Customers</div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <span className="text-xl sm:text-2xl">👑</span>
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{analytics.vipCustomers}</div>
-              <div className="text-white/80 text-sm">VIP Customers</div>
-            </div>
-          </div>
-        )}
-
+      <div className="compact-spacing">
         {/* Search and Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="space-y-4">
+        <div className="compact-card mobile-compact">
+          <div className="compact-spacing">
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative mb-3">
               <input
                 type="text"
                 placeholder="Search customers..."
@@ -342,30 +314,73 @@ function CustomersTab() {
               </svg>
             </div>
 
-            {/* Filters and Actions */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Status Filter */}
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="flex-1 px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary touch-target"
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="vip">VIP</option>
-                <option value="inactive">Inactive</option>
-                <option value="churning">At Risk</option>
-              </select>
+            {/* Inline Status Filter Buttons and Action */}
+            <div className="space-y-3 mb-3">
+              {/* Filter Pills Row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setFilterStatus('all')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${
+                    filterStatus === 'all'
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setFilterStatus('active')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${
+                    filterStatus === 'active'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Active
+                </button>
+                <button
+                  onClick={() => setFilterStatus('vip')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${
+                    filterStatus === 'vip'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  VIP
+                </button>
+                <button
+                  onClick={() => setFilterStatus('inactive')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${
+                    filterStatus === 'inactive'
+                      ? 'bg-gray-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Inactive
+                </button>
+                <button
+                  onClick={() => setFilterStatus('churning')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${
+                    filterStatus === 'churning'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  At Risk
+                </button>
+              </div>
 
-              {/* Actions */}
-              <button
-                onClick={handleSendNotificationClick}
-                disabled={selectedCustomers.size === 0}
-                className="px-4 py-3 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center space-x-2 w-full sm:w-auto touch-target"
-              >
-                <span>📧</span>
-                <span>Send Notification</span>
-              </button>
+              {/* Action Button Row */}
+              <div className="flex justify-stretch sm:justify-end">
+                <button
+                  onClick={handleSendNotificationClick}
+                  disabled={selectedCustomers.size === 0}
+                  className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center space-x-2 touch-target"
+                >
+                  <span>📧</span>
+                  <span>Send Notification</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -382,17 +397,17 @@ function CustomersTab() {
           
           {/* Mobile: Card Layout */}
           <div className="block md:hidden mt-6 space-y-3">
-            {filteredCustomers.map((customer) => (
-              <div key={customer.customer_id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start space-x-3 flex-1 min-w-0">
+            {paginatedCustomers.map((customer) => (
+              <div key={customer.customer_id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start space-x-2 flex-1 min-w-0">
                     <input
                       type="checkbox"
                       checked={selectedCustomers.has(customer.customer_id)}
                       onChange={() => toggleCustomerSelection(customer.customer_id)}
                       className="mt-1 rounded border-gray-300 text-primary focus:ring-primary min-w-[20px] min-h-[20px]"
                     />
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -403,7 +418,7 @@ function CustomersTab() {
                   </div>
                 </div>
                 
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}>
                     {customer.status}
                   </span>
@@ -428,8 +443,8 @@ function CustomersTab() {
                 </div>
 
                 {customer.progress && customer.progress.length > 0 && (
-                  <div className="mb-3 space-y-1">
-                    {customer.progress.slice(0, 2).map((prog, idx) => (
+                  <div className="mb-2 space-y-1">
+                    {customer.progress.slice(0, 1).map((prog, idx) => (
                       <div key={idx} className="text-xs">
                         <span className="font-medium text-gray-900 dark:text-white">{prog.offer?.title || 'Unknown'}</span>
                         <span className="ml-2 text-gray-500 dark:text-gray-400">
@@ -438,9 +453,9 @@ function CustomersTab() {
                         </span>
                       </div>
                     ))}
-                    {customer.progress.length > 2 && (
+                    {customer.progress.length > 1 && (
                       <div className="text-xs text-primary font-medium">
-                        +{customer.progress.length - 2} more
+                        +{customer.progress.length - 1} more
                       </div>
                     )}
                   </div>
@@ -486,14 +501,14 @@ function CustomersTab() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map((customer, index) => (
+                {paginatedCustomers.map((customer, index) => (
                   <tr
                     key={customer.customer_id}
                     className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 ${
-                      index === filteredCustomers.length - 1 ? 'border-b-0' : ''
+                      index === paginatedCustomers.length - 1 ? 'border-b-0' : ''
                     }`}
                   >
-                    <td className="py-4 px-2">
+                    <td className="py-3 px-2">
                       <input
                         type="checkbox"
                         checked={selectedCustomers.has(customer.customer_id)}
@@ -501,9 +516,9 @@ function CustomersTab() {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </td>
-                    <td className="py-4 px-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    <td className="py-3 px-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                           {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div>
@@ -513,7 +528,7 @@ function CustomersTab() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-2">
+                    <td className="py-3 px-2">
                       <div className="space-y-1">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}>
                           {customer.status}
@@ -537,7 +552,7 @@ function CustomersTab() {
                       <div className="text-sm space-y-1">
                         {customer.progress && customer.progress.length > 0 ? (
                           <>
-                            {customer.progress.slice(0, 2).map((prog, idx) => (
+                            {customer.progress.slice(0, 1).map((prog, idx) => (
                               <div key={idx} className="flex items-center space-x-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-gray-900 dark:text-white truncate text-xs">
@@ -550,9 +565,9 @@ function CustomersTab() {
                                 </div>
                               </div>
                             ))}
-                            {customer.progress.length > 2 && (
+                            {customer.progress.length > 1 && (
                               <div className="text-xs text-primary font-medium">
-                                +{customer.progress.length - 2} more
+                                +{customer.progress.length - 1} more
                               </div>
                             )}
                           </>
@@ -604,6 +619,86 @@ function CustomersTab() {
             )}
           </div>
         </div>
+
+        {/* Pagination Controls */}
+        {filteredCustomers.length > 0 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+            {/* Page Info and Items Per Page */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+              <span>
+                Showing {startIndex + 1}-{Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+              </span>
+              <div className="flex items-center gap-2">
+                <label htmlFor="itemsPerPage" className="whitespace-nowrap">Items per page:</label>
+                <select
+                  id="itemsPerPage"
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Page Navigation */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className="px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Previous
+              </button>
+
+              {/* Mobile: Simple page indicator */}
+              <div className="sm:hidden px-3 py-2 text-sm font-medium text-gray-900 dark:text-white">
+                Page {currentPage} of {totalPages}
+              </div>
+
+              {/* Desktop: Page numbers */}
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-2 min-h-[44px] rounded-lg border transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">

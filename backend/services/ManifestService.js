@@ -125,6 +125,49 @@ class ManifestService {
         needsMigration = true
       }
       
+      // Comment 3: Auto-migrate manifest entries to populate strokeFile when missing and backfill legacy fields
+      if (manifest.icons.length > 0) {
+        for (const icon of manifest.icons) {
+          let iconModified = false
+          
+          // Populate filledFile from legacy fileName or default pattern
+          if (!icon.filledFile) {
+            icon.filledFile = icon.fileName || `${icon.id}-filled.svg`
+            logger.info(`🔄 Migrated filledFile for icon '${icon.id}': ${icon.filledFile}`)
+            iconModified = true
+          }
+          
+          // Check if stroke variant file exists, otherwise fallback to filled
+          if (!icon.strokeFile) {
+            const strokePath = path.join(this.iconsPath, `${icon.id}-stroke.svg`)
+            if (fs.existsSync(strokePath)) {
+              icon.strokeFile = `${icon.id}-stroke.svg`
+              logger.info(`✅ Found stroke variant for icon '${icon.id}': ${icon.strokeFile}`)
+            } else {
+              // Fallback: use filled file for stroke (will be rendered with opacity)
+              icon.strokeFile = icon.filledFile
+              logger.warn(`⚠️ No stroke variant found for icon '${icon.id}', using filledFile as fallback`)
+            }
+            iconModified = true
+          }
+          
+          // Populate previewFile if missing
+          if (!icon.previewFile) {
+            icon.previewFile = `${icon.id}.png`
+            logger.info(`🔄 Migrated previewFile for icon '${icon.id}': ${icon.previewFile}`)
+            iconModified = true
+          }
+          
+          if (iconModified) {
+            needsMigration = true
+          }
+        }
+        
+        if (needsMigration) {
+          logger.info(`🔄 Auto-migrated ${manifest.icons.length} icon entries with missing fields`)
+        }
+      }
+      
       console.log('📄 [ManifestService] Migration needed:', needsMigration)
       console.log('📄 [ManifestService] Skip write:', _skipWrite)
 
@@ -290,10 +333,25 @@ class ManifestService {
         updatedAt: new Date().toISOString()
       }
       
-      // Add legacy format fields for backwards compatibility with stampIcons routes
-      if (iconData.variants && iconData.variants.includes('filled')) {
+      // Comment 6: Propagate filledFile, strokeFile, and previewFile from iconData
+      // These fields are enriched by adminIconsController before calling addIcon()
+      if (iconData.filledFile) {
+        newIcon.filledFile = iconData.filledFile
+        newIcon.fileName = iconData.filledFile // legacy field for backwards compatibility
+      } else if (iconData.variants && iconData.variants.includes('filled')) {
+        // Fallback for old code paths
         newIcon.fileName = `${iconData.id}-filled.svg`
         newIcon.filledFile = `${iconData.id}-filled.svg`
+      }
+      
+      if (iconData.strokeFile) {
+        newIcon.strokeFile = iconData.strokeFile
+      }
+      
+      if (iconData.previewFile) {
+        newIcon.previewFile = iconData.previewFile
+      } else {
+        // Default preview file name
         newIcon.previewFile = `${iconData.id}.png`
       }
       

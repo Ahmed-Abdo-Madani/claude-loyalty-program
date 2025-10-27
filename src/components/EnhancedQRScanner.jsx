@@ -414,10 +414,10 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
       </div>
 
       {/* Controls */}
-      <div className="bg-black text-white p-4 space-y-4">
+      <div className="bg-black text-white p-3 space-y-3">
         {/* Error Message */}
         {scanStatus === 'error' && errorMessage && (
-          <div className="bg-red-600 text-white p-3 rounded-lg mb-4">
+          <div className="bg-red-600 text-white p-3 rounded-lg mb-3">
             <div className="flex items-start space-x-2">
               <span className="text-xl">⚠️</span>
               <div>
@@ -428,34 +428,23 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-center space-x-4">
-          {hasFlashlight && (
-            <button
-              onClick={toggleFlashlight}
-              className={`px-4 py-2 rounded-lg font-medium ${
-                flashlightOn ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-white'
-              }`}
-            >
-              {flashlightOn ? '🔦 Light ON' : '🔦 Light OFF'}
-            </button>
-          )}
-
-          {scanStatus === 'error' && (
-            <button
-              onClick={resetScanner}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium"
-            >
-              🔄 Try Again
-            </button>
-          )}
-        </div>
+        {/* Floating Flashlight Button - Only shown when available */}
+        {hasFlashlight && (
+          <button
+            onClick={toggleFlashlight}
+            className={`absolute top-20 right-4 w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all shadow-lg z-20 ${
+              flashlightOn 
+                ? 'bg-yellow-500 text-white shadow-yellow-500/50' 
+                : 'bg-gray-700 text-white'
+            }`}
+          >
+            <span className="text-xl">�</span>
+          </button>
+        )}
 
         {/* Instructions */}
         <div className="text-center text-gray-300 text-sm">
-          <div>📱 Hold your device steady</div>
-          <div>🎯 Center the QR code in the square</div>
-          <div>📏 Keep 6-12 inches away from the code</div>
+          📱 Hold steady • 🎯 Center QR code • 📏 Keep 6-12 inches away
         </div>
       </div>
     </div>

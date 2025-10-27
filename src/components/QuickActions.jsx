@@ -3,61 +3,67 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports }) {
     {
       id: 'new_offer',
       label: 'New Offer',
-      icon: '🎁',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      ),
       action: onNewOffer,
-      description: 'Create a new loyalty offer'
+      description: 'Create a new loyalty offer',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      hoverBg: 'hover:bg-blue-100 dark:hover:bg-blue-900/30'
     },
     {
       id: 'scan_qr',
       label: 'Scan QR',
-      icon: '📱',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
+      ),
       action: onScanQR,
-      description: 'Scan customer QR codes'
+      description: 'Scan customer QR codes',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      iconColor: 'text-green-600 dark:text-green-400',
+      hoverBg: 'hover:bg-green-100 dark:hover:bg-green-900/30'
     },
     {
       id: 'view_reports',
-      label: 'View Reports',
-      icon: '📊',
+      label: 'Reports',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      ),
       action: onViewReports,
-      description: 'View analytics and reports'
+      description: 'View analytics and reports',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      hoverBg: 'hover:bg-purple-100 dark:hover:bg-purple-900/30'
     }
   ]
 
   return (
-    <div className="bg-gradient-to-br from-primary to-purple-600 dark:from-purple-900 dark:to-indigo-900 rounded-xl p-4 sm:p-6 text-white">
-      <h3 className="text-lg font-semibold mb-4 sm:mb-6">Quick Actions</h3>
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 sm:p-4">
+      <h3 className="text-base sm:text-lg font-semibold mb-3 text-gray-900 dark:text-white">Quick Actions</h3>
 
-      <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-row gap-2 sm:gap-3 overflow-x-auto">
         {actions.map((action) => (
           <button
             key={action.id}
             onClick={action.action}
-            className="w-full flex items-center space-x-3 p-4 sm:p-5 rounded-lg bg-white/10 hover:bg-white/20 active:bg-white/30 active:scale-95 transition-all duration-200 text-left group touch-manipulation min-h-[44px]"
+            className={`flex flex-col items-center justify-center space-y-1 p-3 rounded-lg ${action.bgColor} ${action.hoverBg} ${action.iconColor} active:scale-95 transition-all duration-200 text-center group touch-manipulation min-h-[44px] flex-1 min-w-[90px]`}
             title={action.description}
           >
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center group-hover:bg-white/30 transition-colors duration-200">
-              <span className="text-xl sm:text-2xl">{action.icon}</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center shadow-sm">
+              {action.icon}
             </div>
-            <div className="flex-1">
-              <span className="font-medium text-white group-hover:text-white/90">
-                {action.label}
-              </span>
-            </div>
-            <div className="opacity-60 group-hover:opacity-100 transition-opacity duration-200">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {action.label}
+            </span>
           </button>
         ))}
-      </div>
-
-      {/* Quick Stats at bottom */}
-      <div className="mt-4 sm:mt-6 pt-4 border-t border-white/20">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-white/70">Quick Access</span>
-          <span className="text-white/70">3 Actions</span>
-        </div>
       </div>
     </div>
   )

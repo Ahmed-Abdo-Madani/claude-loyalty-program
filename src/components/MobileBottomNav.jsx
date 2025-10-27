@@ -26,7 +26,7 @@ import {
 function MobileBottomNav() {
   const location = useLocation()
   
-  // Navigation items matching DashboardSidebar structure
+  // Navigation items - Streamlined to 5 primary tabs (Analytics moved to Overview)
   const navigationItems = [
     {
       name: 'Overview',
@@ -62,13 +62,6 @@ function MobileBottomNav() {
       icon: UsersIcon,
       iconSolid: UsersIconSolid,
       tabName: 'customers'
-    },
-    {
-      name: 'Analytics',
-      path: '/dashboard?tab=analytics',
-      icon: ChartBarIcon,
-      iconSolid: ChartBarIconSolid,
-      tabName: 'analytics'
     }
   ]
 
@@ -101,7 +94,7 @@ function MobileBottomNav() {
               to={item.path}
               className={`
                 flex flex-col items-center justify-center
-                min-h-[44px] min-w-[44px] px-2 py-1
+                min-h-[44px] min-w-[44px] px-3 py-2
                 transition-all duration-200
                 touch-target
                 ${active 
@@ -113,7 +106,7 @@ function MobileBottomNav() {
               aria-label={item.name}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon className="w-6 h-6 mb-0.5" />
+              <Icon className="w-7 h-7 mb-0.5" />
               <span className={`text-xs font-medium ${active ? 'font-semibold' : ''}`}>
                 {item.name}
               </span>

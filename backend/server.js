@@ -19,6 +19,7 @@ import stampIconsRoutes from './routes/stampIcons.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
+import StampImageGenerator from './services/StampImageGenerator.js'
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -288,6 +289,18 @@ async function initializeDatabase() {
       logger.warn('⚠️ Apple Wallet certificate loading failed:', error.message)
       logger.warn('   Apple Wallet passes will not work until certificates are properly configured')
       // Continue startup even if Apple Wallet certificates fail
+    }
+
+    // Validate stamp icons directory
+    try {
+      const iconsValid = StampImageGenerator.validateIconsDirectory()
+      if (!iconsValid) {
+        logger.warn('⚠️ Stamp icons validation failed - passes may not show stamp visualization')
+        logger.warn('   Run: node backend/scripts/initialize-stamp-icons.js')
+      }
+    } catch (error) {
+      logger.warn('⚠️ Stamp icons validation error:', error.message)
+      // Continue startup - stamp icons are optional
     }
 
     // Initialize location service

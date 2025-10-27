@@ -86,12 +86,64 @@ const __dirname = dirname(__filename)
 class StampImageGenerator {
   // Cache SVG icons by icon ID
   static iconCache = new Map()
-  // Go up two levels from backend/services to project root, then into uploads/icons/stamps
-  static ICONS_BASE_PATH = process.env.ICONS_PATH || join(__dirname, '..', '..', 'uploads', 'icons', 'stamps')
+  
+  // Environment-aware path resolution for icons directory
+  // Priority: 1) ICONS_PATH env var, 2) Production absolute path, 3) Development relative path
+  static ICONS_BASE_PATH = (() => {
+    if (process.env.ICONS_PATH) {
+      logger.info(`🎨 Using ICONS_PATH from environment: ${process.env.ICONS_PATH}`)
+      return process.env.ICONS_PATH
+    }
+    
+    if (process.env.NODE_ENV === 'production') {
+      const productionPath = '/app/uploads/icons/stamps'
+      logger.info(`🎨 Using production absolute path: ${productionPath}`)
+      return productionPath
+    }
+    
+    // Development: One level up from backend/services
+    const devPath = join(__dirname, '..', 'uploads', 'icons', 'stamps')
+    logger.info(`🎨 Using development relative path: ${devPath}`)
+    return devPath
+  })()
 
   // Current loaded icons (for backwards compatibility)
   static filledStampSVG = null
   static strokeStampSVG = null
+
+  /**
+   * Validates that the icons directory and manifest exist
+   * Called during server startup for early error detection
+   */
+  static validateIconsDirectory() {
+    logger.info('🎨 Validating icons directory...')
+    logger.info(`📁 Icons base path: ${this.ICONS_BASE_PATH}`)
+    logger.info(`🔧 NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
+    logger.info(`📍 __dirname: ${__dirname}`)
+
+    const manifestPath = join(this.ICONS_BASE_PATH, 'manifest.json')
+
+    if (!existsSync(this.ICONS_BASE_PATH)) {
+      logger.warn(`⚠️ Icons directory not found: ${this.ICONS_BASE_PATH}`)
+      logger.warn('⚠️ Stamp visualization will be disabled')
+      return false
+    }
+
+    if (!existsSync(manifestPath)) {
+      logger.warn(`⚠️ Icons manifest not found: ${manifestPath}`)
+      logger.warn('⚠️ Stamp visualization will be disabled')
+      return false
+    }
+
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+      logger.info(`✅ Icons manifest found: ${manifest.icons?.length || 0} icons available`)
+      return true
+    } catch (error) {
+      logger.error(`❌ Failed to parse icons manifest: ${error.message}`)
+      return false
+    }
+  }
 
   /**
    * Load stamp SVG icons from persistent storage (cached per icon ID)
@@ -108,49 +160,112 @@ class StampImageGenerator {
     }
 
     try {
-      // Load manifest
+      // Load manifest with detailed diagnostics
       const manifestPath = join(this.ICONS_BASE_PATH, 'manifest.json')
+      logger.info(`📖 Attempting to load manifest from: ${manifestPath}`)
+      logger.debug(`📁 ICONS_BASE_PATH: ${this.ICONS_BASE_PATH}`)
+      logger.debug(`🔧 NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
 
       if (!existsSync(manifestPath)) {
+        // Detailed diagnostics for missing manifest
+        const dirExists = existsSync(this.ICONS_BASE_PATH)
         logger.error(`❌ Manifest not found at: ${manifestPath}`)
+        logger.error(`📊 Diagnostic info:`)
+        logger.error(`   - ICONS_BASE_PATH: ${this.ICONS_BASE_PATH}`)
+        logger.error(`   - Directory exists: ${dirExists}`)
+        logger.error(`   - NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
+        logger.error(`   - __dirname: ${__dirname}`)
         throw new Error('Stamp icons manifest not found')
       }
 
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'))
-      const iconData = manifest.icons.find(i => i.id === iconId)
+      
+      // Guard against missing icons array (Comment 1)
+      const icons = manifest.icons || []
+      if (icons.length === 0) {
+        logger.warn(`⚠️ Manifest has no icons array at: ${manifestPath}`)
+        logger.warn(`⚠️ Stamp visualization will be disabled - manifest structure invalid`)
+        throw new Error('Manifest icons array is empty or missing')
+      }
+      
+      let iconData = icons.find(i => i.id === iconId)
 
+      // Comment 7: Fallback to default icon if not found
       if (!iconData) {
-        logger.warn(`⚠️ Icon '${iconId}' not found in manifest, using default 'coffee-01'`)
-        // Fallback to default icon
-        if (iconId !== 'coffee-01') {
-          return this.loadStampIcons('coffee-01')
+        logger.warn(`⚠️ Icon '${iconId}' not found in manifest`)
+        // Try first icon in manifest as fallback
+        const defaultIcon = icons[0]
+        if (defaultIcon && iconId !== defaultIcon.id) {
+          logger.info(`🔄 Using first icon '${defaultIcon.id}' as fallback for missing '${iconId}'`)
+          iconData = defaultIcon
+        } else {
+          // No fallback available - signal to caller to use logo/emoji mode
+          logger.error(`❌ No fallback icon available - manifest is empty or default missing`)
+          throw new Error(`Icon '${iconId}' not found and no fallback available`)
         }
-        throw new Error(`Default icon 'coffee-01' not found in manifest`)
       }
 
-      // Load SVG files
-      const filledPath = join(this.ICONS_BASE_PATH, iconData.filledFile)
-      const strokePath = join(this.ICONS_BASE_PATH, iconData.strokeFile)
+      // Comment 1: Resolve filledFile and strokeFile with aliases (make strokeFile optional)
+      const filledFile = iconData.filledFile || iconData.fileName || `${iconData.id}-filled.svg`
+      const strokeFile = iconData.strokeFile || iconData.outlineFile || iconData.hollowFile || null
 
-      if (!existsSync(filledPath)) {
+      // Comment 9: Log resolved file paths
+      logger.info('Resolved icon files', { 
+        iconId: iconData.id, 
+        filledFile, 
+        strokeFile: strokeFile || '(fallback to filled)',
+        basePath: this.ICONS_BASE_PATH 
+      })
+
+      // Comment 1: Only require filledFile; strokeFile is optional
+      if (!filledFile) {
+        logger.error(`❌ Icon '${iconData.id}' missing required filledFile in manifest: ${manifestPath}`)
+        throw new Error(`Icon '${iconData.id}' has no filledFile configuration`)
+      }
+
+      // Comment 1 & 9: Guard path.join calls - only invoke with defined strings
+      const filledPath = join(this.ICONS_BASE_PATH, filledFile)
+      const strokePath = strokeFile ? join(this.ICONS_BASE_PATH, strokeFile) : null
+
+      // Comment 9: Check and log file existence
+      const filledExists = existsSync(filledPath)
+      const strokeExists = strokePath ? existsSync(strokePath) : false
+      
+      logger.info('Icon file existence check', {
+        iconId: iconData.id,
+        filledPath,
+        filledExists,
+        strokePath: strokePath || 'N/A',
+        strokeExists: strokePath ? strokeExists : 'N/A'
+      })
+
+      if (!filledExists) {
         throw new Error(`Filled icon file not found: ${filledPath}`)
       }
-      if (!existsSync(strokePath)) {
-        throw new Error(`Stroke icon file not found: ${strokePath}`)
+
+      // Load filled SVG
+      this.filledStampSVG = readFileSync(filledPath, 'utf-8')
+
+      // Comment 1: Load stroke SVG if available, otherwise fallback to filled
+      if (strokePath && strokeExists) {
+        this.strokeStampSVG = readFileSync(strokePath, 'utf-8')
+        logger.info(`✅ Loaded both filled and stroke variants for icon: ${iconData.id}`)
+      } else {
+        // Fallback: Use filled for unearned stamps with reduced opacity
+        this.strokeStampSVG = this.filledStampSVG
+        logger.warn(`⚠️ Icon '${iconData.id}' has no stroke variant, using filled with opacity for unearned stamps`)
       }
 
-      this.filledStampSVG = readFileSync(filledPath, 'utf-8')
-      this.strokeStampSVG = readFileSync(strokePath, 'utf-8')
-
       // Cache for future use
-      this.iconCache.set(iconId, {
+      this.iconCache.set(iconData.id, {
         filled: this.filledStampSVG,
         stroke: this.strokeStampSVG
       })
 
-      logger.info(`✅ Loaded stamp SVG icon: ${iconId} from ${this.ICONS_BASE_PATH}`)
+      logger.info(`✅ Loaded stamp SVG icon: ${iconData.id} from ${this.ICONS_BASE_PATH}`)
     } catch (error) {
-      logger.error(`❌ Failed to load stamp icon '${iconId}':`, error.message)
+      logger.error(`❌ Failed to load stamp icon '${iconId}': ${error.message}`)
+      logger.warn(`⚠️ Stamp visualization will be disabled for this pass`)
       throw error
     }
   }
@@ -287,7 +402,20 @@ class StampImageGenerator {
       return finalImage
 
     } catch (error) {
-      logger.error('❌ Failed to generate stamp hero image:', error)
+      logger.error('❌ Failed to generate stamp hero image:', error.message)
+      
+      // Determine failure reason for better diagnostics
+      if (error.message.includes('manifest not found')) {
+        logger.error('💡 Cause: Icons manifest missing - check ICONS_PATH configuration')
+      } else if (error.message.includes('icon file not found')) {
+        logger.error('💡 Cause: Icon files missing from stamps directory')
+      } else if (error.message.includes('loadStampIcons')) {
+        logger.error('💡 Cause: Failed to load stamp icons')
+      } else {
+        logger.error('💡 Cause: Unknown error during image generation')
+      }
+      
+      logger.warn('⚠️ Using fallback solid color image instead')
       // Fallback: return solid color background
       return await this.createFallbackImage(backgroundColor)
     }
@@ -849,14 +977,14 @@ class StampImageGenerator {
     // Load SVG stamp icons (cached per icon ID)
     this.loadStampIcons(stampIcon)
 
-    // Extract and process styles from both SVG icons
-    // Styles must be at SVG root level, not inside <g> elements
-    const filledStyles = this.extractSVGStyles(this.filledStampSVG)
-    const strokeStyles = this.extractSVGStyles(this.strokeStampSVG)
+    // Comment 4: Extract and process styles from both SVG icons with null-guards
+    // Set to empty strings if SVGs are falsy
+    const filledStyles = this.filledStampSVG ? this.extractSVGStyles(this.filledStampSVG) : ''
+    const strokeStyles = this.strokeStampSVG ? this.extractSVGStyles(this.strokeStampSVG) : ''
 
     // Rename CSS classes to avoid conflicts (both icons use .st0, .st1, etc.)
-    const filledStylesRenamed = this.renameClasses(filledStyles, 'filled-')
-    const strokeStylesRenamed = this.renameClasses(strokeStyles, 'stroke-')
+    const filledStylesRenamed = filledStyles ? this.renameClasses(filledStyles, 'filled-') : ''
+    const strokeStylesRenamed = strokeStyles ? this.renameClasses(strokeStyles, 'stroke-') : ''
 
     // Generate EXACT number of stamps as stampsRequired
     // Each stamp uses custom SVG icon (filled or stroke version)
@@ -864,19 +992,29 @@ class StampImageGenerator {
       for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
         const filled = stampIndex < stampsEarned
 
-        // Choose which SVG icon to use and get its content
-        const iconSVG = filled ? this.filledStampSVG : this.strokeStampSVG
+        // Comment 4: Choose which SVG icon to use with null-guard
+        // If strokeStampSVG is falsy or equals filled, use filledStampSVG with adjusted opacity
+        const useStrokeVariant = !filled && this.strokeStampSVG && (this.strokeStampSVG !== this.filledStampSVG)
+        const iconSVG = useStrokeVariant ? this.strokeStampSVG : this.filledStampSVG
+        
+        // Guard against null/undefined SVG
+        if (!iconSVG) {
+          logger.error(`❌ No SVG available for stamp ${stampIndex + 1}`)
+          continue
+        }
+        
         const iconContent = this.extractSVGContent(iconSVG)
 
         // Rename classes in the graphical content to match the renamed styles
-        const prefix = filled ? 'filled-' : 'stroke-'
+        const prefix = (filled || !useStrokeVariant) ? 'filled-' : 'stroke-'
         const iconContentRenamed = this.renameClasses(iconContent, prefix)
 
-        const iconOpacity = filled ? 1.0 : 0.5  // Filled: full opacity, Unearned: 50%
+        // Adjust opacity: Filled=1.0, Unearned with stroke=0.5, Unearned with filled fallback=0.3
+        const iconOpacity = filled ? 1.0 : (useStrokeVariant ? 0.5 : 0.3)
 
         // Calculate stamp position and size
         // Extract viewBox from the original SVG to get correct dimensions
-        const svgSource = filled ? this.filledStampSVG : this.strokeStampSVG
+        const svgSource = iconSVG
         const viewBox = this.extractViewBox(svgSource)
 
         const iconSize = layout.stampSize * 0.9  // Use 90% of available space

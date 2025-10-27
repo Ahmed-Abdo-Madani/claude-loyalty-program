@@ -2,10 +2,11 @@ import crypto from 'crypto'
 import archiver from 'archiver'
 import forge from 'node-forge'
 import sharp from 'sharp'
-import { PassGenerator } from '../utils/passGenerator.js'
+import { PassGenerator, createContentDispositionHeader } from '../utils/passGenerator.js'
 import WalletPassService from '../services/WalletPassService.js'
 import CardDesignService from '../services/CardDesignService.js'
 import CustomerService from '../services/CustomerService.js'
+import ManifestService from '../services/ManifestService.js'
 import appleCertificateValidator from '../utils/appleCertificateValidator.js'
 import applePassSigner from '../utils/applePassSigner.js'
 import SafeImageFetcher from '../utils/SafeImageFetcher.js'
@@ -256,7 +257,10 @@ class AppleWalletController {
 
       // Set headers for .pkpass download
       res.setHeader('Content-Type', 'application/vnd.apple.pkpass')
-      res.setHeader('Content-Disposition', `attachment; filename="${offerData.businessName.replace(/[^a-zA-Z0-9]/g, '')}-loyalty-card.pkpass"`)
+      res.setHeader('Content-Disposition', createContentDispositionHeader(
+        `${offerData.businessName}-loyalty-card`,
+        { extension: 'pkpass', maxLength: 40 }
+      ))
       res.setHeader('Content-Length', pkpassBuffer.length)
 
       logger.info('✅ Apple Wallet pass generated successfully')
@@ -653,7 +657,26 @@ class AppleWalletController {
 
     // Determine stamp display mode
     let stampDisplayType = design?.stamp_display_type || 'logo'
-    const stampIconId = design?.stamp_icon || 'coffee-01'
+    let stampIconId = design?.stamp_icon || 'coffee-01'
+
+    // Comment 2: Validate stampIcon against manifest entries
+    try {
+      const manifest = ManifestService.readManifest()
+      const validIcon = manifest.icons?.find(icon => icon.id === stampIconId)
+      
+      if (!validIcon) {
+        logger.warn(`⚠️ Invalid stamp icon ID '${stampIconId}' not found in manifest`)
+        // Fallback to first available icon or known-good default
+        const fallbackIcon = manifest.icons?.[0]?.id || 'gift-01'
+        logger.info(`🔄 Using fallback icon '${fallbackIcon}' instead of invalid '${stampIconId}'`)
+        stampIconId = fallbackIcon
+      } else {
+        logger.info(`✅ Stamp icon '${stampIconId}' validated against manifest`)
+      }
+    } catch (error) {
+      logger.warn(`⚠️ Could not validate stamp icon against manifest: ${error.message}`)
+      // Continue with provided icon ID - StampImageGenerator will handle invalid IDs
+    }
 
     // Validate stamp display configuration
     if (stampDisplayType === 'logo' && !design?.logo_url) {
@@ -671,7 +694,7 @@ class AppleWalletController {
     const stampHeroImage = await StampImageGenerator.generateStampHeroImage({
       stampsEarned: progressData.stampsEarned || 0,
       stampsRequired: offerData.stampsRequired || offerData.stamps_required || 10,
-      stampIcon: stampIconId,  // SVG icon ID (e.g., 'coffee-01')
+      stampIcon: stampIconId,  // SVG icon ID (e.g., 'coffee-01') - now validated
       stampDisplayType: stampDisplayType,  // 'svg' or 'logo'
       logoUrl: design?.logo_url,
       heroImageUrl: design?.hero_image_url,

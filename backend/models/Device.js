@@ -37,10 +37,13 @@ const Device = sequelize.define('Device', {
   },
   // Device Metadata (JSONB)
   // Stores additional device information:
-  // - user_agent: HTTP User-Agent string
+  // - user_agent: HTTP User-Agent string (use this for device lookup, NOT a separate column)
   // - platform: 'iOS'
   // - os_version: iOS version (e.g., '17.2')
   // - device_model: iPhone model (e.g., 'iPhone14,2')
+  // 
+  // ⚠️ IMPORTANT: user_agent is stored in this JSONB column, not as a separate column
+  // To query by user_agent: sequelize.where(sequelize.cast(sequelize.json('device_info.user_agent'), 'text'), 'Safari...')
   device_info: {
     type: DataTypes.JSONB,
     defaultValue: {},

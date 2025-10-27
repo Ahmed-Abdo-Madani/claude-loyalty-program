@@ -11,9 +11,9 @@ function BranchGrid({
   onManageOffers
 }) {
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('ar-SA', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'SAR'
     }).format(amount)
   }
 
@@ -47,8 +47,8 @@ function BranchGrid({
 
   return (
     <>
-      {/* Branches Grid - Mobile-first: Single column → 2 cols → 3 cols */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Branches Grid - Compact spacing */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {branches.map((branch) => (
           <BranchCard
             key={branch.public_id || branch.id}
@@ -63,40 +63,38 @@ function BranchGrid({
         ))}
       </div>
 
-      {/* Grid Summary */}
-      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 text-center">
-          <div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              {branches.length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Total Branches
-            </div>
+      {/* Grid Summary - Compact horizontal bar */}
+      <div className="flex items-center justify-around gap-2 sm:gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-2 sm:px-3 py-2.5 border border-gray-200 dark:border-gray-700">
+        <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
+          <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+            {branches.length}
           </div>
-          <div>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
-              {branches.filter(branch => branch.status === 'active').length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Active Locations
-            </div>
+          <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+            Total
           </div>
-          <div>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-              {branches.reduce((sum, branch) => sum + (branch.customers || 0), 0)}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Total Customers
-            </div>
+        </div>
+        <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
+          <div className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">
+            {branches.filter(branch => branch.status === 'active').length}
           </div>
-          <div>
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-              {formatCurrency(branches.reduce((sum, branch) => sum + (branch.monthlyRevenue || 0), 0))}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Monthly Revenue
-            </div>
+          <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+            Active
+          </div>
+        </div>
+        <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
+          <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+            {branches.reduce((sum, branch) => sum + (branch.customers || 0), 0)}
+          </div>
+          <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+            Customers
+          </div>
+        </div>
+        <div className="flex-1 text-center">
+          <div className="text-base sm:text-lg font-bold text-purple-600 dark:text-purple-400">
+            {formatCurrency(branches.reduce((sum, branch) => sum + (branch.monthlyRevenue || 0), 0))}
+          </div>
+          <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
+            Revenue
           </div>
         </div>
       </div>

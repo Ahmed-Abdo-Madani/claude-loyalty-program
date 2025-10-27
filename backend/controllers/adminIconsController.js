@@ -139,13 +139,28 @@ class AdminIconsController {
       }
 
       // Add icon to manifest
+      // Comment 6: Enrich iconData with filledFile, previewFile, and strokeFile
       const iconData = {
         id,
         name,
         category,
         description: description || '',
-        variants
+        variants,
+        // Always set filledFile and previewFile
+        filledFile: `${id}-filled.svg`,
+        previewFile: `${id}.png`,
+        // Set strokeFile: if stroke variant uploaded, use it; otherwise fallback to filled
+        strokeFile: variants.includes('stroke') ? `${id}-stroke.svg` : `${id}-filled.svg`
       }
+
+      // Log enriched icon data
+      logger.info('Enriched icon data for manifest', {
+        iconId: id,
+        filledFile: iconData.filledFile,
+        strokeFile: iconData.strokeFile,
+        previewFile: iconData.previewFile,
+        hasStrokeVariant: variants.includes('stroke')
+      })
 
       try {
         await ManifestService.addIcon(iconData)
