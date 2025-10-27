@@ -287,7 +287,7 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     const customerData = {
       customerId: walletPass.customer_id,
       firstName: walletPass.customer?.first_name || 'Valued',
-      lastName: walletPass.customer?.last_name || 'Customer',
+      lastName: walletPass.customer?.last_name || '',
       joinedDate: walletPass.created_at || new Date()
     }
 

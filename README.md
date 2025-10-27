@@ -6,7 +6,7 @@ A cost-effective and scalable loyalty program management platform designed for b
 
 ### **For Businesses**
 - ⚡ **5-minute setup** - Create loyalty programs in minutes
-- 📱 **QR Code generation** - Unique codes for each offer
+- 📱 **QR Code generation** - Unique codes for each offer with mobile-optimized modal (no scrolling required on mobile devices)
 - 🎯 **Multiple program types** - Stamps, points, discounts
 - 📊 **Real-time analytics** - Track customer engagement
 - 🏪 **Multi-location support** - Manage multiple branches

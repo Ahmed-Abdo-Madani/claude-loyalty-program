@@ -656,7 +656,7 @@ router.get('/public/offer/:id', async (req, res) => {
         {
           model: Business,
           as: 'business',
-          attributes: ['business_name', 'business_name_ar', 'phone', 'city', 'logo_filename', 'logo_url']
+          attributes: ['business_name', 'business_name_ar', 'phone', 'city', 'district', 'region', 'address', 'location_hierarchy', 'logo_filename', 'logo_url']
         },
         {
           model: OfferCardDesign,
@@ -692,8 +692,15 @@ router.get('/public/offer/:id', async (req, res) => {
       stampsRequired: offer.stamps_required,
       type: offer.type,
       status: offer.status,
+      // PHASE 10: Include business contact and location data for Apple Wallet back fields
       businessPhone: offer.business?.phone,
+      phone: offer.business?.phone, // Alias for backward compatibility
       businessCity: offer.business?.city,
+      businessDistrict: offer.business?.district,
+      businessRegion: offer.business?.region,
+      businessAddress: offer.business?.address,
+      address: offer.business?.address, // Alias for backward compatibility
+      location_hierarchy: offer.business?.location_hierarchy,
       // Business logo information for customer-facing display
       businessLogo: offer.business?.logo_url ? {
         url: `/api/business/public/logo/${offer.business_id}/${offer.business.logo_filename}`,
@@ -873,7 +880,7 @@ router.post('/customers/signup', async (req, res) => {
       offer.business_id,
       {
         firstName: customerData.firstName || 'Guest',
-        lastName: customerData.lastName || 'Customer',
+        lastName: customerData.lastName || '',
         phone: customerData.phone || customerData.whatsapp || null,
         email: customerData.email || null,
         date_of_birth: customerData.birthday || null,

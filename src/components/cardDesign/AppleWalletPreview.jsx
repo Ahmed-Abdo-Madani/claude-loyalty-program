@@ -7,7 +7,7 @@
 import { hexToRgbString } from '../../utils/colorUtils'
 import { apiBaseUrl } from '../../config/api'
 
-function AppleWalletPreview({ design, offerData }) {
+function AppleWalletPreview({ design, offerData, customerData }) {
   const {
     background_color = '#3B82F6',
     foreground_color = '#FFFFFF',
@@ -22,8 +22,14 @@ function AppleWalletPreview({ design, offerData }) {
     title = 'Loyalty Card',
     description = 'Your loyalty rewards',
     stamps_required = 10,
-    type = 'stamps'
+    type = 'stamps',
+    businessName = 'Business Name'
   } = offerData || {}
+
+  // Mock customer data for preview if not provided
+  const mockCustomerName = customerData 
+    ? `${customerData.firstName || ''} ${customerData.lastName || ''}`.trim()
+    : 'John Doe'
 
   // Mock progress for preview
   const mockProgress = Math.floor(stamps_required * 0.6) // 60% complete
@@ -69,7 +75,7 @@ function AppleWalletPreview({ design, offerData }) {
       >
         {/* Pass Header */}
         <div className="p-6 pb-4">
-          {/* Logo and Title */}
+          {/* Logo and Business Name Header - PHASE 1 */}
           <div className="flex items-start justify-between mb-6">
             {logo_apple_url && (
               <img
@@ -81,10 +87,11 @@ function AppleWalletPreview({ design, offerData }) {
             )}
             <div className="text-right ml-3">
               <p
-                className="text-xs font-medium uppercase tracking-wider"
-                style={{ color: label_color }}
+                className="text-sm font-semibold truncate"
+                style={{ color: foreground_color, maxWidth: '180px' }}
+                title={businessName}
               >
-                Loyalty Card
+                {businessName}
               </p>
             </div>
           </div>
@@ -218,6 +225,24 @@ function AppleWalletPreview({ design, offerData }) {
               </div>
             </div>
           )}
+
+          {/* PHASE 2: Customer Name - Auxiliary Field (Right Side Under Hero) */}
+          <div className="pt-2">
+            <div className="text-right">
+              <p
+                className="text-xs font-semibold uppercase tracking-wide mb-1"
+                style={{ color: label_color }}
+              >
+                Member
+              </p>
+              <p
+                className="text-base font-medium"
+                style={{ color: foreground_color }}
+              >
+                {mockCustomerName}
+              </p>
+            </div>
+          </div>
 
           {/* Additional Info */}
           <div className="grid grid-cols-2 gap-4 pt-2">

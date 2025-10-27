@@ -1622,7 +1622,597 @@ These have been copied to `public/assets/wallet-buttons/` with standardized nami
 - [ ] Test QR parameter tracking through success page
 - [ ] Verify analytics tracking for wallet additions
 
+---
+
+## 🍎 Apple Wallet Pass Enhancements
+
+### Overview
+Apple Wallet passes now include enhanced information display to provide customers with comprehensive business details and improve the overall user experience.
+
+**Key Enhancements:**
+- Business name appears in top right corner (header field)
+- Customer name displayed on right side under hero image (auxiliary field)
+- Business contact and location details on back of pass (back fields)
+- Logo positioning improved (closer to left edge for better alignment)
+
+### 1. Pass Structure
+
+**Front of Pass:**
+- **Header**: Logo (left, 5px offset) + Business name (right-aligned)
+- **Hero Image**: Dynamic stamp visualization (624x168px)
+- **Secondary Fields**: Progress indicator ("X of Y stamps")
+- **Auxiliary Fields**: Customer name ("Member: John Doe")
+- **Barcode**: QR code for POS scanning with encrypted customer token
+
+**Back of Pass:**
+- **Business Phone**: Contact number with tap-to-call enabled (PKDataDetectorTypePhoneNumber)
+- **Location**: Full location hierarchy (Region, City, District)
+- **Address**: Street address with tap-to-map functionality (PKDataDetectorTypeAddress)
+- **Offer Details**: Title and description
+- **Reward**: Reward description
+- **Member ID**: Customer ID for reference and support
+
+### 2. Field Alignment
+
+**Apple PassKit Field Types:**
+- **Header fields**: Right-aligned (top right corner next to logo)
+- **Auxiliary fields**: Right-aligned (right side of pass front)
+- **Secondary fields**: Left-aligned (progress indicator)
+- **Back fields**: Left-aligned (standard for detailed information)
+
+### 3. Logo Positioning
+
+**Previous Configuration:**
+- @1x resolution: 10px offset from left edge (160x50px canvas)
+- @2x resolution: 20px offset from left edge (320x100px canvas)
+- Visual impact: Noticeable padding from left edge
+
+**Updated Configuration:**
+- @1x resolution: 3px offset from left edge (proportional to @2x)
+- @2x resolution: 5px offset from left edge (closer to edge alignment)
+- Visual impact: Logo appears more aligned with pass edge while maintaining safe margin
+- No changes to logo size or aspect ratio
+
+**Design Rationale:**
+Reducing the left offset brings the logo closer to the edge, matching the visual expectations of Apple Wallet passes (similar to Apple Pay cards). The 5px offset maintains a minimal safe margin to prevent clipping while creating a more polished appearance.
+
+### 4. Data Requirements
+
+**Required Data (Pass Generation Fails Without):**
+- Customer first name and last name
+- Business name
+- Offer title and stamps required
+- Customer ID and offer ID
+
+**Optional Data (Graceful Degradation):**
+- Business phone (omitted from back if missing)
+- Business location/city/district/region (omitted from back if missing)
+- Business address (omitted from back if missing)
+- Reward description (uses offer title as fallback)
+- Business logo (Apple Wallet icon used as fallback)
+
+**Data Flow:**
+1. Frontend fetches offer from `/api/business/public/offer/:id` (includes business data)
+2. Business model includes: phone, city, district, region, address, location_hierarchy
+3. Data passed to Apple Wallet controller via `/api/wallet/apple/generate`
+4. Controller builds backFields array dynamically based on available data
+
+### 5. iOS Compatibility
+
+**Minimum Supported Version:** iOS 15.6
+
+**Field Support:**
+- Header fields: ✅ Supported on all iOS versions with Wallet
+- Secondary fields: ✅ Supported on all iOS versions
+- Auxiliary fields: ✅ Supported on all iOS versions
+- Back fields: ✅ Supported on all iOS versions
+- Data detectors (phone/address): ✅ Supported on iOS 10+
+
+**Testing Matrix:**
+- iOS 15.6 (minimum supported version) ✅
+- iOS 16.x (current stable) ✅
+- iOS 17.x (latest) ✅
+
+### 6. Testing Checklist
+
+**Pass Generation Tests:**
+- [ ] Generate pass with complete business data (phone, location, address)
+- [ ] Generate pass with missing business phone (should omit phone field from back)
+- [ ] Generate pass with missing location (should omit location field from back)
+- [ ] Generate pass with missing address (should omit address field from back)
+- [ ] Generate pass with very long business name (>30 chars, should truncate in header)
+- [ ] Generate pass with very long customer name (>25 chars, should truncate)
+- [ ] Generate pass with Arabic business name (should display correctly RTL)
+- [ ] Generate pass with bilingual business (Arabic + English names)
+
+**Visual Verification (On Actual iOS Device):**
+- [ ] Install pass on iPhone and verify business name appears in top right corner
+- [ ] Verify business name is right-aligned and doesn't overlap with logo
+- [ ] Verify customer name appears below hero image on right side
+- [ ] Verify customer name uses correct label ("Member")
+- [ ] Flip pass to back and verify all populated fields display
+- [ ] Verify back fields have proper labels (Contact, Location, Address, Offer, Reward, Member ID)
+- [ ] Verify logo is closer to left edge (5px offset visible)
+- [ ] Verify logo is not clipped or touching left edge
+- [ ] Check text truncation for long values (ellipsis appears)
+
+**Data Detector Tests (iOS Device):**
+- [ ] Tap phone number on back of pass → Should offer to call
+- [ ] Tap address on back of pass → Should offer to open in Maps
+- [ ] Verify phone number is in international format (e.g., +966...)
+- [ ] Verify address opens correct location in Maps app
+
+**Field Display Tests:**
+- [ ] Verify all back fields have proper labels (not empty or "undefined")
+- [ ] Verify field values are not truncated unexpectedly
+- [ ] Verify text alignment is correct (right for header/aux, left for back)
+- [ ] Verify colors are readable (foreground text on background color)
+- [ ] Verify label color provides sufficient contrast
+
+**Edge Cases:**
+- [ ] Test with business that has no phone (back should omit phone field)
+- [ ] Test with business that has no address (back should omit address field)
+- [ ] Test with business that has no location data (back should omit location field)
+- [ ] Test with customer name containing special characters (e.g., O'Brien, José)
+- [ ] Test with very long reward description (>100 chars)
+- [ ] Test with multiple line breaks in offer description
+
+### 7. Single-Word Name Handling
+
+**Issue:**
+Customers with single-word names (e.g., "Ahmad", "Mohammed") or those who only enter their first name in the signup form previously had "Customer" appended to their name in the wallet pass (e.g., "Ahmad Customer").
+
+**Solution:**
+Removed the "Customer" default fallback from all customer data processing paths:
+- `appleWalletController.js` (pass generation - line 72)
+- `business.js` (customer signup - line 883)
+- `CustomerService.js` (customer creation - line 87)
+- `appleWebService.js` (pass updates - line 290)
+
+**Behavior After Fix:**
+- Single-word name: "ascascasc" → Displays as "ascascasc" (clean)
+- Full name: "Ahmad Abdelgader" → Displays as "Ahmad Abdelgader" (unchanged)
+- First name only: "Ahmad" → Displays as "Ahmad" (clean)
+- Empty lastName: Stored as empty string in database (valid)
+
+**Technical Implementation:**
+- Changed default from `'Customer'` to `''` (empty string)
+- Updated auxiliary field value construction to: `[customerData.firstName, customerData.lastName].filter(Boolean).join(' ')`
+- This filters out empty/falsy values and joins with space, handling all edge cases elegantly
+- No trailing spaces in pass field display
+
+**Database Impact:**
+- No migration needed (last_name column is nullable)
+- Existing customers with lastName="Customer" remain unchanged (no data loss)
+- New customers with single-word names have lastName="" (empty string)
+- No data corruption or backwards compatibility issues
+
+**Testing Checklist:**
+- [ ] Test signup with single-word name (e.g., "Ahmad")
+- [ ] Test signup with full name (e.g., "Ahmad Abdelgader")
+- [ ] Test signup with multiple spaces (e.g., "Ahmad Abdullah Abdelgader")
+- [ ] Verify wallet pass shows correct name (no "Customer" suffix)
+- [ ] Verify database record has correct lastName (empty string for single-word)
+- [ ] Test pass updates via push notification (name should remain correct)
+- [ ] Verify customer management dashboard shows correct names
+- [ ] Test with names containing special characters (e.g., O'Brien, José)
+
+**Rationale:**
+Single-word names are common in many cultures (Arabic, Indonesian, Indian, etc.) and should be handled gracefully. The "Customer" default was originally added as a safety mechanism for missing data but created poor UX when users legitimately have single-word names. Removing the default improves data accuracy and user experience without requiring database changes or breaking existing functionality.
+
+### 8. Troubleshooting
+
+**Issue: Business name not appearing in header**
+- **Cause**: headerFields array not added or businessName missing from offerData
+- **Solution**: 
+  - Verify `storeCard.headerFields` array exists in pass.json
+  - Check that offerData includes `businessName` field
+  - Ensure `/api/business/public/offer/:id` returns `businessName`
+
+**Issue: Customer name not appearing**
+- **Cause**: auxiliaryFields array not added or customerData missing
+- **Solution**:
+  - Verify `storeCard.auxiliaryFields` array exists in pass.json
+  - Check customerData.firstName and lastName are passed to controller
+  - Verify auxiliary fields use right text alignment
+
+**Issue: Customer name shows "Customer" suffix for single-word names**
+- **Cause**: Using old code with 'Customer' default fallback
+- **Solution**:
+  - Verify all files updated per Section 7 (Single-Word Name Handling)
+  - Check line 72 of appleWalletController.js: should use `''` not `'Customer'`
+  - Check line 883 of business.js: should use `''` not `'Customer'`
+  - Check line 87 of CustomerService.js: should use `''` not `'Customer'`
+  - Check line 290 of appleWebService.js: should use `''` not `'Customer'`
+  - Regenerate pass after updates (old passes won't update automatically)
+
+**Issue: Back fields empty or missing**
+- **Cause**: Business data not fetched from database or not passed to createPassJson
+- **Solution**:
+  - Verify database query includes Business model association
+  - Check Business model attributes include: phone, city, district, region, address, location_hierarchy
+  - Verify offerData enrichment in frontend includes business fields
+  - Check `buildBackFields()` method receives complete offerData
+
+**Issue: Logo appears clipped on left edge**
+- **Cause**: 5px offset too small for specific logo design or device
+- **Solution**:
+  - Increase offset to 8-10px in `generatePassImages()` method
+  - Test with various logo sizes and aspect ratios
+  - Ensure logo resize maintains aspect ratio (fit: 'contain')
+
+**Issue: Phone/address data detectors not working**
+- **Cause**: dataDetectorTypes not set or invalid phone/address format
+- **Solution**:
+  - Verify `dataDetectorTypes: ['PKDataDetectorTypePhoneNumber']` in phone field
+  - Verify `dataDetectorTypes: ['PKDataDetectorTypeAddress']` in address field
+  - Ensure phone number is in international format (+country_code...)
+  - Validate address string format (street, city, region)
+
+**Issue: Pass fails to install on iOS**
+- **Cause**: Invalid field structure, too many fields, or missing required data
+- **Solution**:
+  - Validate pass.json against Apple's PassKit schema
+  - Reduce number of back fields if exceeding limits (6-8 recommended maximum)
+  - Check that all field values are non-null strings
+  - Verify pass.json is valid JSON
+
+**Issue: Text truncated with ellipsis**
+- **Cause**: Field value too long for available space
+- **Solution**:
+  - This is expected behavior for long text
+  - Shorten business name to <30 characters if possible
+  - Keep customer names concise
+  - Use abbreviations for location (e.g., "Riyadh" instead of "Riyadh Region")
+
+**Issue: Back fields not showing all data**
+- **Cause**: Conditional field addition skipping fields with valid data
+- **Solution**:
+  - Check `buildBackFields()` logic for proper null/undefined checks
+  - Verify database fields are not null in Business table
+  - Add logging to see which fields are being included/excluded
+
+### 8. Best Practices
+
+**Business Name:**
+- Keep concise (max 30 characters recommended for clean display)
+- Use short form if full name is long (e.g., "Starbucks" not "Starbucks Coffee Company")
+- Test with both Arabic and English names for bilingual businesses
+
+**Phone Numbers:**
+- Always use international format (+966501234567)
+- Include country code for proper tap-to-call functionality
+- Validate format before storing in database
+
+**Location Data:**
+- Provide complete location hierarchy for better customer experience
+- Format: "City, District, Region" or use location_hierarchy field
+- Ensure consistency across all business records
+
+**Address:**
+- Include street name and number
+- Keep concise but descriptive
+- Test tap-to-map functionality with actual addresses
+
+**Testing:**
+- Always test passes on actual iOS devices before deploying to customers
+- Test with various data combinations (complete, partial, missing)
+- Monitor pass installation success rate after deployment
+- Collect user feedback on information display
+
+**Performance:**
+- Back fields are rendered only when pass is flipped (no performance impact on front)
+- Conditional field addition keeps pass.json lean
+- Logo positioning change has no performance impact
+
+### 9. Implementation Notes
+
+**Backend Changes:**
+- `appleWalletController.js`: Added `buildBackFields()` helper method
+- `appleWalletController.js`: Updated `createPassJson()` to include headerFields and auxiliaryFields
+- `appleWalletController.js`: Updated logo positioning (left offset 20px → 5px)
+- `business.js` routes: Enhanced `/public/offer/:id` to include business location fields
+
+**Frontend Changes:**
+- `AppleWalletPreview.jsx`: Added business name to header (right-aligned)
+- `AppleWalletPreview.jsx`: Added customer name below hero (right-aligned)
+- `AppleWalletPreview.jsx`: Accepts customerData prop for realistic preview
+
+**Database Schema:**
+No changes required - all fields already exist in Business model:
+- phone (VARCHAR)
+- city (VARCHAR)
+- district (VARCHAR)
+- region (VARCHAR)
+- address (VARCHAR)
+- location_hierarchy (TEXT)
+
+### 10. Future Enhancements
+
+**Potential Improvements:**
+- Add business hours to back fields
+- Include social media links
+- Add terms and conditions link
+- Support for multiple locations/branches
+- Dynamic relevant location triggers
+- Push notifications for location-based offers
+
+**Advanced Features:**
+- NFC tap-to-pay integration
+- Loyalty tier indicators
+- Personalized offers on pass back
+- Integration with Apple Maps business listings
+
+---
+
+## 📱 QR Code Modal Mobile Optimization
+
+### Overview
+The QR Code Modal has been redesigned with a mobile-first approach to eliminate scrolling on mobile devices while maintaining full functionality and backward compatibility with desktop layouts.
+
+### 1. Mobile Layout (< 1024px)
+
+**Design Principles:**
+- Vertical stack layout with collapsible accordion sections
+- QR code always visible at top (192px on mobile)
+- Primary download actions (PNG/SVG) always visible below QR code
+- Secondary features collapsed by default (expand as needed)
+- Total height when collapsed: ~570px (fits iPhone SE viewport: 667px)
+
+**Content Priority:**
+
+**Always Visible (No Scrolling Required):**
+- QR code display (192x192px)
+- Download PNG button (icon + label)
+- Download SVG button (icon + label)
+- Modal header with title and close button
+
+**Collapsible Sections (Expand as Needed):**
+- 📊 Performance Analytics (scans, conversions, downloads, conversion rate)
+- ⚙️ Configuration (QR size selector, source tracking)
+- 🚀 Advanced Options (URL copy, regenerate button, preview button)
+
+### 2. Desktop Layout (≥ 1024px)
+
+**Unchanged Behavior:**
+- Two-column grid layout (QR code left, controls right)
+- All sections always expanded (no accordion behavior)
+- QR code display: 256x256px
+- Original spacing and padding preserved
+- Download options shown in dedicated section
+- No breaking changes to existing UX
+
+### 3. Accordion Behavior
+
+**Mobile-Specific Features:**
+- Only one section can be expanded at a time
+- Tapping a section header toggles expansion
+- Expanding a new section auto-collapses the previously expanded section
+- Smooth height transitions (300ms ease-in-out)
+- Chevron icon (▼/▲) indicates expand/collapse state
+- Auto-scroll to expanded section (smooth behavior)
+
+**Desktop Override:**
+- All accordion sections ignore collapsed state
+- Sections always rendered as expanded cards
+- No chevron icons displayed
+- No accordion header interactivity
+
+### 4. Touch Optimization
+
+**Mobile Enhancements:**
+- Minimum 48px touch targets for all interactive elements
+- Accordion headers: 50px height (easy to tap)
+- Button padding increased on mobile: `py-3` (12px)
+- Active state animations: `active:scale-95` (tactile feedback)
+- Adequate spacing between elements: `gap-3` minimum (12px)
+
+**Accessibility:**
+- `aria-expanded` attribute on accordion headers
+- `aria-controls` links headers to content sections
+- `role="button"` on accordion headers
+- `tabIndex={0}` for keyboard navigation
+- Enter/Space keys toggle accordion expansion
+- Focus management: expanded section scrolls into view
+
+### 5. Responsive Breakpoints
+
+**Breakpoint Strategy:**
+- Mobile: `< 1024px` (lg breakpoint)
+  - Vertical stack layout
+  - Accordion sections collapsed by default
+  - Compact spacing: `p-4`, `gap-3`
+  - Full-width buttons
+  - Smaller QR code (192px)
+  - Icon-only download buttons with labels
+
+- Desktop: `≥ 1024px` (lg breakpoint)
+  - Two-column grid layout
+  - All sections auto-expanded
+  - Original spacing: `p-6`, `gap-8`
+  - Side-by-side buttons
+  - Larger QR code (256px)
+  - Full-text download buttons
+
+**Implementation Pattern:**
+- Tailwind responsive prefixes: `lg:grid-cols-2`, `lg:p-6`, `lg:w-64`
+- Conditional rendering: `hidden lg:block` for desktop-only elements
+- Media query hook: `useMediaQuery('(min-width: 1024px)')`
+- Desktop check: `const isDesktop = useMediaQuery('(min-width: 1024px)')`
+
+### 6. Performance Metrics
+
+**Target Performance:**
+- Modal open time: < 100ms
+- Accordion expand/collapse animation: 300ms (smooth 60fps)
+- QR code generation: < 500ms
+- Download action response: < 200ms
+- No layout shifts during accordion transitions (CLS = 0)
+
+**Optimization Techniques:**
+- CSS transitions using GPU-accelerated properties (`transform`, `opacity`)
+- Max-height transitions (0 to 1000px) instead of height: auto
+- `will-change: max-height` for smoother animations
+- Conditional rendering: accordion content only rendered when expanded
+- React.memo on AccordionSection component to prevent unnecessary re-renders
+- Debounced accordion toggle to prevent rapid clicking
+
+### 7. Testing Checklist
+
+**Mobile Device Testing:**
+- [ ] iPhone SE (375x667px) - smallest modern iPhone
+  - [ ] Modal fits without scrolling when all sections collapsed
+  - [ ] QR code clearly visible and properly sized
+  - [ ] Download buttons easily tappable (48px touch targets)
+  - [ ] Close button accessible without scrolling
+
+- [ ] iPhone 14 (390x844px) - standard iPhone
+  - [ ] Modal fits comfortably with extra space
+  - [ ] Accordion sections expand smoothly
+  - [ ] Auto-scroll to expanded section works correctly
+
+- [ ] iPhone 14 Pro Max (430x932px) - largest iPhone
+  - [ ] Layout takes advantage of additional space
+  - [ ] No excessive white space at bottom
+
+- [ ] Samsung Galaxy S21 (360x800px) - standard Android
+  - [ ] Modal fits within viewport
+  - [ ] Touch targets meet Android minimum (48dp)
+  - [ ] Animations smooth on mid-range hardware
+
+- [ ] iPad Mini (768x1024px) - small tablet
+  - [ ] Uses mobile layout (< 1024px)
+  - [ ] Accordion sections work correctly
+  - [ ] Content properly scaled for larger screen
+
+**Accordion Functionality:**
+- [ ] Tap Analytics section header - expands smoothly
+- [ ] Tap Settings section header - collapses Analytics, expands Settings
+- [ ] Tap Advanced Options header - collapses Settings, expands Advanced
+- [ ] Chevron icon rotates 180° when expanding
+- [ ] Expanded section scrolls into view automatically
+- [ ] Content inside expanded section fully visible
+- [ ] Collapse/expand animation completes in 300ms
+
+**Download Functionality:**
+- [ ] Tap PNG download button - downloads immediately
+- [ ] Tap SVG download button - downloads immediately
+- [ ] Download buttons disabled when QR not generated
+- [ ] Loading state shows during QR generation
+- [ ] Error state displays if generation fails
+
+**Settings Functionality:**
+- [ ] Change QR size - QR code regenerates with new size
+- [ ] Change source tracking - QR code regenerates with tracking parameter
+- [ ] Settings persist during modal session
+- [ ] Regenerate button in Advanced Options works
+
+**Desktop Testing:**
+- [ ] Open modal on 1920x1080 desktop - shows two-column layout
+- [ ] All sections expanded by default (no accordions)
+- [ ] No chevron icons visible
+- [ ] QR code 256x256px on left side
+- [ ] Controls and analytics on right side
+- [ ] No breaking changes from original design
+- [ ] Download options in dedicated section (not icon-only)
+
+**Cross-Device Responsive:**
+- [ ] Resize browser from desktop to mobile - layout adapts smoothly
+- [ ] Resize from mobile to desktop - sections auto-expand
+- [ ] No layout breaks at breakpoint transition (1024px)
+- [ ] Media query hook updates correctly
+
+**Dark Mode:**
+- [ ] Modal renders correctly in dark mode
+- [ ] Accordion sections have proper contrast
+- [ ] QR code visible against dark background
+- [ ] Button states clearly visible
+- [ ] Border colors appropriate for dark theme
+
+**Accessibility:**
+- [ ] Keyboard navigation: Tab through all interactive elements
+- [ ] Keyboard navigation: Enter/Space toggles accordion sections
+- [ ] Screen reader announces accordion state changes
+- [ ] Screen reader reads ARIA labels on buttons
+- [ ] Focus visible on all interactive elements
+- [ ] Focus trap keeps focus within modal
+- [ ] Escape key closes modal
+
+### 8. Known Limitations
+
+**Very Small Devices:**
+- Devices with width < 375px (very old phones) may require minimal scrolling
+- Collapsing all sections reduces height but may still exceed 320px width viewports
+
+**Landscape Orientation:**
+- Phones in landscape mode have reduced vertical space
+- May require scrolling even with sections collapsed
+- Considered acceptable tradeoff (landscape less common for modals)
+
+**Print Templates Section:**
+- Removed from mobile view to reduce clutter
+- Feature marked "Coming Soon" - can be added back when implemented
+- Desktop version can include it if needed in future
+
+**One Section Open at a Time:**
+- Mobile users must collapse one section to open another
+- Cannot view multiple sections simultaneously on mobile
+- Desktop allows viewing all sections at once (no limitation)
+
+### 9. Future Enhancements
+
+**Potential Improvements:**
+- Swipe gestures for accordion expansion on mobile
+- Haptic feedback on button taps (mobile browsers that support it)
+- QR code customization (colors, logo overlay, error correction level)
+- Batch QR generation for multiple offers
+- Print preview functionality with templates
+- Share QR code directly to social media apps
+- Copy QR code image to clipboard
+- QR code history (previously generated codes)
+- Analytics export (CSV/Excel download)
+
+**Performance Optimizations:**
+- Lazy load analytics data only when section expanded
+- Preload QR code in background before modal opens
+- Cache generated QR codes for faster re-opening
+- Service worker caching for offline QR generation
+
+### 10. Implementation Notes
+
+**Media Query Hook:**
+- Located at: `src/hooks/useMediaQuery.js`
+- Usage: `const isDesktop = useMediaQuery('(min-width: 1024px)')`
+- Returns boolean indicating if media query matches
+- Updates automatically on window resize
+- SSR-safe (checks for window existence)
+
+**AccordionSection Component:**
+- Defined inside `QRCodeModal.jsx` (internal component)
+- Props: `id`, `title`, `icon`, `isExpanded`, `onToggle`
+- Desktop bypass: checks `isDesktop` prop to disable accordion behavior
+- Auto-scroll: uses `scrollIntoView()` when expanded on mobile
+- Keyboard support: Enter/Space keys toggle expansion
+- Accessibility: Full ARIA attribute support
+
+**State Management:**
+- `expandedSection`: String or null (which section is open)
+- `null`: All sections collapsed (initial mobile state)
+- `'analytics'`, `'settings'`, `'advanced'`: Section identifiers
+- Toggle logic: `setExpandedSection(current === id ? null : id)`
+- Desktop override: `isDesktop` bypasses accordion state
+
+**CSS Transitions:**
+- `transition-all duration-300 ease-in-out`
+- `max-h-0` (collapsed) to `max-h-[1000px]` (expanded)
+- `opacity-0` (collapsed) to `opacity-100` (expanded)
+- `transform: rotate(0deg)` (collapsed chevron) to `rotate(180deg)` (expanded chevron)
+- Desktop override: `lg:max-h-none lg:opacity-100` (always visible)
+
+---
+
 ### 8. Color Contrast Considerations
+
 
 **Accessibility:**
 - Use `foreground_color` for text on `background_color` backgrounds

@@ -68,8 +68,8 @@ class AppleWalletController {
         customerData.firstName = 'Valued'
       }
       if (!customerData.lastName) {
-        logger.warn('⚠️ lastName missing, using default')
-        customerData.lastName = 'Customer'
+        logger.warn('⚠️ lastName missing, using empty string')
+        customerData.lastName = ''
       }
 
       logger.info('🍎 Generating Apple Wallet pass for:', {
@@ -132,6 +132,45 @@ class AppleWalletController {
         }
       } else {
         logger.info('✅ offerData has required fields (businessId and stampsRequired)')
+      }
+
+      // 🆕 COMMENT 2 FIX: Fetch business contact and location data for back fields
+      logger.info('🔍 Fetching business data for back fields...')
+      try {
+        const { default: sequelize } = await import('../config/database.js')
+        const [businessRecord] = await sequelize.query(`
+          SELECT phone, city, district, region, address, location_hierarchy
+          FROM businesses
+          WHERE public_id = ?
+          LIMIT 1
+        `, {
+          replacements: [offerData.businessId],
+          type: sequelize.QueryTypes.SELECT
+        })
+
+        if (businessRecord) {
+          // Enrich offerData with business contact and location fields
+          offerData.businessPhone = businessRecord.phone || null
+          offerData.businessCity = businessRecord.city || null
+          offerData.businessDistrict = businessRecord.district || null
+          offerData.businessRegion = businessRecord.region || null
+          offerData.businessAddress = businessRecord.address || null
+          offerData.location_hierarchy = businessRecord.location_hierarchy || null
+          
+          logger.info('✅ Business data enriched for back fields:', {
+            phone: !!businessRecord.phone,
+            city: !!businessRecord.city,
+            district: !!businessRecord.district,
+            region: !!businessRecord.region,
+            address: !!businessRecord.address,
+            location_hierarchy: !!businessRecord.location_hierarchy
+          })
+        } else {
+          logger.warn('⚠️ Business not found in database:', offerData.businessId)
+        }
+      } catch (error) {
+        logger.error('❌ Failed to fetch business data from database:', error.message)
+        // Continue without business data - back fields will be empty
       }
 
       // Ensure we have actual customer progress for stamp visualization
@@ -318,6 +357,90 @@ class AppleWalletController {
     return summary
   }
 
+  // PHASE 3: Helper method to build back fields dynamically based on available data
+  buildBackFields(offerData, customerData) {
+    const backFields = []
+
+    // 1. Business Phone (if available) - with tap-to-call
+    if (offerData.businessPhone || offerData.phone) {
+      backFields.push({
+        key: 'business_phone',
+        label: 'Contact',
+        value: offerData.businessPhone || offerData.phone,
+        textAlignment: 'PKTextAlignmentLeft',
+        dataDetectorTypes: ['PKDataDetectorTypePhoneNumber']
+      })
+    }
+
+    // 2. Business Location (if available)
+    let locationValue = null
+    if (offerData.location_hierarchy) {
+      locationValue = offerData.location_hierarchy
+    } else if (offerData.businessCity || offerData.businessDistrict || offerData.businessRegion) {
+      // Build location from components
+      const parts = []
+      if (offerData.businessCity) parts.push(offerData.businessCity)
+      if (offerData.businessDistrict) parts.push(offerData.businessDistrict)
+      if (offerData.businessRegion) parts.push(offerData.businessRegion)
+      locationValue = parts.join(', ')
+    }
+    
+    if (locationValue) {
+      backFields.push({
+        key: 'location',
+        label: 'Location',
+        value: locationValue,
+        textAlignment: 'PKTextAlignmentLeft'
+      })
+    }
+
+    // 3. Business Address (if available) - with tap-to-map
+    if (offerData.businessAddress || offerData.address) {
+      backFields.push({
+        key: 'address',
+        label: 'Address',
+        value: offerData.businessAddress || offerData.address,
+        textAlignment: 'PKTextAlignmentLeft',
+        dataDetectorTypes: ['PKDataDetectorTypeAddress']
+      })
+    }
+
+    // 4. Offer Details (always available)
+    const offerDetails = offerData.description 
+      ? `${offerData.title}\n${offerData.description}` 
+      : offerData.title
+    backFields.push({
+      key: 'offer_details',
+      label: 'Offer',
+      value: offerDetails,
+      textAlignment: 'PKTextAlignmentLeft'
+    })
+
+    // 5. Reward Description (if available)
+    if (offerData.rewardDescription) {
+      backFields.push({
+        key: 'reward',
+        label: 'Reward',
+        value: offerData.rewardDescription,
+        textAlignment: 'PKTextAlignmentLeft'
+      })
+    }
+
+    // 6. Customer ID (always available)
+    backFields.push({
+      key: 'customer_id',
+      label: 'Member ID',
+      value: customerData.customerId,
+      textAlignment: 'PKTextAlignmentLeft'
+    })
+
+    // Log which fields are populated
+    const populatedFields = backFields.map(f => f.key).join(', ')
+    logger.info(`📋 Back fields populated: ${populatedFields}`)
+    
+    return backFields
+  }
+
   createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null) {
     try {
       // Use existing serial number if provided (for updates), otherwise generate new one
@@ -452,10 +575,19 @@ class AppleWalletController {
       sharingProhibited: true, // Prevents pass from being shared
       suppressStripShine: false, // Allows glossy effect on strip image
 
-      // Store Card structure - EXACT match to working iOS 15.6 clone structure
-      // Working clone: ONLY secondaryFields (1 field) + backFields - NO primaryFields, NO auxiliaryFields
+      // Store Card structure - Enhanced with header fields, auxiliary fields
+      // Maintains iOS 15.6 compatibility while adding business and customer information
       storeCard: {
-        // ONLY secondaryFields - show progress on front of pass
+        // PHASE 1: Header fields - Business name in top right corner
+        headerFields: [
+          {
+            key: 'business',
+            value: businessName, // Business name from validated variable (line 372)
+            textAlignment: 'PKTextAlignmentRight' // Right-aligned in header
+          }
+        ],
+
+        // Secondary fields - show progress on front of pass
         secondaryFields: [
           {
             key: 's0', // Match working clone key naming
@@ -465,9 +597,19 @@ class AppleWalletController {
           }
         ],
 
-        // No back fields - all stamp visualization shown on dynamic hero image
-        backFields: []
+        // PHASE 2: Auxiliary fields - Customer name on right side under hero
+        auxiliaryFields: [
+          {
+            key: 'customer',
+            label: 'Member',
+            value: [customerData.firstName, customerData.lastName].filter(Boolean).join(' '),
+            textAlignment: 'PKTextAlignmentRight' // Right-aligned
+          }
+        ]
       },
+
+      // PHASE 3: Back fields - Business contact, location, and offer details (TOP-LEVEL per PassKit schema)
+      backFields: this.buildBackFields(offerData, customerData),
 
       // Barcode for POS scanning
       // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
@@ -627,7 +769,7 @@ class AppleWalletController {
         .resize(100, 45, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer(),
-      left: 10,  // 10px offset from left edge
+      left: 3,  // PHASE 4: 3px offset from left edge (proportional to @2x)
       top: 2     // Vertically centered: (50-45)/2 ≈ 2px
     }])
     .png()
@@ -646,7 +788,7 @@ class AppleWalletController {
         .resize(200, 90, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer(),
-      left: 20,  // 20px offset from left edge (like abbajava reference)
+      left: 5,  // PHASE 4: 5px offset from left edge (closer to edge alignment)
       top: 5     // Vertically centered: (100-90)/2 = 5px
     }])
     .png()
@@ -926,7 +1068,7 @@ class AppleWalletController {
       })
 
       // Extract customer name from progressData
-      const customerName = progressData.customer_name || 'Valued Customer'
+      const customerName = progressData.customer_name || 'Valued'
       const [firstName, ...lastNameParts] = customerName.split(' ')
       const lastName = lastNameParts.join(' ') || ''
 
@@ -937,7 +1079,7 @@ class AppleWalletController {
       // Construct complete customerData object
       const customerData = {
         customerId: customerId,
-        firstName: firstName,
+        firstName: firstName || 'Valued',
         lastName: lastName,
         joinedDate: progressData.created_at || new Date()
       }
@@ -951,6 +1093,45 @@ class AppleWalletController {
         stampsRequired: offer.stamps_required || progressData.max_stamps || 10,
         rewardDescription: offer.description || 'Reward',
         branchName: offer.branch || 'All Locations'
+      }
+
+      // 🆕 COMMENT 3 FIX: Fetch business contact and location data for back fields (same as generatePass)
+      logger.info('🔍 Fetching business data for back fields in push update...')
+      try {
+        const { default: sequelize } = await import('../config/database.js')
+        const [businessRecord] = await sequelize.query(`
+          SELECT phone, city, district, region, address, location_hierarchy
+          FROM businesses
+          WHERE public_id = ?
+          LIMIT 1
+        `, {
+          replacements: [offerData.businessId],
+          type: sequelize.QueryTypes.SELECT
+        })
+
+        if (businessRecord) {
+          // Enrich offerData with business contact and location fields
+          offerData.businessPhone = businessRecord.phone || null
+          offerData.businessCity = businessRecord.city || null
+          offerData.businessDistrict = businessRecord.district || null
+          offerData.businessRegion = businessRecord.region || null
+          offerData.businessAddress = businessRecord.address || null
+          offerData.location_hierarchy = businessRecord.location_hierarchy || null
+          
+          logger.info('✅ Business data enriched for back fields in push update:', {
+            phone: !!businessRecord.phone,
+            city: !!businessRecord.city,
+            district: !!businessRecord.district,
+            region: !!businessRecord.region,
+            address: !!businessRecord.address,
+            location_hierarchy: !!businessRecord.location_hierarchy
+          })
+        } else {
+          logger.warn('⚠️ Business not found in database:', offerData.businessId)
+        }
+      } catch (error) {
+        logger.error('❌ Failed to fetch business data in push update:', error.message)
+        // Continue without business data - back fields will be empty
       }
 
       // Construct progress data for stamp visualization
