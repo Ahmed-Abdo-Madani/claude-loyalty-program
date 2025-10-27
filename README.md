@@ -13,7 +13,7 @@ A cost-effective and scalable loyalty program management platform designed for b
 - 🎨 **Custom stamp icons** - SVG icons generated automatically on server startup
 
 ### **For Customers**
-- 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with emoji stamp visualization
+- 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with official platform-compliant button designs and emoji stamp visualization
 - 🔍 **QR code scanning** - Instant program enrollment
 - ⭐ **Progress tracking** - Visual stamp/point collection (⭐, ☕, 🍕, etc.)
 - 🎁 **Automatic rewards** - Seamless redemption process
@@ -92,7 +92,11 @@ claude-loyalty-program/
    
    **Note**: Stamp icons (coffee, gift) are automatically generated on backend startup. No manual setup required. The system creates SVG files programmatically and generates PNG previews using Sharp.
 
-4. **Open browser**
+4. **Wallet button assets** ✅
+   
+   Official Apple and Google Wallet button designs are already included in `public/assets/wallet-buttons/`. These comply with platform branding guidelines and support both English and Arabic. No additional setup required. See [DEPLOYMENT.md](DEPLOYMENT.md#61-official-wallet-button-assets) for details.
+
+5. **Open browser**
    ```
    http://localhost:3000
    ```

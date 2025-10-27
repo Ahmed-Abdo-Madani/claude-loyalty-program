@@ -1420,28 +1420,177 @@ Simplified success page to match minimalist design mockup with integrated brand 
 **Apple Wallet:**
 - Displays on iOS devices
 - Downloads `.pkpass` file
-- Button text: Arabic "أضف إلى Apple Wallet" or English "Add to Apple Wallet"
-- Icon: 🍎 emoji
-- Brand-colored background
+- Uses official "Add to Apple Wallet" button design
+- Black background with white Apple logo and text
+- Localized for Arabic and English
 
 **Google Wallet:**
 - Displays on Android/other devices
 - Redirects to Google Wallet save URL
-- Button text: Arabic "أضف إلى Google Wallet" or English "Add to Google Wallet"
-- Icon: 📱 emoji
-- Brand-colored background
+- Uses official "Add to Google Wallet" button design
+- Black background with Google Wallet logo
+- Localized for Arabic and English
 
 **Both Platforms:**
 - Stacked vertically with `space-y-4` if both supported
-- Consistent styling with brand colors
-- Loading spinner uses `foreground_color` for visibility
+- Official platform-compliant button designs
+- Loading spinner overlays button during generation
 - Disabled state at 50% opacity
+- Hover effect with subtle scale (1.02x)
 
 **Error Handling:**
 - Red error box with warning icon
 - Error message in current language
 - Brand-colored retry button
 - Dismissable with click
+
+### 6.1. Official Wallet Button Assets
+
+**Overview:**
+The customer signup success page uses official Apple and Google Wallet button designs following strict platform branding guidelines. These assets are stored locally in `public/assets/wallet-buttons/` for optimal performance.
+
+**Asset Requirements:**
+
+**Apple Wallet Buttons:**
+- **Source**: Apple Developer Resources - "Add to Apple Wallet" badge guidelines
+  - https://developer.apple.com/wallet/add-to-apple-wallet-guidelines/
+- **Format**: SVG (vector)
+- **Dimensions**: 110.7x35px (official Apple dimensions)
+- **Colors**: Black background (#000000), white logo and text
+- **Corner Radius**: 4px
+- **Languages**: English (`add-to-apple-wallet-en.svg`), Arabic (`add-to-apple-wallet-ar.svg`)
+- **File Size**: ~20KB each
+- **Status**: ✅ Official assets in place
+
+**Google Wallet Buttons:**
+- **Source**: Google Wallet Brand Guidelines
+  - https://developers.google.com/wallet/generic/resources/brand-guidelines
+- **Format**: SVG (vector)
+- **Dimensions**: Varies (responsive SVG)
+- **Colors**: Black background (#000000), multicolor Google logo, white text
+- **Corner Radius**: 8px
+- **Languages**: English (`add-to-google-wallet-en.svg`), Arabic (`add-to-google-wallet-ar.svg`)
+- **File Size**: 14-25KB each
+- **Status**: ✅ Official assets in place
+
+**Asset Acquisition Instructions:**
+
+**✅ Official Assets Already In Place:**
+
+The repository now includes authentic Apple and Google Wallet button assets downloaded from official sources:
+- Apple: `EN_Add_to_Apple_Wallet_RGB_101421.svg` (English) and `AR_Add_to_Apple_Wallet_RGB_101421.svg` (Arabic)
+- Google: `enUS_add_to_google_wallet_add-wallet-badge.svg` (English) and `ar_add_to_google_wallet_add-wallet-badge.svg` (Arabic)
+
+These have been copied to `public/assets/wallet-buttons/` with standardized naming for the application.
+
+**For Future Updates or New Languages:**
+
+**For Apple Wallet:**
+1. Visit Apple Developer Resources
+2. Download official "Add to Apple Wallet" badge in SVG format
+3. Download both English and Arabic versions (if available)
+4. DO NOT modify colors, text, logo, or dimensions
+5. Save to `public/assets/wallet-buttons/`
+6. Filename format: `add-to-apple-wallet-{lang}.svg`
+
+**For Google Wallet:**
+1. Visit Google Wallet Brand Guidelines
+2. Download official "Add to Google Wallet" button in SVG format
+3. Download both English and Arabic versions (if available)
+4. DO NOT modify colors, text, logo, or dimensions
+5. Save to `public/assets/wallet-buttons/`
+6. Filename format: `add-to-google-wallet-{lang}.svg`
+
+**Localization Strategy:**
+
+**Arabic Support:**
+- Check if official Arabic button assets are available from Apple/Google
+- If not available, use English buttons as fallback
+- Arabic fallback is acceptable as brand recognition is maintained
+- Document any language limitations for future improvement
+
+**Future Languages:**
+- Follow same process for additional languages
+- Maintain consistent naming: `add-to-{platform}-wallet-{language}.svg`
+- Update `CustomerSignup.jsx` if adding new language support
+
+**Branding Guidelines Compliance:**
+
+**Apple Requirements:**
+- Must use official badge artwork without modifications
+- Maintain minimum size requirements (120pt width)
+- Ensure proper spacing around button (minimum 1/10 button height)
+- Do not change colors, add effects, rotate, or modify logo
+- Follow Apple's Human Interface Guidelines
+- No custom text or emoji icons
+
+**Google Requirements:**
+- Must use official button artwork without modifications
+- Maintain minimum height (48dp/64px recommended)
+- Follow Material Design principles
+- Do not change colors, add effects, or modify logo
+- Ensure proper touch target size (minimum 48x48dp)
+- No custom text or emoji icons
+
+**Deployment Checklist:**
+
+**Before Deploying:**
+- [✅] Download official button assets from Apple and Google (COMPLETED - assets in place)
+- [✅] Verify SVG files are optimized and under size limits (Apple: ~20KB, Google: 14-25KB)
+- [✅] Place assets in `public/assets/wallet-buttons/` directory (COMPLETED)
+- [ ] Test button rendering in both English and Arabic
+- [ ] Verify buttons display correctly on mobile and desktop
+- [ ] Check loading states work properly with overlay
+- [ ] Ensure accessibility (alt text, ARIA labels) is correct
+- [ ] Test hover and focus states
+
+**After Deploying:**
+- [ ] Verify buttons load correctly in production
+- [ ] Test wallet generation flow with new buttons
+- [ ] Check button appearance on various devices and browsers
+- [ ] Verify localization works for both languages
+- [ ] Monitor for any asset loading errors in logs
+- [ ] Confirm brand compliance with platform guidelines
+
+**Maintenance:**
+
+**Updating Assets:**
+- Check Apple/Google guidelines periodically for branding updates
+- Replace assets if platforms release new versions
+- Test thoroughly after any asset updates
+- Document version/date of current assets in comments
+
+**Asset Versioning:**
+- Consider adding version suffix if needed: `add-to-apple-wallet-en-v2.svg`
+- Update references in `CustomerSignup.jsx` accordingly
+- Keep old versions temporarily for rollback capability
+- Document changes in git commit messages
+
+**Troubleshooting:**
+
+**Issue: Buttons not displaying**
+- **Cause**: Asset files missing or incorrect path
+- **Solution**: Verify files exist in `public/assets/wallet-buttons/` and paths match exactly
+
+**Issue: Buttons look pixelated**
+- **Cause**: Using PNG instead of SVG, or SVG not properly scaled
+- **Solution**: Ensure using SVG format and `w-full h-auto` CSS classes are applied
+
+**Issue: Arabic buttons showing English**
+- **Cause**: Arabic assets not available or incorrect filename
+- **Solution**: Check if official Arabic buttons exist; use English as fallback if not available
+
+**Issue: Loading state not showing**
+- **Cause**: Overlay z-index or positioning issue
+- **Solution**: Verify `absolute inset-0` positioning and `relative` on button wrapper
+
+**Issue: Buttons don't match platform guidelines**
+- **Cause**: Modified or custom button assets being used
+- **Solution**: Re-download official assets from Apple/Google without modifications
+
+**Issue: Touch targets too small on mobile**
+- **Cause**: Button dimensions below minimum recommended size
+- **Solution**: Buttons are 40-48px height which meets minimum; ensure no CSS overrides reduce size
 
 ### 7. Testing Checklist
 

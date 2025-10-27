@@ -710,33 +710,31 @@ function CustomerSignup() {
             )}
           </div>
 
-          {/* Add to Wallet Button(s) with Brand Colors */}
-          <div className="space-y-4">
+          {/* Add to Wallet Button(s) with Official Platform Designs */}
+          <div className="space-y-4 px-4">
             {/* Apple Wallet Button */}
             {(deviceCapabilities?.supportsAppleWallet || !deviceCapabilities) && (
-              <div className="w-full max-w-sm mx-auto">
+              <div className="w-full max-w-[240px] mx-auto">
                 <button
                   onClick={handleAddToAppleWallet}
                   disabled={isGeneratingWallet}
-                  className="w-full py-4 px-6 rounded-full font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-200 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:brightness-90"
-                  style={{ 
-                    backgroundColor: getColors().primary,
-                    color: getColors().secondary
-                  }}
+                  className="relative w-full block transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                  aria-label={t.addToAppleWallet}
+                  aria-busy={isGeneratingWallet}
                 >
-                  {isGeneratingWallet ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <img
+                    src={`/assets/wallet-buttons/add-to-apple-wallet-${selectedLanguage}.svg`}
+                    alt={t.addToAppleWallet}
+                    className="w-full h-auto"
+                    draggable="false"
+                  />
+                  {isGeneratingWallet && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none rounded">
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>{t.addingToWallet}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-2xl">🍎</span>
-                      <span>{t.addToAppleWallet}</span>
-                    </>
+                    </div>
                   )}
                 </button>
               </div>
@@ -744,29 +742,27 @@ function CustomerSignup() {
 
             {/* Google Wallet Button */}
             {(deviceCapabilities?.supportsGoogleWallet || !deviceCapabilities) && (
-              <div className="w-full max-w-sm mx-auto">
+              <div className="w-full max-w-[260px] mx-auto">
                 <button
                   onClick={handleAddToGoogleWallet}
                   disabled={isGeneratingWallet}
-                  className="w-full py-4 px-6 rounded-full font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-200 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] hover:brightness-90"
-                  style={{ 
-                    backgroundColor: getColors().primary,
-                    color: getColors().secondary
-                  }}
+                  className="relative w-full block transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                  aria-label={t.addToGoogleWallet}
+                  aria-busy={isGeneratingWallet}
                 >
-                  {isGeneratingWallet ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <img
+                    src={`/assets/wallet-buttons/add-to-google-wallet-${selectedLanguage}.svg`}
+                    alt={t.addToGoogleWallet}
+                    className="w-full h-auto"
+                    draggable="false"
+                  />
+                  {isGeneratingWallet && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none rounded-lg">
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>{t.addingToWallet}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-2xl">📱</span>
-                      <span>{t.addToGoogleWallet}</span>
-                    </>
+                    </div>
                   )}
                 </button>
               </div>
