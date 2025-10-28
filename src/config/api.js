@@ -119,7 +119,14 @@ export const endpoints = {
   // Admin Icon Management APIs
   adminIcons: `${API_BASE_URL}/api/admin/icons`,
   adminIconsCategories: `${API_BASE_URL}/api/admin/icons/categories`,
-  adminIconsRegeneratePreviews: `${API_BASE_URL}/api/admin/icons/regenerate-previews`
+  adminIconsRegeneratePreviews: `${API_BASE_URL}/api/admin/icons/regenerate-previews`,
+
+  // Branch Manager APIs
+  branchManagerLogin: `${API_BASE_URL}/api/branch-manager/login`,
+  branchManagerVerify: `${API_BASE_URL}/api/branch-manager/verify`,
+  branchManagerScan: `${API_BASE_URL}/api/branch-manager/scan`,
+  branchManagerConfirmPrize: `${API_BASE_URL}/api/branch-manager/confirm-prize`,
+  branchManagerStats: `${API_BASE_URL}/api/branch-manager/stats/today`
 }
 
 // Secure API helper functions

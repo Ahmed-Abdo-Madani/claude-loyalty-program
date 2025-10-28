@@ -64,7 +64,7 @@ const WalletPass = sequelize.define('WalletPass', {
   },
   // Status
   pass_status: {
-    type: DataTypes.ENUM('active', 'expired', 'revoked', 'deleted'),
+    type: DataTypes.ENUM('active', 'completed', 'expired', 'revoked', 'deleted'),
     defaultValue: 'active',
     comment: 'Current status of the wallet pass'
   },
@@ -116,6 +116,22 @@ const WalletPass = sequelize.define('WalletPass', {
     type: DataTypes.JSONB,
     allowNull: true,
     comment: 'Complete pass.json structure for regeneration (Apple Wallet only)'
+  },
+  // Pass Lifecycle fields
+  scheduled_expiration_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'When this pass should expire (typically 30 days after completion)'
+  },
+  expiration_notified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Whether customer has been notified about impending expiration'
+  },
+  deleted_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Soft delete timestamp (for expired passes after 90 days)'
   }
 }, {
   tableName: 'wallet_passes',
@@ -414,6 +430,33 @@ WalletPass.prototype.recordNotification = async function(messageType, messageDat
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   this.notification_history = history.filter(h => new Date(h.sent_at) > thirtyDaysAgo)
 
+  await this.save()
+}
+
+/**
+ * Schedule pass expiration
+ * @param {number} daysFromNow - Days from now when pass should expire (default: 30)
+ */
+WalletPass.prototype.scheduleExpiration = async function(daysFromNow = 30) {
+  const expirationDate = new Date()
+  expirationDate.setDate(expirationDate.getDate() + daysFromNow)
+  
+  this.scheduled_expiration_at = expirationDate
+  this.expiration_notified = false
+  
+  await this.save()
+  return this.scheduled_expiration_at
+}
+
+/**
+ * Mark pass as completed (when customer redeems reward)
+ */
+WalletPass.prototype.markCompleted = async function() {
+  this.pass_status = 'completed'
+  
+  // Schedule expiration 30 days from now
+  await this.scheduleExpiration(30)
+  
   await this.save()
 }
 

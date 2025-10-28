@@ -108,9 +108,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       logger.info('   2. /v1/log endpoint can now store logs in database')
       logger.info('   3. Consider setting up log retention policy')
       logger.info('')
+      
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(0)
     } catch (error) {
       logger.error('❌ Migration failed:', error)
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(1)
     }
   })()

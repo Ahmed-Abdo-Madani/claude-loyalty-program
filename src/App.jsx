@@ -6,6 +6,9 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
 import AdminLoginPage from './pages/AdminLoginPage'
+import BranchManagerLogin from './pages/BranchManagerLogin'
+import BranchScanner from './pages/BranchScanner'
+import ManagerProtectedRoute from './components/ManagerProtectedRoute'
 
 // Lazy load heavy components (Dashboard, Admin, etc.)
 // These are only loaded when user navigates to them
@@ -46,6 +49,17 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            
+            {/* Branch Manager Routes */}
+            <Route path="/branch-manager-login" element={<BranchManagerLogin />} />
+            <Route 
+              path="/branch-scanner" 
+              element={
+                <ManagerProtectedRoute>
+                  <BranchScanner />
+                </ManagerProtectedRoute>
+              } 
+            />
 
             {/* Heavy pages - lazy loaded */}
             <Route path="/dashboard" element={<Dashboard />} />

@@ -313,10 +313,42 @@ function BranchesTab({ analytics }) {
             try {
               console.log('🔒 Saving branch data:', JSON.stringify(branchData, null, 2))
               
+              const branchId = showEditModal?.public_id || showEditModal?.id
+              
+              // Phase 1: Handle PIN update via dedicated endpoint (if needed)
+              // Only update PIN if manager access is enabled, PIN is provided, and format is valid
+              if (branchData.manager_pin_enabled === true && 
+                  branchData.manager_pin && 
+                  branchData.manager_pin.trim() !== '' && 
+                  branchId) {
+                // Validate PIN format
+                if (!/^\d{4,6}$/.test(branchData.manager_pin)) {
+                  throw new Error('Manager PIN must be 4-6 digits')
+                }
+                
+                console.log('🔐 Updating manager PIN via dedicated endpoint')
+                
+                const pinResponse = await secureApi.put(
+                  `${endpoints.myBranches}/${branchId}/manager-pin`,
+                  { manager_pin: branchData.manager_pin }
+                )
+                
+                const pinData = await pinResponse.json()
+                
+                if (!pinData.success) {
+                  throw new Error(pinData.message || 'Failed to set manager PIN')
+                }
+                
+                console.log('✅ Manager PIN updated and hashed')
+              }
+              
+              // Phase 2: Remove PIN from general update to prevent plaintext storage
+              const { manager_pin, ...cleanedBranchData } = branchData
+              
               if (showEditModal) {
                 // Update existing branch using secure ID
                 console.log('📝 Updating branch:', showEditModal.public_id)
-                const response = await secureApi.put(`${endpoints.myBranches}/${showEditModal.public_id || showEditModal.id}`, branchData)
+                const response = await secureApi.put(`${endpoints.myBranches}/${branchId}`, cleanedBranchData)
                 const data = await response.json()
                 
                 if (!data.success) {
@@ -326,13 +358,46 @@ function BranchesTab({ analytics }) {
               } else {
                 // Create new branch
                 console.log('➕ Creating new branch')
-                const response = await secureApi.post(endpoints.myBranches, branchData)
+                const response = await secureApi.post(endpoints.myBranches, cleanedBranchData)
                 const data = await response.json()
                 
                 if (!data.success) {
                   throw new Error(data.message || 'Failed to create branch')
                 }
-                console.log('✅ Branch created successfully:', data.data?.public_id)
+                
+                const newBranchId = data.data?.public_id
+                console.log('✅ Branch created successfully:', newBranchId)
+                
+                // Phase 3: If PIN was provided in create mode AND manager access is enabled, save it now
+                if (branchData.manager_pin_enabled === true &&
+                    manager_pin && 
+                    manager_pin.trim() !== '' && 
+                    newBranchId) {
+                  if (!/^\d{4,6}$/.test(manager_pin)) {
+                    throw new Error('Manager PIN must be 4-6 digits')
+                  }
+                  
+                  try {
+                    console.log('🔐 Setting manager PIN for new branch')
+                    
+                    const pinResponse = await secureApi.put(
+                      `${endpoints.myBranches}/${newBranchId}/manager-pin`,
+                      { manager_pin: manager_pin }
+                    )
+                    
+                    const pinData = await pinResponse.json()
+                    
+                    if (!pinData.success) {
+                      console.error('⚠️ Branch saved but PIN failed:', pinData.message)
+                      setError('Branch saved successfully, but failed to set manager PIN. Please edit the branch to retry.')
+                    } else {
+                      console.log('✅ Manager PIN set for new branch')
+                    }
+                  } catch (pinError) {
+                    console.error('⚠️ Branch saved but PIN failed:', pinError)
+                    setError('Branch saved successfully, but failed to set manager PIN. Please edit the branch to retry.')
+                  }
+                }
               }
               await loadBranches() // Reload to get updated data
               setShowCreateModal(false)
@@ -360,8 +425,14 @@ function BranchModal({ branch, onClose, onSave }) {
     phone: branch?.phone || '',
     email: branch?.email || '',
     manager_name: branch?.manager_name || '',
-    isMain: branch?.isMain || false
+    isMain: branch?.isMain || false,
+    manager_pin_enabled: branch?.manager_pin_enabled || false,
+    manager_pin: ''
   })
+
+  // Manager PIN state
+  const [showPin, setShowPin] = useState(false)
+  const [pinValidated, setPinValidated] = useState(false)
 
   // District management state
   const [loadingDistricts, setLoadingDistricts] = useState(false)
@@ -752,6 +823,111 @@ function BranchModal({ branch, onClose, onSave }) {
                       placeholder="branch@business.com"
                     />
                   </div>
+                </div>
+
+                {/* Manager Access Section */}
+                <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
+                        🔐 Manager Access
+                      </h3>
+                      <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                        Enable managers to scan and redeem customer rewards
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      id="manager_pin_enabled"
+                      checked={formData.manager_pin_enabled}
+                      onChange={(e) => setFormData({...formData, manager_pin_enabled: e.target.checked})}
+                      className="h-6 w-6 min-h-[24px] min-w-[24px] text-purple-600 focus:ring-purple-500 border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-gray-700"
+                    />
+                  </div>
+
+                  {formData.manager_pin_enabled && (
+                    <div className="space-y-4 mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
+                      {/* PIN Input */}
+                      <div>
+                        <label className="block text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
+                          📱 Manager PIN (4-6 digits)
+                        </label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type={showPin ? "text" : "password"}
+                              value={formData.manager_pin}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '').substring(0, 6)
+                                setFormData({...formData, manager_pin: value})
+                                setPinValidated(false) // Clear validation when PIN changes
+                              }}
+                              maxLength={6}
+                              pattern="[0-9]{4,6}"
+                              className="w-full px-4 py-3 min-h-[44px] border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all touch-target font-mono text-lg tracking-widest"
+                              placeholder="123456"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPin(!showPin)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
+                            >
+                              {showPin ? '👁️' : '👁️‍🗨️'}
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)) {
+                                setPinValidated(true)
+                              }
+                            }}
+                            disabled={!formData.manager_pin || !/^\d{4,6}$/.test(formData.manager_pin)}
+                            className="px-4 py-3 min-h-[44px] bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 active:scale-95 transition-all shadow-md disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {pinValidated ? '✓ Set' : '💾 Set PIN'}
+                          </button>
+                        </div>
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
+                          {pinValidated
+                            ? `✓ ${formData.manager_pin.length}-digit PIN validated and ready to save`
+                            : formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)
+                            ? `✓ ${formData.manager_pin.length}-digit PIN ready to validate`
+                            : 'Enter 4-6 numeric digits'}
+                        </p>
+                      </div>
+
+                      {/* Branch Login QR Code */}
+                      {branch?.public_id && (
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                          <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
+                            📱 Manager Login QR Code
+                          </h4>
+                          <div className="flex items-center gap-4">
+                            <div className="bg-white p-2 rounded-lg border border-gray-200">
+                              <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
+                                  `${window.location.origin}/branch-manager-login?branch=${branch.public_id}`
+                                )}`}
+                                alt="Branch Manager Login QR Code"
+                                className="w-[120px] h-[120px]"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
+                                Branch managers can scan this QR code to access the login page
+                              </p>
+                              <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
+                                <code className="text-xs text-purple-900 dark:text-purple-200 break-all">
+                                  {branch.public_id}
+                                </code>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Main Branch Setting */}

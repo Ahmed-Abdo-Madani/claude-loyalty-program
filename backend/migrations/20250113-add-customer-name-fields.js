@@ -136,9 +136,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   (async () => {
     try {
       await up()
+      await sequelize.close()
+      console.log('✅ Database connection closed')
       process.exit(0)
     } catch (error) {
       console.error('Migration failed:', error)
+      await sequelize.close()
+      console.log('✅ Database connection closed')
       process.exit(1)
     }
   })()

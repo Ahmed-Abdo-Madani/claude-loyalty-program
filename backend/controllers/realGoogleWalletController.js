@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import fs from 'fs'
 import path from 'path'
 import CardDesignService from '../services/CardDesignService.js'
+import WalletPass from '../models/WalletPass.js'
 
 class RealGoogleWalletController {
   constructor() {
@@ -354,13 +355,24 @@ class RealGoogleWalletController {
       throw new Error(`stamps_required is missing from offerData: ${JSON.stringify(offerData)}`)
     }
 
+    // Fetch existing pass to determine state and expiration
+    const existingPass = await WalletPass.findOne({
+      where: {
+        customer_id: customerData.customerId,
+        offer_id: offerData.offerId,
+        wallet_type: 'google'
+      }
+    })
+
     const objectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
     const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9\-]/g, '_')}`
 
     const loyaltyObject = {
       id: objectId,
       classId: classId,
-      state: 'ACTIVE',
+      state: existingPass && existingPass.pass_status === 'completed' ? 'COMPLETED' : 
+             existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked') ? 'EXPIRED' : 
+             'ACTIVE',
 
       // Account information
       accountName: `${customerData.firstName} ${customerData.lastName}`,
@@ -431,6 +443,16 @@ class RealGoogleWalletController {
 
       // Enable push notifications for field updates
       notifyPreference: 'notifyOnUpdate'
+    }
+
+    // Add validTimeInterval if pass has scheduled expiration
+    if (existingPass && existingPass.scheduled_expiration_at) {
+      loyaltyObject.validTimeInterval = {
+        end: {
+          date: new Date(existingPass.scheduled_expiration_at).toISOString().split('T')[0] // YYYY-MM-DD format
+        }
+      }
+      console.log('⏰ Pass expiration scheduled:', loyaltyObject.validTimeInterval.end.date)
     }
 
     try {
@@ -928,6 +950,48 @@ class RealGoogleWalletController {
       }
     } catch (error) {
       console.error('❌ Google Wallet push update failed:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  }
+
+  /**
+   * Expire a Google Wallet pass by setting state to EXPIRED
+   * Called by PassLifecycleService when pass expires
+   */
+  async expirePass(objectId) {
+    try {
+      const accessToken = await this.auth.getAccessToken()
+
+      const updateData = {
+        state: 'EXPIRED'
+      }
+
+      const response = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Failed to expire pass: ${error}`)
+      }
+
+      console.log(`✅ Google Wallet pass ${objectId} marked as EXPIRED`)
+
+      return {
+        success: true,
+        objectId,
+        expired: new Date().toISOString()
+      }
+    } catch (error) {
+      console.error('❌ Failed to expire Google Wallet pass:', error)
       return {
         success: false,
         error: error.message

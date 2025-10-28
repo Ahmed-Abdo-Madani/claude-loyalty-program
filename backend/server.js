@@ -16,6 +16,7 @@ import segmentRoutes from './routes/segments.js'
 import locationRoutes from './routes/locations.js'
 import cardDesignRoutes from './routes/cardDesign.js'
 import stampIconsRoutes from './routes/stampIcons.js'
+import branchManagerRoutes from './routes/branchManager.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
@@ -33,6 +34,33 @@ if (!process.env.FONTCONFIG_PATH) {
 }
 
 dotenv.config()
+
+// ============================================
+// Environment Validation (PRODUCTION CRITICAL)
+// ============================================
+if (process.env.NODE_ENV === 'production') {
+  const requiredEnvVars = [
+    'JWT_SECRET',
+    'DATABASE_URL',
+    'BASE_URL'
+  ]
+
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
+
+  if (missingVars.length > 0) {
+    console.error('🔴 FATAL: Missing required environment variables:', missingVars.join(', '))
+    console.error('Server cannot start without these variables in production mode')
+    process.exit(1)
+  }
+
+  // Validate JWT_SECRET strength (minimum 32 characters)
+  if (process.env.JWT_SECRET.length < 32) {
+    console.error('🔴 FATAL: JWT_SECRET must be at least 32 characters long for production')
+    process.exit(1)
+  }
+
+  logger.info('✅ Environment validation passed')
+}
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -91,7 +119,9 @@ app.use(cors({
     'Content-Type',
     'Authorization',      // Added for admin JWT tokens
     'x-session-token',
-    'x-business-id'
+    'x-business-id',
+    'x-manager-token',    // Branch manager authentication
+    'x-branch-id'         // Branch manager branch ID
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }))
@@ -117,7 +147,7 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('X-XSS-Protection', '1; mode=block')
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)')
   next()
 })
 
@@ -208,6 +238,7 @@ app.use('/api/segments', segmentRoutes)
 app.use('/api/locations', locationRoutes)
 app.use('/api/card-design', cardDesignRoutes)
 app.use('/api/stamp-icons', stampIconsRoutes)
+app.use('/api/branch-manager', branchManagerRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

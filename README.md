@@ -85,18 +85,55 @@ claude-loyalty-program/
    npm install
    ```
 
-3. **Start development server**
+3. **Configure Environment Variables**
+
+   Copy the example environment file:
+   ```bash
+   cd backend
+   cp .env.example .env
+   ```
+
+   Update `.env` with your configuration:
+   - `JWT_SECRET`: Required for authentication (default provided for development)
+   - `DATABASE_URL`: PostgreSQL connection string (if using database)
+   - `APPLE_PASS_CERTIFICATE_PATH`: Path to Apple Wallet certificate (for wallet features)
+
+   For development, the default values in `.env.example` work out of the box.
+
+   For production, see `DEPLOYMENT.md` for secure configuration guidelines.
+
+4. **Run Database Migrations**
+
+   After setting up the database, run all migrations:
+
+   ```bash
+   cd backend
+   npm run migrate:branch-manager
+   npm run migrate:pass-lifecycle
+   npm run migrate:pass-status-constraint
+   ```
+
+   These migrations add:
+   - Branch manager authentication fields
+   - Pass lifecycle management fields
+   - Database constraint fixes
+
+   For detailed migration information, see `DEPLOYMENT.md`.
+
+   **Important**: Migration scripts must close database connections before exiting. If a migration hangs after showing "Database pool initialized", it's missing `await sequelize.close()` before `process.exit()`. See `DEPLOYMENT.md` for the correct pattern.
+
+5. **Start development server**
    ```bash
    npm run dev
    ```
    
    **Note**: Stamp icons (coffee, gift) are automatically generated on backend startup. No manual setup required. The system creates SVG files programmatically and generates PNG previews using Sharp.
 
-4. **Wallet button assets** ✅
+6. **Wallet button assets** ✅
    
    Official Apple and Google Wallet button designs are already included in `public/assets/wallet-buttons/`. These comply with platform branding guidelines and support both English and Arabic. No additional setup required. See [DEPLOYMENT.md](DEPLOYMENT.md#61-official-wallet-button-assets) for details.
 
-5. **Open browser**
+7. **Open browser**
    ```
    http://localhost:3000
    ```

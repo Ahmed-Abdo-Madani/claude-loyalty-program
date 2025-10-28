@@ -172,12 +172,16 @@ async function runCautiousMigration() {
 // Run migration if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   runCautiousMigration()
-    .then(() => {
+    .then(async () => {
       logger.info('✅ Migration completed')
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(0)
     })
-    .catch((error) => {
+    .catch(async (error) => {
       logger.error('❌ Migration failed', error)
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(1)
     })
 }

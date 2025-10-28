@@ -1,6 +1,8 @@
 // Secure API utilities for authenticated requests
 // Handles secure business ID authentication headers
 
+import { endpoints } from '../config/api.js'
+
 /**
  * Get stored authentication data
  */
@@ -140,3 +142,122 @@ export default {
   validateSecureCustomerId,
   getSecureBusinessId
 }
+// ============================================
+// Branch Manager Authentication Functions
+// ============================================
+
+/**
+ * Get stored manager authentication data
+ */
+export function getManagerAuthData() {
+  return {
+    isAuthenticated: localStorage.getItem('managerAuthenticated') === 'true',
+    branchId: localStorage.getItem('managerBranchId'),
+    branchName: localStorage.getItem('managerBranchName'),
+    managerToken: localStorage.getItem('managerToken')
+  }
+}
+
+/**
+ * Get manager authentication headers for API requests
+ */
+export function getManagerAuthHeaders() {
+  const { managerToken, branchId } = getManagerAuthData()
+  
+  if (!managerToken || !branchId) {
+    console.warn('?? Missing manager authentication data')
+    return {
+      'Content-Type': 'application/json'
+    }
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    'x-manager-token': managerToken,
+    'x-branch-id': branchId
+  }
+}
+
+/**
+ * Check if manager is authenticated
+ */
+export function isManagerAuthenticated() {
+  const { isAuthenticated, branchId, managerToken } = getManagerAuthData()
+  
+  if (!isAuthenticated || !branchId || !managerToken) {
+    return false
+  }
+
+  // Validate branch ID format
+  if (!branchId.startsWith('branch_')) {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Login manager
+ */
+export async function managerLogin(branchId, pin) {
+  try {
+    // Use centralized endpoint configuration
+    const response = await fetch(endpoints.branchManagerLogin, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ branchId, pin })
+    })
+
+    const data = await response.json()
+
+    if (data.success && data.token) {
+      localStorage.setItem('managerAuthenticated', 'true')
+      localStorage.setItem('managerToken', data.token)
+      localStorage.setItem('managerBranchId', data.branch.id)
+      localStorage.setItem('managerBranchName', data.branch.name)
+
+      return { success: true }
+    } else {
+      return { success: false, error: data.error || 'Login failed' }
+    }
+  } catch (error) {
+    console.error('Manager login error:', error)
+    return { success: false, error: 'Login failed' }
+  }
+}
+
+/**
+ * Logout manager
+ */
+export function managerLogout() {
+  localStorage.removeItem('managerAuthenticated')
+  localStorage.removeItem('managerToken')
+  localStorage.removeItem('managerBranchId')
+  localStorage.removeItem('managerBranchName')
+}
+
+/**
+ * Make authenticated manager API request
+ */
+export async function managerApiRequest(url, options = {}) {
+  const headers = {
+    ...getManagerAuthHeaders(),
+    ...(options.headers || {})
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers
+  })
+
+  if (response.status === 401) {
+    managerLogout()
+    window.location.href = '/branch-manager-login'
+    throw new Error('Authentication expired')
+  }
+
+  return response
+}
+

@@ -2,6 +2,7 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import path from 'path'
 import fs from 'fs'
+import logger from '../config/logger.js'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
@@ -1475,6 +1476,67 @@ router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) =>
     res.status(500).json({
       success: false,
       message: 'Failed to update branch status',
+      error: error.message
+    })
+  }
+})
+
+// Update branch manager PIN - SECURE VERSION
+router.put('/my/branches/:id/manager-pin', requireBusinessAuth, async (req, res) => {
+  try {
+    const branchId = req.params.id
+    const businessId = req.business.public_id
+    const { manager_pin } = req.body
+
+    // Validate PIN format (4-6 digits)
+    if (!manager_pin || !/^\d{4,6}$/.test(manager_pin)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Manager PIN must be 4-6 digits'
+      })
+    }
+
+    // Find branch and verify ownership
+    const branch = await Branch.findOne({
+      where: { public_id: branchId, business_id: businessId }
+    })
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: 'Branch not found or not owned by your business'
+      })
+    }
+
+    // Hash PIN with bcryptjs (same as business password)
+    const hashedPIN = await bcrypt.hash(manager_pin, 10)
+
+    // Update branch with hashed PIN and enable manager login
+    await branch.update({
+      manager_pin: hashedPIN,
+      manager_pin_enabled: true
+    })
+
+    logger.info('Branch manager PIN updated', {
+      branchId: branch.public_id,
+      branchName: branch.name,
+      businessId
+    })
+
+    res.json({
+      success: true,
+      message: 'Manager PIN updated successfully',
+      data: {
+        public_id: branch.public_id,
+        name: branch.name,
+        manager_pin_enabled: true
+      }
+    })
+  } catch (error) {
+    logger.error('Update manager PIN error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update manager PIN',
       error: error.message
     })
   }

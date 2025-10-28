@@ -246,7 +246,8 @@ class AppleWalletController {
         actualProgressData,
         design,
         existingSerialNumber,
-        existingAuthToken
+        existingAuthToken,
+        existingPass  // Pass existingPass for lifecycle fields
       )
 
       // Generate pass images with progress data for stamp visualization
@@ -441,7 +442,7 @@ class AppleWalletController {
     return backFields
   }
 
-  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null) {
+  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null, existingPass = null) {
     try {
       // Use existing serial number if provided (for updates), otherwise generate new one
       const serialNumber = existingSerialNumber || `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
@@ -659,6 +660,21 @@ class AppleWalletController {
       generatedFrom: existingAuthToken ? 'database' : `customerId:${customerData.customerId} + offerId:${offerData.offerId}`
     })
     // ===================================================
+
+    // ============ PASS LIFECYCLE FIELDS ============
+    // Add expiration date and voided status for completed/expired passes
+    // If pass is completed and has scheduled expiration, set expirationDate
+    if (existingPass && existingPass.pass_status === 'completed' && existingPass.scheduled_expiration_at) {
+      passData.expirationDate = new Date(existingPass.scheduled_expiration_at).toISOString()
+      logger.info('⏰ Pass expiration scheduled:', passData.expirationDate)
+    }
+    
+    // If pass is expired or revoked, mark as voided (grays out the pass in Wallet)
+    if (existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked')) {
+      passData.voided = true
+      logger.info('🚫 Pass marked as voided (status: ' + existingPass.pass_status + ')')
+    }
+    // ===============================================
 
       // ==================== DEBUG LOGGING ====================
       logger.info('🔍 ========== PASS.JSON DEBUG ==========')
@@ -1180,7 +1196,8 @@ class AppleWalletController {
         stampProgressData,
         design,
         existingSerialNumber,  // Pass existing serial number!
-        existingAuthToken      // Pass existing auth token!
+        existingAuthToken,     // Pass existing auth token!
+        walletPass             // Pass walletPass for lifecycle fields
       )
 
       // Update pass data in database

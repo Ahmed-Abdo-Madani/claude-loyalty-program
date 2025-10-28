@@ -163,6 +163,8 @@ if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
       logger.error('   4. Review error logs above')
       logger.error('')
 
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(1)
     }
   })()

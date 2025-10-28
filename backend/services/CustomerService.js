@@ -279,6 +279,52 @@ class CustomerService {
     return expectedHash === providedHash
   }
 
+  /**
+   * Find offer by hash for a given business
+   * Loops through all offers and verifies hash against each
+   * Returns the matching offer object or null if not found
+   * 
+   * Comment 3: Removed status filter to mirror business.js behavior
+   * This prevents rejecting valid QR codes for archived/inactive offers
+   * 
+   * @param {string} offerHash - The hash from the QR code
+   * @param {string} businessId - The business ID to search within
+   * @returns {Promise<Object|null>} The matching offer or null
+   */
+  static async findOfferByHash(offerHash, businessId) {
+    try {
+      logger.debug('Finding offer by hash for business:', businessId)
+      
+      // Fetch all offers for the business (no status filter, matching business.js)
+      const businessOffers = await Offer.findAll({
+        where: {
+          business_id: businessId
+        }
+      })
+
+      if (!businessOffers || businessOffers.length === 0) {
+        logger.warn('No offers found for business:', businessId)
+        return null
+      }
+
+      logger.debug(`Checking ${businessOffers.length} offers for hash match`)
+
+      // Loop through offers and verify hash for each
+      for (const offer of businessOffers) {
+        if (this.verifyOfferHash(offer.public_id, businessId, offerHash)) {
+          logger.info('Found matching offer:', offer.public_id)
+          return offer
+        }
+      }
+
+      logger.warn('No matching offer found for provided hash')
+      return null
+    } catch (error) {
+      logger.error('Error finding offer by hash:', error)
+      return null
+    }
+  }
+
   // Scan transaction recording
   static async recordScanTransaction(customerId, offerId, businessId, metadata = {}) {
     // For now, we'll store this as a simple log

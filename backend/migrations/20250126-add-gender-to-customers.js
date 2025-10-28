@@ -104,17 +104,30 @@ async function down() {
   }
 }
 
-// Run migration if called directly
+// Direct execution support
 if (import.meta.url === `file://${process.argv[1]}`) {
-  up()
-    .then(() => {
-      console.log('Migration executed successfully');
+  (async () => {
+    try {
+      console.log('Authenticating database connection...');
+      await sequelize.authenticate();
+      console.log('✓ Database authenticated');
+      
+      if (process.argv[2] === 'down') {
+        await down();
+      } else {
+        await up();
+      }
+      
+      await sequelize.close();
+      console.log('✅ Database connection closed');
       process.exit(0);
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error('Migration failed:', error);
+      await sequelize.close();
+      console.log('✅ Database connection closed');
       process.exit(1);
-    });
+    }
+  })();
 }
 
 export { up, down };

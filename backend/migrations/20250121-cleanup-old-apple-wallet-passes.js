@@ -147,4 +147,31 @@ export async function down() {
   }
 }
 
+// Run migration if called directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  (async () => {
+    const { default: sequelize } = await import('../config/database.js')
+    
+    try {
+      await sequelize.authenticate()
+      console.log('✅ Database connection established')
+      
+      if (process.argv[2] === 'down') {
+        await down()
+      } else {
+        await up()
+      }
+      
+      await sequelize.close()
+      console.log('✅ Database connection closed')
+      process.exit(0)
+    } catch (error) {
+      console.error('❌ Migration script failed:', error)
+      await sequelize.close()
+      console.log('✅ Database connection closed')
+      process.exit(1)
+    }
+  })()
+}
+
 export default { up, down }

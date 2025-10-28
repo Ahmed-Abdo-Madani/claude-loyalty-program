@@ -54,6 +54,25 @@ const CustomerProgress = sequelize.define('CustomerProgress', {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
+  reward_fulfilled_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'When the reward was physically given to customer by branch manager'
+  },
+  fulfilled_by_branch: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    references: {
+      model: 'branches',
+      key: 'public_id'
+    },
+    comment: 'Branch ID that fulfilled the reward'
+  },
+  fulfillment_notes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Notes from branch manager about prize fulfillment'
+  },
   last_scan_date: {
     type: DataTypes.DATE,
     allowNull: true
@@ -161,12 +180,19 @@ CustomerProgress.prototype.addStamp = async function(incrementBy = 1) {
   return this
 }
 
-CustomerProgress.prototype.claimReward = async function() {
+CustomerProgress.prototype.claimReward = async function(branchId = null, notes = null) {
   if (!this.is_completed) {
     throw new Error('Cannot claim reward: progress not completed')
   }
 
   this.rewards_claimed = (this.rewards_claimed || 0) + 1
+  
+  // Set fulfillment tracking
+  if (branchId) {
+    this.reward_fulfilled_at = new Date()
+    this.fulfilled_by_branch = branchId
+    this.fulfillment_notes = notes
+  }
 
   // Reset progress for next reward cycle
   this.current_stamps = 0
@@ -201,6 +227,20 @@ CustomerProgress.prototype.claimReward = async function() {
     // Don't throw - progress already saved successfully
   }
 
+  return this
+}
+
+CustomerProgress.prototype.markRewardFulfilled = async function(branchId, notes = null) {
+  if (!this.is_completed) {
+    throw new Error('Cannot mark reward fulfilled: progress not completed')
+  }
+  
+  this.reward_fulfilled_at = new Date()
+  this.fulfilled_by_branch = branchId
+  this.fulfillment_notes = notes
+  
+  await this.save()
+  
   return this
 }
 

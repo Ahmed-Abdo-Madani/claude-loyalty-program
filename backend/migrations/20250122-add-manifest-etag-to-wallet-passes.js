@@ -119,9 +119,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       logger.info('   3. Test GET /v1/passes endpoint with If-None-Match header')
       logger.info('   4. Monitor 304 Not Modified responses in production')
       logger.info('')
+      
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(0)
     } catch (error) {
       logger.error('❌ Migration failed:', error)
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(1)
     }
   })()

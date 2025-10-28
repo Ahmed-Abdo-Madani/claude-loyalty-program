@@ -117,6 +117,443 @@ node migrations/20250125-fix-last-updated-tag-nullable.js --rollback
 - The field is used by Apple Web Service Protocol's `passesUpdatedSince` endpoint
 - See `PRODUCTION-DEPLOYMENT.md` for detailed troubleshooting
 
+### Step 4: Branch Manager Authentication Setup
+
+⚠️ **CRITICAL: Database Constraint Fix Required**
+
+**IMPORTANT: Choose the correct migration path based on your database state:**
+
+**Path A: Fresh Database Installation (recommended for new setups)**
+
+Run all migrations in order using `migrate:all`:
+
+```bash
+cd backend
+npm run migrate:all
+```
+
+This runs: gender → branch-manager → pass-lifecycle → pass-status-constraint
+
+The lifecycle migration now includes the CHECK constraint fix, but running the constraint
+fix migration afterward is safe and ensures the constraint is correct.
+
+**Path B: Existing Database That Already Ran Lifecycle Migration**
+
+If you already ran `20250127-add-pass-lifecycle-fields.js` BEFORE January 28, 2025:
+
+```bash
+cd backend
+npm run migrate:pass-status-constraint
+```
+
+This fixes the CHECK constraint that prevents the 'completed' state from being used.
+
+**Path C: Existing Database Running Lifecycle Migration for First Time**
+
+If running the lifecycle migration for the first time (after January 28, 2025):
+
+```bash
+cd backend
+npm run migrate:pass-lifecycle
+# Optionally run constraint fix for extra safety:
+npm run migrate:pass-status-constraint
+```
+
+The lifecycle migration now includes the constraint fix, but running the dedicated fix
+migration is harmless and provides extra verification.
+
+**Verification:**
+
+After running the migration(s), verify the constraint is correct:
+
+```sql
+-- Connect to PostgreSQL and run:
+SELECT conname, pg_get_constraintdef(oid) 
+FROM pg_constraint 
+WHERE conrelid = 'wallet_passes'::regclass 
+  AND conname = 'wallet_passes_pass_status_check';
+```
+
+Expected output should show all enum values (at minimum: active, completed, expired, revoked, deleted).
+
+**Troubleshooting:**
+
+**If prize confirmation still fails after migration:**
+1. Check migration logs for errors
+2. Verify the constraint was actually updated (use SQL query above)
+3. Try running the constraint fix migration again
+4. If still failing, manually run the SQL commands:
+   ```sql
+   ALTER TABLE wallet_passes DROP CONSTRAINT IF EXISTS wallet_passes_pass_status_check;
+   ALTER TABLE wallet_passes ADD CONSTRAINT wallet_passes_pass_status_check 
+     CHECK (pass_status IN ('active', 'completed', 'expired', 'revoked', 'deleted'));
+   ```
+5. Restart the backend server
+6. Test prize confirmation again
+
+**Purpose**: Enable secure branch-level access for staff to scan loyalty stamps/rewards using PIN authentication.
+
+**Migration File**: `backend/migrations/20250127-add-branch-manager-auth.sql` or `.js`
+
+**Features Implemented**:
+1. **Secure PIN Storage**: PINs are hashed with bcrypt before storage (never plaintext)
+2. **Flexible PIN Length**: Supports 4-6 digit PINs (4 minimum, 6 recommended)
+3. **QR Code Auto-Fill**: Branch managers scan QR code → auto-fills branch ID → prompts for PIN
+4. **Dedicated Endpoint**: Separate `/my/branches/:id/manager-pin` endpoint for PIN updates
+
+**How Branch Managers Set Up PIN** (Business Owner):
+
+1. Navigate to **Branches** tab in Business Dashboard
+2. Create or edit a branch
+3. Scroll to "Branch Manager Authentication" section
+4. Enter 4-6 digit PIN in the input field
+5. Click **💾 Set PIN** button (validates format)
+6. Click **Save Branch** to hash and store PIN securely
+7. Show QR code to branch manager for scanning
+
+**Branch Manager Login Flow**:
+
+```
+Manager scans QR code →
+Auto-fills branch ID (from ?branch= parameter) →
+Auto-advances to PIN input →
+Manager enters PIN →
+Backend validates with bcrypt.compare() →
+Login success → Redirect to scanning interface
+```
+
+**Security Features**:
+- PINs hashed with bcrypt (salt rounds: 10)
+- Branch ID validation (must start with `branch_`)
+- Rate limiting on login endpoint (5 attempts per 15 minutes)
+- Business data isolation (multi-tenancy enforced)
+
+**Migration Commands**:
+
+**Database Migrations (Critical - Run in Order):**
+
+**Option 1: Run All Migrations (Recommended for Fresh Installs)**
+```bash
+cd backend
+npm run migrate:all
+```
+This runs all migrations in correct order: gender → branch-manager → pass-lifecycle → pass-status-constraint
+
+**Option 2: Run Individual Migrations (For Existing Databases)**
+- [ ] Run gender migration: `npm run migrate:gender` (if not already run)
+- [ ] Run branch manager auth migration: `npm run migrate:branch-manager`
+- [ ] Run pass lifecycle migration: `npm run migrate:pass-lifecycle`
+- [ ] **Run constraint fix migration: `npm run migrate:pass-status-constraint`** (critical for existing databases)
+- [ ] Verify all migrations completed successfully (check logs)
+- [ ] Verify CHECK constraint includes all enum values (use SQL query above)
+- [ ] Test prize confirmation in development/staging
+- [ ] Only deploy to production after all migrations succeed
+
+**Important Notes:**
+- The `migrate:all` script now includes the constraint fix migration
+- If you already ran lifecycle migration before Jan 28, 2025, you MUST run constraint fix
+- Fresh installations get the constraint fix automatically via lifecycle migration
+- Running constraint fix on fresh databases is safe but redundant
+
+```bash
+# Option 3: Run SQL script directly in pgAdmin
+# Copy/paste contents of: backend/migrations/20250127-add-branch-manager-auth.sql
+
+# Option 4: Run Node.js migration script
+cd backend
+node migrations/20250127-add-branch-manager-auth.js
+```
+
+**Verification Steps**:
+
+1. Check that `manager_pin` and `manager_pin_hash` columns exist:
+```sql
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'branches' 
+AND column_name IN ('manager_pin', 'manager_pin_hash');
+```
+
+2. Test PIN hashing endpoint:
+```bash
+curl -X PUT https://api.madna.me/api/business/my/branches/branch_123/manager-pin \
+  -H "Content-Type: application/json" \
+  -H "x-session-token: YOUR_TOKEN" \
+  -H "x-business-id: biz_123" \
+  -d '{"manager_pin": "123456"}'
+
+# Expected response:
+# {"success": true, "message": "Manager PIN updated successfully"}
+```
+
+3. Test branch manager login:
+```bash
+curl -X POST https://api.madna.me/api/auth/branch-manager/login \
+  -H "Content-Type: application/json" \
+  -d '{"branchId": "branch_123", "pin": "123456"}'
+
+# Expected response:
+# {"success": true, "token": "...", "branchId": "branch_123"}
+```
+
+**Important Notes**:
+- Old plaintext PINs are incompatible - business owners must re-set PINs after migration
+- QR codes contain full URL: `https://app.madna.me/branch-manager-login?branch=branch_123`
+- Frontend auto-detects `?branch` parameter and pre-fills the login form
+- Pin validation: Frontend validates format, backend validates hash match
+
+**Troubleshooting**:
+
+**Issue: "JWT_SECRET environment variable not configured" error**
+- **Cause**: JWT_SECRET is not set in the environment (development or production)
+- **Solution for Development**:
+  1. Copy `.env.example` to `.env` in the backend directory
+  2. Uncomment the `JWT_SECRET` line (line 43)
+  3. Use the default value or generate a new one: `openssl rand -base64 32`
+  4. Restart the backend server
+  5. Try logging in again - should work now
+- **Solution for Production**:
+  1. Set `JWT_SECRET` environment variable in Render.com dashboard
+  2. Use a cryptographically secure random string (min 32 characters)
+  3. Never use the development default in production
+  4. Redeploy the service
+- **Prevention**: The middleware now includes a development fallback, so this error should only occur in production if JWT_SECRET is not set
+- **Verification**: Check server startup logs for "✅ Environment validation passed" (production) or successful server start (development)
+
+**Issue: "Invalid PIN" error**
+- **Cause**: PIN hash mismatch or JWT_SECRET not configured
+- **Additional Cause**: JWT_SECRET not configured (see above) - this prevents token generation even if PIN is correct
+- **Solution**: Verify PIN is correctly set via the Branches tab, ensure JWT_SECRET is configured
+
+**Issue: "Invalid offer" error when scanning QR codes that work in business dashboard**
+- **Cause**: Branch manager scan endpoint had incorrect offer hash verification logic (now fixed)
+- **Symptoms**: 
+  - QR code scans successfully in business dashboard
+  - Same QR code returns "Invalid offer" error in branch manager scanner
+  - Browser console shows 400 Bad Request
+  - Server logs show "Invalid offer" at scan endpoint
+- **Solution**: This was a bug in the branch manager scan endpoint implementation (now fixed in latest version)
+  - The endpoint now fetches all business offers and verifies the hash against each one
+  - Matches the proven logic from the business scan endpoint
+  - Should work with all valid QR codes
+- **Verification**: 
+  1. Generate a QR code in business dashboard
+  2. Scan it in business dashboard (should work)
+  3. Scan the same QR code in branch manager scanner (should also work)
+  4. Check server logs for "Matched offer: off_..." message
+- **Prevention**: Both scan endpoints now use the same offer verification logic
+
+**Testing Checklist - QR Code Compatibility:**
+- [ ] Generate QR code in business dashboard for an active offer
+- [ ] Scan QR code in business dashboard scanner (should award stamp)
+- [ ] Log out from business dashboard
+- [ ] Log in as branch manager
+- [ ] Scan the same QR code in branch manager scanner (should award stamp)
+- [ ] Verify both scans update the same customer progress record
+- [ ] Check that stamps are awarded correctly in both cases
+- [ ] Verify wallet pass updates are sent after both types of scans
+
+**Testing Checklist - Database Constraint:**
+- [ ] Run constraint fix migration in development
+- [ ] Verify migration logs show successful constraint update
+- [ ] Test setting pass_status to 'active' (should work)
+- [ ] Test setting pass_status to 'completed' (should work - this was failing before)
+- [ ] Test setting pass_status to 'expired' (should work)
+- [ ] Test setting pass_status to invalid value like 'test' (should fail with constraint error)
+- [ ] Verify prize confirmation workflow completes without errors
+- [ ] Check that scheduled_expiration_at is set correctly
+
+**Testing Checklist - Cross-Authentication:**
+- [ ] Test that business owner can scan QR codes
+- [ ] Test that branch manager can scan the same QR codes
+- [ ] Test that QR codes work across different branches of the same business
+- [ ] Verify that branch managers can only scan for their assigned branch's business
+- [ ] Test with multiple offers per business (ensure correct offer is matched)
+
+## Database Migration Script Pattern
+
+### Critical: Always Close Database Connections
+
+Migration scripts must explicitly close the Sequelize connection pool before exiting, otherwise they will hang indefinitely.
+
+**Correct Pattern:**
+```javascript
+import sequelize from '../config/database.js'
+import logger from '../config/logger.js'
+
+async function up() {
+  try {
+    await sequelize.authenticate()
+    logger.info('✅ Database connection established')
+    
+    // ... migration logic ...
+    
+    logger.info('✅ Migration completed successfully')
+    
+    await sequelize.close()  // ✅ CRITICAL: Close connection
+    logger.info('✅ Database connection closed')
+    process.exit(0)
+    
+  } catch (error) {
+    logger.error('❌ Migration failed:', error)
+    await sequelize.close()  // ✅ Close even on error
+    process.exit(1)
+  }
+}
+
+// Run if executed directly
+if (process.argv[1] === new URL(import.meta.url).pathname) {
+  up()
+}
+```
+
+**Why This Matters:**
+
+**Without `sequelize.close()`:**
+- Connection pool remains active (10 connections open)
+- Node.js event loop waits for connections to close
+- Script hangs after showing "Database pool initialized"
+- Must manually kill process with Ctrl+C
+- Automated deployments timeout and fail
+
+**With `sequelize.close()`:**
+- Connection pool is destroyed
+- All connections are closed
+- Node.js event loop exits cleanly
+- Script completes in seconds
+- Automated deployments work correctly
+
+**Common Mistakes:**
+
+**❌ Mistake 1: Only closing on success**
+```javascript
+try {
+  // migration logic
+  await sequelize.close()
+  process.exit(0)
+} catch (error) {
+  process.exit(1)  // ❌ Forgot to close on error
+}
+```
+
+**❌ Mistake 2: Closing before async operations complete**
+```javascript
+const promise = sequelize.query('...')  // ❌ Not awaited
+await sequelize.close()  // Closes before query completes
+process.exit(0)
+```
+
+**❌ Mistake 3: Using process.exit() without closing**
+```javascript
+logger.info('Migration complete')
+process.exit(0)  // ❌ Pool still active
+```
+
+**✅ Correct: Close in all exit paths**
+```javascript
+try {
+  // migration logic
+  await sequelize.close()
+  process.exit(0)
+} catch (error) {
+  await sequelize.close()  // ✅ Close on error too
+  process.exit(1)
+}
+```
+
+**Troubleshooting Migration Hangs:**
+
+**Symptom:** Migration shows "Database pool initialized" and hangs
+
+**Diagnosis:**
+1. Check if migration has `await sequelize.close()` before `process.exit()`
+2. Check if close is called in both success and error paths
+3. Check if all async operations are awaited before closing
+
+**Quick Fix:**
+1. Press Ctrl+C to kill the hung process
+2. Add `await sequelize.close()` before all `process.exit()` calls
+3. Run migration again - should complete in seconds
+
+**Verification:**
+
+After fixing, you should see:
+```
+💾 Database pool initialized: {...}
+✅ Database connection established
+... migration logs ...
+✅ Migration completed successfully
+✅ Database connection closed  ← This line confirms proper closure
+```
+
+If you don't see "Database connection closed", the script will hang.
+
+**Reference Implementation:**
+
+Use `backend/migrations/20250127-add-pass-lifecycle-fields.js` as the template for all migrations:
+- Line 278: `await sequelize.close()`
+- Line 279: `logger.info('✅ Database connection closed')`
+- Line 280: `process.exit(0)`
+
+This is the correct pattern that all migrations should follow.
+
+### Database Constraint Fix for 'completed' State
+
+**Issue:**
+The initial pass lifecycle migration added 'completed' to the ENUM type but didn't update the table CHECK constraint, causing prize confirmation to fail with:
+```
+new row for relation "wallet_passes" violates check constraint "wallet_passes_pass_status_check"
+```
+
+**Solution:**
+Run the constraint fix migration to update the CHECK constraint:
+
+```bash
+cd backend
+npm run migrate:pass-status-constraint
+```
+
+**What This Does:**
+- Drops the old CHECK constraint that only allowed 4 states
+- Creates a new CHECK constraint that allows all 5 states (including 'completed')
+- Safe to run multiple times (uses IF EXISTS clauses)
+- No data migration needed (no existing rows have 'completed' status)
+
+**Verification:**
+After running the migration:
+1. Check migration logs for "✅ Created new pass_status CHECK constraint"
+2. Test prize confirmation in branch manager scanner
+3. Verify pass status updates to 'completed' without errors
+4. Check that expiration is scheduled (30 days from now)
+
+**Production Deployment:**
+This migration must be run BEFORE deploying the branch manager portal to production. Add to deployment checklist:
+- [ ] Run `npm run migrate:pass-lifecycle` (if not already run)
+- [ ] Run `npm run migrate:pass-status-constraint` (new, critical)
+- [ ] Verify both migrations completed successfully
+- [ ] Test prize confirmation in staging environment
+- [ ] Deploy to production
+
+**Rollback:**
+If issues occur, rollback by running:
+```bash
+node migrations/20250128-fix-pass-status-constraint.js down
+```
+
+This restores the original constraint (without 'completed'), but prize confirmation will fail again.
+
+**Development Environment Setup:**
+1. Copy `backend/.env.example` to `backend/.env`
+2. Ensure `JWT_SECRET` is uncommented and set (default value works for development)
+3. Restart backend server if it's already running
+4. Verify server starts without JWT_SECRET errors
+
+**Production Environment Setup:**
+1. Set `JWT_SECRET` environment variable in Render.com dashboard
+2. Use a strong random secret (min 32 characters): `openssl rand -base64 32`
+3. Never commit JWT_SECRET to git or share publicly
+4. Redeploy service after setting the variable
+
 ## 🔧 Backend Deployment
 
 ### Step 1: Create Web Service on Render
@@ -2677,4 +3114,80 @@ const convertArabicToEnglishNumbers = (str) => {
 **Deployment Date**: January 27, 2025  
 **Version**: 2.2 - Dual Logo System with Fallback Logic  
 **Status**: Ready for Production
+
+---
+
+## Branch Manager Portal - Mobile Optimization
+
+### Mobile-First Scanner Design
+
+**Optimized for Handheld Scanning:**
+- Full-screen camera view on mobile devices
+- Floating close button (top-left corner, 56px touch target)
+- Large, easy-to-tap action buttons (minimum 56px height)
+- No scrolling required during scanning
+- Minimal UI chrome (header hidden when camera is active)
+- Responsive targeting overlay (adapts to screen size)
+
+**Mobile UX Improvements:**
+- One-handed operation support (buttons at bottom)
+- Large text and icons for outdoor visibility
+- High-contrast colors for bright sunlight
+- Haptic feedback on scan success (vibration)
+- Audio feedback (beep on detection)
+- Quick access to flashlight (floating button)
+
+**Desktop Compatibility:**
+- Scanner centered with max-width container
+- Header visible with branch name and logout
+- Original button sizes and spacing
+- All features accessible
+- No breaking changes
+
+**Supported Devices:**
+- iPhone SE and newer (375px width minimum)
+- Android phones (360px width minimum)
+- Tablets (iPad, Android tablets)
+- Desktop browsers (Chrome, Firefox, Safari, Edge)
+
+**Browser Requirements:**
+- HTTPS required for camera access (or localhost for development)
+- Modern browser with MediaDevices API support
+- WebRTC support for camera streaming
+- JavaScript enabled
+
+**Safe Area Support:**
+- Custom Tailwind utilities added for notched devices (pb-safe, pt-safe, pl-safe, pr-safe)
+- Uses CSS `env(safe-area-inset-*)` for iPhone X and newer
+- Ensures bottom buttons aren't hidden by home indicator
+- Applied to all full-screen overlays and modals
+- No additional configuration required
+
+---
+
+### Mobile Scanner Testing Checklist
+
+**Mobile Scanner Testing:**
+- [ ] Test on iPhone SE (smallest modern iPhone, 375x667px)
+- [ ] Test on iPhone 14 (standard size, 390x844px)
+- [ ] Test on iPhone 14 Pro Max (largest, 430x932px)
+- [ ] Test on Samsung Galaxy S21 (360x800px)
+- [ ] Test on iPad Mini (768x1024px)
+- [ ] Verify full-screen camera view (no white space)
+- [ ] Verify close button works (top-left, easy to reach)
+- [ ] Verify all buttons are easily tappable (56px minimum)
+- [ ] Test in portrait and landscape orientations
+- [ ] Test in bright sunlight (outdoor visibility)
+- [ ] Test with gloves (larger touch targets help)
+- [ ] Verify no scrolling required during scanning
+- [ ] Test haptic feedback (vibration on scan)
+- [ ] Test audio feedback (beep on detection)
+- [ ] Test flashlight toggle (if device supports)
+
+**Desktop Scanner Testing:**
+- [ ] Test on 1920x1080 desktop
+- [ ] Verify scanner is centered with max-width
+- [ ] Verify header is visible
+- [ ] Verify all features work as before
+- [ ] Test dark mode on desktop
 

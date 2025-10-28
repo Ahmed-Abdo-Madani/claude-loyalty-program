@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import PropTypes from 'prop-types'
 import QrScanner from 'qr-scanner'
 import CryptoJS from 'crypto-js'
 import ApiService from '../utils/api.js'
 
-function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
+function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isActive }) {
   const videoRef = useRef(null)
   const qrScannerRef = useRef(null)
   const [scanStatus, setScanStatus] = useState('initializing') // initializing, ready, scanning, detected, processing, success, error
@@ -195,7 +196,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
       setErrorMessage(error.message)
 
       if (onScanError) {
-        onScanError(error)
+        onScanError(error.message)
       }
     }
   }, [detectedQR, lastScanTime, onScanSuccess, onScanError, playBeep, vibrate, playSuccessSound])
@@ -251,13 +252,13 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
           )
         }
 
-        // Check for flashlight support
-        const hasFlash = await QrScanner.hasCamera()
-        setHasFlashlight(hasFlash)
-
         // Start scanning
         await qrScannerRef.current.start()
         setScanStatus('ready')
+
+        // Check for flashlight support after scanner starts
+        const hasFlash = await qrScannerRef.current.hasFlash()
+        setHasFlashlight(hasFlash)
 
         console.log('📸 QR Scanner initialized and started')
 
@@ -282,7 +283,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
         setErrorMessage(errorMsg)
 
         if (onScanError) {
-          onScanError(new Error(errorMsg))
+          onScanError(errorMsg)
         }
       }
     }
@@ -328,12 +329,13 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-black text-white p-4 flex justify-between items-center">
+      {/* Header - Hidden on mobile, shown on desktop */}
+      <div className="hidden lg:flex bg-black text-white p-4 justify-between items-center">
         <h2 className="text-lg font-semibold">QR Scanner</h2>
         <button
           onClick={onClose}
-          className="text-white hover:text-gray-300 text-xl font-bold"
+          className="text-white hover:text-gray-300 text-xl font-bold w-12 h-12 focus:outline-none focus:ring-4 focus:ring-white/50"
+          aria-label="Close scanner"
         >
           ✕
         </button>
@@ -346,17 +348,28 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
           className="w-full h-full object-cover"
           playsInline
           muted
+          autoPlay
         />
+
+        {/* Floating Close Button - Mobile only */}
+        <button
+          onClick={onClose}
+          className="lg:hidden absolute top-4 left-4 z-30 w-14 h-14 bg-black/60 backdrop-blur-sm border-2 border-white/30 rounded-full flex items-center justify-center text-white text-2xl hover:bg-black/80 active:scale-95 shadow-xl transition-all focus:outline-none focus:ring-4 focus:ring-white/50"
+          aria-label="Close scanner"
+          title="Close"
+        >
+          ←
+        </button>
 
         {/* Targeting Overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div
-            className={`relative w-64 h-64 border-4 rounded-lg transition-colors duration-300 ${
+            className={`relative w-56 h-56 lg:w-64 lg:h-64 border-[6px] lg:border-4 rounded-lg transition-colors duration-300 ${
               scanStatus === 'detected' || scanStatus === 'success'
                 ? 'border-green-400 shadow-lg shadow-green-400/50'
                 : scanStatus === 'error'
                 ? 'border-red-400'
-                : 'border-white'
+                : 'border-white shadow-2xl shadow-white/30'
             }`}
             style={{
               background: 'transparent',
@@ -364,25 +377,28 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
             }}
           >
             {/* Corner Brackets */}
-            <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-white"></div>
-            <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-white"></div>
-            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-white"></div>
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-white"></div>
+            <div className="absolute -top-1 -left-1 w-12 h-12 lg:w-8 lg:h-8 border-t-4 border-l-4 border-white"></div>
+            <div className="absolute -top-1 -right-1 w-12 h-12 lg:w-8 lg:h-8 border-t-4 border-r-4 border-white"></div>
+            <div className="absolute -bottom-1 -left-1 w-12 h-12 lg:w-8 lg:h-8 border-b-4 border-l-4 border-white"></div>
+            <div className="absolute -bottom-1 -right-1 w-12 h-12 lg:w-8 lg:h-8 border-b-4 border-r-4 border-white"></div>
           </div>
         </div>
 
         {/* Status Indicator */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
-          <div className={`px-4 py-2 rounded-full text-white font-medium ${
-            scanStatus === 'ready' || scanStatus === 'scanning' ? 'bg-blue-600' :
-            scanStatus === 'detected' ? 'bg-yellow-600' :
-            scanStatus === 'processing' ? 'bg-purple-600' :
-            scanStatus === 'success' ? 'bg-green-600' :
-            scanStatus === 'error' ? 'bg-red-600' :
-            'bg-gray-600'
-          }`}>
-            {scanStatus === 'initializing' && '📷 Starting camera...'}
-            {scanStatus === 'ready' && '🔍 Point at QR code'}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2" aria-live="polite" aria-atomic="true">
+          <div 
+            className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-white font-medium text-sm lg:text-base ${
+              scanStatus === 'ready' || scanStatus === 'scanning' ? 'bg-blue-600' :
+              scanStatus === 'detected' ? 'bg-yellow-600' :
+              scanStatus === 'processing' ? 'bg-purple-600' :
+              scanStatus === 'success' ? 'bg-green-600' :
+              scanStatus === 'error' ? 'bg-red-600' :
+              'bg-gray-600'
+            }`}
+            role="status"
+          >
+            {scanStatus === 'initializing' && '📷 Starting...'}
+            {scanStatus === 'ready' && '🔍 Point camera'}
             {scanStatus === 'scanning' && '👀 Scanning...'}
             {scanStatus === 'detected' && '✅ QR Code detected!'}
             {scanStatus === 'processing' && '⚡ Processing...'}
@@ -414,10 +430,10 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
       </div>
 
       {/* Controls */}
-      <div className="bg-black text-white p-3 space-y-3">
+      <div className="bg-black text-white p-2 lg:p-3 space-y-3">
         {/* Error Message */}
         {scanStatus === 'error' && errorMessage && (
-          <div className="bg-red-600 text-white p-3 rounded-lg mb-3">
+          <div className="bg-red-600 text-white p-4 lg:p-3 rounded-lg mb-3 text-base lg:text-sm">
             <div className="flex items-start space-x-2">
               <span className="text-xl">⚠️</span>
               <div>
@@ -432,23 +448,32 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose, isActive }) {
         {hasFlashlight && (
           <button
             onClick={toggleFlashlight}
-            className={`absolute top-20 right-4 w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all shadow-lg z-20 ${
+            className={`absolute top-20 right-4 w-14 h-14 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold transition-all shadow-lg z-20 text-2xl lg:text-xl focus:outline-none focus:ring-4 focus:ring-white/50 ${
               flashlightOn 
                 ? 'bg-yellow-500 text-white shadow-yellow-500/50' 
                 : 'bg-gray-700 text-white'
             }`}
+            aria-label="Toggle flashlight"
+            title="Flash"
           >
-            <span className="text-xl">�</span>
+            <span className="text-xl">💡</span>
           </button>
         )}
 
-        {/* Instructions */}
-        <div className="text-center text-gray-300 text-sm">
+        {/* Instructions - Hidden on mobile, shown on desktop */}
+        <div className="hidden lg:block text-center text-gray-300 text-sm">
           📱 Hold steady • 🎯 Center QR code • 📏 Keep 6-12 inches away
         </div>
       </div>
     </div>
   )
+}
+
+EnhancedQRScanner.propTypes = {
+  onScanSuccess: PropTypes.func.isRequired,
+  onScanError: PropTypes.func, // Expects a string message
+  onClose: PropTypes.func,
+  isActive: PropTypes.bool.isRequired
 }
 
 export default EnhancedQRScanner

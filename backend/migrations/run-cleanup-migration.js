@@ -9,6 +9,7 @@
  */
 
 import { up } from './20250121-cleanup-old-apple-wallet-passes.js'
+import sequelize from '../config/database.js'
 
 console.log('🚀 Running Apple Wallet Pass Cleanup Migration...')
 console.log('=' .repeat(60))
@@ -19,6 +20,9 @@ try {
   console.log('')
   console.log('=' .repeat(60))
   console.log('✅ Migration completed successfully!')
+  
+  await sequelize.close()
+  console.log('✅ Database connection closed')
   process.exit(0)
 } catch (error) {
   console.error('')
@@ -26,5 +30,8 @@ try {
   console.error('❌ Migration failed!')
   console.error('Error:', error.message)
   console.error('Stack:', error.stack)
+  
+  await sequelize.close()
+  console.log('✅ Database connection closed')
   process.exit(1)
 }

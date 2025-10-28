@@ -224,9 +224,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       logger.info('   3. Implement Apple Web Service Protocol endpoints')
       logger.info('   4. Update appleWalletController to add webServiceURL')
       logger.info('')
+      
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(0)
     } catch (error) {
       logger.error('❌ Migration failed:', error)
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(1)
     }
   })()

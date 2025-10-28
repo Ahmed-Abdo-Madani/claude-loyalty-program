@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
+import bcrypt from 'bcryptjs'
 
 const Branch = sequelize.define('Branch', {
   public_id: {
@@ -84,6 +85,21 @@ const Branch = sequelize.define('Branch', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  manager_pin: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Hashed PIN for branch manager authentication (4-6 digits)'
+  },
+  manager_pin_enabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Whether branch manager PIN login is enabled'
+  },
+  manager_last_login: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Last time branch manager logged in'
+  },
   status: {
     type: DataTypes.ENUM('active', 'inactive', 'closed'),
     defaultValue: 'inactive'
@@ -126,6 +142,21 @@ const Branch = sequelize.define('Branch', {
 // Instance methods
 Branch.prototype.isOpen = function() {
   return this.status === 'active'
+}
+
+Branch.prototype.verifyManagerPin = async function(pin) {
+  if (!this.manager_pin || !this.manager_pin_enabled) {
+    return false
+  }
+  
+  const isValid = await bcrypt.compare(pin, this.manager_pin)
+  
+  if (isValid) {
+    this.manager_last_login = new Date()
+    await this.save()
+  }
+  
+  return isValid
 }
 
 Branch.prototype.incrementCustomers = async function() {

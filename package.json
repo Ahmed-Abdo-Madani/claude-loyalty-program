@@ -14,7 +14,9 @@
     "dev:full": "npm run clean-ports && npx concurrently --kill-others-on-fail \"npm run backend\" \"npm run dev\"",
     "dev:windows": "start-dev.bat",
     "start": "concurrently \"npm run backend\" \"npm run preview\"",
-    "start:clean": "npm run clean-ports && npm run start"
+    "start:clean": "npm run clean-ports && npm run start",
+    "migrate:branch-manager": "node backend/migrations/20250127-add-branch-manager-auth.js",
+    "migrate:pass-lifecycle": "node backend/migrations/20250127-add-pass-lifecycle-fields.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

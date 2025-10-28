@@ -173,6 +173,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (results[0].exists) {
         logger.warn('⚠️  Table offer_card_designs already exists. Skipping migration.')
         logger.info('💡 To re-run, first execute: node backend/migrations/006-create-offer-card-designs-table.js --rollback')
+        await sequelize.close()
+        logger.info('✅ Database connection closed')
         process.exit(0)
       }
 
@@ -180,9 +182,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
       logger.info('🎉 Migration completed successfully')
       logger.info('✅ You can now create card designs for your offers')
+      
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(0)
     } catch (error) {
       logger.error('❌ Migration failed:', error)
+      await sequelize.close()
+      logger.info('✅ Database connection closed')
       process.exit(1)
     }
   })()
