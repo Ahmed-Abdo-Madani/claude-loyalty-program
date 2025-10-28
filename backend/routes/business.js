@@ -1126,7 +1126,7 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
     const newOfferData = {
       ...processedBody,
       business_id: req.business.public_id, // Use secure public_id
-      status: req.body.status || 'paused'
+      status: req.body.status || 'active'
     }
 
     const newOffer = await Offer.create(newOfferData)
@@ -1290,7 +1290,7 @@ router.post('/my/branches', requireBusinessAuth, async (req, res) => {
     const newBranchData = {
       ...branchData,
       business_id: req.business.public_id, // Use secure public_id
-      status: branchData.status || 'inactive'
+      status: branchData.status || 'active'
     }
 
     // Validate that location data is provided
@@ -1677,7 +1677,7 @@ router.post('/register', async (req, res) => {
       city: businessData.city,
       phone: businessData.phone,
       manager_name: businessData.owner_name,
-      status: 'inactive', // Will be activated when business is approved
+      status: 'active', // Main branch is active by default for immediate use
       country: 'Saudi Arabia'
     })
 

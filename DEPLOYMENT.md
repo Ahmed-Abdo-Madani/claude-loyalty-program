@@ -3117,6 +3117,82 @@ const convertArabicToEnglishNumbers = (str) => {
 
 ---
 
+## Default Status Configuration
+
+### Branches
+
+- **Default Status**: `active`
+- **Behavior**: All new branches are created with 'active' status by default
+- **Auto-Created Main Branch**: The main branch created during business registration is also 'active'
+- **Manual Override**: Business owners can set branches to 'inactive' or 'closed' if needed
+- **Rationale**: Active by default provides better UX and allows immediate platform usage
+
+### Offers
+
+- **Default Status**: `active`
+- **Behavior**: All new offers are created with 'active' status by default
+- **Manual Override**: Business owners can set offers to 'paused', 'inactive', or 'expired' if needed
+- **Rationale**: Active by default allows businesses to start collecting stamps immediately
+
+### Business Registration Flow
+
+1. Business registers via `/api/business/register`
+2. Main branch is automatically created with `status: 'active'`
+3. Business can immediately create offers
+4. Offers are created with `status: 'active'` by default
+5. Customers can start scanning QR codes and earning stamps immediately
+6. No manual activation steps required
+
+### Status Management
+
+Business owners can change status at any time:
+- **Branches**: Via Dashboard → Branches → Edit Branch → Status dropdown
+- **Offers**: Via Dashboard → Offers → Edit Offer → Status dropdown
+
+### Available Status Values
+
+**Branch Status:**
+- `active`: Branch is operational and accepting scans
+- `inactive`: Branch is temporarily disabled (no scans accepted)
+- `closed`: Branch is permanently closed (cannot be reactivated)
+
+**Offer Status:**
+- `active`: Offer is live and customers can earn stamps
+- `paused`: Offer is temporarily paused (no new stamps, existing progress preserved)
+- `inactive`: Offer is disabled (no stamps, progress preserved)
+- `expired`: Offer has ended (no stamps, progress preserved for analytics)
+
+### Migration Impact
+
+This change only affects **new** branches and offers created after deployment:
+- Existing branches with 'inactive' status remain unchanged
+- Existing offers with any status remain unchanged
+- No database migration required (this is a model-level default change)
+- No data loss or corruption
+
+### Testing Checklist
+
+- [ ] Register a new business and verify main branch is created with 'active' status
+- [ ] Create a new branch manually and verify it defaults to 'active'
+- [ ] Create a new offer and verify it defaults to 'active' (already working)
+- [ ] Verify existing branches retain their current status
+- [ ] Verify existing offers retain their current status
+- [ ] Test that inactive/closed branches can still be created by manually setting status
+- [ ] Test that paused/inactive offers can still be created by manually setting status
+- [ ] Verify QR code scanning works with newly created active branches
+- [ ] Verify customers can earn stamps on newly created active offers
+
+### Backward Compatibility
+
+- ✅ No breaking changes
+- ✅ Existing data unaffected
+- ✅ All status values still supported
+- ✅ Manual status override still works
+- ✅ No API changes required
+- ✅ No frontend changes required
+
+---
+
 ## Branch Manager Portal - Mobile Optimization
 
 ### Mobile-First Scanner Design

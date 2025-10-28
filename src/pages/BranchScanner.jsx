@@ -152,7 +152,7 @@ export default function BranchScanner() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
-      {!isScanning && (
+      {!isScanning && !scanResult && (
         <div className="bg-white dark:bg-gray-800 shadow-sm px-4 py-4 flex items-center justify-between sticky top-0 z-10">
           <div>
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -178,14 +178,14 @@ export default function BranchScanner() {
           /* Start Scanner Button */
           <button
             onClick={handleStartScanner}
-            className="w-full min-h-[400px] lg:h-64 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center transition-all duration-200 active:scale-95 px-6 py-12 focus:outline-none focus:ring-4 focus:ring-blue-500"
+            className="w-full max-w-md mx-auto h-48 lg:h-56 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-xl flex flex-col items-center justify-center transition-all duration-200 active:scale-95 px-6 py-6 focus:outline-none focus:ring-4 focus:ring-blue-500"
             aria-label="Start QR code scanner"
           >
-            <svg className="w-32 h-32 lg:w-24 lg:h-24 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-16 h-16 lg:w-20 lg:h-20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
-            <span className="text-3xl lg:text-2xl font-bold">Start Scanner</span>
-            <span className="text-3xl lg:text-2xl font-bold mt-2">ابدأ المسح</span>
+            <span className="text-xl lg:text-2xl font-bold">Start Scanner</span>
+            <span className="text-xl lg:text-2xl font-bold mt-1">ابدأ المسح</span>
           </button>
         )}
 
@@ -203,33 +203,50 @@ export default function BranchScanner() {
 
         {loading && (
           /* Loading State */
-          <div className="text-center">
-            <div className="animate-spin w-20 h-20 lg:w-16 lg:h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-lg lg:text-base text-gray-600 dark:text-gray-400">Processing...</p>
+          <div className="fixed inset-0 bg-white/90 dark:bg-gray-900/90 flex items-center justify-center z-40">
+            <div className="text-center">
+              <div className="animate-spin w-20 h-20 lg:w-16 lg:h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-lg lg:text-base text-gray-600 dark:text-gray-400">Processing...</p>
+            </div>
           </div>
         )}
 
-        {error && (
-          /* Error State */
-          <div className="w-full lg:max-w-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-8 lg:p-6 text-center">
-            <svg className="w-20 h-20 lg:w-16 lg:h-16 text-red-600 dark:text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">Error</h3>
-            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
-            <button
-              onClick={handleScanNext}
-              className="w-full lg:w-auto px-6 py-4 lg:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
-              aria-label="Scan next customer"
+        {error && !isScanning && !scanResult && (
+          /* Error Modal Overlay */
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            onClick={() => setError('')}
+          >
+            <div 
+              className="max-w-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-8 lg:p-6 text-center"
+              onClick={(e) => e.stopPropagation()}
             >
-              Scan Next
-            </button>
+              <svg className="w-20 h-20 lg:w-16 lg:h-16 text-red-600 dark:text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">Error</h3>
+              <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
+              <button
+                onClick={handleScanNext}
+                className="w-full lg:w-auto px-6 py-4 lg:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
+                aria-label="Scan next customer"
+              >
+                Scan Next
+              </button>
+            </div>
           </div>
         )}
 
         {scanResult && !loading && (
-          /* Scan Result */
-          <div className="w-full lg:max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-10 lg:p-8 text-center fixed inset-0 lg:relative lg:rounded-2xl pb-safe">
+          /* Scan Result Modal with Backdrop */
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 lg:relative lg:bg-transparent lg:z-auto lg:p-0">
+            <div 
+              className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-10 lg:p-8 text-center max-h-[90vh] overflow-y-auto"
+              style={{ 
+                paddingTop: 'max(2.5rem, env(safe-area-inset-top))', 
+                paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' 
+              }}
+            >
             {scanResult.rewardEarned && !scanResult.prizeFulfilled ? (
               /* Reward Earned State */
               <>
@@ -305,6 +322,7 @@ export default function BranchScanner() {
                 </button>
               </>
             )}
+            </div>
           </div>
         )}
       </div>
@@ -312,7 +330,13 @@ export default function BranchScanner() {
       {/* Prize Confirmation Modal */}
       {showPrizeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full lg:max-w-md p-8 lg:p-6 h-full lg:h-auto pb-safe">
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full lg:max-w-md p-8 lg:p-6 max-h-[90vh] overflow-y-auto"
+            style={{ 
+              paddingTop: 'max(2rem, env(safe-area-inset-top))', 
+              paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' 
+            }}
+          >
             <h3 className="text-2xl lg:text-xl font-bold text-gray-900 dark:text-white mb-4">
               Confirm Prize Given
             </h3>

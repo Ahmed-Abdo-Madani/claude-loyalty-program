@@ -102,7 +102,7 @@ const Branch = sequelize.define('Branch', {
   },
   status: {
     type: DataTypes.ENUM('active', 'inactive', 'closed'),
-    defaultValue: 'inactive'
+    defaultValue: 'active'
   },
   // Analytics fields for branch performance tracking
   customers: {
