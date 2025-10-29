@@ -193,7 +193,7 @@ const OfferCardDesign = sequelize.define('OfferCardDesign', {
       name: 'idx_offer_card_designs_validation'
     },
     {
-      fields: [['created_at', 'DESC']],
+      fields: [{ name: 'created_at', order: 'DESC' }],
       name: 'idx_offer_card_designs_created'
     }
   ]

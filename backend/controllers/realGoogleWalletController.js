@@ -111,6 +111,33 @@ class RealGoogleWalletController {
       // Get authenticated client
       const authClient = await this.auth.getClient()
 
+      // FIX 6: Normalize progress data for consistency with pushProgressUpdate
+      let normalizedProgress
+      if (progressData && (progressData.constructor.name === 'CustomerProgress' || typeof progressData.toJSON === 'function')) {
+        // It's a Sequelize model instance - convert to plain object
+        console.log('🔄 Detected Sequelize instance in generatePass, normalizing to camelCase...')
+        const plainData = progressData.toJSON ? progressData.toJSON() : progressData.get({ plain: true })
+        normalizedProgress = {
+          currentStamps: plainData.current_stamps,
+          maxStamps: plainData.max_stamps,
+          rewardsClaimed: plainData.rewards_claimed,
+          isCompleted: plainData.is_completed
+        }
+        console.log('✅ Normalized progress data for generatePass:', normalizedProgress)
+      } else {
+        // Already a plain object - ensure camelCase fields exist
+        normalizedProgress = {
+          currentStamps: progressData.currentStamps ?? progressData.current_stamps ?? 0,
+          maxStamps: progressData.maxStamps ?? progressData.max_stamps ?? 10,
+          rewardsClaimed: progressData.rewardsClaimed ?? progressData.rewards_claimed ?? 0,
+          isCompleted: progressData.isCompleted ?? progressData.is_completed ?? false
+        }
+        console.log('✅ Using plain object with camelCase normalization for generatePass:', normalizedProgress)
+      }
+
+      // Replace progressData with normalized version
+      progressData = normalizedProgress
+
       // Calculate customer tier
       const CustomerService = (await import('../services/CustomerService.js')).default
       const tierData = await CustomerService.calculateCustomerTier(customerData.customerId, offerData.offerId)
@@ -119,6 +146,12 @@ class RealGoogleWalletController {
         // Add tier data to progress data
         progressData.tierData = tierData
         progressData.rewardsClaimed = tierData.rewardsClaimed
+        console.log('✅ Updated rewardsClaimed from tier data in generatePass:', progressData.rewardsClaimed)
+      } else {
+        console.warn('⚠️ Tier calculation returned null in generatePass, using normalized data')
+        // Ensure rewardsClaimed is set even when tier calculation fails
+        progressData.rewardsClaimed = progressData.rewardsClaimed ?? 0
+        console.log('✅ Using fallback rewardsClaimed in generatePass:', progressData.rewardsClaimed)
       }
 
       // Step 1: Create or update loyalty class
@@ -389,9 +422,13 @@ class RealGoogleWalletController {
       accountId: customerData.customerId,
 
       // Loyalty points - Enhanced with star emoji and completion count (Phase 4)
+      // Comment 2: Coerce rewardsClaimed to number before assigning
       loyaltyPoints: {
         balance: {
-          int: progressData.rewardsClaimed || 0  // Show total completions as loyalty points
+          int: (() => {
+            const val = Number(progressData.rewardsClaimed)
+            return (Number.isFinite(val) && val >= 0) ? val : 0
+          })()
         },
         label: 'Rewards Earned',
         // Add localized labels for international support
@@ -414,7 +451,7 @@ class RealGoogleWalletController {
         {
           id: 'progress_visual',
           header: 'Your Progress',
-          body: this.generateProgressText(progressData.current_stamps || 0, offerData.stamps_required)
+          body: this.generateProgressText(progressData.currentStamps ?? progressData.current_stamps ?? 0, offerData.stamps_required)
         },
         ...(progressData.tierData && progressData.tierData.currentTier ? [{
           id: 'tier',
@@ -797,6 +834,56 @@ class RealGoogleWalletController {
         }
       }
 
+      // Comment 3: Guard against missing or invalid progressData
+      if (!progressData) {
+        console.warn('⚠️ progressData is missing, fetching fresh data from database...')
+        const CustomerProgress = (await import('../models/CustomerProgress.js')).default
+        const freshProgress = await CustomerProgress.findOne({
+          where: {
+            customer_id: customerId,
+            offer_id: offerId
+          }
+        })
+
+        if (!freshProgress) {
+          console.error('❌ Progress not found in database for customer:', customerId, 'offer:', offerId)
+          return {
+            success: false,
+            error: 'Progress data not found'
+          }
+        }
+
+        console.log('✅ Fetched fresh progress from database')
+        progressData = freshProgress.toJSON()
+      }
+
+      // FIX 1: Normalize Progress Data - Convert Sequelize instance to plain object with camelCase
+      let normalizedProgress
+      if (progressData && (progressData.constructor.name === 'CustomerProgress' || typeof progressData.toJSON === 'function')) {
+        // It's a Sequelize model instance - convert to plain object
+        console.log('🔄 Detected Sequelize instance, normalizing to camelCase...')
+        const plainData = progressData.toJSON ? progressData.toJSON() : progressData.get({ plain: true })
+        normalizedProgress = {
+          currentStamps: plainData.current_stamps,
+          maxStamps: plainData.max_stamps,
+          rewardsClaimed: plainData.rewards_claimed,
+          isCompleted: plainData.is_completed
+        }
+        console.log('✅ Normalized progress data:', normalizedProgress)
+      } else {
+        // Already a plain object - ensure camelCase fields exist
+        normalizedProgress = {
+          currentStamps: progressData.currentStamps ?? progressData.current_stamps,
+          maxStamps: progressData.maxStamps ?? progressData.max_stamps,
+          rewardsClaimed: progressData.rewardsClaimed ?? progressData.rewards_claimed,
+          isCompleted: progressData.isCompleted ?? progressData.is_completed
+        }
+        console.log('✅ Using plain object with camelCase normalization:', normalizedProgress)
+      }
+
+      // Replace progressData with normalized version for consistent usage
+      progressData = normalizedProgress
+
       // Check if Google Wallet is enabled
       if (!this.isGoogleWalletEnabled) {
         console.log('⚠️ Google Wallet: Service disabled, skipping push update')
@@ -809,25 +896,46 @@ class RealGoogleWalletController {
 
       console.log('📱 Google Wallet: Pushing update', {
         customer: customerId,
-        stamps: `${progressData.current_stamps}/${progressData.max_stamps}`
+        stamps: `${progressData.currentStamps}/${progressData.maxStamps}`
       })
 
-      // DEFENSIVE LOGGING: Verify fresh progress data received
-      console.log('Progress data received in Google pushProgressUpdate:', {
-        currentStamps: progressData.current_stamps,
-        rewardsClaimed: progressData.rewards_claimed,
-        isCompleted: progressData.is_completed
+      // FIX 2: Enhanced defensive logging with correct camelCase field names
+      console.log('🔍 Progress data before tier calculation:', {
+        currentStamps: progressData.currentStamps,
+        rewardsClaimed: progressData.rewardsClaimed,
+        isCompleted: progressData.isCompleted
       })
 
       // Calculate customer tier
       const CustomerService = (await import('../services/CustomerService.js')).default
       const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
+      
+      // FIX 3: Defensive fallback for tier calculation
       if (tierData) {
-        console.log('🏆 Customer tier for push update:', tierData)
+        console.log('🏆 Customer tier calculated successfully:', tierData)
         // Add tier data to progress data for display in wallet
         progressData.tierData = tierData
         progressData.rewardsClaimed = tierData.rewardsClaimed
+        console.log('✅ Updated rewardsClaimed from tier data:', progressData.rewardsClaimed)
+      } else {
+        console.warn('⚠️ Tier calculation returned null, using normalized progress data')
+        // Ensure rewardsClaimed is set even when tier calculation fails
+        progressData.rewardsClaimed = progressData.rewardsClaimed ?? 0
+        console.log('✅ Using fallback rewardsClaimed:', progressData.rewardsClaimed)
       }
+
+      // Verify rewardsClaimed is properly set (defensive check)
+      if (progressData.rewardsClaimed === undefined) {
+        console.error('❌ CRITICAL: rewardsClaimed is undefined after normalization and tier calculation')
+        progressData.rewardsClaimed = 0
+      }
+
+      console.log('📊 Final progress data after tier calculation:', {
+        currentStamps: progressData.currentStamps,
+        rewardsClaimed: progressData.rewardsClaimed,
+        isCompleted: progressData.isCompleted,
+        hasTierData: !!progressData.tierData
+      })
 
       // Create object ID using same format as creation - CRITICAL FIX: Use identical regex pattern
       const objectId = `${this.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
@@ -914,10 +1022,28 @@ class RealGoogleWalletController {
       }
 
       // Prepare update data for Google Wallet - MAP FIELD NAMES CORRECTLY
+      // FIX 4: Add defensive logging before creating update payload
+      console.log('🔍 Preparing update payload with values:', {
+        rewardsClaimed: progressData.rewardsClaimed,
+        currentStamps: progressData.currentStamps,
+        maxStamps: progressData.maxStamps,
+        hasTierData: !!progressData.tierData
+      })
+
+      // Comment 2: Coerce rewardsClaimed to number before sending to Google Wallet
+      let completions = Number(progressData.rewardsClaimed)
+      if (!Number.isFinite(completions) || completions < 0) {
+        console.error('❌ WARNING: Invalid completions value, defaulting to 0:', {
+          original: progressData.rewardsClaimed,
+          coerced: completions
+        })
+        completions = 0
+      }
+
       const updateData = {
         loyaltyPoints: {
           balance: {
-            int: progressData.rewardsClaimed || 0  // Use int for total completions (standardized)
+            int: completions  // Use coerced numeric value
           },
           label: 'Rewards Earned'
         },
@@ -925,14 +1051,23 @@ class RealGoogleWalletController {
           {
             id: 'progress_visual',
             header: 'Progress',
-            body: `${progressData.current_stamps} of ${progressData.max_stamps} stamps`
+            body: `${progressData.currentStamps} of ${progressData.maxStamps} stamps`
           }
         ]
       }
 
+      console.log('📤 Update payload being sent to Google Wallet:', {
+        loyaltyPointsBalance: updateData.loyaltyPoints.balance.int,
+        progressVisual: updateData.textModulesData[0].body
+      })
+
       // Add tier information if available
       if (progressData.tierData) {
-        // Already set above, but ensure it's the correct value
+        // Coerce tier rewardsClaimed to number as well
+        const tierCompletions = Number(progressData.tierData.rewardsClaimed)
+        if (Number.isFinite(tierCompletions) && tierCompletions >= 0) {
+          updateData.loyaltyPoints.balance.int = tierCompletions
+        }
         updateData.loyaltyPoints.balance.int = progressData.tierData.rewardsClaimed || 0
         
         updateData.textModulesData.push({
@@ -951,7 +1086,7 @@ class RealGoogleWalletController {
       }
 
       // If reward is earned, update the status
-      if (progressData.is_completed) {
+      if (progressData.isCompleted) {
         updateData.state = 'COMPLETED'
         updateData.textModulesData.push({
           id: 'reward_status',
@@ -960,14 +1095,14 @@ class RealGoogleWalletController {
         })
       }
 
-      console.log('📦 Update payload:', JSON.stringify(updateData, null, 2))
+      console.log('📦 Complete update payload:', JSON.stringify(updateData, null, 2))
 
       // Update the loyalty object in Google Wallet
       const result = await this.updateLoyaltyObject(objectId, updateData)
       
       console.log('📱 Update response received:', result)
 
-      // Verify the update was successful by fetching the updated object
+      // FIX 5: Enhanced verification logging
       console.log('🔍 Verifying update success...')
       const verifyResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
         method: 'GET',
@@ -980,16 +1115,46 @@ class RealGoogleWalletController {
       if (verifyResponse.ok) {
         const updatedObject = await verifyResponse.json()
         const currentBalance = updatedObject.loyaltyPoints?.balance?.int
-        const expectedBalance = progressData.rewardsClaimed || 0
+        // Comment 2: Use the coerced completions value for verification
+        const expectedBalance = completions
         
         console.log('🔍 Verification results:', {
           expected: expectedBalance,
           actual: currentBalance,
           matches: currentBalance === expectedBalance
         })
-        
+
+        // Verify tier information if it was included
+        if (progressData.tierData) {
+          const tierModule = updatedObject.textModulesData?.find(m => m.id === 'tier')
+          console.log('🔍 Tier verification:', {
+            tierIncludedInUpdate: true,
+            tierModuleFound: !!tierModule,
+            tierModuleBody: tierModule?.body,
+            expectedTier: progressData.tierData.currentTier.name
+          })
+
+          if (!tierModule) {
+            console.error('❌ WARNING: Tier module was sent but not found in updated object')
+          }
+        }
+
+        // Log complete response for debugging
+        console.log('📋 Complete verification response:', {
+          loyaltyPoints: updatedObject.loyaltyPoints,
+          textModulesData: updatedObject.textModulesData,
+          state: updatedObject.state
+        })
+
         if (currentBalance !== expectedBalance) {
-          console.warn('⚠️ Update verification failed: Balance mismatch')
+          console.error('❌ VERIFICATION FAILED: Balance mismatch!', {
+            sentValue: expectedBalance,
+            receivedValue: currentBalance,
+            updatePayload: updateData,
+            fullResponse: updatedObject
+          })
+        } else {
+          console.log('✅ Verification passed: Balance matches expected value')
         }
       } else {
         console.warn('⚠️ Could not verify update success')

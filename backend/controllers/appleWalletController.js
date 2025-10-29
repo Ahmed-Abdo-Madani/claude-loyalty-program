@@ -1259,6 +1259,14 @@ class AppleWalletController {
 
       // Update pass data in database
       await walletPass.updatePassData(updatedPassData)
+      
+      // Log successful save with tier information for debugging
+      logger.info('💾 Pass data saved to database:', {
+        serialNumber: updatedPassData.serialNumber,
+        rewardsClaimed: stampProgressData.rewardsClaimed,
+        currentTier: stampProgressData.tierData?.currentTier?.name || 'Unknown',
+        stampsEarned: stampProgressData.stampsEarned
+      })
 
       // Send APNs push notification to trigger update on device
       const pushResult = await walletPass.sendPushNotification()

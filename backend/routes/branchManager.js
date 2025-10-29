@@ -262,13 +262,36 @@ router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (
     // Award stamp
     await progress.addStamp()
 
+    // Primary Fix: Reload progress with associations after addStamp()
+    // This ensures wallet controllers receive complete data without needing to fetch it themselves
+    await progress.reload({
+      include: [
+        { association: 'offer', required: false },
+        { association: 'business', required: false },
+        { association: 'customer', required: false }
+      ]
+    })
+
     logger.info('Manager scanned customer', {
       branchId: req.branchId,
       customerId,
       offerId,
       currentStamps: progress.current_stamps,
       maxStamps: progress.max_stamps,
-      completed: progress.is_completed
+      completed: progress.is_completed,
+      hasOfferAssociation: !!progress.offer,
+      hasBusinessAssociation: !!progress.business
+    })
+
+    // Secondary Fix: Convert Sequelize instance to plain object
+    // This normalizes field names and ensures consistent data format
+    const progressData = progress.toJSON()
+    logger.info('📤 Normalized progress data for wallet updates:', {
+      rewardsClaimed: progressData.rewards_claimed,
+      currentStamps: progressData.current_stamps,
+      isCompleted: progressData.is_completed,
+      hasOffer: !!progressData.offer,
+      hasBusiness: !!progressData.business
     })
 
     // Comment 5: Push wallet progress updates (best-effort, non-fatal)
@@ -294,7 +317,7 @@ router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (
               const appleUpdate = await appleWalletController.pushProgressUpdate(
                 customerId,
                 offerId,
-                progress
+                progressData  // Secondary Fix: Pass plain object instead of Sequelize instance
               )
               walletUpdates.push({
                 platform: 'Apple Wallet',
@@ -302,13 +325,21 @@ router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (
                 ...appleUpdate
               })
 
-              // Update last push timestamp
-              await wallet.updateLastPush()
+              // Quaternary Fix: Log the update result
+              logger.info('✅ Apple Wallet update result:', {
+                success: appleUpdate.success,
+                serialNumber: appleUpdate.serialNumber,
+                updatedAt: appleUpdate.updated
+              })
+
+              // Tertiary Fix: Remove redundant updateLastPush() for Apple Wallet
+              // Apple's pushProgressUpdate() already updates last_updated_at and last_updated_tag
+              // via updatePassData() method, so this call is redundant
             } else if (wallet.wallet_type === 'google') {
               const googleUpdate = await googleWalletController.pushProgressUpdate(
                 customerId,
                 offerId,
-                progress
+                progressData  // Secondary Fix: Pass plain object instead of Sequelize instance
               )
               walletUpdates.push({
                 platform: 'Google Wallet',
@@ -316,8 +347,18 @@ router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (
                 ...googleUpdate
               })
 
-              // Update last push timestamp
+              // Quaternary Fix: Log the update result
+              logger.info('✅ Google Wallet update result:', {
+                success: googleUpdate.success,
+                objectId: googleUpdate.objectId,
+                updatedAt: googleUpdate.updated
+              })
+
+              // Tertiary Fix: Keep updateLastPush() for Google Wallet
+              // Google's pushProgressUpdate() does NOT update the local database,
+              // so this is the only database update for Google Wallet passes
               await wallet.updateLastPush()
+              logger.info('✅ Updated Google Wallet last_updated_at timestamp')
             }
           } catch (singleWalletError) {
             logger.warn(`Failed to update ${wallet.wallet_type} wallet:`, singleWalletError.message)
@@ -329,6 +370,16 @@ router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (
             })
           }
         }
+
+        // Quaternary Fix: Add summary logging after wallet updates
+        const successfulUpdates = walletUpdates.filter(u => u.success !== false).length
+        const failedUpdates = walletUpdates.length - successfulUpdates
+        logger.info('📊 Wallet updates summary:', {
+          total: walletUpdates.length,
+          successful: successfulUpdates,
+          failed: failedUpdates,
+          platforms: walletUpdates.map(u => u.platform)
+        })
       }
     } catch (walletError) {
       logger.warn('Failed to push wallet updates (non-fatal):', walletError.message)
@@ -408,6 +459,15 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
       isCompleted: progress.is_completed
     })
 
+    // Optional Enhancement: Convert Sequelize instance to plain object before passing to wallet controllers
+    // This makes the data flow more explicit and ensures consistent field naming
+    const progressData = progress.toJSON()
+    logger.info('📤 Normalized progress data for wallet updates:', {
+      rewardsClaimed: progressData.rewards_claimed,
+      currentStamps: progressData.current_stamps,
+      isCompleted: progressData.is_completed
+    })
+
     // Calculate customer tier AFTER claimReward (uses fresh rewards_claimed from database)
     const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
     const tierNameAfter = tierData?.currentTier?.name || null
@@ -428,9 +488,9 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
       const { default: appleWalletController } = await import('../controllers/appleWalletController.js')
       const { default: googleWalletController } = await import('../controllers/realGoogleWalletController.js')
 
-      // Push updates to wallet passes
-      await appleWalletController.pushProgressUpdate(customerId, offerId, progress)
-      await googleWalletController.pushProgressUpdate(customerId, offerId, progress)
+      // Push updates to wallet passes (using plain object for consistency)
+      await appleWalletController.pushProgressUpdate(customerId, offerId, progressData)
+      await googleWalletController.pushProgressUpdate(customerId, offerId, progressData)
 
       logger.info('✅ Wallet passes updated with reset progress and tier')
     } catch (walletError) {

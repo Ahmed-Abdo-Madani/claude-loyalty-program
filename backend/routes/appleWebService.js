@@ -22,6 +22,7 @@ import DeviceLog from '../models/DeviceLog.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import { CustomerProgress, Offer, Business, Customer } from '../models/index.js'
 import CardDesignService from '../services/CardDesignService.js'
+import CustomerService from '../services/CustomerService.js'
 import { createContentDispositionHeader } from '../utils/passGenerator.js'
 
 const router = express.Router()
@@ -308,6 +309,62 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
       stampsEarned: walletPass.progress?.current_stamps || 0
     }
 
+    // Calculate tier data to ensure consistency with pushProgressUpdate()
+    // This prevents the web service endpoint from overwriting correct tier data
+    // Wrapped in try/catch to fall back gracefully on error instead of 500
+    try {
+      logger.info('🎯 Calculating tier data for customer:', walletPass.customer_id, 'offer:', walletPass.offer_id)
+      const tierData = await CustomerService.calculateCustomerTier(walletPass.customer_id, walletPass.offer_id)
+      
+      if (tierData) {
+        // Enrich progressData with tier information (matches appleWalletController.pushProgressUpdate pattern)
+        progressData.rewardsClaimed = tierData.rewardsClaimed || 0
+        progressData.tierData = tierData
+        logger.info('✅ Tier data calculated:', {
+          rewardsClaimed: progressData.rewardsClaimed,
+          currentTier: tierData.currentTier?.name || 'None',
+          tierIcon: tierData.currentTier?.icon || ''
+        })
+      } else {
+        // Defensive fallback: set default values to prevent undefined errors
+        progressData.rewardsClaimed = 0
+        progressData.tierData = {
+          currentTier: {
+            name: 'New Member',
+            icon: '👋',
+            minRewards: 0,
+            maxRewards: null
+          },
+          nextTier: null,
+          rewardsClaimed: 0,
+          rewardsToNextTier: null
+        }
+        logger.warn('⚠️ No tier data found, using defensive fallback')
+      }
+
+      logger.info('📊 Enriched progressData:', {
+        stampsEarned: progressData.stampsEarned,
+        rewardsClaimed: progressData.rewardsClaimed,
+        tier: progressData.tierData?.currentTier?.name
+      })
+    } catch (error) {
+      // Fall back to default tier on any error to prevent 500 responses
+      logger.error('❌ Error calculating tier data:', error)
+      progressData.rewardsClaimed = 0
+      progressData.tierData = {
+        currentTier: {
+          name: 'New Member',
+          icon: '👋',
+          minRewards: 0,
+          maxRewards: null
+        },
+        nextTier: null,
+        rewardsClaimed: 0,
+        rewardsToNextTier: null
+      }
+      logger.warn('⚠️ Using defensive fallback due to tier calculation error')
+    }
+
     // Load card design if available
     let design = null
     try {
@@ -342,11 +399,9 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     // Create .pkpass ZIP
     const pkpassBuffer = await appleWalletController.createPkpassZip(passData, manifest, signature, images)
 
-    // Update pass data in database with current timestamp AND manifest ETag
+    // Update pass data in database with current timestamp AND manifest ETag (single save operation)
     const updateTimestamp = new Date()
-    await walletPass.updatePassData(passData)
-    walletPass.manifest_etag = manifestETag
-    await walletPass.save()
+    await walletPass.updatePassData(passData, manifestETag)
     
     // Reload the record to get the updated last_updated_at value
     await walletPass.reload()

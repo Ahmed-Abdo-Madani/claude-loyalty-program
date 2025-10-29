@@ -722,7 +722,13 @@ class CustomerService {
       return tierResult
 
     } catch (error) {
-      logger.error('❌ calculateCustomerTier failed:', error)
+      // Enhanced error logging with context
+      logger.error('❌ calculateCustomerTier failed:', {
+        error: error.message,
+        stack: error.stack,
+        customerId: customerId,
+        offerId: offerId
+      })
       // Return null instead of throwing to prevent pass generation failures
       return null
     }

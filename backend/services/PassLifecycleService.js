@@ -5,6 +5,7 @@ import sequelize from '../config/database.js'
 import { Op } from 'sequelize'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
+import CustomerService from './CustomerService.js'
 
 /**
  * Service to handle wallet pass lifecycle management and expiration
@@ -141,6 +142,22 @@ class PassLifecycleService {
               stampsEarned: progress?.current_stamps || 0
             }
 
+            // Optional: Calculate tier data for consistency (even though pass will be voided)
+            const tierData = await CustomerService.calculateCustomerTier(pass.customer_id, pass.offer_id)
+            if (tierData) {
+              progressData.rewardsClaimed = tierData.rewardsClaimed || 0
+              progressData.tierData = tierData
+              logger.debug('🏆 Tier data added to expired pass:', tierData.currentTier?.name)
+            } else {
+              progressData.rewardsClaimed = 0
+              progressData.tierData = {
+                currentTier: { name: 'New Member', icon: '👋', minRewards: 0, maxRewards: null },
+                nextTier: null,
+                rewardsClaimed: 0,
+                rewardsToNextTier: null
+              }
+            }
+
             // Regenerate pass JSON with voided flag
             const updatedPassData = appleWalletController.createPassJson(
               customerData,
@@ -152,8 +169,8 @@ class PassLifecycleService {
               pass // existingPass with pass_status='expired' triggers voided flag
             )
 
-            // Update pass_data_json in database
-            await pass.update({ pass_data_json: updatedPassData })
+            // Update pass_data_json in database using updatePassData to ensure tag management
+            await pass.updatePassData(updatedPassData)
             logger.info('✅ Updated pass_data_json with voided flag')
           }
 
@@ -280,6 +297,22 @@ class PassLifecycleService {
               stampsEarned: progress.current_stamps || 0
             }
 
+            // Optional: Calculate tier data for consistency (even though pass will be voided)
+            const tierData = await CustomerService.calculateCustomerTier(pass.customer_id, pass.offer_id)
+            if (tierData) {
+              progressData.rewardsClaimed = tierData.rewardsClaimed || 0
+              progressData.tierData = tierData
+              logger.debug('🏆 Tier data added to completed expired pass:', tierData.currentTier?.name)
+            } else {
+              progressData.rewardsClaimed = 0
+              progressData.tierData = {
+                currentTier: { name: 'New Member', icon: '👋', minRewards: 0, maxRewards: null },
+                nextTier: null,
+                rewardsClaimed: 0,
+                rewardsToNextTier: null
+              }
+            }
+
             // Regenerate pass JSON with voided flag
             const updatedPassData = appleWalletController.createPassJson(
               customerData,
@@ -291,8 +324,8 @@ class PassLifecycleService {
               pass // existingPass with pass_status='expired' triggers voided flag
             )
 
-            // Update pass_data_json in database
-            await pass.update({ pass_data_json: updatedPassData })
+            // Update pass_data_json in database using updatePassData to ensure tag management
+            await pass.updatePassData(updatedPassData)
             logger.info('✅ Updated pass_data_json with voided flag')
           }
 
