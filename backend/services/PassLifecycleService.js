@@ -57,6 +57,153 @@ class PassLifecycleService {
    * @param {number} passId - Wallet pass primary key ID
    * @returns {Promise<Object>} - Result of expiration
    */
+  /**
+   * Generic pass expiration method for any pass status (completed or incomplete)
+   * @param {string} passId - Wallet pass ID
+   * @param {string} reason - Reason for expiration (e.g., 'inactivity', 'completion', 'manual')
+   * @param {boolean} requireCompletion - If true, only expire if progress is completed
+   */
+  static async expirePass(passId, reason = 'expired', requireCompletion = false) {
+    const transaction = await sequelize.transaction()
+
+    try {
+      const pass = await WalletPass.findByPk(passId, { transaction })
+
+      if (!pass) {
+        throw new Error('Wallet pass not found')
+      }
+
+      if (pass.pass_status !== 'active' && pass.pass_status !== 'completed') {
+        logger.warn('Pass already expired or revoked', { passId, status: pass.pass_status })
+        await transaction.rollback()
+        return { success: false, reason: 'Pass already expired' }
+      }
+
+      // Find associated progress separately
+      const progress = await CustomerProgress.findOne({
+        where: {
+          customer_id: pass.customer_id,
+          offer_id: pass.offer_id
+        },
+        transaction
+      })
+
+      // Optional completion check
+      if (requireCompletion && (!progress || !progress.is_completed)) {
+        logger.warn('Cannot expire pass: progress not completed', { passId })
+        await transaction.rollback()
+        return { success: false, reason: 'Progress not completed' }
+      }
+
+      // Mark pass as expired
+      pass.pass_status = 'expired'
+      await pass.save({ transaction })
+
+      await transaction.commit()
+
+      // Send push notification to wallet (triggers device update)
+      // Important: Do this AFTER commit to avoid holding transaction open
+      try {
+        if (pass.wallet_type === 'apple' && pass.wallet_serial) {
+          logger.info('Regenerating Apple pass with voided flag for expiration', {
+            serial: pass.wallet_serial,
+            passId,
+            reason
+          })
+
+          // Fetch customer, offer, and progress data for pass regeneration
+          const Customer = (await import('../models/Customer.js')).default
+          const Offer = (await import('../models/Offer.js')).default
+          
+          const customer = await Customer.findOne({
+            where: { public_id: pass.customer_id }
+          })
+          const offer = await Offer.findOne({
+            where: { public_id: pass.offer_id }
+          })
+
+          if (customer && offer) {
+            // Prepare data for createPassJson
+            const customerData = {
+              customerId: customer.public_id,
+              firstName: customer.first_name,
+              lastName: customer.last_name
+            }
+            const offerData = {
+              offerId: offer.public_id,
+              businessId: offer.business_id,
+              businessName: offer.business_name || 'Business',
+              title: offer.title,
+              stampsRequired: offer.max_stamps,
+              rewardDescription: offer.reward_description
+            }
+            const progressData = {
+              stampsEarned: progress?.current_stamps || 0
+            }
+
+            // Regenerate pass JSON with voided flag
+            const updatedPassData = appleWalletController.createPassJson(
+              customerData,
+              offerData,
+              progressData,
+              null, // design
+              pass.wallet_serial,
+              pass.authentication_token,
+              pass // existingPass with pass_status='expired' triggers voided flag
+            )
+
+            // Update pass_data_json in database
+            await pass.update({ pass_data_json: updatedPassData })
+            logger.info('✅ Updated pass_data_json with voided flag')
+          }
+
+          // Send APNs push notification
+          logger.info('Sending Apple Wallet push notification for expiration', {
+            serial: pass.wallet_serial
+          })
+          await pass.sendPushNotification()
+          
+        } else if (pass.wallet_type === 'google' && pass.wallet_object_id) {
+          logger.info('Expiring Google Wallet pass', {
+            objectId: pass.wallet_object_id,
+            reason
+          })
+
+          // Update Google Wallet object to expired state
+          const googleController = (await import('../controllers/realGoogleWalletController.js')).default
+          try {
+            await googleController.updateLoyaltyObject(pass.wallet_object_id, {
+              state: 'EXPIRED'
+            })
+          } catch (googleError) {
+            logger.error('Failed to update Google Wallet object state:', googleError)
+          }
+        }
+      } catch (pushError) {
+        logger.error('Push notification failed during expiration:', pushError)
+      }
+
+      logger.info('✅ Pass expired successfully', { 
+        passId, 
+        customerId: pass.customer_id, 
+        offerId: pass.offer_id,
+        reason 
+      })
+
+      return {
+        success: true,
+        passId,
+        customerId: pass.customer_id,
+        offerId: pass.offer_id,
+        reason
+      }
+    } catch (error) {
+      await transaction.rollback()
+      logger.error('Pass expiration failed:', error)
+      throw error
+    }
+  }
+
   static async expireCompletedPass(passId) {
     const transaction = await sequelize.transaction()
 
@@ -386,6 +533,123 @@ class PassLifecycleService {
     } catch (error) {
       logger.error('Failed to send completion notification:', error)
       return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Expire passes based on inactivity (for perpetual loyalty passes)
+   * @param {number} daysOfInactivity - Days of no scans before expiring (default: 90)
+   * @param {boolean} isDryRun - If true, only log what would be expired without making changes
+   * @returns {Promise<Object>} - Expiration result with expired passes and errors
+   */
+  static async expireInactivePasses(daysOfInactivity = 90, isDryRun = false) {
+    try {
+      logger.info(`🔍 Finding passes inactive for ${daysOfInactivity}+ days (dry run: ${isDryRun})...`)
+
+      // Calculate cutoff date
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - daysOfInactivity)
+      logger.info(`📅 Cutoff date: ${cutoffDate.toISOString()}`)
+
+      // Find inactive progress records
+      const inactiveProgress = await CustomerProgress.findAll({
+        where: {
+          [Op.or]: [
+            // No scans in X days
+            {
+              last_scan_date: {
+                [Op.lt]: cutoffDate
+              }
+            },
+            // Never scanned AND created more than X days ago
+            {
+              last_scan_date: null,
+              created_at: {
+                [Op.lt]: cutoffDate
+              }
+            }
+          ]
+        },
+        attributes: ['customer_id', 'offer_id', 'last_scan_date', 'reward_fulfilled_at', 'created_at']
+      })
+
+      logger.info(`🔎 Found ${inactiveProgress.length} inactive progress records`)
+
+      // Filter out records with recent reward fulfillment (active customers who just claimed)
+      const recentlyActiveThreshold = new Date()
+      recentlyActiveThreshold.setDate(recentlyActiveThreshold.getDate() - 7) // Active within last 7 days
+
+      const trulyInactive = inactiveProgress.filter(progress => {
+        if (progress.reward_fulfilled_at && progress.reward_fulfilled_at > recentlyActiveThreshold) {
+          return false // Exclude recently active customers
+        }
+        return true
+      })
+
+      logger.info(`✅ Filtered to ${trulyInactive.length} truly inactive customers`)
+
+      // Find corresponding wallet passes
+      const passesToExpire = []
+      for (const progress of trulyInactive) {
+        const passes = await WalletPass.findAll({
+          where: {
+            customer_id: progress.customer_id,
+            offer_id: progress.offer_id,
+            pass_status: {
+              [Op.in]: ['active', 'completed']
+            }
+          }
+        })
+
+        passesToExpire.push(...passes)
+      }
+
+      logger.info(`📦 Found ${passesToExpire.length} passes to expire`)
+
+      if (isDryRun) {
+        logger.info('🏃 DRY RUN MODE - Not making any changes')
+        return {
+          expired: passesToExpire.map(pass => ({
+            id: pass.id,
+            customerId: pass.customer_id,
+            offerId: pass.offer_id,
+            walletType: pass.wallet_type,
+            lastScanDate: trulyInactive.find(p => p.customer_id === pass.customer_id && p.offer_id === pass.offer_id)?.last_scan_date,
+            dryRun: true
+          })),
+          errors: []
+        }
+      }
+
+      // Expire passes
+      const expired = []
+      const errors = []
+
+      for (const pass of passesToExpire) {
+        try {
+          await this.expirePass(pass.id, 'inactivity', false) // Use generic expirePass for inactivity
+          expired.push({
+            id: pass.id,
+            customerId: pass.customer_id,
+            offerId: pass.offer_id,
+            walletType: pass.wallet_type
+          })
+          logger.info(`✅ Expired inactive pass: ${pass.id}`)
+        } catch (error) {
+          errors.push({
+            id: pass.id,
+            message: error.message
+          })
+          logger.error(`❌ Failed to expire pass ${pass.id}:`, error)
+        }
+      }
+
+      logger.info(`✅ Expiration complete: ${expired.length} expired, ${errors.length} errors`)
+
+      return { expired, errors }
+    } catch (error) {
+      logger.error('❌ expireInactivePasses failed:', error)
+      throw error
     }
   }
 }

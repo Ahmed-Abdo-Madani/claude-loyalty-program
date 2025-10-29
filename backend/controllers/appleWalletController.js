@@ -210,6 +210,19 @@ class AppleWalletController {
         logger.info('✅ Using provided progressData with normalized stampsEarned:', actualProgressData)
       }
 
+      // Calculate customer tier
+      const tierData = await CustomerService.calculateCustomerTier(customerData.customerId, offerData.offerId)
+      if (tierData) {
+        logger.info('🏆 Customer tier:', tierData)
+        // Add tier data to progress data
+        actualProgressData.tierData = tierData
+        actualProgressData.rewardsClaimed = tierData.rewardsClaimed
+      } else {
+        // Even if no tier (shouldn't happen with New Member tier), set rewardsClaimed to 0
+        actualProgressData.rewardsClaimed = 0
+        logger.info('ℹ️ No tier data, setting rewardsClaimed to 0')
+      }
+
       // Check if pass already exists to reuse authentication token and serial number
       let existingPass = null
       let existingSerialNumber = null
@@ -595,6 +608,21 @@ class AppleWalletController {
             label: 'Progress',
             textAlignment: 'PKTextAlignmentLeft', // Match working clone alignment
             value: `${stampsEarned} of ${stampsRequired}`
+          },
+          {
+            key: 'completions',
+            label: 'Completed',
+            textAlignment: 'PKTextAlignmentLeft',
+            value: `${progressData.rewardsClaimed || 0}x`
+          },
+          {
+            key: 'tier',
+            label: '',
+            textAlignment: 'PKTextAlignmentLeft',
+            // Always show tier field with fallback to "New Member"
+            value: progressData.tierData?.currentTier
+              ? `${progressData.tierData.currentTier.icon} ${progressData.tierData.currentTier.name}`
+              : '👋 New Member'
           }
         ],
 
@@ -1153,6 +1181,28 @@ class AppleWalletController {
       // Construct progress data for stamp visualization
       const stampProgressData = {
         stampsEarned: progressData.current_stamps || 0
+      }
+
+      // Calculate customer tier
+      const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
+      if (tierData) {
+        logger.info('🏆 Customer tier:', tierData)
+        // Add tier data to progress data
+        stampProgressData.tierData = tierData
+        stampProgressData.rewardsClaimed = tierData.rewardsClaimed
+      } else {
+        // Defensive fallback: set New Member tier and rewardsClaimed to 0
+        // This ensures createPassJson always has a tier to display
+        stampProgressData.rewardsClaimed = 0
+        stampProgressData.tierData = {
+          currentTier: {
+            name: 'New Member',
+            nameAr: 'عضو جديد',
+            icon: '👋',
+            color: '#6B7280'
+          }
+        }
+        logger.info('ℹ️ No tier data in push update, using default New Member tier')
       }
 
       // Load card design if available

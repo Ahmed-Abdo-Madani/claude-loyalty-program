@@ -13,6 +13,132 @@ import { upload, handleUploadError } from '../middleware/logoUpload.js'
 
 const router = express.Router()
 
+// Validation helper for loyalty_tiers
+function validateLoyaltyTiers(tierConfig) {
+  if (!tierConfig) return null // null/undefined is valid (tiers disabled)
+  
+  // Handle both formats: { enabled: true, tiers: [...] } or just [...]
+  let tiersArray
+  let enabled = true
+  
+  if (typeof tierConfig === 'object' && !Array.isArray(tierConfig)) {
+    // Frontend sends { enabled: true, tiers: [...] }
+    enabled = tierConfig.enabled !== false
+    tiersArray = tierConfig.tiers || []
+    
+    if (!enabled) {
+      logger.debug('Tier system disabled, skipping validation')
+      return tierConfig // Return as-is if disabled
+    }
+  } else if (Array.isArray(tierConfig)) {
+    // Direct array format (backward compatibility)
+    tiersArray = tierConfig
+  } else {
+    throw new Error('loyalty_tiers must be an array or object with tiers property')
+  }
+  
+  if (!Array.isArray(tiersArray)) {
+    throw new Error('loyalty_tiers.tiers must be an array')
+  }
+  
+  if (tiersArray.length < 2 || tiersArray.length > 5) {
+    throw new Error('loyalty_tiers must have between 2 and 5 tiers')
+  }
+  
+  logger.debug(`Validating ${tiersArray.length} tiers:`, tiersArray.map(t => ({ name: t.name, minRewards: t.minRewards, maxRewards: t.maxRewards })))
+  
+  for (let i = 0; i < tiersArray.length; i++) {
+    const tier = tiersArray[i]
+    const tierLabel = `Tier ${i + 1} (${tier.name || 'unnamed'})`
+    
+    // Required fields
+    if (!tier.name || typeof tier.name !== 'string' || tier.name.trim() === '') {
+      throw new Error(`${tierLabel}: name is required and must be a non-empty string`)
+    }
+    
+    // Optional nameAr validation (Arabic name)
+    if (tier.nameAr !== undefined && typeof tier.nameAr !== 'string') {
+      throw new Error(`${tierLabel}: nameAr must be a string`)
+    }
+    
+    // Validate minRewards (required)
+    // First tier can start at 0 (for "New Member" tier) or 1
+    const minAllowedValue = (i === 0) ? 0 : 1
+    if (tier.minRewards === undefined || typeof tier.minRewards !== 'number' || tier.minRewards < minAllowedValue) {
+      if (i === 0) {
+        throw new Error(`${tierLabel}: minRewards is required and must be 0 or 1 for first tier. Got: ${tier.minRewards}`)
+      } else {
+        throw new Error(`${tierLabel}: minRewards is required and must be a positive number (>= 1). Got: ${tier.minRewards}`)
+      }
+    }
+    
+    // Validate maxRewards (required, can be null for unlimited)
+    if (tier.maxRewards !== null && tier.maxRewards !== undefined) {
+      if (typeof tier.maxRewards !== 'number') {
+        throw new Error(`${tierLabel}: maxRewards must be a number or null (unlimited). Got: ${typeof tier.maxRewards}`)
+      }
+      if (tier.maxRewards < tier.minRewards) {
+        throw new Error(`${tierLabel}: maxRewards (${tier.maxRewards}) must be >= minRewards (${tier.minRewards})`)
+      }
+    }
+    
+    // Only the last tier can have maxRewards = null (unlimited)
+    if (tier.maxRewards === null && i !== tiersArray.length - 1) {
+      throw new Error(`${tierLabel}: Only the last tier can have maxRewards = null (unlimited). Non-last tiers must have a specific maxRewards value.`)
+    }
+    
+    if (!tier.color || typeof tier.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(tier.color)) {
+      throw new Error(`${tierLabel}: color is required and must be a valid hex color (e.g., #FFD700). Got: ${tier.color}`)
+    }
+    
+    if (!tier.icon || typeof tier.icon !== 'string' || tier.icon.trim() === '') {
+      throw new Error(`${tierLabel}: icon is required and must be a non-empty string (emoji)`)
+    }
+    
+    // Optional reward boost must be between 0 and 1
+    if (tier.rewardBoost !== undefined) {
+      if (typeof tier.rewardBoost !== 'number' || tier.rewardBoost < 0 || tier.rewardBoost > 1) {
+        throw new Error(`${tierLabel}: rewardBoost must be a number between 0 and 1. Got: ${tier.rewardBoost}`)
+      }
+    }
+    
+    // Optional iconUrl validation
+    if (tier.iconUrl !== undefined && typeof tier.iconUrl !== 'string') {
+      throw new Error(`${tierLabel}: iconUrl must be a string (URL)`)
+    }
+    
+    // Ensure tiers are in ascending order
+    if (i > 0) {
+      const prevTier = tiersArray[i - 1]
+      
+      if (tier.minRewards <= prevTier.minRewards) {
+        throw new Error(`${tierLabel}: minRewards (${tier.minRewards}) must be greater than previous tier's minRewards (${prevTier.minRewards})`)
+      }
+      
+      // Check for gaps (optional - could allow gaps if business wants)
+      if (prevTier.maxRewards !== null && tier.minRewards !== prevTier.maxRewards + 1) {
+        logger.warn(`${tierLabel}: Gap detected between tier ranges. Previous tier maxRewards: ${prevTier.maxRewards}, current minRewards: ${tier.minRewards}`)
+      }
+    }
+  }
+  
+  // First tier must start at 0 or 1
+  // 0 = explicit "New Member" tier, 1 = synthetic New Member tier generated by backend
+  if (tiersArray[0].minRewards !== 0 && tiersArray[0].minRewards !== 1) {
+    throw new Error(`First tier must have minRewards = 0 (explicit New Member tier) or 1 (backend generates New Member tier). Got: ${tiersArray[0].minRewards}`)
+  }
+  
+  // Last tier MUST have maxRewards = null (unlimited) - ENFORCE, not warn
+  const lastTier = tiersArray[tiersArray.length - 1]
+  if (lastTier.maxRewards !== null) {
+    throw new Error(`Last tier "${lastTier.name}" must have maxRewards = null (unlimited). Leave the max empty for unlimited rewards. Got: ${lastTier.maxRewards}`)
+  }
+  
+  logger.debug('✅ Tier validation passed')
+  
+  return tierConfig // Return validated config (preserves { enabled, tiers } structure)
+}
+
 // In-memory storage for demo purposes (replace with database in production)
 let offers = [
   {
@@ -1116,6 +1242,19 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
 // Create business offer - SECURE VERSION
 router.post('/my/offers', requireBusinessAuth, async (req, res) => {
   try {
+    // Validate loyalty_tiers if provided
+    if (req.body.loyalty_tiers !== undefined && req.body.loyalty_tiers !== null) {
+      try {
+        validateLoyaltyTiers(req.body.loyalty_tiers)
+      } catch (validationError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid loyalty_tiers configuration',
+          error: validationError.message
+        })
+      }
+    }
+    
     // Process date fields - convert empty strings to null
     const processedBody = {
       ...req.body,
@@ -1169,6 +1308,19 @@ router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
         success: false,
         message: 'Offer not found or not owned by your business'
       })
+    }
+
+    // Validate loyalty_tiers if provided
+    if (req.body.loyalty_tiers !== undefined && req.body.loyalty_tiers !== null) {
+      try {
+        validateLoyaltyTiers(req.body.loyalty_tiers)
+      } catch (validationError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid loyalty_tiers configuration',
+          error: validationError.message
+        })
+      }
     }
 
     // Process date fields - convert empty strings to null

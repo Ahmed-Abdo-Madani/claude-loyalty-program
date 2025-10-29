@@ -468,12 +468,82 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
     stamps_required: offer?.stamps_required || 10,
     is_time_limited: offer?.is_time_limited || false,
     start_date: offer?.start_date || '',
-    end_date: offer?.end_date || ''
+    end_date: offer?.end_date || '',
+    loyalty_tiers: offer?.loyalty_tiers || null
   })
+
+  const [tiersEnabled, setTiersEnabled] = useState(
+    offer?.loyalty_tiers?.enabled || false
+  )
+
+  const [tiers, setTiers] = useState(
+    offer?.loyalty_tiers?.tiers || [
+      { id: 'bronze', name: 'Bronze Member', nameAr: 'عضو برونزي', minRewards: 1, maxRewards: 2, icon: '🥉', color: '#CD7F32' },
+      { id: 'silver', name: 'Silver Member', nameAr: 'عضو فضي', minRewards: 3, maxRewards: 5, icon: '🥈', color: '#C0C0C0' },
+      { id: 'gold', name: 'Gold Member', nameAr: 'عضو ذهبي', minRewards: 6, maxRewards: null, icon: '🥇', color: '#FFD700' }
+    ]
+  )
+
+  const updateTier = (index, field, value) => {
+    const newTiers = [...tiers]
+    newTiers[index] = { ...newTiers[index], [field]: value }
+    setTiers(newTiers)
+  }
+
+  const addTier = () => {
+    if (tiers.length < 5) {
+      const lastTier = tiers[tiers.length - 1]
+      const newMinRewards = (lastTier.maxRewards || lastTier.minRewards) + 1
+      
+      // Update previous last tier's maxRewards if it's currently null
+      const updatedTiers = [...tiers]
+      if (lastTier.maxRewards === null) {
+        updatedTiers[tiers.length - 1] = {
+          ...lastTier,
+          maxRewards: newMinRewards - 1
+        }
+      }
+      
+      // Add new tier
+      setTiers([
+        ...updatedTiers,
+        {
+          id: `tier${tiers.length + 1}`,
+          name: 'New Tier',
+          nameAr: 'مستوى جديد',
+          minRewards: newMinRewards,
+          maxRewards: null,
+          icon: '⭐',
+          color: '#000000'
+        }
+      ])
+    }
+  }
+
+  const removeTier = (index) => {
+    if (tiers.length > 2) {
+      setTiers(tiers.filter((_, i) => i !== index))
+    }
+  }
+
+  const loadDefaultTiers = () => {
+    setTiers([
+      { id: 'bronze', name: 'Bronze Member', nameAr: 'عضو برونزي', minRewards: 1, maxRewards: 2, icon: '🥉', color: '#CD7F32' },
+      { id: 'silver', name: 'Silver Member', nameAr: 'عضو فضي', minRewards: 3, maxRewards: 5, icon: '🥈', color: '#C0C0C0' },
+      { id: 'gold', name: 'Gold Member', nameAr: 'عضو ذهبي', minRewards: 6, maxRewards: null, icon: '🥇', color: '#FFD700' }
+    ])
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSave(formData)
+    
+    // Include tier configuration in form data
+    const dataToSave = {
+      ...formData,
+      loyalty_tiers: tiersEnabled ? { enabled: true, tiers } : null
+    }
+    
+    onSave(dataToSave)
   }
 
   return (
@@ -581,6 +651,189 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 placeholder={formData.type === 'stamps' ? 'e.g., 10' : formData.type === 'points' ? 'e.g., 100' : 'e.g., 50'}
               />
+            </div>
+
+            {/* Loyalty Tiers Section */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="tiersEnabled"
+                  checked={tiersEnabled}
+                  onChange={(e) => setTiersEnabled(e.target.checked)}
+                  className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                />
+                <label htmlFor="tiersEnabled" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  🏆 Enable Custom Loyalty Tiers / تفعيل مستويات الولاء المخصصة
+                </label>
+              </div>
+
+              {tiersEnabled && (
+                <div className="p-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Configure tier names, rewards thresholds, and icons. Customers see their tier in their wallet pass.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={loadDefaultTiers}
+                      className="px-3 py-2 text-xs font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
+                    >
+                      Reset to Defaults
+                    </button>
+                  </div>
+
+                  {/* Tier Configuration List */}
+                  <div className="space-y-4">
+                    {tiers.map((tier, index) => (
+                      <div key={tier.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">{tier.icon}</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              Tier {index + 1}
+                            </span>
+                          </div>
+                          {tiers.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => removeTier(index)}
+                              className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Tier Name (English) *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={tier.name}
+                              onChange={(e) => updateTier(index, 'name', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="Gold Member"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Tier Name (Arabic)
+                            </label>
+                            <input
+                              type="text"
+                              value={tier.nameAr}
+                              onChange={(e) => updateTier(index, 'nameAr', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="عضو ذهبي"
+                              dir="rtl"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Minimum Rewards *
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={tier.minRewards}
+                              onChange={(e) => updateTier(index, 'minRewards', parseInt(e.target.value))}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Maximum Rewards {index === tiers.length - 1 ? '(empty = unlimited)' : '*'}
+                            </label>
+                            <input
+                              type="number"
+                              min={tier.minRewards}
+                              value={tier.maxRewards === null ? '' : tier.maxRewards}
+                              onChange={(e) => updateTier(index, 'maxRewards', e.target.value === '' ? null : parseInt(e.target.value))}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder={index === tiers.length - 1 ? 'Unlimited' : ''}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Icon (Emoji) *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={tier.icon}
+                              onChange={(e) => updateTier(index, 'icon', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="🥇"
+                              maxLength="2"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Icon URL (Optional)
+                            </label>
+                            <input
+                              type="url"
+                              value={tier.iconUrl || ''}
+                              onChange={(e) => updateTier(index, 'iconUrl', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="https://example.com/icon.png"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Tier Color
+                            </label>
+                            <input
+                              type="color"
+                              value={tier.color}
+                              onChange={(e) => updateTier(index, 'color', e.target.value)}
+                              className="w-full h-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Tier Button */}
+                  {tiers.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={addTier}
+                      className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors font-medium"
+                    >
+                      + Add Tier (max 5)
+                    </button>
+                  )}
+
+                  {/* Preview */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
+                      📱 Preview in Wallet Pass:
+                    </p>
+                    <div className="space-y-1">
+                      {tiers.map((tier, index) => (
+                        <p key={tier.id} className="text-sm text-blue-800 dark:text-blue-300">
+                          {tier.minRewards}-{tier.maxRewards === null ? '∞' : tier.maxRewards} rewards: {tier.icon} {tier.name}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Time Limits Section */}

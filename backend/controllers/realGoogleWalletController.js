@@ -111,6 +111,16 @@ class RealGoogleWalletController {
       // Get authenticated client
       const authClient = await this.auth.getClient()
 
+      // Calculate customer tier
+      const CustomerService = (await import('../services/CustomerService.js')).default
+      const tierData = await CustomerService.calculateCustomerTier(customerData.customerId, offerData.offerId)
+      if (tierData) {
+        console.log('🏆 Customer tier:', tierData)
+        // Add tier data to progress data
+        progressData.tierData = tierData
+        progressData.rewardsClaimed = tierData.rewardsClaimed
+      }
+
       // Step 1: Create or update loyalty class
       const loyaltyClass = await this.createOrUpdateLoyaltyClass(authClient, offerData)
 
@@ -378,34 +388,44 @@ class RealGoogleWalletController {
       accountName: `${customerData.firstName} ${customerData.lastName}`,
       accountId: customerData.customerId,
 
-      // Loyalty points - Enhanced with star emoji (Phase 4)
+      // Loyalty points - Enhanced with star emoji and completion count (Phase 4)
       loyaltyPoints: {
         balance: {
-          string: `${progressData.current_stamps || 0}/${offerData.stamps_required}`
+          int: progressData.rewardsClaimed || 0  // Show total completions as loyalty points
         },
-        label: '⭐ Stamps Collected',
+        label: 'Rewards Earned',
         // Add localized labels for international support
         localizedLabel: {
           defaultValue: {
             language: 'en-US',
-            value: '⭐ Stamps Collected'
+            value: 'Rewards Earned'
           },
           translatedValues: [
             {
               language: 'ar',
-              value: '⭐ الطوابع المجمعة'
+              value: 'المكافآت المكتسبة'
             }
           ]
         }
       },
 
-      // Text modules for card content - Enhanced with visual progress (Phase 4)
+      // Text modules for card content - Enhanced with tier info (Phase 4)
       textModulesData: [
         {
           id: 'progress_visual',
           header: 'Your Progress',
           body: this.generateProgressText(progressData.current_stamps || 0, offerData.stamps_required)
         },
+        ...(progressData.tierData && progressData.tierData.currentTier ? [{
+          id: 'tier',
+          header: 'Member Status',
+          body: `${progressData.tierData.currentTier.icon} ${progressData.tierData.currentTier.name}`
+        }] : []),
+        ...(progressData.tierData && !progressData.tierData.isTopTier && progressData.tierData.nextTier ? [{
+          id: 'next_tier',
+          header: 'Next Tier',
+          body: `${progressData.tierData.rewardsToNextTier} more rewards for ${progressData.tierData.nextTier.name}`
+        }] : []),
         {
           id: 'reward',
           header: '🎁 Reward',
@@ -792,6 +812,16 @@ class RealGoogleWalletController {
         stamps: `${progressData.current_stamps}/${progressData.max_stamps}`
       })
 
+      // Calculate customer tier
+      const CustomerService = (await import('../services/CustomerService.js')).default
+      const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
+      if (tierData) {
+        console.log('🏆 Customer tier for push update:', tierData)
+        // Add tier data to progress data for display in wallet
+        progressData.tierData = tierData
+        progressData.rewardsClaimed = tierData.rewardsClaimed
+      }
+
       // Create object ID using same format as creation - CRITICAL FIX: Use identical regex pattern
       const objectId = `${this.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
 
@@ -837,7 +867,7 @@ class RealGoogleWalletController {
             }
             
             const offerData = {
-              offerId: offer.id,
+              offerId: offerId,  // Use secure public ID, not integer id
               businessName: offer.business?.business_name || 'Business',
               title: offer.title,
               description: offer.description,
@@ -880,9 +910,9 @@ class RealGoogleWalletController {
       const updateData = {
         loyaltyPoints: {
           balance: {
-            string: `${progressData.current_stamps}/${progressData.max_stamps}`
+            int: progressData.rewardsClaimed || 0  // Use int for total completions (standardized)
           },
-          label: 'Stamps Collected'
+          label: 'Rewards Earned'
         },
         textModulesData: [
           {
@@ -891,6 +921,26 @@ class RealGoogleWalletController {
             body: `${progressData.current_stamps} of ${progressData.max_stamps} stamps`
           }
         ]
+      }
+
+      // Add tier information if available
+      if (progressData.tierData) {
+        // Already set above, but ensure it's the correct value
+        updateData.loyaltyPoints.balance.int = progressData.tierData.rewardsClaimed || 0
+        
+        updateData.textModulesData.push({
+          id: 'tier',
+          header: 'Loyalty Tier',
+          body: `${progressData.tierData.currentTier.name} (${progressData.tierData.rewardsClaimed} completions)`
+        })
+
+        if (progressData.tierData.nextTier) {
+          updateData.textModulesData.push({
+            id: 'next_tier',
+            header: 'Next Tier',
+            body: `${progressData.tierData.rewardsToNextTier} more rewards to reach ${progressData.tierData.nextTier.name}`
+          })
+        }
       }
 
       // If reward is earned, update the status
@@ -922,8 +972,8 @@ class RealGoogleWalletController {
       
       if (verifyResponse.ok) {
         const updatedObject = await verifyResponse.json()
-        const currentBalance = updatedObject.loyaltyPoints?.balance?.string
-        const expectedBalance = `${progressData.current_stamps}/${progressData.max_stamps}`
+        const currentBalance = updatedObject.loyaltyPoints?.balance?.int
+        const expectedBalance = progressData.rewardsClaimed || 0
         
         console.log('🔍 Verification results:', {
           expected: expectedBalance,

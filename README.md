@@ -13,10 +13,12 @@ A cost-effective and scalable loyalty program management platform designed for b
 - 🎨 **Custom stamp icons** - SVG icons generated automatically on server startup
 
 ### **For Customers**
-- 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with official platform-compliant button designs and emoji stamp visualization
+- 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with perpetual loyalty passes (auto-reset after each reward)
+- 🏆 **Customizable tier system** - Gamified loyalty experience with business-defined tier names, thresholds, and icons
+- 🔄 **Perpetual passes** - One pass forever, reusable indefinitely for continuous engagement
 - 🔍 **QR code scanning** - Instant program enrollment
-- ⭐ **Progress tracking** - Visual stamp/point collection (⭐, ☕, 🍕, etc.)
-- 🎁 **Automatic rewards** - Seamless redemption process
+- ⭐ **Progress tracking** - Visual stamp/point collection with completion counters and tier progression
+- 🎁 **Automatic rewards** - Seamless redemption process with stamps auto-reset
 - 📧 **Smart notifications** - Birthday offers & reminders
 - ✨ **Bilingual support** - Arabic numeral conversion for phone inputs (see [DEPLOYMENT.md](DEPLOYMENT.md#-arabic-numeral-support-for-phone-numbers))
 

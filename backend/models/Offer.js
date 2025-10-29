@@ -84,6 +84,12 @@ const Offer = sequelize.define('Offer', {
   conversion_rate: {
     type: DataTypes.DECIMAL(5, 2),
     defaultValue: 0.00
+  },
+  loyalty_tiers: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null,
+    comment: 'Customizable tier/medal system configuration for perpetual loyalty passes'
   }
 }, {
   tableName: 'offers',

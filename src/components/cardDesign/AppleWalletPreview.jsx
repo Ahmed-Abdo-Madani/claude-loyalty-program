@@ -35,6 +35,15 @@ function AppleWalletPreview({ design, offerData, customerData }) {
   const mockProgress = Math.floor(stamps_required * 0.6) // 60% complete
   const progressPercentage = (mockProgress / stamps_required) * 100
 
+  // Mock tier data for preview - Always show tier (New Member for 0 completions)
+  const mockCompletions = 0 // Show 0 to demonstrate New Member tier
+  const mockTier = {
+    name: 'New Member',
+    nameAr: 'عضو جديد',
+    icon: '👋',
+    color: '#6B7280'
+  }
+
   // Convert hex to RGB for Apple Wallet style
   const bgRgb = hexToRgbString(background_color)
   const fgRgb = hexToRgbString(foreground_color)
@@ -189,6 +198,46 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completion Counter - Always show (even at 0) */}
+          {type === 'stamps' && (
+            <div className="pt-2">
+              <div className="flex justify-between items-baseline">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: label_color }}
+                >
+                  Completed
+                </span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: foreground_color }}
+                >
+                  {mockCompletions}x
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Customer Tier - Always show */}
+          {type === 'stamps' && mockTier && (
+            <div className="pt-2">
+              <div className="flex justify-between items-baseline">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: label_color }}
+                >
+                  {/* Empty label for cleaner appearance */}
+                </span>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: foreground_color }}
+                >
+                  {mockTier.icon} {mockTier.name}
+                </span>
               </div>
             </div>
           )}

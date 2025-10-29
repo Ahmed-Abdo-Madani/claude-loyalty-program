@@ -509,6 +509,224 @@ class CustomerService {
 
     return errors
   }
+
+  /**
+   * Calculate customer's tier based on rewards_claimed count and offer's tier configuration
+   * @param {string} customerId - Customer's public ID (cust_*)
+   * @param {string} offerId - Offer's public ID (off_*)
+   * @returns {Object|null} Tier data object or null if customer hasn't started this offer
+   */
+  static async calculateCustomerTier(customerId, offerId) {
+    try {
+      // Default tiers (used when loyalty_tiers is null or disabled)
+      const DEFAULT_TIERS = [
+        {
+          id: 'bronze',
+          name: 'Bronze Member',
+          nameAr: 'عضو برونزي',
+          minRewards: 1,
+          maxRewards: 2,
+          icon: '🥉',
+          color: '#CD7F32'
+        },
+        {
+          id: 'silver',
+          name: 'Silver Member',
+          nameAr: 'عضو فضي',
+          minRewards: 3,
+          maxRewards: 5,
+          icon: '🥈',
+          color: '#C0C0C0'
+        },
+        {
+          id: 'gold',
+          name: 'Gold Member',
+          nameAr: 'عضو ذهبي',
+          minRewards: 6,
+          maxRewards: null,
+          icon: '🥇',
+          color: '#FFD700'
+        }
+      ]
+
+      // Step 1: Fetch customer progress
+      const progress = await CustomerProgress.findOne({
+        where: {
+          customer_id: customerId,
+          offer_id: offerId
+        }
+      })
+
+      // If customer hasn't started this offer yet, treat as 0 completions
+      // This ensures new customers get the "New Member" tier
+      let rewardsClaimed = 0
+      if (!progress) {
+        logger.info('📊 No progress found, treating as new customer with 0 completions:', { customerId, offerId })
+      } else {
+        rewardsClaimed = progress.rewards_claimed || 0
+        logger.info('📊 Customer progress:', { customerId, offerId, rewardsClaimed })
+      }
+
+      // Step 2: Fetch offer tier configuration
+      const offer = await Offer.findOne({
+        where: { public_id: offerId },
+        attributes: ['public_id', 'loyalty_tiers']
+      })
+
+      if (!offer) {
+        logger.warn(`Offer not found: ${offerId}`)
+        return null
+      }
+
+      // Step 3: Determine which tiers to use (custom or default)
+      let tiers = DEFAULT_TIERS
+      if (offer.loyalty_tiers && offer.loyalty_tiers.enabled && Array.isArray(offer.loyalty_tiers.tiers)) {
+        tiers = offer.loyalty_tiers.tiers
+      }
+
+      // Validate tier configuration
+      if (!tiers || tiers.length === 0) {
+        logger.warn(`Invalid tier configuration for offer ${offerId}, using defaults`)
+        tiers = DEFAULT_TIERS
+      }
+
+      logger.info('🎯 Using tiers:', { tierCount: tiers.length, tierNames: tiers.map(t => t.name), source: offer.loyalty_tiers?.enabled ? 'custom' : 'default' })
+
+      // Handle customers with 0 completions
+      if (rewardsClaimed === 0) {
+        const firstTier = tiers[0]
+        
+        // Check if first tier starts at 0 (includes new members)
+        if (firstTier.minRewards === 0) {
+          // First tier includes new members, assign them to it
+          logger.info('🏆 Matched tier:', { tierId: firstTier.id, tierName: firstTier.name, rewardsClaimed: 0, note: 'New member in first tier' })
+          
+          // Calculate next tier
+          let nextTier = null
+          let rewardsToNextTier = null
+          if (tiers.length > 1) {
+            nextTier = tiers[1]
+            rewardsToNextTier = nextTier.minRewards - 0
+          }
+          
+          return {
+            currentTier: {
+              id: firstTier.id,
+              name: firstTier.name,
+              nameAr: firstTier.nameAr || firstTier.name,
+              icon: firstTier.icon || '',
+              color: firstTier.color || '#000000',
+              minRewards: firstTier.minRewards,
+              maxRewards: firstTier.maxRewards
+            },
+            rewardsClaimed: 0,
+            rewardsToNextTier: rewardsToNextTier,
+            nextTier: nextTier ? {
+              name: nextTier.name,
+              nameAr: nextTier.nameAr || nextTier.name,
+              icon: nextTier.icon || ''
+            } : null,
+            isTopTier: tiers.length === 1
+          }
+        } else {
+          // First tier starts at 1, show "New Member" tier for 0 completions
+          logger.info('🏆 Matched tier:', { tierId: 'new', tierName: 'New Member', rewardsClaimed: 0, note: 'First-time customer' })
+          
+          const newMemberTier = {
+            currentTier: {
+              id: 'new',
+              name: 'New Member',
+              nameAr: 'عضو جديد',
+              icon: '👋',
+              color: '#6B7280',
+              minRewards: 0,
+              maxRewards: 0
+            },
+            rewardsClaimed: 0,
+            rewardsToNextTier: firstTier.minRewards,
+            nextTier: {
+              name: firstTier.name,
+              nameAr: firstTier.nameAr || firstTier.name,
+              icon: firstTier.icon || ''
+            },
+            isTopTier: false
+          }
+          
+          logger.info('📈 Tier progression:', { currentTier: 'New Member', nextTier: firstTier.name, rewardsToNext: firstTier.minRewards, isTopTier: false })
+          
+          return newMemberTier
+        }
+      }
+
+      // Step 4: Find current tier
+      let currentTier = null
+      for (const tier of tiers) {
+        const minRewards = tier.minRewards || 0
+        const maxRewards = tier.maxRewards
+
+        if (rewardsClaimed >= minRewards && (maxRewards === null || rewardsClaimed <= maxRewards)) {
+          currentTier = tier
+          break
+        }
+      }
+
+      // If no tier matches, assign to highest tier
+      if (!currentTier && tiers.length > 0) {
+        currentTier = tiers[tiers.length - 1]
+      }
+
+      logger.info('🏆 Matched tier:', { tierId: currentTier?.id, tierName: currentTier?.name, rewardsClaimed })
+
+      // Step 5: Calculate progress to next tier
+      let rewardsToNextTier = null
+      let nextTier = null
+      let isTopTier = false
+
+      if (currentTier) {
+        // Find next tier
+        const currentTierIndex = tiers.findIndex(t => t.id === currentTier.id)
+        if (currentTierIndex >= 0 && currentTierIndex < tiers.length - 1) {
+          nextTier = tiers[currentTierIndex + 1]
+          rewardsToNextTier = (nextTier.minRewards || 0) - rewardsClaimed
+        } else {
+          // Customer is in the highest tier
+          isTopTier = true
+        }
+      }
+
+      logger.info('📈 Tier progression:', { currentTier: currentTier?.name, nextTier: nextTier?.name, rewardsToNext: rewardsToNextTier, isTopTier })
+
+      // Step 6: Return tier data
+      const tierResult = {
+        currentTier: {
+          id: currentTier.id,
+          name: currentTier.name,
+          nameAr: currentTier.nameAr || currentTier.name,
+          icon: currentTier.icon || '',
+          color: currentTier.color || '#000000',
+          minRewards: currentTier.minRewards,
+          maxRewards: currentTier.maxRewards
+        },
+        rewardsClaimed: rewardsClaimed,
+        rewardsToNextTier: rewardsToNextTier,
+        nextTier: nextTier ? {
+          name: nextTier.name,
+          nameAr: nextTier.nameAr || nextTier.name,
+          icon: nextTier.icon || ''
+        } : null,
+        isTopTier: isTopTier
+      }
+
+      logger.info('✅ Tier calculation complete:', { tier: tierResult.currentTier?.name, completions: rewardsClaimed, toNext: rewardsToNextTier })
+
+      return tierResult
+
+    } catch (error) {
+      logger.error('❌ calculateCustomerTier failed:', error)
+      // Return null instead of throwing to prevent pass generation failures
+      return null
+    }
+  }
 }
 
 export default CustomerService

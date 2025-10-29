@@ -126,7 +126,15 @@ export default function BranchScanner() {
 
       if (data.success) {
         setShowPrizeModal(false)
-        setScanResult({ ...scanResult, prizeFulfilled: true })
+        // Consume tier, newCycleStarted, totalCompletions from response
+        setScanResult({ 
+          ...scanResult, 
+          prizeFulfilled: true,
+          tier: data.tier,
+          newCycleStarted: data.newCycleStarted,
+          totalCompletions: data.totalCompletions,
+          progress: data.progress // Update progress to reflect reset (0 of max)
+        })
         setPrizeNotes('')
       } else {
         setError(data.error || 'Prize confirmation failed')
@@ -281,9 +289,50 @@ export default function BranchScanner() {
                 <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
                   Prize Confirmed!
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-8 lg:mb-6">
-                  Pass will expire in 30 days
-                </p>
+                
+                {/* Display tier information if available */}
+                {scanResult.tier && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
+                    <p className="text-xl lg:text-lg font-bold text-gray-900 dark:text-white mb-1">
+                      {scanResult.tier.currentTier && (
+                        <>
+                          {scanResult.tier.currentTier.icon} {scanResult.tier.currentTier.name}
+                        </>
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {scanResult.totalCompletions} {scanResult.totalCompletions === 1 ? 'reward' : 'rewards'} earned!
+                    </p>
+                  </div>
+                )}
+                
+                {/* New cycle indicator */}
+                {scanResult.newCycleStarted && (
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    🔄 New cycle started: 0 of {scanResult.progress.maxStamps} stamps
+                  </p>
+                )}
+                
+                {/* Tier upgrade celebration */}
+                {scanResult.tier && scanResult.tierUpgrade && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-300 dark:border-purple-700">
+                    <p className="text-lg font-bold text-purple-900 dark:text-purple-200 mb-1">
+                      🎉 Tier Upgrade!
+                    </p>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                      Customer reached {scanResult.tier.currentTier.name}!
+                    </p>
+                  </div>
+                )}
+                
+                {/* Milestone celebration */}
+                {scanResult.totalCompletions && [5, 10, 25, 50, 100].includes(scanResult.totalCompletions) && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                    <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
+                      🎊 Milestone! {scanResult.totalCompletions} rewards earned!
+                    </p>
+                  </div>
+                )}
                 
                 <button
                   onClick={handleScanNext}

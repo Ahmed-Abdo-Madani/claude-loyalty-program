@@ -803,6 +803,116 @@ Expected response:
    - **Test Stamp Generation**: Use the stamp preview endpoint directly to verify rendering
    - **Environment Variable**: Confirm `FONTCONFIG_PATH` is not overridden incorrectly
 
+6. **"Invalid loyalty_tiers configuration" Error When Saving Offer**
+   - **Cause**: Tier configuration validation failed due to missing or invalid fields
+   - **Common Causes**:
+     1. First tier doesn't start at `minRewards = 0` or `1` (must be 0 for "New Member" tier or 1 for first earned tier)
+     2. Missing required fields: `name`, `minRewards`, `maxRewards`, `icon`, `color`
+     3. Invalid color format (must be hex: `#RRGGBB`)
+     4. Tier ranges overlap or have gaps
+     5. Last tier doesn't have `maxRewards = null` (unlimited)
+     6. Less than 2 or more than 5 tiers configured
+   - **Solution**:
+     1. Verify first tier has `minRewards: 0` (for "New Member" tier shown to all customers) or `minRewards: 1` (tiers only shown after first completion)
+     2. Ensure all required fields are filled:
+        - `name`: Non-empty string (e.g., "Bronze Member")
+        - `nameAr`: Optional Arabic name (e.g., "عضو برونزي")
+        - `minRewards`: Number >= 0 for first tier (0 or 1), >= 1 for subsequent tiers
+        - `maxRewards`: Number >= minRewards or null for unlimited
+        - `icon`: Emoji or icon string (e.g., "🥉")
+        - `color`: Hex color (e.g., "#CD7F32")
+     3. Ensure tier ranges are continuous:
+        - ✅ New Member: 0-0, Bronze: 1-2, Silver: 3-null (correct - with New Member tier)
+        - ✅ Bronze: 1-2, Silver: 3-5, Gold: 6-null (correct - without New Member tier)
+        - ❌ Bronze: 1-2, Silver: 5-10, Gold: 11-null (gap between 2 and 5)
+     4. Ensure last tier has `maxRewards: null`
+     5. Use 2-5 tiers (not more, not less)
+     6. Check browser console for specific validation error message
+   - **Verification**:
+     - Check browser console (F12) for detailed error message
+     - Verify tier configuration matches the required schema
+     - Test with default tiers first (New Member/Bronze/Silver/Gold)
+     - Save offer without custom tiers to verify other fields are valid
+   - **Example Valid Configuration (With New Member Tier)**:
+     ```json
+     {
+       "enabled": true,
+       "tiers": [
+         {
+           "id": "new",
+           "name": "New Member",
+           "nameAr": "عضو جديد",
+           "minRewards": 0,
+           "maxRewards": 0,
+           "icon": "👋",
+           "color": "#6B7280"
+         },
+         {
+           "id": "bronze",
+           "name": "Bronze Member",
+           "nameAr": "عضو برونزي",
+           "minRewards": 1,
+           "maxRewards": 2,
+           "icon": "🥉",
+           "color": "#CD7F32"
+         },
+         {
+           "id": "silver",
+           "name": "Silver Member",
+           "nameAr": "عضو فضي",
+           "minRewards": 3,
+           "maxRewards": 5,
+           "icon": "🥈",
+           "color": "#C0C0C0"
+         },
+         {
+           "id": "gold",
+           "name": "Gold Member",
+           "nameAr": "عضو ذهبي",
+           "minRewards": 6,
+           "maxRewards": null,
+           "icon": "🥇",
+           "color": "#FFD700"
+         }
+       ]
+     }
+     ```
+   - **Example Valid Configuration (Without New Member Tier)**:
+     ```json
+     {
+       "enabled": true,
+       "tiers": [
+         {
+           "id": "bronze",
+           "name": "Bronze Member",
+           "nameAr": "عضو برونزي",
+           "minRewards": 1,
+           "maxRewards": 2,
+           "icon": "🥉",
+           "color": "#CD7F32"
+         },
+         {
+           "id": "silver",
+           "name": "Silver Member",
+           "nameAr": "عضو فضي",
+           "minRewards": 3,
+           "maxRewards": 5,
+           "icon": "🥈",
+           "color": "#C0C0C0"
+         },
+         {
+           "id": "gold",
+           "name": "Gold Member",
+           "nameAr": "عضو ذهبي",
+           "minRewards": 6,
+           "maxRewards": null,
+           "icon": "🥇",
+           "color": "#FFD700"
+         }
+       ]
+     }
+     ```
+
 ### Support Contacts
 - **Platform**: customer_support@madna.me
 - **Technical**: super_admin@madna.me

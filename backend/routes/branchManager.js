@@ -388,29 +388,41 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
       })
     }
 
-    // Mark reward as fulfilled
-    await progress.markRewardFulfilled(req.branchId, notes)
+    // Call claimReward() to auto-reset stamps - use req.branch.public_id
+    await progress.claimReward(req.branch.public_id, notes)
 
-    // Schedule pass expiration (30 days from now)
-    await PassLifecycleService.schedulePassExpiration(customerId, offerId, 30)
+    logger.info('🔄 Stamps reset to 0, new cycle started')
+    logger.info('📊 Total completions:', progress.rewards_claimed)
 
-    // Update all active wallet passes to 'completed' status
-    await WalletPass.update(
-      { pass_status: 'completed' },
-      {
-        where: {
-          customer_id: customerId,
-          offer_id: offerId,
-          pass_status: 'active'
-        }
-      }
-    )
+    // Calculate customer tier
+    const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
+    if (tierData) {
+      logger.info('🏆 Customer tier:', tierData)
+    }
+
+    // Trigger immediate pass updates (Apple and Google Wallet)
+    try {
+      // Import controllers dynamically to avoid circular dependencies
+      const { default: appleWalletController } = await import('../controllers/appleWalletController.js')
+      const { default: googleWalletController } = await import('../controllers/realGoogleWalletController.js')
+
+      // Push updates to wallet passes
+      await appleWalletController.pushProgressUpdate(customerId, offerId, progress)
+      await googleWalletController.pushProgressUpdate(customerId, offerId, progress)
+
+      logger.info('✅ Wallet passes updated with reset progress and tier')
+    } catch (walletError) {
+      logger.error('⚠️ Failed to update wallet passes:', walletError)
+      // Non-critical error, continue with response
+    }
 
     logger.info('Prize confirmed by manager', {
-      branchId: req.branchId,
+      branchId: req.branch.public_id,
       customerId,
       offerId,
-      notes
+      notes,
+      newCycleStarted: true,
+      totalCompletions: progress.rewards_claimed
     })
 
     res.json({
@@ -420,9 +432,14 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
         maxStamps: progress.max_stamps,
         isCompleted: progress.is_completed,
         rewardsClaimed: progress.rewards_claimed,
-        rewardFulfilledAt: progress.reward_fulfilled_at
+        rewardFulfilledAt: progress.reward_fulfilled_at,
+        stampsEarned: progress.current_stamps,
+        stampsRequired: progress.max_stamps,
+        status: progress.is_completed ? 'completed' : 'active'
       },
-      expirationScheduled: true
+      tier: tierData,
+      newCycleStarted: true,
+      totalCompletions: progress.rewards_claimed
     })
   } catch (error) {
     logger.error('Prize confirmation error:', error)
