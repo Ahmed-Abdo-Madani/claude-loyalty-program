@@ -1111,6 +1111,13 @@ class AppleWalletController {
         progress: progressData
       })
 
+      // DEFENSIVE LOGGING: Verify fresh progress data received
+      logger.info('Progress data received in pushProgressUpdate:', {
+        currentStamps: progressData.current_stamps,
+        rewardsClaimed: progressData.rewards_claimed,
+        isCompleted: progressData.is_completed
+      })
+
       // Extract customer name from progressData
       const customerName = progressData.customer_name || 'Valued'
       const [firstName, ...lastNameParts] = customerName.split(' ')

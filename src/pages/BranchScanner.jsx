@@ -12,8 +12,6 @@ export default function BranchScanner() {
   const [error, setError] = useState('')
   const [todayStats, setTodayStats] = useState({ scansToday: 0, rewardsEarned: 0 })
   const [branchInfo, setBranchInfo] = useState(null)
-  const [showPrizeModal, setShowPrizeModal] = useState(false)
-  const [prizeNotes, setPrizeNotes] = useState('')
 
   useEffect(() => {
     // Check authentication
@@ -77,12 +75,74 @@ export default function BranchScanner() {
       const data = await response.json()
 
       if (data.success) {
-        setScanResult({
-          rewardEarned: data.rewardEarned,
-          progress: data.progress,
-          customerId: data.customerId,   // Added from API response
-          offerId: data.offerId           // Added from API response
-        })
+        // Check if reward was earned - auto-confirm prize immediately
+        if (data.rewardEarned) {
+          // Auto-confirm prize (no modal, no user interaction)
+          try {
+            const confirmResponse = await fetch(
+              `${endpoints.branchManagerConfirmPrize}/${data.customerId}/${data.offerId}`,
+              {
+                method: 'POST',
+                headers: {
+                  'x-branch-id': authData.branchId,
+                  'x-manager-token': authData.managerToken,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ notes: '' })
+              }
+            )
+
+            // Check response status before parsing JSON
+            if (!confirmResponse.ok) {
+              throw new Error(`Prize confirmation failed: ${confirmResponse.status}`)
+            }
+
+            const confirmData = await confirmResponse.json()
+
+            if (confirmData.success) {
+              // Show success with fresh data from confirmation
+              setScanResult({
+                rewardEarned: true,
+                prizeFulfilled: true,
+                tier: confirmData.tier,
+                tierUpgrade: confirmData.tierUpgrade,
+                totalCompletions: confirmData.totalCompletions,
+                progress: confirmData.progress, // Fresh data with reset stamps
+                customerId: data.customerId,
+                offerId: data.offerId
+              })
+            } else {
+              // Prize confirmation failed, but still show result
+              setScanResult({
+                rewardEarned: true,
+                prizeFulfilled: false,
+                progress: data.progress,
+                customerId: data.customerId,
+                offerId: data.offerId,
+                confirmError: confirmData.error || 'Prize confirmation failed'
+              })
+            }
+          } catch (confirmError) {
+            // Handle auto-confirm errors without blocking flow
+            console.error('Auto-confirm error:', confirmError)
+            setScanResult({
+              rewardEarned: true,
+              prizeFulfilled: false,
+              progress: data.progress,
+              customerId: data.customerId,
+              offerId: data.offerId,
+              confirmError: 'Prize confirmation failed - wallet update may be delayed'
+            })
+          }
+        } else {
+          // Regular stamp added (no reward earned)
+          setScanResult({
+            rewardEarned: false,
+            progress: data.progress,
+            customerId: data.customerId,
+            offerId: data.offerId
+          })
+        }
         
         // Reload stats
         loadTodayStats()
@@ -99,51 +159,6 @@ export default function BranchScanner() {
   const handleScanError = (err) => {
     setIsScanning(false)
     setError(err?.message ?? String(err))
-  }
-
-  const handleGivePrize = () => {
-    setShowPrizeModal(true)
-  }
-
-  const handleConfirmPrize = async () => {
-    setLoading(true)
-
-    try {
-      const authData = getManagerAuthData()
-      const { customerId, offerId } = scanResult
-      
-      const response = await fetch(`${endpoints.branchManagerConfirmPrize}/${customerId}/${offerId}`, {
-        method: 'POST',
-        headers: {
-          'x-branch-id': authData.branchId,
-          'x-manager-token': authData.managerToken,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ notes: prizeNotes })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setShowPrizeModal(false)
-        // Consume tier, newCycleStarted, totalCompletions from response
-        setScanResult({ 
-          ...scanResult, 
-          prizeFulfilled: true,
-          tier: data.tier,
-          newCycleStarted: data.newCycleStarted,
-          totalCompletions: data.totalCompletions,
-          progress: data.progress // Update progress to reflect reset (0 of max)
-        })
-        setPrizeNotes('')
-      } else {
-        setError(data.error || 'Prize confirmation failed')
-      }
-    } catch (err) {
-      setError('Failed to confirm prize')
-    } finally {
-      setLoading(false)
-    }
   }
 
   const handleLogout = () => {
@@ -255,35 +270,8 @@ export default function BranchScanner() {
                 paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' 
               }}
             >
-            {scanResult.rewardEarned && !scanResult.prizeFulfilled ? (
-              /* Reward Earned State */
-              <>
-                <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">🏆</div>
-                <h2 className="text-3xl lg:text-2xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">
-                  🎉 REWARD EARNED!
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-8 lg:mb-6">
-                  Customer completed {scanResult.progress.maxStamps} stamps!
-                </p>
-                
-                <button
-                  onClick={handleGivePrize}
-                  className="w-full py-5 lg:py-4 bg-green-600 hover:bg-green-700 text-white text-xl lg:text-lg font-semibold rounded-lg mb-3 transition-colors focus:outline-none focus:ring-4 focus:ring-green-500"
-                  aria-label="Give prize to customer"
-                >
-                  Give Prize - اعط الجائزة
-                </button>
-                
-                <button
-                  onClick={handleScanNext}
-                  className="w-full py-5 lg:py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors focus:outline-none focus:ring-4 focus:ring-gray-500"
-                  aria-label="Skip and scan next customer"
-                >
-                  Skip
-                </button>
-              </>
-            ) : scanResult.prizeFulfilled ? (
-              /* Prize Confirmed State */
+            {scanResult.rewardEarned && scanResult.prizeFulfilled ? (
+              /* Prize Auto-Confirmed State */
               <>
                 <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
                 <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
@@ -306,11 +294,18 @@ export default function BranchScanner() {
                   </div>
                 )}
                 
-                {/* New cycle indicator */}
-                {scanResult.newCycleStarted && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    🔄 New cycle started: 0 of {scanResult.progress.maxStamps} stamps
-                  </p>
+                {/* New cycle indicator with fresh progress data */}
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  🔄 New cycle started: {scanResult.progress?.currentStamps || 0} of {scanResult.progress?.maxStamps || 5} stamps
+                </p>
+                
+                {/* Show confirmation error if auto-confirm failed */}
+                {scanResult.confirmError && (
+                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      ⚠️ Prize confirmed but wallet update may be delayed
+                    </p>
+                  </div>
                 )}
                 
                 {/* Tier upgrade celebration */}
@@ -375,55 +370,6 @@ export default function BranchScanner() {
           </div>
         )}
       </div>
-
-      {/* Prize Confirmation Modal */}
-      {showPrizeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div 
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full lg:max-w-md p-8 lg:p-6 max-h-[90vh] overflow-y-auto"
-            style={{ 
-              paddingTop: 'max(2rem, env(safe-area-inset-top))', 
-              paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' 
-            }}
-          >
-            <h3 className="text-2xl lg:text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Confirm Prize Given
-            </h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Notes (optional)
-              </label>
-              <textarea
-                value={prizeNotes}
-                onChange={(e) => setPrizeNotes(e.target.value)}
-                placeholder="e.g., Given free coffee, redeemed gift card..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                rows="4"
-              />
-            </div>
-
-            <div className="flex space-x-4 lg:space-x-3">
-              <button
-                onClick={() => setShowPrizeModal(false)}
-                disabled={loading}
-                className="flex-1 py-4 lg:py-3 text-lg lg:text-base bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-gray-500"
-                aria-label="Cancel prize confirmation"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmPrize}
-                disabled={loading}
-                className="flex-1 py-4 lg:py-3 text-lg lg:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-green-500"
-                aria-label="Confirm prize was given"
-              >
-                {loading ? 'Confirming...' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -388,16 +388,38 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
       })
     }
 
+    // Calculate tier BEFORE claimReward to detect upgrades
+    const tierBeforeClaim = await CustomerService.calculateCustomerTier(customerId, offerId)
+    const tierNameBefore = tierBeforeClaim?.currentTier?.name || null
+
     // Call claimReward() to auto-reset stamps - use req.branch.public_id
     await progress.claimReward(req.branch.public_id, notes)
 
-    logger.info('🔄 Stamps reset to 0, new cycle started')
-    logger.info('📊 Total completions:', progress.rewards_claimed)
+    // CRITICAL FIX: Refetch progress from database to get fresh values
+    // After claimReward(), the in-memory progress object still has old values
+    // Reload the instance to get the updated rewards_claimed, current_stamps, is_completed
+    await progress.reload()
 
-    // Calculate customer tier
+    logger.info('🔄 Stamps reset to 0, new cycle started')
+    logger.info('📊 Total completions (fresh):', progress.rewards_claimed)
+    logger.info('📊 Fresh progress after reset:', {
+      rewardsClaimed: progress.rewards_claimed,
+      currentStamps: progress.current_stamps,
+      isCompleted: progress.is_completed
+    })
+
+    // Calculate customer tier AFTER claimReward (uses fresh rewards_claimed from database)
     const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
+    const tierNameAfter = tierData?.currentTier?.name || null
+    
+    // Detect tier upgrade by comparing tier names
+    const tierUpgrade = tierNameBefore !== null && tierNameAfter !== null && tierNameBefore !== tierNameAfter
+    
     if (tierData) {
-      logger.info('🏆 Customer tier:', tierData)
+      logger.info('🏆 Customer tier after claim:', tierData)
+      if (tierUpgrade) {
+        logger.info('🎉 Tier upgraded!', { from: tierNameBefore, to: tierNameAfter })
+      }
     }
 
     // Trigger immediate pass updates (Apple and Google Wallet)
@@ -438,6 +460,7 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
         status: progress.is_completed ? 'completed' : 'active'
       },
       tier: tierData,
+      tierUpgrade: tierUpgrade,
       newCycleStarted: true,
       totalCompletions: progress.rewards_claimed
     })

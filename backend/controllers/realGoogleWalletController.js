@@ -812,6 +812,13 @@ class RealGoogleWalletController {
         stamps: `${progressData.current_stamps}/${progressData.max_stamps}`
       })
 
+      // DEFENSIVE LOGGING: Verify fresh progress data received
+      console.log('Progress data received in Google pushProgressUpdate:', {
+        currentStamps: progressData.current_stamps,
+        rewardsClaimed: progressData.rewards_claimed,
+        isCompleted: progressData.is_completed
+      })
+
       // Calculate customer tier
       const CustomerService = (await import('../services/CustomerService.js')).default
       const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
@@ -916,7 +923,7 @@ class RealGoogleWalletController {
         },
         textModulesData: [
           {
-            id: 'progress',
+            id: 'progress_visual',
             header: 'Progress',
             body: `${progressData.current_stamps} of ${progressData.max_stamps} stamps`
           }

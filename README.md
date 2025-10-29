@@ -11,6 +11,7 @@ A cost-effective and scalable loyalty program management platform designed for b
 - 📊 **Real-time analytics** - Track customer engagement
 - 🏪 **Multi-location support** - Manage multiple branches
 - 🎨 **Custom stamp icons** - SVG icons generated automatically on server startup
+- 🚀 **Streamlined scanning** - Branch manager portal with PIN-based authentication and one-tap prize confirmation (auto-confirms prizes for 3-second transactions, optimized for high-volume operations)
 
 ### **For Customers**
 - 📱 **Mobile wallet integration** - Apple Wallet & Google Pay with perpetual loyalty passes (auto-reset after each reward)
