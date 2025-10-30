@@ -72,6 +72,7 @@ export const endpoints = {
   scanVerify: `${API_BASE_URL}/api/business/scan/verify`,
   scanHistory: `${API_BASE_URL}/api/business/scan/history`,
   scanAnalytics: `${API_BASE_URL}/api/business/scan/analytics`,
+  scanConfirmPrize: `${API_BASE_URL}/api/business/scan/confirm-prize`,
 
   // Test APIs
   testDualQRFlow: `${API_BASE_URL}/api/business/test/dual-qr-flow`,

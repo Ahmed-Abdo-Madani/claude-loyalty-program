@@ -82,19 +82,17 @@ class RealGoogleWalletController {
           error: 'Google Wallet service unavailable',
           message: 'Google Wallet credentials not configured',
           mock: true
-        })
-      }
-
-      const { customerData, offerData, progressData } = req.body
-
-      // Debug logging for stamp values (keeping this for Google Wallet debugging)
-      console.log('🔍 Google Wallet: Generating pass', {
-        customer: customerData.customerId,
-        offer: offerData.offerId,
-        stamps_required: offerData?.stamps_required
       })
+    }
 
-      // Validate required data
+    let { customerData, offerData, progressData } = req.body
+
+    // Debug logging for stamp values (keeping this for Google Wallet debugging)
+    console.log('🔍 Google Wallet: Generating pass', {
+      customer: customerData.customerId,
+      offer: offerData.offerId,
+      stamps_required: offerData?.stamps_required
+    })      // Validate required data
       if (!customerData?.customerId || !offerData?.offerId || !offerData?.businessName) {
         return res.status(400).json({
           error: 'Missing required data',
@@ -125,12 +123,13 @@ class RealGoogleWalletController {
         }
         console.log('✅ Normalized progress data for generatePass:', normalizedProgress)
       } else {
-        // Already a plain object - ensure camelCase fields exist
+        // Already a plain object - ensure camelCase fields exist with defensive default
+        const pd = progressData || {}
         normalizedProgress = {
-          currentStamps: progressData.currentStamps ?? progressData.current_stamps ?? 0,
-          maxStamps: progressData.maxStamps ?? progressData.max_stamps ?? 10,
-          rewardsClaimed: progressData.rewardsClaimed ?? progressData.rewards_claimed ?? 0,
-          isCompleted: progressData.isCompleted ?? progressData.is_completed ?? false
+          currentStamps: pd.currentStamps ?? pd.current_stamps ?? 0,
+          maxStamps: pd.maxStamps ?? pd.max_stamps ?? 10,
+          rewardsClaimed: pd.rewardsClaimed ?? pd.rewards_claimed ?? 0,
+          isCompleted: pd.isCompleted ?? pd.is_completed ?? false
         }
         console.log('✅ Using plain object with camelCase normalization for generatePass:', normalizedProgress)
       }

@@ -2418,6 +2418,142 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
   }
 })
 
+// Confirm prize and reset customer progress (business-authenticated)
+router.post('/scan/confirm-prize/:customerId/:offerId', requireBusinessAuth, async (req, res) => {
+  try {
+    const { customerId, offerId } = req.params
+    const { notes } = req.body
+
+    // Find customer progress
+    const progress = await CustomerProgress.findOne({
+      where: {
+        customer_id: customerId,
+        offer_id: offerId
+      }
+    })
+
+    if (!progress) {
+      return res.status(404).json({
+        success: false,
+        error: 'Customer progress not found'
+      })
+    }
+
+    if (!progress.is_completed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Progress not completed'
+      })
+    }
+
+    // Verify business ownership of the offer
+    const offer = await Offer.findOne({
+      where: {
+        public_id: offerId
+      }
+    })
+
+    if (!offer || offer.business_id !== req.business.public_id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized to confirm prize for this offer'
+      })
+    }
+
+    // Calculate tier BEFORE claimReward to detect upgrades
+    const tierBeforeClaim = await CustomerService.calculateCustomerTier(customerId, offerId)
+    const tierNameBefore = tierBeforeClaim?.currentTier?.name || null
+
+    // Call claimReward() to auto-reset stamps - use req.business.public_id
+    await progress.claimReward(req.business.public_id, notes)
+
+    // CRITICAL FIX: Refetch progress from database to get fresh values
+    // After claimReward(), the in-memory progress object still has old values
+    // Reload the instance to get the updated rewards_claimed, current_stamps, is_completed
+    await progress.reload()
+
+    console.log('🔄 Stamps reset to 0, new cycle started')
+    console.log('📊 Total completions (fresh):', progress.rewards_claimed)
+    console.log('📊 Fresh progress after reset:', {
+      rewardsClaimed: progress.rewards_claimed,
+      currentStamps: progress.current_stamps,
+      isCompleted: progress.is_completed
+    })
+
+    // Optional Enhancement: Convert Sequelize instance to plain object before passing to wallet controllers
+    // This makes the data flow more explicit and ensures consistent field naming
+    const progressData = progress.toJSON()
+    console.log('📤 Normalized progress data for wallet updates:', {
+      rewardsClaimed: progressData.rewards_claimed,
+      currentStamps: progressData.current_stamps,
+      isCompleted: progressData.is_completed
+    })
+
+    // Calculate customer tier AFTER claimReward (uses fresh rewards_claimed from database)
+    const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
+    const tierNameAfter = tierData?.currentTier?.name || null
+    
+    // Detect tier upgrade by comparing tier names
+    const tierUpgrade = tierNameBefore !== null && tierNameAfter !== null && tierNameBefore !== tierNameAfter
+    
+    if (tierData) {
+      console.log('🏆 Customer tier after claim:', tierData)
+      if (tierUpgrade) {
+        console.log('🎉 Tier upgraded!', { from: tierNameBefore, to: tierNameAfter })
+      }
+    }
+
+    // Trigger immediate pass updates (Apple and Google Wallet)
+    try {
+      // Import controllers dynamically to avoid circular dependencies
+      const { default: appleWalletController } = await import('../controllers/appleWalletController.js')
+      const { default: googleWalletController } = await import('../controllers/realGoogleWalletController.js')
+
+      // Push updates to wallet passes (using plain object for consistency)
+      await appleWalletController.pushProgressUpdate(customerId, offerId, progressData)
+      await googleWalletController.pushProgressUpdate(customerId, offerId, progressData)
+
+      console.log('✅ Wallet passes updated with reset progress and tier')
+    } catch (walletError) {
+      console.error('⚠️ Failed to update wallet passes:', walletError)
+      // Non-critical error, continue with response
+    }
+
+    console.log('Prize confirmed by business', {
+      businessId: req.business.public_id,
+      customerId,
+      offerId,
+      notes,
+      newCycleStarted: true,
+      totalCompletions: progress.rewards_claimed
+    })
+
+    res.json({
+      success: true,
+      progress: {
+        currentStamps: progress.current_stamps,
+        maxStamps: progress.max_stamps,
+        isCompleted: progress.is_completed,
+        rewardsClaimed: progress.rewards_claimed,
+        rewardFulfilledAt: progress.reward_fulfilled_at,
+        stampsEarned: progress.current_stamps,
+        stampsRequired: progress.max_stamps,
+        status: progress.is_completed ? 'completed' : 'active'
+      },
+      tier: tierData,
+      tierUpgrade: tierUpgrade,
+      newCycleStarted: true,
+      totalCompletions: progress.rewards_claimed
+    })
+  } catch (error) {
+    console.error('Prize confirmation error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Prize confirmation failed'
+    })
+  }
+})
+
 // Get customer progress by token (for verification before scanning)
 // 🆕 ENHANCED QR CODE SCANNING - Phase 1 Implementation
 // Supports BOTH formats for backward compatibility

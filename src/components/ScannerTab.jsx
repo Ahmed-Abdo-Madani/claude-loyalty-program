@@ -156,12 +156,90 @@ function ScannerTab({ analytics: globalAnalytics }) {
         const scanData = await scanResponse.json()
 
         if (scanData.success) {
-          // Set result directly to success without intermediate verification state
-          setScanResult({
-            type: 'success',
-            ...scanData.data,
-            message: scanData.message
-          })
+          // Check if reward was earned - auto-confirm prize immediately
+          if (scanData.data.rewardEarned) {
+            // Auto-confirm prize (no modal, no user interaction)
+            try {
+              // Comment 1: Extract and validate customer/offer IDs
+              const customerId = scanData.data.customer?.id
+              const offerId = scanData.data.offer?.id
+
+              if (!customerId || !offerId) {
+                throw new Error('Missing customer or offer ID for prize confirmation')
+              }
+
+              const confirmResponse = await secureApi.post(
+                `${endpoints.scanConfirmPrize}/${customerId}/${offerId}`,
+                { notes: '' }
+              )
+
+              // Comment 3: Validate response status before parsing JSON
+              if (!confirmResponse.ok) {
+                throw new Error(`Prize confirmation failed: ${confirmResponse.status}`)
+              }
+
+              const confirmData = await confirmResponse.json()
+
+              if (confirmData.success) {
+                // Comment 2: Normalize progress data to snake_case for UI consistency
+                const normalizedProgress = {
+                  current_stamps: confirmData.progress?.currentStamps ?? confirmData.progress?.current_stamps ?? 0,
+                  max_stamps: confirmData.progress?.maxStamps ?? confirmData.progress?.max_stamps ?? 0,
+                  is_completed: confirmData.progress?.isCompleted ?? confirmData.progress?.is_completed ?? false,
+                  rewards_claimed: confirmData.progress?.rewardsClaimed ?? confirmData.progress?.rewards_claimed ?? 0
+                }
+
+                // Show success with fresh data from confirmation
+                setScanResult({
+                  type: 'success',
+                  rewardEarned: true,
+                  prizeFulfilled: true,
+                  tier: confirmData.tier,
+                  tierUpgrade: confirmData.tierUpgrade,
+                  totalCompletions: confirmData.totalCompletions,
+                  progress: normalizedProgress, // Normalized fresh data with reset stamps
+                  customerId: customerId,
+                  offerId: offerId,
+                  offer: scanData.data.offer,
+                  message: scanData.message
+                })
+              } else {
+                // Prize confirmation failed, but still show result
+                setScanResult({
+                  type: 'success',
+                  rewardEarned: true,
+                  prizeFulfilled: false,
+                  progress: scanData.data.progress,
+                  customerId: customerId,
+                  offerId: offerId,
+                  offer: scanData.data.offer,
+                  confirmError: confirmData.error || 'Prize confirmation failed',
+                  message: scanData.message
+                })
+              }
+            } catch (confirmError) {
+              // Handle auto-confirm errors without blocking flow
+              console.error('Auto-confirm error:', confirmError)
+              setScanResult({
+                type: 'success',
+                rewardEarned: true,
+                prizeFulfilled: false,
+                progress: scanData.data.progress,
+                customerId: scanData.data.customer?.id,
+                offerId: scanData.data.offer?.id,
+                offer: scanData.data.offer,
+                confirmError: 'Prize confirmation failed - wallet update may be delayed',
+                message: scanData.message
+              })
+            }
+          } else {
+            // Regular stamp added (no reward earned)
+            setScanResult({
+              type: 'success',
+              ...scanData.data,
+              message: scanData.message
+            })
+          }
 
           // Reload data
           await loadScanHistory()
@@ -190,6 +268,75 @@ function ScannerTab({ analytics: globalAnalytics }) {
   const clearResults = () => {
     setScanResult(null)
     setError('')
+  }
+
+  // Comment 5: Manual prize confirmation for already-completed progress
+  const handleManualConfirm = async () => {
+    if (!scanResult?.customer?.id || !scanResult?.offer?.id) {
+      setError('Missing customer or offer information')
+      return
+    }
+
+    // Check if progress is completed
+    if (!scanResult?.progress?.is_completed && !scanResult?.progress?.isCompleted) {
+      setError('Progress not completed')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError('')
+
+      const customerId = scanResult.customer.id
+      const offerId = scanResult.offer.id
+
+      const confirmResponse = await secureApi.post(
+        `${endpoints.scanConfirmPrize}/${customerId}/${offerId}`,
+        { notes: 'Manual confirmation from completed state' }
+      )
+
+      if (!confirmResponse.ok) {
+        throw new Error(`Prize confirmation failed: ${confirmResponse.status}`)
+      }
+
+      const confirmData = await confirmResponse.json()
+
+      if (confirmData.success) {
+        // Normalize progress data to snake_case for UI consistency
+        const normalizedProgress = {
+          current_stamps: confirmData.progress?.currentStamps ?? confirmData.progress?.current_stamps ?? 0,
+          max_stamps: confirmData.progress?.maxStamps ?? confirmData.progress?.max_stamps ?? 0,
+          is_completed: confirmData.progress?.isCompleted ?? confirmData.progress?.is_completed ?? false,
+          rewards_claimed: confirmData.progress?.rewardsClaimed ?? confirmData.progress?.rewards_claimed ?? 0
+        }
+
+        // Update to success state with confirmation data
+        setScanResult({
+          type: 'success',
+          rewardEarned: true,
+          prizeFulfilled: true,
+          tier: confirmData.tier,
+          tierUpgrade: confirmData.tierUpgrade,
+          totalCompletions: confirmData.totalCompletions,
+          progress: normalizedProgress,
+          customerId: customerId,
+          offerId: offerId,
+          offer: scanResult.offer,
+          customer: scanResult.customer,
+          message: 'Prize confirmed and new cycle started!'
+        })
+
+        // Reload data
+        await loadScanHistory()
+        await loadScanAnalytics()
+      } else {
+        throw new Error(confirmData.error || 'Prize confirmation failed')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to confirm prize')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formatDate = (dateString) => {
@@ -290,18 +437,29 @@ function ScannerTab({ analytics: globalAnalytics }) {
 
                 {/* Transaction Summary */}
                 <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-green-700 dark:text-green-300">New Progress</span>
-                    <span className="text-3xl font-bold text-green-900 dark:text-green-100">
-                      {scanResult.progress?.current_stamps}/{scanResult.progress?.max_stamps}
-                    </span>
-                  </div>
-                  <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-3 overflow-hidden">
-                    <div 
-                      className="bg-green-600 dark:bg-green-400 h-full transition-all duration-500"
-                      style={{ width: `${(scanResult.progress?.current_stamps / scanResult.progress?.max_stamps) * 100}%` }}
-                    />
-                  </div>
+                  {(() => {
+                    // Comment 4: Defensive progress calculation with field name support
+                    const current = scanResult.progress?.current_stamps ?? scanResult.progress?.currentStamps ?? 0
+                    const max = scanResult.progress?.max_stamps ?? scanResult.progress?.maxStamps ?? 0
+                    const pct = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-green-700 dark:text-green-300">New Progress</span>
+                          <span className="text-3xl font-bold text-green-900 dark:text-green-100">
+                            {current}/{max}
+                          </span>
+                        </div>
+                        <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="bg-green-600 dark:bg-green-400 h-full transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </>
+                    )
+                  })()}
                 </div>
 
                 {/* Reward Earned Banner */}
@@ -315,6 +473,59 @@ function ScannerTab({ analytics: globalAnalytics }) {
                       </div>
                       <span className="text-3xl ml-3">🎉</span>
                     </div>
+                  </div>
+                )}
+
+                {/* Display tier information if prize was fulfilled */}
+                {scanResult.prizeFulfilled && scanResult.tier && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
+                    <p className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                      {scanResult.tier.currentTier && (
+                        <>
+                          {scanResult.tier.currentTier.icon} {scanResult.tier.currentTier.name}
+                        </>
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {scanResult.totalCompletions} {scanResult.totalCompletions === 1 ? 'reward' : 'rewards'} earned!
+                    </p>
+                  </div>
+                )}
+
+                {/* New cycle indicator with fresh progress data */}
+                {scanResult.prizeFulfilled && (
+                  <div className="mb-4 text-gray-600 dark:text-gray-400">
+                    🔄 New cycle started: {scanResult.progress?.currentStamps || 0} of {scanResult.progress?.maxStamps || 5} stamps
+                  </div>
+                )}
+
+                {/* Show confirmation error if auto-confirm failed */}
+                {scanResult.confirmError && (
+                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      ⚠️ Prize confirmed but wallet update may be delayed
+                    </p>
+                  </div>
+                )}
+
+                {/* Tier upgrade celebration */}
+                {scanResult.tier && scanResult.tierUpgrade && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-300 dark:border-purple-700">
+                    <p className="text-lg font-bold text-purple-900 dark:text-purple-200 mb-1">
+                      🎉 Tier Upgrade!
+                    </p>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                      Customer reached {scanResult.tier.currentTier.name}!
+                    </p>
+                  </div>
+                )}
+
+                {/* Milestone celebration */}
+                {scanResult.totalCompletions && [5, 10, 25, 50, 100].includes(scanResult.totalCompletions) && (
+                  <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                    <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
+                      🎊 Milestone! {scanResult.totalCompletions} rewards earned!
+                    </p>
                   </div>
                 )}
 
@@ -348,9 +559,25 @@ function ScannerTab({ analytics: globalAnalytics }) {
 
                 <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
                   <div className="text-center text-yellow-800 dark:text-yellow-200 font-medium">
-                    Customer has already completed this loyalty program and claimed their reward
+                    Customer has already completed this loyalty program
                   </div>
                 </div>
+
+                {/* Comment 5: Manual confirmation option for pending prizes */}
+                {(scanResult.progress?.is_completed || scanResult.progress?.isCompleted) && (
+                  <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700">
+                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 text-center">
+                      💡 Want to fulfill this prize and start a new cycle?
+                    </p>
+                    <button
+                      onClick={handleManualConfirm}
+                      disabled={loading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed active:scale-[0.98] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
+                    >
+                      {loading ? 'Confirming...' : '✓ Confirm Prize & Reset Progress'}
+                    </button>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3">
