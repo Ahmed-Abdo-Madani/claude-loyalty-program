@@ -207,21 +207,6 @@ npm run generate-icon-previews   # Legacy preview generation (deprecated)
 npm run migrate:gender           # Run gender field migration
 ```
 
-## 🎨 **Wireframes & Design**
-
-The project includes comprehensive wireframes for all major pages:
-
-1. **[Main Landing Page](wireframes-main-page.md)** - Marketing and conversion
-2. **[Business Dashboard](wireframes-dashboard.md)** - Offer management
-3. **[Customer Signup](wireframes-customer-signup.md)** - Mobile enrollment
-
-### **Design System**
-- **Primary Color**: `#3B82F6` (Blue)
-- **Secondary Color**: `#10B981` (Green)
-- **Accent Color**: `#F59E0B` (Orange)
-- **Typography**: Inter font family
-- **Components**: Tailwind CSS utility classes
-
 ## 📊 **Database Schema**
 
 ```sql
@@ -233,30 +218,30 @@ customers (id, first_name, last_name, whatsapp, birthday)
 customer_cards (id, customer_id, offer_id, stamps_earned, redeemed)
 ```
 
-[View complete schema](SCALABILITY-ROADMAP.md#database-scaling-strategy)
+For complete database schema and migration guides, see [Database Documentation](docs/migrations/).
 
 ## 🔮 **Roadmap**
 
 ### **Phase 1: MVP (Current)**
-- ✅ Landing page and wireframes
+- ✅ Landing page and core features
 - ✅ React application structure
-- 🔄 QR code generation
-- 🔄 Mobile wallet integration
-- 🔄 Customer signup flow
+- ✅ QR code generation
+- ✅ Mobile wallet integration (Apple Wallet & Google Pay)
+- ✅ Customer signup flow
 
 ### **Phase 2: Production Ready**
-- Backend API development
-- Database setup and authentication
-- Payment processing integration
-- Testing and deployment
+- ✅ Backend API development
+- ✅ Database setup and authentication
+- ✅ Payment processing integration
+- ✅ Testing and deployment
 
 ### **Phase 3: Growth Features**
-- Advanced analytics dashboard
-- Multiple offer types (points, tiers)
-- Email/SMS notifications
-- POS system integrations
+- ✅ Advanced analytics dashboard
+- ✅ Multiple offer types (points, tiers)
+- ✅ Email/SMS notifications
+- 🔄 POS system integrations
 
-[View complete roadmap](SCALABILITY-ROADMAP.md)
+For detailed feature planning and architecture decisions, see [Documentation Guides](docs/guides/).
 
 ## 💰 **Business Model**
 

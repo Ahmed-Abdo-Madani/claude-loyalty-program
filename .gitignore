@@ -71,10 +71,6 @@ decode-jwt-test.js
 setup-customer-db.js
 QR-SCANNER-ISSUES-ANALYSIS.md
 
-# Development documentation (keep only main README)
-wireframes-*.md
-SCALABILITY-ROADMAP.md
-
 # Production deployment files (keep local)
 # render.yaml - COMMENTED OUT: Now using Blueprint deployment (render.yaml must be committed)
 .env.production
