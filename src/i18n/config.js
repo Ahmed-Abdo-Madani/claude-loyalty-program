@@ -11,6 +11,8 @@ import dashboardAr from '../locales/ar/dashboard.json';
 import dashboardEn from '../locales/en/dashboard.json';
 import adminAr from '../locales/ar/admin.json';
 import adminEn from '../locales/en/admin.json';
+import customerAr from '../locales/ar/customer.json';
+import customerEn from '../locales/en/customer.json';
 
 // Configure i18next
 i18n
@@ -24,35 +26,40 @@ i18n
         auth: authAr,
         dashboard: dashboardAr,
         admin: adminAr,
+        customer: customerAr,
       },
       en: {
         common: commonEn,
         auth: authEn,
         dashboard: dashboardEn,
         admin: adminEn,
+        customer: customerEn,
       },
     },
 
-    // Default language (Arabic)
-    fallbackLng: 'ar',
-    
+    // Fallback language is English
+    fallbackLng: 'en',
+
+    // Restrict to supported languages only
+    supportedLngs: ['ar', 'en'],
+
     // Default namespace
     defaultNS: 'common',
-    
+
     // Namespaces to load by default
-    ns: ['common', 'auth', 'dashboard', 'admin'],
+    ns: ['common', 'auth', 'dashboard', 'admin', 'customer'],
 
     // Language detection options
     detection: {
       // Order of language detection methods
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      
+      order: ['localStorage', 'htmlTag', 'navigator'],
+
       // Keys to look for in localStorage
       lookupLocalStorage: 'i18nextLng',
-      
+
       // Cache user language selection
       caches: ['localStorage'],
-      
+
       // Exclude certain paths from detection
       excludeCacheFor: ['cimode'],
     },

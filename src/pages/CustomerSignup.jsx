@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { apiBaseUrl, endpoints } from '../config/api'
 import { validateSecureOfferId } from '../utils/secureAuth'
 import QRCodeGenerator from '../utils/qrCodeGenerator'
@@ -8,154 +9,11 @@ import WalletPassGenerator from '../utils/walletPassGenerator'
 import CountryCodeSelector from '../components/CountryCodeSelector'
 import GenderSelector from '../components/GenderSelector'
 
-// Language content objects
-const content = {
-  ar: {
-    // Header & Business Info
-    businessName: 'اسم الأعمال',
-    branchName: 'اسم الفرع',
-    specialOffer: 'عرض خاص!',
-    joinProgram: 'انضم إلى برنامج الولاء واحصل على المكافآت!',
-    collectStamps: 'اجمع {count} طوابع',
-    scannedFrom: 'تم المسح من: {source}',
-
-    // Language Selection
-    selectLanguage: 'اختر اللغة',
-    arabic: 'العربية',
-    english: 'English',
-
-    // Form Fields
-    fullName: 'الاسم الكامل',
-    fullNamePlaceholder: 'أدخل اسمك الكامل',
-    phoneNumber: 'رقم الهاتف',
-    phonePlaceholder: '50 123 4567',
-    gender: 'الجنس',
-    male: 'ذكر',
-    female: 'أنثى',
-    countryCode: 'رمز الدولة',
-    joinAddToWallet: 'تسجيل',
-    byJoining: 'بالانضمام، فإنك توافق على تلقي الرسائل والعروض الترويجية',
-    required: '*',
-
-    // Security & Features
-    secureInfo: 'معلوماتك آمنة',
-    instantWallet: 'بطاقة محفظة فورية',
-
-    // Success Page
-    welcome: 'مرحباً!',
-    joinedLoyalty: 'لقد انضممت إلى برنامج ولاء {businessName}! 🎉',
-    cardReady: 'بطاقة الولاء جاهزة. أضفها إلى محفظة الجوال للوصول السريع!',
-    addedToWallet: 'تمت الإضافة إلى المحفظة!',
-    walletReady: 'بطاقة الولاء الآن في محفظة الجوال وجاهزة للاستخدام.',
-    whatsNext: 'ما التالي؟',
-    visitBusiness: 'زر {businessName} وأظهر بطاقة الولاء',
-    earnStamps: 'احصل على طوابع مع كل عملية شراء مؤهلة',
-    getReward: 'احصل على مكافأتك بعد {count} طوابع',
-    receiveNotifications: 'تلقَّ إشعارات حول العروض الخاصة',
-    getDirections: 'احصل على الاتجاهات',
-    callRestaurant: 'اتصل بالمطعم',
-    accountDetails: 'تفاصيل الحساب:',
-    customerId: 'رقم العميل:',
-    name: 'الاسم:',
-    joined: 'تاريخ الانضمام:',
-    source: 'المصدر:',
-    readyToEarn: 'مستعد لكسب المكافآت؟',
-    visitNow: 'زر {businessName} الآن!',
-
-    // Error States
-    offerNotFound: 'العرض غير موجود',
-    goBack: 'ارجع',
-    noOfferSelected: 'لم يتم اختيار عرض',
-    selectValidOffer: 'يرجى اختيار عرض صالح للمتابعة.',
-    loadingOffer: 'جاري تحميل تفاصيل العرض...',
-    
-    // Wallet Integration
-    addedSuccessfully: 'تمت الإضافة بنجاح!',
-    addingToWallet: 'جاري الإضافة إلى المحفظة...',
-    addToAppleWallet: 'أضف إلى Apple Wallet',
-    addToGoogleWallet: 'أضف إلى Google Wallet',
-    walletError: 'فشلت إضافة البطاقة. يرجى المحاولة مرة أخرى.',
-    tryAgain: 'حاول مرة أخرى',
-    
-    // Phone Input
-    arabicNumbersSupported: 'يمكنك استخدام الأرقام العربية'
-  },
-  en: {
-    // Header & Business Info
-    businessName: 'Business Name',
-    branchName: 'Branch Name',
-    specialOffer: 'SPECIAL OFFER!',
-    joinProgram: 'Join our loyalty program and start earning rewards!',
-    collectStamps: 'Collect {count} stamps',
-    scannedFrom: 'Scanned from: {source}',
-
-    // Language Selection
-    selectLanguage: 'Select Language',
-    arabic: 'العربية',
-    english: 'English',
-
-    // Form Fields
-    fullName: 'Full Name',
-    fullNamePlaceholder: 'Enter your full name',
-    phoneNumber: 'Phone Number',
-    phonePlaceholder: '50 123 4567',
-    gender: 'Gender',
-    male: 'Male',
-    female: 'Female',
-    countryCode: 'Country Code',
-    joinAddToWallet: 'Register',
-    byJoining: 'By joining, you agree to receive promotional messages and offers',
-    required: '*',
-
-    // Security & Features
-    secureInfo: 'Your info is secure',
-    instantWallet: 'Instant wallet card',
-
-    // Success Page
-    welcome: 'Welcome!',
-    joinedLoyalty: "You've joined {businessName} Loyalty! 🎉",
-    cardReady: 'Your loyalty card is ready. Add it to your mobile wallet for easy access!',
-    addedToWallet: 'Added to Wallet!',
-    walletReady: 'Your loyalty card is now in your mobile wallet and ready to use.',
-    whatsNext: "What's Next?",
-    visitBusiness: 'Visit {businessName} and show your loyalty card',
-    earnStamps: 'Earn stamps with every qualifying purchase',
-    getReward: 'Get your reward after {count} stamps',
-    receiveNotifications: 'Receive notifications about special offers',
-    getDirections: 'Get Directions',
-    callRestaurant: 'Call Restaurant',
-    accountDetails: 'Account Details:',
-    customerId: 'Customer ID:',
-    name: 'Name:',
-    joined: 'Joined:',
-    source: 'Source:',
-    readyToEarn: 'Ready to start earning rewards?',
-    visitNow: 'Visit {businessName} Now!',
-
-    // Error States
-    offerNotFound: 'Offer Not Found',
-    goBack: 'Go Back',
-    noOfferSelected: 'No Offer Selected',
-    selectValidOffer: 'Please select a valid offer to continue.',
-    loadingOffer: 'Loading offer details...',
-    
-    // Wallet Integration
-    addedSuccessfully: 'Added Successfully!',
-    addingToWallet: 'Adding to Wallet...',
-    addToAppleWallet: 'Add to Apple Wallet',
-    addToGoogleWallet: 'Add to Google Wallet',
-    walletError: 'Failed to add card. Please try again.',
-    tryAgain: 'Try Again',
-    
-    // Phone Input
-    arabicNumbersSupported: 'Arabic numerals are supported'
-  }
-}
-
 function CustomerSignup() {
   const { offerId } = useParams()
   const [searchParams] = useSearchParams()
-  const [selectedLanguage, setSelectedLanguage] = useState('ar') // Arabic as primary
+  const { t, i18n } = useTranslation('customer')
+  const isRTL = i18n.language === 'ar'
   const [formData, setFormData] = useState({
     fullName: '',
     countryCode: '+966',
@@ -173,10 +31,6 @@ function CustomerSignup() {
   const [deviceCapabilities, setDeviceCapabilities] = useState(null)
   const [isGeneratingWallet, setIsGeneratingWallet] = useState(false)
   const [walletError, setWalletError] = useState(null)
-
-  // Get current language content
-  const t = content[selectedLanguage]
-  const isRTL = selectedLanguage === 'ar'
 
   // Helper function to get colors from card design or use defaults
   const getColors = () => {
@@ -203,15 +57,6 @@ function CustomerSignup() {
       inputBg: '#FFFFFF',
       inputBorder: '#D1D5DB'
     }
-  }
-
-  // Helper function to replace placeholders in text
-  const formatText = (text, replacements = {}) => {
-    let formatted = text
-    Object.keys(replacements).forEach(key => {
-      formatted = formatted.replace(`{${key}}`, replacements[key])
-    })
-    return formatted
   }
 
   // Helper function to render stamp icon (emoji or icon ID)
@@ -641,7 +486,7 @@ function CustomerSignup() {
       }
     } catch (err) {
       console.error('Google Wallet generation error:', err)
-      setWalletError(t.walletError)
+      setWalletError(t('signup.wallet.walletError'))
     } finally {
       setIsGeneratingWallet(false)
     }
@@ -652,7 +497,7 @@ function CustomerSignup() {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t.loadingOffer}</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('signup.errors.loadingOffer')}</p>
         </div>
       </div>
     )
@@ -663,13 +508,13 @@ function CustomerSignup() {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.offerNotFound}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('signup.errors.offerNotFound')}</h1>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={() => window.history.back()}
             className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-lg"
           >
-            {t.goBack}
+            {t('signup.errors.goBack')}
           </button>
         </div>
       </div>
@@ -723,12 +568,12 @@ function CustomerSignup() {
                   onClick={handleAddToAppleWallet}
                   disabled={isGeneratingWallet}
                   className="relative w-full block transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
-                  aria-label={t.addToAppleWallet}
+                  aria-label={t('signup.wallet.addToAppleWallet')}
                   aria-busy={isGeneratingWallet}
                 >
                   <img
-                    src={`/assets/wallet-buttons/add-to-apple-wallet-${selectedLanguage}.svg`}
-                    alt={t.addToAppleWallet}
+                    src={`/assets/wallet-buttons/add-to-apple-wallet-${i18n.language}.svg`}
+                    alt={t('signup.wallet.addToAppleWallet')}
                     className="w-full h-auto"
                     draggable="false"
                   />
@@ -751,12 +596,12 @@ function CustomerSignup() {
                   onClick={handleAddToGoogleWallet}
                   disabled={isGeneratingWallet}
                   className="relative w-full block transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
-                  aria-label={t.addToGoogleWallet}
+                  aria-label={t('signup.wallet.addToGoogleWallet')}
                   aria-busy={isGeneratingWallet}
                 >
                   <img
-                    src={`/assets/wallet-buttons/add-to-google-wallet-${selectedLanguage}.svg`}
-                    alt={t.addToGoogleWallet}
+                    src={`/assets/wallet-buttons/add-to-google-wallet-${i18n.language}.svg`}
+                    alt={t('signup.wallet.addToGoogleWallet')}
                     className="w-full h-auto"
                     draggable="false"
                   />
@@ -786,7 +631,7 @@ function CustomerSignup() {
                       className="mt-2 text-sm font-medium underline hover:no-underline"
                       style={{ color: getColors().primary }}
                     >
-                      {t.tryAgain}
+                      {t('signup.wallet.tryAgain')}
                     </button>
                   </div>
                 </div>
@@ -799,7 +644,7 @@ function CustomerSignup() {
             <div className="mt-6 text-center">
               <div className="flex items-center justify-center gap-2 text-sm font-medium">
                 <span style={{ color: getColors().primary }}>✓</span>
-                <span style={{ color: getColors().primary }}>{t.addedSuccessfully}</span>
+                <span style={{ color: getColors().primary }}>{t('signup.wallet.addedSuccessfully')}</span>
               </div>
             </div>
           )}
@@ -814,8 +659,8 @@ function CustomerSignup() {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <div className="text-6xl mb-4">🤔</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.noOfferSelected}</h1>
-          <p className="text-gray-600 dark:text-gray-400">{t.selectValidOffer}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('signup.errors.noOfferSelected')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('signup.errors.selectValidOffer')}</p>
         </div>
       </div>
     )
@@ -864,7 +709,7 @@ function CustomerSignup() {
             ))}
           </div>
           <div className="text-xs sm:text-sm opacity-90">
-            {formatText(t.collectStamps, { count: offer.stamps_required || offer.stampsRequired })}
+            {t('signup.header.collectStamps', { count: offer.stamps_required || offer.stampsRequired })}
           </div>
         </div>
 
@@ -880,13 +725,13 @@ function CustomerSignup() {
             >
               {/* Always show Arabic first, then English - regardless of current language */}
               <button
-                onClick={() => setSelectedLanguage('ar')}
+                onClick={() => i18n.changeLanguage('ar')}
                 style={{ 
-                  backgroundColor: selectedLanguage === 'ar' ? getColors().primary : undefined,
-                  color: selectedLanguage === 'ar' ? getColors().secondary : getColors().bodyText
+                  backgroundColor: i18n.language === 'ar' ? getColors().primary : undefined,
+                  color: i18n.language === 'ar' ? getColors().secondary : getColors().bodyText
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  selectedLanguage === 'ar'
+                  i18n.language === 'ar'
                     ? 'shadow-sm'
                     : 'hover:opacity-80'
                 }`}
@@ -894,13 +739,13 @@ function CustomerSignup() {
                 العربية
               </button>
               <button
-                onClick={() => setSelectedLanguage('en')}
+                onClick={() => i18n.changeLanguage('en')}
                 style={{ 
-                  backgroundColor: selectedLanguage === 'en' ? getColors().primary : undefined,
-                  color: selectedLanguage === 'en' ? getColors().secondary : getColors().bodyText
+                  backgroundColor: i18n.language === 'en' ? getColors().primary : undefined,
+                  color: i18n.language === 'en' ? getColors().secondary : getColors().bodyText
                 }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  selectedLanguage === 'en'
+                  i18n.language === 'en'
                     ? 'shadow-sm'
                     : 'hover:opacity-80'
                 }`}
@@ -918,7 +763,7 @@ function CustomerSignup() {
               className="font-medium"
               style={{ color: getColors().labelText }}
             >
-              {t.joinProgram}
+              {t('signup.header.joinProgram')}
             </p>
           </div>
 
@@ -929,7 +774,7 @@ function CustomerSignup() {
                 className="block text-sm font-medium mb-2"
                 style={{ color: getColors().labelText }}
               >
-                {t.fullName} <span style={{ color: getColors().labelText }}>{t.required}</span>
+                {t('signup.form.fullName')} <span style={{ color: getColors().labelText }}>{t('signup.form.required')}</span>
               </label>
               <input
                 type="text"
@@ -944,7 +789,7 @@ function CustomerSignup() {
                   color: getColors().bodyText,
                   '--tw-ring-color': getColors().primary
                 }}
-                placeholder={t.fullNamePlaceholder}
+                placeholder={t('signup.form.fullNamePlaceholder')}
                 dir={isRTL ? 'rtl' : 'ltr'}
                 minLength={2}
                 maxLength={100}
@@ -957,14 +802,14 @@ function CustomerSignup() {
                 className="block text-sm font-medium mb-2"
                 style={{ color: getColors().labelText }}
               >
-                {t.phoneNumber} <span style={{ color: getColors().labelText }}>{t.required}</span>
+                {t('signup.form.phoneNumber')} <span style={{ color: getColors().labelText }}>{t('signup.form.required')}</span>
               </label>
               <div className="flex gap-2" dir="ltr">
                 <div className="w-[120px] flex-shrink-0">
                   <CountryCodeSelector
                     value={formData.countryCode}
                     onChange={(code) => setFormData({ ...formData, countryCode: code })}
-                    language={selectedLanguage}
+                    language={i18n.language}
                     className=""
                     primaryColor={getColors().primary}
                     backgroundColor={getColors().inputBg}
@@ -985,7 +830,7 @@ function CustomerSignup() {
                     color: getColors().bodyText,
                     '--tw-ring-color': getColors().primary
                   }}
-                  placeholder={t.phonePlaceholder}
+                  placeholder={t('signup.form.phonePlaceholder')}
                   pattern="[0-9]{7,15}"
                   dir="ltr"
                 />
@@ -998,12 +843,12 @@ function CustomerSignup() {
                 className="block text-sm font-medium mb-2"
                 style={{ color: getColors().labelText }}
               >
-                {t.gender} <span style={{ color: getColors().labelText }}>{t.required}</span>
+                {t('signup.form.gender')} <span style={{ color: getColors().labelText }}>{t('signup.form.required')}</span>
               </label>
               <GenderSelector
                 value={formData.gender}
                 onChange={(gender) => setFormData({ ...formData, gender })}
-                language={selectedLanguage}
+                language={i18n.language}
                 required={true}
                 primaryColor={getColors().primary}
                 backgroundColor="#F3F4F6"
@@ -1036,10 +881,10 @@ function CustomerSignup() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  {selectedLanguage === 'ar' ? 'جاري التسجيل...' : 'Signing up...'}
+                  {i18n.language === 'ar' ? 'جاري التسجيل...' : 'Signing up...'}
                 </span>
               ) : (
-                `📱 ${t.joinAddToWallet}`
+                `📱 ${t('signup.form.joinAddToWallet')}`
               )}
             </button>
 
@@ -1049,14 +894,14 @@ function CustomerSignup() {
                 className="text-xs"
                 style={{ color: getColors().bodyText, opacity: 0.7 }}
               >
-                {t.byJoining}
+                {t('signup.form.byJoining')}
               </p>
             </div>
           </form>
 
           <div className="mt-6 text-center text-sm space-y-1">
-            <p style={{ color: getColors().bodyText, opacity: 0.7 }}>🔒 {t.secureInfo}</p>
-            <p style={{ color: getColors().bodyText, opacity: 0.7 }}>✨ {t.instantWallet}</p>
+            <p style={{ color: getColors().bodyText, opacity: 0.7 }}>🔒 {t('signup.security.secureInfo')}</p>
+            <p style={{ color: getColors().bodyText, opacity: 0.7 }}>✨ {t('signup.security.instantWallet')}</p>
           </div>
         </div>
       </div>

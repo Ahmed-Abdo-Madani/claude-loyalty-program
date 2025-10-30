@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 import DarkModeToggle from '../components/DarkModeToggle'
 import LocationAutocomplete from '../components/LocationAutocomplete'
@@ -16,232 +17,13 @@ const businessCategories = [
   { id: 5, name: "صحة ولياقة - Health & Fitness", nameEn: "Health & Fitness" }
 ]
 
-// Language content objects
-const content = {
-  ar: {
-    // Header & Navigation
-    businessRegistration: 'تسجيل الأعمال',
-    joinThousands: 'ابنِ علاقات قوية مع عملائك وامنحهم أفضل برنامج ولاء.',
-    home: 'الرئيسية',
-    features: 'الميزات',
-    signIn: 'تسجيل الدخول',
-
-    // Language Selection
-    selectLanguage: 'اختر اللغة',
-    arabic: 'العربية',
-    english: 'English',
-
-    // Steps
-    step: 'الخطوة',
-    of: 'من',
-    businessInfo: 'معلومات الأعمال',
-    location: 'الموقع',
-    ownerInfo: 'معلومات المالك',
-    account: 'الحساب',
-
-    // Step 1: Business Information
-    businessInformation: 'معلومات الأعمال',
-    businessName: 'اسم الأعمال',
-    businessNamePlaceholder: 'مطعم الأمل',
-    businessType: 'نوع الأعمال',
-    businessTypePlaceholder: 'اختر نوع الأعمال',
-    crNumber: 'رقم السجل التجاري',
-    crNumberPlaceholder: '1234567890',
-    crNumberHelp: 'أدخل 10 أرقام فقط',
-    businessDescription: 'وصف الأعمال',
-    businessDescriptionPlaceholder: 'صف خدمات أعمالك',
-    businessDetails: 'تفاصيل الأعمال',
-
-    // Step 2: Location & Contact
-    locationContact: 'الموقع والتواصل',
-    saudiRegion: 'المنطقة السعودية',
-    regionPlaceholder: 'اختر المنطقة',
-    city: 'المدينة',
-    cityPlaceholder: 'اختر المدينة',
-    district: 'الحي',
-    districtPlaceholder: 'اختر الحي (اختياري)',
-    selectDistrict: 'اختر الحي',
-    loadingDistricts: 'جاري تحميل الأحياء...',
-    noDistricts: 'لا توجد أحياء متاحة',
-    businessAddress: 'اسم الشارع',
-    addressPlaceholder: 'اسم الشارع',
-    businessPhone: 'هاتف الأعمال',
-    businessEmail: 'بريد الأعمال الإلكتروني',
-
-    // Step 3: Owner Information
-    ownerInformation: 'معلومات المالك',
-    ownerFullName: 'اسم المالك الكامل',
-    ownerNamePlaceholder: 'أحمد محمد الأحمد',
-    personalDetails: 'التفاصيل الشخصية',
-    nationalId: 'رقم الهوية الوطنية / الإقامة',
-    ownerPhone: 'هاتف المالك',
-    ownerEmail: 'بريد المالك الإلكتروني',
-
-    // Step 4: Account Setup
-    accountSetup: 'إعداد الحساب',
-    password: 'كلمة المرور',
-    passwordPlaceholder: '6 أحرف على الأقل',
-    confirmPassword: 'تأكيد كلمة المرور',
-    confirmPasswordPlaceholder: 'أعد إدخال كلمة المرور',
-    agreeToTerms: 'أوافق على',
-    termsAndConditions: 'الشروط والأحكام',
-    and: 'و',
-    privacyPolicy: 'سياسة الخصوصية',
-    whatHappensNext: 'ماذا يحدث بعد ذلك؟',
-    reviewApplication: 'سيتم مراجعة طلبك من قبل فريقنا',
-    verifyDocuments: 'سنتحقق من وثائق أعمالك',
-    approvalNotification: 'ستتلقى إشعار الموافقة عبر البريد الإلكتروني',
-    accessDashboard: 'بمجرد الموافقة، يمكنك الوصول إلى لوحة التحكم',
-
-    // Navigation
-    previous: 'السابق',
-    next: 'التالي',
-    submitting: 'جاري التقديم',
-    submitApplication: 'تقديم الطلب',
-
-    // Footer
-    alreadyHaveAccount: 'لديك حساب؟',
-    signInLink: 'تسجيل الدخول',
-
-    // Validation
-    required: 'مطلوب',
-    businessNameRequired: 'اسم الأعمال مطلوب',
-    businessTypeRequired: 'نوع الأعمال مطلوب',
-    crNumberRequired: 'رقم السجل التجاري مطلوب',
-    invalidCrFormat: 'تنسيق السجل التجاري غير صحيح. استخدم 10 أرقام',
-    regionRequired: 'المنطقة مطلوبة',
-    cityRequired: 'المدينة مطلوبة',
-    addressRequired: 'اسم الشارع مطلوب',
-    phoneRequired: 'رقم الهاتف مطلوب',
-    invalidPhoneFormat: 'تنسيق الهاتف غير صحيح. استخدم: +966XXXXXXXXX',
-    emailRequired: 'البريد الإلكتروني مطلوب',
-    invalidEmailFormat: 'تنسيق البريد الإلكتروني غير صحيح',
-    ownerNameRequired: 'اسم المالك مطلوب',
-    ownerIdRequired: 'هوية المالك مطلوبة',
-    ownerPhoneRequired: 'هاتف المالك مطلوب',
-    ownerEmailRequired: 'بريد المالك الإلكتروني مطلوب',
-    passwordRequired: 'كلمة المرور مطلوبة',
-    passwordMinLength: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
-    passwordsNotMatch: 'كلمات المرور غير متطابقة',
-    termsRequired: 'يجب قبول الشروط والأحكام',
-    arabicNumbersSupported: 'يمكنك استخدام الأرقام العربية'
-  },
-  en: {
-    // Header & Navigation
-    businessRegistration: 'Business Registration',
-    joinThousands: 'Build Strong Relations With your Customers & give them the Best loyalty Program.',
-    home: 'Home',
-    features: 'Features',
-    signIn: 'Sign In',
-
-    // Language Selection
-    selectLanguage: 'Select Language',
-    arabic: 'العربية',
-    english: 'English',
-
-    // Steps
-    step: 'Step',
-    of: 'of',
-    businessInfo: 'Business Info',
-    location: 'Location',
-    ownerInfo: 'Owner Info',
-    account: 'Account',
-
-    // Step 1: Business Information
-    businessInformation: 'Business Information',
-    businessName: 'Business Name',
-    businessNamePlaceholder: 'Al-Amal Restaurant',
-    businessType: 'Business Type',
-    businessTypePlaceholder: 'Select business type',
-    crNumber: 'Commercial Registration Number',
-    crNumberPlaceholder: '1234567890',
-    crNumberHelp: 'Enter 10 digits only',
-    businessDescription: 'Business Description',
-    businessDescriptionPlaceholder: 'Describe your business services',
-    businessDetails: 'Business Details',
-
-    // Step 2: Location & Contact
-    locationContact: 'Location & Contact',
-    saudiRegion: 'Saudi Region',
-    regionPlaceholder: 'Select region',
-    city: 'City',
-    cityPlaceholder: 'Select city',
-    district: 'District',
-    districtPlaceholder: 'Select district (optional)',
-    selectDistrict: 'Select district',
-    loadingDistricts: 'Loading districts...',
-    noDistricts: 'No districts available',
-    businessAddress: 'Street Name',
-    addressPlaceholder: 'Street Name',
-    businessPhone: 'Business Phone',
-    businessEmail: 'Business Email',
-
-    // Step 3: Owner Information
-    ownerInformation: 'Owner Information',
-    ownerFullName: 'Owner Full Name',
-    ownerNamePlaceholder: 'Ahmed Mohammed Al-Ahmed',
-    personalDetails: 'Personal Details',
-    nationalId: 'National ID / Iqama Number',
-    ownerPhone: 'Owner Phone',
-    ownerEmail: 'Owner Email',
-
-    // Step 4: Account Setup
-    accountSetup: 'Account Setup',
-    password: 'Password',
-    passwordPlaceholder: 'Minimum 6 characters',
-    confirmPassword: 'Confirm Password',
-    confirmPasswordPlaceholder: 'Re-enter password',
-    agreeToTerms: 'I agree to the',
-    termsAndConditions: 'Terms and Conditions',
-    and: 'and',
-    privacyPolicy: 'Privacy Policy',
-    whatHappensNext: 'What happens next?',
-    reviewApplication: 'Your application will be reviewed by our team',
-    verifyDocuments: "We'll verify your business documents",
-    approvalNotification: "You'll receive approval notification via email",
-    accessDashboard: 'Once approved, you can access your dashboard',
-
-    // Navigation
-    previous: 'Previous',
-    next: 'Next',
-    submitting: 'Submitting...',
-    submitApplication: 'Submit Application',
-
-    // Footer
-    alreadyHaveAccount: 'Already have an account?',
-    signInLink: 'Sign in',
-
-    // Validation
-    required: 'Required',
-    businessNameRequired: 'Business name is required',
-    businessTypeRequired: 'Business type is required',
-    crNumberRequired: 'Commercial Registration number is required',
-    invalidCrFormat: 'Invalid CR format. Use 10 digits: XXXXXXXXXX',
-    regionRequired: 'Region is required',
-    cityRequired: 'City is required',
-    addressRequired: 'Street name is required',
-    phoneRequired: 'Phone number is required',
-    invalidPhoneFormat: 'Invalid phone format. Use: +966XXXXXXXXX',
-    emailRequired: 'Email is required',
-    invalidEmailFormat: 'Invalid email format',
-    ownerNameRequired: 'Owner name is required',
-    ownerIdRequired: 'Owner ID is required',
-    ownerPhoneRequired: 'Owner phone is required',
-    ownerEmailRequired: 'Owner email is required',
-    passwordRequired: 'Password is required',
-    passwordMinLength: 'Password must be at least 6 characters',
-    passwordsNotMatch: 'Passwords do not match',
-    termsRequired: 'You must accept the terms and conditions',
-    arabicNumbersSupported: 'Arabic numerals are supported'
-  }
-}
-
 function BusinessRegistrationPage() {
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation('customer')
+  const isRTL = i18n.language === 'ar'
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [selectedLanguage, setSelectedLanguage] = useState('ar') // 'ar' or 'en'
 
   // District management state
   const [loadingDistricts, setLoadingDistricts] = useState(false)
@@ -277,9 +59,6 @@ function BusinessRegistrationPage() {
     confirmPassword: '',
     termsAccepted: false
   })
-
-  // Get current language content
-  const t = content[selectedLanguage]
 
   // Convert Arabic numerals to English numerals
   const convertArabicToEnglishNumbers = (str) => {
@@ -348,7 +127,7 @@ function BusinessRegistrationPage() {
     } else if (districts.length === 1) {
       // Auto-select single district
       const district = districts[0]
-      const districtName = selectedLanguage === 'ar' ? district.name_ar : district.name_en
+      const districtName = i18n.language === 'ar' ? district.name_ar : district.name_en
       setFormData(prev => ({ ...prev, district: districtName }))
       setShowDistrictDropdown(false) // Hide dropdown since auto-selected
       console.log('📍 Single district auto-selected:', districtName)
@@ -377,7 +156,7 @@ function BusinessRegistrationPage() {
     
     if (location.type === 'city') {
       // City selected - auto-populate region and load districts
-      const cityName = selectedLanguage === 'ar' ? location.name_ar : location.name_en
+      const cityName = i18n.language === 'ar' ? location.name_ar : location.name_en
       const cityId = location.city_id || location.id
       
       console.log('🔧 Extracted location data:', { region, city: cityName, cityId })
@@ -402,7 +181,7 @@ function BusinessRegistrationPage() {
       
     } else if (location.type === 'district') {
       // District selected directly - extract city and region info
-      const districtName = selectedLanguage === 'ar' ? location.name_ar : location.name_en
+      const districtName = i18n.language === 'ar' ? location.name_ar : location.name_en
       
       // Try to extract city from hierarchy
       let cityName = ''
@@ -432,7 +211,7 @@ function BusinessRegistrationPage() {
       
     } else if (location.type === 'region') {
       // Region selected - just set region, clear city and district
-      const regionName = selectedLanguage === 'ar' ? location.name_ar : location.name_en
+      const regionName = i18n.language === 'ar' ? location.name_ar : location.name_en
       
       console.log('🔧 Extracted location data:', { region: regionName })
       
@@ -467,12 +246,12 @@ function BusinessRegistrationPage() {
     if (fieldName === 'business_name') {
       setFormData(prev => ({
         ...prev,
-        [selectedLanguage === 'ar' ? 'business_name_ar' : 'business_name']: value
+        [i18n.language === 'ar' ? 'business_name_ar' : 'business_name']: value
       }))
     } else if (fieldName === 'owner_name') {
       setFormData(prev => ({
         ...prev,
-        [selectedLanguage === 'ar' ? 'owner_name_ar' : 'owner_name']: value
+        [i18n.language === 'ar' ? 'owner_name_ar' : 'owner_name']: value
       }))
     } else {
       setFormData(prev => ({
@@ -556,7 +335,7 @@ function BusinessRegistrationPage() {
         console.log('- formData.city:', formData.city)
         
         if (!formData.location) {
-          setError(selectedLanguage === 'ar' ? 'يرجى اختيار الموقع (المنطقة أو المدينة أو الحي)' : 'Please select a location (region, city, or district)')
+          setError(i18n.language === 'ar' ? 'يرجى اختيار الموقع (المنطقة أو المدينة أو الحي)' : 'Please select a location (region, city, or district)')
           return false
         }
         if (!formData.address.trim()) {
@@ -725,12 +504,12 @@ function BusinessRegistrationPage() {
 
   // Helper to get current business name based on selected language
   const getCurrentBusinessName = () => {
-    return selectedLanguage === 'ar' ? formData.business_name_ar : formData.business_name
+    return i18n.language === 'ar' ? formData.business_name_ar : formData.business_name
   }
 
   // Helper to get current owner name based on selected language
   const getCurrentOwnerName = () => {
-    return selectedLanguage === 'ar' ? formData.owner_name_ar : formData.owner_name
+    return i18n.language === 'ar' ? formData.owner_name_ar : formData.owner_name
   }
 
   const renderStep = () => {
@@ -739,13 +518,13 @@ function BusinessRegistrationPage() {
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-              {t.businessInformation}
+              {t('registration.businessInfo.businessInformation')}
             </h3>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.businessName} *
+                  {t('registration.businessInfo.businessName')} *
                 </label>
                 <input
                   type="text"
@@ -753,15 +532,15 @@ function BusinessRegistrationPage() {
                   value={getCurrentBusinessName()}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder={t.businessNamePlaceholder}
-                  dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                  placeholder={t('registration.businessInfo.businessNamePlaceholder')}
+                  dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.businessType} *
+                  {t('registration.businessInfo.businessType')} *
                 </label>
                 <select
                   name="business_type"
@@ -770,10 +549,10 @@ function BusinessRegistrationPage() {
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
                   required
                 >
-                  <option value="">{t.businessTypePlaceholder}</option>
+                  <option value="">{t('registration.businessInfo.businessTypePlaceholder')}</option>
                   {businessCategories.map(category => (
                     <option key={category.id} value={category.id}>
-                      {selectedLanguage === 'ar' ? category.name : category.nameEn}
+                      {i18n.language === 'ar' ? category.name : category.nameEn}
                     </option>
                   ))}
                 </select>
@@ -781,7 +560,7 @@ function BusinessRegistrationPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.crNumber} *
+                  {t('registration.businessInfo.crNumber')} *
                 </label>
                 <input
                   type="text"
@@ -789,17 +568,17 @@ function BusinessRegistrationPage() {
                   value={formData.license_number}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder={t.crNumberPlaceholder}
+                  placeholder={t('registration.businessInfo.crNumberPlaceholder')}
                   required
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t.crNumberHelp}
+                  {t('registration.businessInfo.crNumberHelp')}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.businessDescription}
+                  {t('registration.businessInfo.businessDescription')}
                 </label>
                 <textarea
                   name="description"
@@ -807,8 +586,8 @@ function BusinessRegistrationPage() {
                   onChange={handleInputChange}
                   rows="3"
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder={t.businessDescriptionPlaceholder}
-                  dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                  placeholder={t('registration.businessInfo.businessDescriptionPlaceholder')}
+                  dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
                 />
               </div>
             </div>
@@ -819,19 +598,19 @@ function BusinessRegistrationPage() {
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-              {t.locationContact}
+              {t('registration.locationContact.locationContact')}
             </h3>
 
             {/* Saudi Location Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {selectedLanguage === 'ar' ? 'الموقع (المنطقة، المدينة، أو الحي)' : 'Location (Region, City, or District)'} *
+                {i18n.language === 'ar' ? 'الموقع (المنطقة، المدينة، أو الحي)' : 'Location (Region, City, or District)'} *
               </label>
               <LocationAutocomplete
                 value={formData.location}
                 onChange={handleLocationSelect}
-                language={selectedLanguage}
-                placeholder={selectedLanguage === 'ar' ? 'ابحث عن المنطقة أو المدينة أو الحي...' : 'Search for region, city, or district...'}
+                language={i18n.language}
+                placeholder={i18n.language === 'ar' ? 'ابحث عن المنطقة أو المدينة أو الحي...' : 'Search for region, city, or district...'}
                 placeholderEn="Search for region, city, or district..."
                 className="w-full"
                 required
@@ -839,21 +618,21 @@ function BusinessRegistrationPage() {
               {formData.location && (
                 <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <div className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>{selectedLanguage === 'ar' ? 'الموقع المحدد:' : 'Selected Location:'}</strong>
+                    <strong>{i18n.language === 'ar' ? 'الموقع المحدد:' : 'Selected Location:'}</strong>
                     <div className="mt-1">
                       {formData.region && (
                         <span className="inline-block bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs mr-2 mb-1">
-                          {selectedLanguage === 'ar' ? 'منطقة:' : 'Region:'} {formData.region}
+                          {i18n.language === 'ar' ? 'منطقة:' : 'Region:'} {formData.region}
                         </span>
                       )}
                       {formData.city && (
                         <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-md text-xs mr-2 mb-1">
-                          {selectedLanguage === 'ar' ? 'مدينة:' : 'City:'} {formData.city}
+                          {i18n.language === 'ar' ? 'مدينة:' : 'City:'} {formData.city}
                         </span>
                       )}
                       {formData.district && (
                         <span className="inline-block bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-md text-xs mr-2 mb-1">
-                          {selectedLanguage === 'ar' ? 'حي:' : 'District:'} {formData.district}
+                          {i18n.language === 'ar' ? 'حي:' : 'District:'} {formData.district}
                         </span>
                       )}
                     </div>
@@ -866,7 +645,7 @@ function BusinessRegistrationPage() {
             {showDistrictDropdown && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.district}
+                  {t('registration.locationContact.district')}
                 </label>
                 {loadingDistricts ? (
                   // Skeleton loader
@@ -878,22 +657,22 @@ function BusinessRegistrationPage() {
                     value={formData.district}
                     onChange={handleDistrictSelect}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                    dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
                   >
-                    <option value="">{t.districtPlaceholder}</option>
+                    <option value="">{t('registration.locationContact.districtPlaceholder')}</option>
                     {districtOptions.map((district, index) => (
                       <option 
                         key={district.district_id || district.id || index} 
-                        value={selectedLanguage === 'ar' ? district.name_ar : district.name_en}
+                        value={i18n.language === 'ar' ? district.name_ar : district.name_en}
                       >
-                        {selectedLanguage === 'ar' ? district.name_ar : district.name_en}
+                        {i18n.language === 'ar' ? district.name_ar : district.name_en}
                       </option>
                     ))}
                   </select>
                 )}
                 {loadingDistricts && (
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t.loadingDistricts}
+                    {t('registration.locationContact.loadingDistricts')}
                   </p>
                 )}
               </div>
@@ -901,7 +680,7 @@ function BusinessRegistrationPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t.businessAddress} *
+                {t('registration.locationContact.businessAddress')} *
               </label>
               <input
                 type="text"
@@ -909,19 +688,19 @@ function BusinessRegistrationPage() {
                 value={formData.address}
                 onChange={handleInputChange}
                 className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                placeholder={t.addressPlaceholder}
-                dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                placeholder={t('registration.locationContact.addressPlaceholder')}
+                dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
                 required
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {selectedLanguage === 'ar' ? 'أدخل اسم الشارع فقط (تم اختيار الموقع أعلاه)' : 'Enter the street name only (location is selected above)'}
+                {i18n.language === 'ar' ? 'أدخل اسم الشارع فقط (تم اختيار الموقع أعلاه)' : 'Enter the street name only (location is selected above)'}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.businessPhone} *
+                  {t('registration.locationContact.businessPhone')} *
                 </label>
                 <input
                   type="tel"
@@ -932,12 +711,12 @@ function BusinessRegistrationPage() {
                   placeholder="+966551234567"
                   required
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t.arabicNumbersSupported}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t('registration.validation.arabicNumbersSupported')}</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.businessEmail} *
+                  {t('registration.locationContact.businessEmail')} *
                 </label>
                 <input
                   type="email"
@@ -957,13 +736,13 @@ function BusinessRegistrationPage() {
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-              {t.ownerInformation}
+              {t('registration.ownerInfo.ownerInformation')}
             </h3>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.ownerFullName} *
+                  {t('registration.ownerInfo.ownerFullName')} *
                 </label>
                 <input
                   type="text"
@@ -971,15 +750,15 @@ function BusinessRegistrationPage() {
                   value={getCurrentOwnerName()}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder={t.ownerNamePlaceholder}
-                  dir={selectedLanguage === 'ar' ? 'rtl' : 'ltr'}
+                  placeholder={t('registration.ownerInfo.ownerNamePlaceholder')}
+                  dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.nationalId} *
+                  {t('registration.ownerInfo.nationalId')} *
                 </label>
                 <input
                   type="text"
@@ -995,7 +774,7 @@ function BusinessRegistrationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t.ownerPhone} *
+                    {t('registration.ownerInfo.ownerPhone')} *
                   </label>
                   <input
                     type="tel"
@@ -1006,12 +785,12 @@ function BusinessRegistrationPage() {
                     placeholder="+966501234567"
                     required
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t.arabicNumbersSupported}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t('registration.validation.arabicNumbersSupported')}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t.ownerEmail} *
+                    {t('registration.ownerInfo.ownerEmail')} *
                   </label>
                   <input
                     type="email"
@@ -1032,13 +811,13 @@ function BusinessRegistrationPage() {
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-              {t.accountSetup}
+              {t('registration.accountSetup.accountSetup')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.password} *
+                  {t('registration.accountSetup.password')} *
                 </label>
                 <input
                   type="password"
@@ -1046,14 +825,14 @@ function BusinessRegistrationPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder={t.passwordPlaceholder}
+                  placeholder={t('registration.accountSetup.passwordPlaceholder')}
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t.confirmPassword} *
+                  {t('registration.accountSetup.confirmPassword')} *
                 </label>
                 <input
                   type="password"
@@ -1061,7 +840,7 @@ function BusinessRegistrationPage() {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder={t.confirmPasswordPlaceholder}
+                  placeholder={t('registration.accountSetup.confirmPasswordPlaceholder')}
                   required
                 />
               </div>
@@ -1079,13 +858,13 @@ function BusinessRegistrationPage() {
                 />
                 <div className="ml-3">
                   <label className="text-sm text-gray-700 dark:text-gray-300">
-                    {t.agreeToTerms}{' '}
+                    {t('registration.accountSetup.agreeToTerms')}{' '}
                     <Link to="/terms" className="text-primary hover:text-blue-500">
-                      {t.termsAndConditions}
+                      {t('registration.accountSetup.termsAndConditions')}
                     </Link>{' '}
-                    {t.and}{' '}
+                    {t('registration.accountSetup.and')}{' '}
                     <Link to="/privacy" className="text-primary hover:text-blue-500">
-                      {t.privacyPolicy}
+                      {t('registration.accountSetup.privacyPolicy')}
                     </Link>
                     {' '}*
                   </label>
@@ -1095,13 +874,13 @@ function BusinessRegistrationPage() {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
-                {t.whatHappensNext}
+                {t('registration.accountSetup.whatHappensNext')}
               </h4>
               <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                <li>✅ {t.reviewApplication}</li>
-                <li>✅ {t.verifyDocuments}</li>
-                <li>✅ {t.approvalNotification}</li>
-                <li>✅ {t.accessDashboard}</li>
+                <li>✅ {t('registration.accountSetup.reviewApplication')}</li>
+                <li>✅ {t('registration.accountSetup.verifyDocuments')}</li>
+                <li>✅ {t('registration.accountSetup.approvalNotification')}</li>
+                <li>✅ {t('registration.accountSetup.accessDashboard')}</li>
               </ul>
             </div>
           </div>
@@ -1140,9 +919,9 @@ function BusinessRegistrationPage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary to-blue-700 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">{t.businessRegistration}</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">{t('registration.header.businessRegistration')}</h1>
           <p className="text-xl mb-8 max-w-3xl mx-auto">
-            {t.joinThousands}
+            {t('registration.header.joinThousands')}
           </p>
         </div>
       </section>
@@ -1158,7 +937,7 @@ function BusinessRegistrationPage() {
                 type="button"
                 onClick={() => setSelectedLanguage('ar')}
                 className={`px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
-                  selectedLanguage === 'ar'
+                  i18n.language === 'ar'
                     ? 'bg-primary text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
@@ -1183,7 +962,7 @@ function BusinessRegistrationPage() {
         {/* Progress Bar */}
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t.step} {currentStep} {t.of} 4</span>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{t('registration.steps.step')} {currentStep} {t('registration.steps.of')} 4</span>
             <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{Math.round((currentStep / 4) * 100)}%</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
@@ -1237,7 +1016,7 @@ function BusinessRegistrationPage() {
                 disabled={currentStep === 1}
                 className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {selectedLanguage === 'ar' ? '←' : '←'} {t.previous}
+                {i18n.language === 'ar' ? '←' : '←'} {t('registration.navigation.previous')}
               </button>
 
               {currentStep < 4 ? (
@@ -1246,7 +1025,7 @@ function BusinessRegistrationPage() {
                   onClick={nextStep}
                   className="px-8 py-3 bg-primary text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors"
                 >
-                  {t.next} {selectedLanguage === 'ar' ? '←' : '→'}
+                  {t('registration.navigation.next')} {i18n.language === 'ar' ? '←' : '→'}
                 </button>
               ) : (
                 <button
@@ -1260,7 +1039,7 @@ function BusinessRegistrationPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      {t.submitting}
+                      {t('registration.navigation.submitting')}
                     </div>
                   ) : (
                     t.submitApplication
@@ -1273,9 +1052,9 @@ function BusinessRegistrationPage() {
 
         {/* Back to Sign In */}
         <div className="text-center mt-6">
-          <span className="text-gray-600 dark:text-gray-400">{t.alreadyHaveAccount} </span>
+          <span className="text-gray-600 dark:text-gray-400">{t('registration.footer.alreadyHaveAccount')} </span>
           <Link to="/auth?mode=signin" className="font-medium text-primary hover:text-blue-500">
-            {t.signInLink}
+            {t('registration.footer.signInLink')}
           </Link>
         </div>
       </div>
@@ -1284,3 +1063,4 @@ function BusinessRegistrationPage() {
 }
 
 export default BusinessRegistrationPage
+
