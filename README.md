@@ -44,28 +44,69 @@ A cost-effective and scalable loyalty program management platform designed for b
 
 ```
 claude-loyalty-program/
-├── 📄 README.md                          # This file
+├── 📄 README.md                          # This file - Project overview
+├── 📄 DEPLOYMENT.md                      # Production deployment guide
 ├── 📄 package.json                       # Dependencies and scripts
-├── 📄 SCALABILITY-ROADMAP.md            # Scaling strategy & roadmap
-├── 📁 wireframes-*.md                    # UI/UX wireframes
-├── 📁 src/
+├── � docs/                              # 📚 Documentation hub
+│   ├── �📄 README.md                      # Documentation index
+│   ├── 📁 guides/                        # Active reference guides
+│   │   ├── 📄 DEVELOPMENT.md            # Development setup
+│   │   ├── 📄 QUICK_REFERENCE.md        # Common commands
+│   │   ├── 📄 DEBUGGING-PLAN.md         # Troubleshooting
+│   │   └── 📄 ...more guides            # See docs/README.md
+│   ├── 📁 migrations/                    # Migration documentation
+│   └── 📁 archive/                       # Historical reports
+├── 📁 tests/                             # 🧪 Testing & analysis tools
+│   ├── 📄 README.md                      # Testing guide
+│   ├── 📄 stress-test.js                # Load testing
+│   ├── 📄 performance-test.js           # Performance benchmarks
+│   └── 📄 ...more tests                 # See tests/README.md
+├── 📁 src/                               # Frontend source code
 │   ├── 📄 main.jsx                       # React entry point
 │   ├── 📄 App.jsx                        # Main app component
 │   ├── 📄 index.css                      # Global styles
-│   ├── 📁 pages/
+│   ├── 📁 pages/                         # Page components
 │   │   ├── 📄 LandingPage.jsx           # Main marketing page
 │   │   ├── 📄 AuthPage.jsx              # Sign in/up forms
 │   │   ├── 📄 Dashboard.jsx             # Business owner interface
 │   │   └── 📄 CustomerSignup.jsx        # Customer enrollment
-│   └── 📁 components/
+│   └── 📁 components/                    # Reusable components
 │       ├── 📄 Header.jsx                # Navigation header
 │       ├── 📄 Hero.jsx                  # Landing page hero
 │       ├── 📄 Benefits.jsx              # Feature showcase
 │       ├── 📄 HowItWorks.jsx           # Process explanation
 │       ├── 📄 CTA.jsx                   # Call-to-action section
 │       └── 📄 Footer.jsx                # Site footer
-└── 📁 config files (vite, tailwind, etc.)
+├── 📁 backend/                           # Backend source code
+│   ├── 📄 server.js                      # Express server
+│   ├── 📁 routes/                        # API routes
+│   ├── 📁 controllers/                   # Business logic
+│   ├── 📁 models/                        # Database models
+│   ├── 📁 services/                      # Service layer
+│   └── 📁 migrations/                    # Database migrations
+└── 📁 config files                       # Build & config files
 ```
+
+## 📚 **Documentation**
+
+### Quick Access
+- **[Documentation Index](docs/README.md)** - Complete documentation hub
+- **[Development Guide](docs/guides/DEVELOPMENT.md)** - Setup and development workflow
+- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
+- **[Testing Guide](tests/README.md)** - Testing tools and procedures
+- **[Quick Reference](docs/guides/QUICK_REFERENCE.md)** - Common commands and tasks
+- **[Troubleshooting](docs/guides/QUICK-FIX-GUIDE.md)** - Fix common issues
+
+### For New Developers
+1. Start with **[DEVELOPMENT.md](docs/guides/DEVELOPMENT.md)** for environment setup
+2. Review **[QUICK_REFERENCE.md](docs/guides/QUICK_REFERENCE.md)** for common commands
+3. Set up database with **[POSTGRESQL-SETUP-GUIDE.md](docs/guides/POSTGRESQL-SETUP-GUIDE.md)**
+4. Refer to **[DEBUGGING-PLAN.md](docs/guides/DEBUGGING-PLAN.md)** when troubleshooting
+
+### For Deployments
+- **[PRODUCTION_DEPLOYMENT_CHECKLIST.md](docs/guides/PRODUCTION_DEPLOYMENT_CHECKLIST.md)**
+- **[PRODUCTION_DEPLOYMENT_GUIDE.md](docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md)**
+- **[DEPLOYMENT-NEXT-STEPS.md](docs/guides/DEPLOYMENT-NEXT-STEPS.md)**
 
 ## 🚀 **Quick Start**
 
