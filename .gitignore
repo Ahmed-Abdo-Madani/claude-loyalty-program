@@ -52,9 +52,17 @@ logs
 *.tmp
 *.temp
 nul
+cookies.txt
+_tmp_*
+backend/_tmp_*
 
 # Claude specific
 .claude/
+
+# Test output files
+tests/*.json
+tests/memory-snapshots.json
+tests/location-service-*.json
 
 # Development/Test files
 test-*.js
