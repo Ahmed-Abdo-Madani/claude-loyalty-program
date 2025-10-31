@@ -1,7 +1,18 @@
+import { useTranslation } from 'react-i18next'
+
 function MonthlyChart({ analytics }) {
+  const { t } = useTranslation('dashboard')
+  
   // Generate sample monthly data based on existing analytics
   const generateMonthlyData = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+    const months = [
+      t('monthlyChart.months.jan'),
+      t('monthlyChart.months.feb'),
+      t('monthlyChart.months.mar'),
+      t('monthlyChart.months.apr'),
+      t('monthlyChart.months.may'),
+      t('monthlyChart.months.jun')
+    ]
     const baseValue = analytics?.totalCustomers || 100
 
     return months.map((month, index) => ({
@@ -17,11 +28,11 @@ function MonthlyChart({ analytics }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Monthly Performance</h3>
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{t('monthlyChart.title')}</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-primary rounded-full"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Customer Activity</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('monthlyChart.customerActivity')}</span>
           </div>
         </div>
       </div>
@@ -29,7 +40,7 @@ function MonthlyChart({ analytics }) {
       {/* Chart Area */}
       <div className="relative">
         {/* Chart Grid */}
-        <div className="flex items-end justify-between h-32 sm:h-48 space-x-1 sm:space-x-2">
+        <div className="flex items-end justify-between h-32 sm:h-48 gap-1 sm:gap-2">
           {monthlyData.map((data, index) => {
             const height = (data.value / maxValue) * 100
             return (
@@ -69,19 +80,19 @@ function MonthlyChart({ analytics }) {
               <div className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                 {Math.round(monthlyData[monthlyData.length - 1]?.value || 0).toLocaleString()}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">This Month</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('monthlyChart.thisMonth')}</div>
             </div>
             <div className="text-center sm:text-center">
               <div className="text-base sm:text-lg font-semibold text-green-600 dark:text-green-400">
                 +{((monthlyData[monthlyData.length - 1]?.value / monthlyData[0]?.value - 1) * 100).toFixed(0)}%
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Growth</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('monthlyChart.growth')}</div>
             </div>
             <div className="text-center sm:text-center hidden sm:block">
               <div className="text-base sm:text-lg font-semibold text-primary">
                 {Math.round(monthlyData.reduce((sum, d) => sum + d.value, 0) / monthlyData.length).toLocaleString()}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Average</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{t('monthlyChart.average')}</div>
             </div>
           </div>
         </div>

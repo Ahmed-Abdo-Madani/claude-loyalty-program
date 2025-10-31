@@ -1,7 +1,7 @@
 // Clean AdminBusinessController - PostgreSQL only
 import BusinessService from '../services/BusinessService.js'
-import OfferService from '../services/OfferService.js'
-import { Business, Offer, CustomerProgress } from '../models/index.js'
+import { Business, Offer } from '../models/index.js'
+import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 
 class AdminBusinessController {
   // Get all businesses with filters and pagination
@@ -13,9 +13,7 @@ class AdminBusinessController {
         region,
         business_type,
         limit = 50,
-        offset = 0,
-        sort_by = 'created_at',
-        sort_order = 'desc'
+        offset = 0
       } = req.query
 
       console.log('🔍 Admin: Fetching businesses with filters:', {
@@ -38,44 +36,70 @@ class AdminBusinessController {
 
       console.log(`📊 Admin: Retrieved ${businesses.length} businesses from database`)
 
-      // Get total count for pagination
-      const total = await Business.count()
+      // Build the same where clause used by BusinessService for accurate filtered count
+      const whereClause = {}
+      
+      if (status && status !== 'all') {
+        whereClause.status = status
+      }
 
-      // Enrich with related data
-      const enrichedBusinesses = await Promise.all(
-        businesses.map(async business => {
-          // Safely get the business ID - handle both old and new secure ID format
-          const businessId = business.public_id || business.id
-          
-          if (!businessId) {
-            console.error('⚠️ Business missing ID:', business)
-            return {
-              ...business.toJSON(),
-              total_offers: 0,
-              active_offers: 0
-            }
-          }
+      if (region && region !== 'all') {
+        whereClause.region = region
+      }
 
-          try {
-            const offers = await Offer.findAll({
-              where: { business_id: businessId }  // Use the resolved business ID
-            })
+      if (business_type && business_type !== 'all') {
+        whereClause.business_type = business_type
+      }
 
-            return {
-              ...business.toJSON(),
-              total_offers: offers.length,
-              active_offers: offers.filter(o => o.status === 'active').length
-            }
-          } catch (offerError) {
-            console.error('Error fetching offers for business:', businessId, offerError.message)
-            return {
-              ...business.toJSON(),
-              total_offers: 0,
-              active_offers: 0
-            }
-          }
-        })
-      )
+      if (search && search !== 'none') {
+        const { Op } = await import('sequelize')
+        whereClause[Op.or] = [
+          { business_name: { [Op.iLike]: `%${search}%` } },
+          { business_name_ar: { [Op.iLike]: `%${search}%` } },
+          { email: { [Op.iLike]: `%${search}%` } }
+        ]
+      }
+
+      // Get filtered count matching the query filters
+      const total = await Business.count({ where: whereClause })
+
+      // Fetch offer counts in a single aggregated query to avoid N+1
+      const { Op } = await import('sequelize')
+      const businessIds = businesses.map(b => b.public_id || b.id).filter(Boolean)
+      
+      const offerCounts = await Offer.findAll({
+        attributes: [
+          'business_id',
+          [Business.sequelize.fn('COUNT', Business.sequelize.literal('*')), 'total_offers'],
+          [Business.sequelize.fn('SUM', Business.sequelize.literal("CASE WHEN \"Offer\".\"status\" = 'active' THEN 1 ELSE 0 END")), 'active_offers']
+        ],
+        where: {
+          business_id: { [Op.in]: businessIds }
+        },
+        group: ['business_id'],
+        raw: true
+      })
+
+      // Create a map of business_id -> counts for efficient lookup
+      const countsMap = {}
+      offerCounts.forEach(count => {
+        countsMap[count.business_id] = {
+          total_offers: parseInt(count.total_offers) || 0,
+          active_offers: parseInt(count.active_offers) || 0
+        }
+      })
+
+      // Enrich businesses with offer counts from the map
+      const enrichedBusinesses = businesses.map(business => {
+        const businessId = business.public_id || business.id
+        const counts = countsMap[businessId] || { total_offers: 0, active_offers: 0 }
+        
+        return {
+          ...business.toJSON(),
+          total_offers: counts.total_offers,
+          active_offers: counts.active_offers
+        }
+      })
 
       console.log(`✅ Admin: Successfully enriched ${enrichedBusinesses.length} businesses`)
 
@@ -101,7 +125,7 @@ class AdminBusinessController {
       })
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve businesses',
+        message: getLocalizedMessage('server.failedToGetBusinesses', req.locale),
         error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       })
     }
@@ -143,7 +167,7 @@ class AdminBusinessController {
       console.error('Get business stats error:', error)
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve business statistics'
+        message: getLocalizedMessage('server.failedToGetStats', req.locale)
       })
     }
   }
@@ -155,15 +179,18 @@ class AdminBusinessController {
       
       // Try to find by both secure ID and legacy ID
       let business = await Business.findByPk(id)
-      if (!business && !id.startsWith('biz_')) {
-        // If not found and it's a numeric ID, try as legacy ID
-        business = await Business.findByPk(parseInt(id))
+      if (!business && !id.startsWith('biz_') && /^[0-9]+$/.test(id)) {
+        // If not found and it's a valid numeric ID string, try as legacy ID
+        const numericId = Number(id)
+        if (!isNaN(numericId) && numericId > 0) {
+          business = await Business.findByPk(numericId)
+        }
       }
 
       if (!business) {
         return res.status(404).json({
           success: false,
-          message: 'Business not found'
+          message: getLocalizedMessage('notFound.business', req.locale)
         })
       }
 
@@ -189,7 +216,7 @@ class AdminBusinessController {
       console.error('Get business by ID error:', error)
       res.status(500).json({
         success: false,
-        message: 'Failed to retrieve business details'
+        message: getLocalizedMessage('server.failedToGetBusinessDetails', req.locale)
       })
     }
   }
@@ -203,7 +230,7 @@ class AdminBusinessController {
       if (!['active', 'pending', 'suspended'].includes(status)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid status. Must be: active, pending, or suspended'
+          message: getLocalizedMessage('validation.invalidStatus', req.locale)
         })
       }
 
@@ -212,7 +239,7 @@ class AdminBusinessController {
       res.json({
         success: true,
         data: updatedBusiness,
-        message: `Business status updated to ${status} successfully`
+        message: getLocalizedMessage('business.statusUpdateSuccess', req.locale, { status })
       })
 
     } catch (error) {
@@ -220,12 +247,12 @@ class AdminBusinessController {
       if (error.message === 'Business not found') {
         res.status(404).json({
           success: false,
-          message: 'Business not found'
+          message: getLocalizedMessage('notFound.business', req.locale)
         })
       } else {
         res.status(500).json({
           success: false,
-          message: 'Failed to update business status'
+          message: getLocalizedMessage('server.failedToUpdateStatus', req.locale)
         })
       }
     }
@@ -243,7 +270,7 @@ class AdminBusinessController {
       if (missingFields.length > 0) {
         return res.status(400).json({
           success: false,
-          message: `Missing required fields: ${missingFields.join(', ')}`
+          message: getLocalizedMessage('validation.missingRequiredFields', req.locale, { fields: missingFields.join(', ') })
         })
       }
 
@@ -252,7 +279,7 @@ class AdminBusinessController {
       if (existingBusiness) {
         return res.status(400).json({
           success: false,
-          message: 'Business with this email already exists'
+          message: getLocalizedMessage('validation.emailAlreadyExists', req.locale)
         })
       }
 
@@ -261,14 +288,14 @@ class AdminBusinessController {
       res.status(201).json({
         success: true,
         data: newBusiness,
-        message: 'Business registered successfully'
+        message: getLocalizedMessage('business.createSuccess', req.locale)
       })
 
     } catch (error) {
       console.error('Add business error:', error)
       res.status(500).json({
         success: false,
-        message: 'Failed to register business'
+        message: getLocalizedMessage('server.businessCreateFailed', req.locale)
       })
     }
   }
@@ -280,14 +307,18 @@ class AdminBusinessController {
       
       // Try to find by both secure ID and legacy ID
       let business = await Business.findByPk(id)
-      if (!business && !id.startsWith('biz_')) {
-        business = await Business.findByPk(parseInt(id))
+      if (!business && !id.startsWith('biz_') && /^[0-9]+$/.test(id)) {
+        // If not found and it's a valid numeric ID string, try as legacy ID
+        const numericId = Number(id)
+        if (!isNaN(numericId) && numericId > 0) {
+          business = await Business.findByPk(numericId)
+        }
       }
 
       if (!business) {
         return res.status(404).json({
           success: false,
-          message: 'Business not found'
+          message: getLocalizedMessage('notFound.business', req.locale)
         })
       }
 
@@ -295,7 +326,7 @@ class AdminBusinessController {
       if (business.status === 'active' && business.total_customers > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Cannot delete business with active customers. Suspend the business first.'
+          message: getLocalizedMessage('permission.cannotDeleteActiveBusinessWithCustomers', req.locale)
         })
       }
 
@@ -304,14 +335,14 @@ class AdminBusinessController {
 
       res.json({
         success: true,
-        message: 'Business and all related data deleted successfully'
+        message: getLocalizedMessage('business.deleteSuccess', req.locale)
       })
 
     } catch (error) {
       console.error('Delete business error:', error)
       res.status(500).json({
         success: false,
-        message: 'Failed to delete business'
+        message: getLocalizedMessage('server.businessDeleteFailed', req.locale)
       })
     }
   }
@@ -324,14 +355,14 @@ class AdminBusinessController {
       if (!business_ids || !Array.isArray(business_ids) || business_ids.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'business_ids array is required'
+          message: getLocalizedMessage('validation.businessIdsRequired', req.locale)
         })
       }
 
       if (!['approve', 'suspend', 'activate'].includes(action)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid action. Must be: approve, suspend, or activate'
+          message: getLocalizedMessage('validation.invalidBulkAction', req.locale)
         })
       }
 
@@ -363,14 +394,14 @@ class AdminBusinessController {
           total_updated: updatedBusinesses.length,
           total_requested: business_ids.length
         },
-        message: `Bulk ${action} operation completed. ${updatedBusinesses.length} businesses updated.`
+        message: getLocalizedMessage('business.bulkUpdateSuccess', req.locale, { action, count: updatedBusinesses.length })
       })
 
     } catch (error) {
       console.error('Bulk update businesses error:', error)
       res.status(500).json({
         success: false,
-        message: 'Failed to perform bulk operation'
+        message: getLocalizedMessage('server.bulkOperationFailed', req.locale)
       })
     }
   }

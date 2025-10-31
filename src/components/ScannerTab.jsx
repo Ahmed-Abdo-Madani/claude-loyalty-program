@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 import { getSecureBusinessId } from '../utils/secureAuth'
 import EnhancedQRScanner from './EnhancedQRScanner'
 import CompactStatsBar from './CompactStatsBar'
 
 function ScannerTab({ analytics: globalAnalytics }) {
+  const { t } = useTranslation('dashboard')
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState('')
@@ -358,8 +360,8 @@ function ScannerTab({ analytics: globalAnalytics }) {
 
       {/* Header Section - Mobile-first */}
       <div className="compact-header">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">QR Scanner</h2>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Scan customer wallet pass QR codes to update loyalty progress</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('scanner.qrScanner')}</h2>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('scanner.scanToAddStamps')}</p>
       </div>
 
       <div className="compact-spacing">
@@ -368,14 +370,14 @@ function ScannerTab({ analytics: globalAnalytics }) {
         <div className="compact-card mobile-compact">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white compact-header flex items-center">
             <span className="mr-2">🔍</span>
-            QR Code Scanner
+            {t('scanner.qrCodeScanner')}
           </h3>
 
           {!isScanning ? (
             <div className="text-center space-y-3 sm:space-y-4">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-5 hover:border-primary/30 hover:shadow-md transition-all">
-                <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">Ready to Scan</h4>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">Position the customer's QR code in front of your camera</p>
+                <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('scanner.readyToScan')}</h4>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">{t('scanner.positionQrCode')}</p>
 
                 <div className="flex justify-center">
                   <button
@@ -385,7 +387,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
-                    <span>Start Camera Scanner</span>
+                    <span>{t('scanner.startCameraScanner')}</span>
                   </button>
                 </div>
 
@@ -431,7 +433,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h4 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-1">Stamp Awarded!</h4>
+                  <h4 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-1">{t('scanner.stampAwarded')}</h4>
                   <p className="text-sm text-green-700 dark:text-green-300">{scanResult.offer?.title}</p>
                 </div>
 
@@ -446,7 +448,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                     return (
                       <>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-green-700 dark:text-green-300">New Progress</span>
+                          <span className="text-sm font-medium text-green-700 dark:text-green-300">{t('scanner.newProgress')}</span>
                           <span className="text-3xl font-bold text-green-900 dark:text-green-100">
                             {current}/{max}
                           </span>
@@ -468,8 +470,8 @@ function ScannerTab({ analytics: globalAnalytics }) {
                     <div className="flex items-center justify-center">
                       <span className="text-3xl mr-3">🎉</span>
                       <div className="text-center">
-                        <div className="font-bold text-xl">REWARD COMPLETED!</div>
-                        <div className="text-yellow-100 text-sm">Customer earned their reward</div>
+                        <div className="font-bold text-xl">{t('scanner.rewardCompleted')}</div>
+                        <div className="text-yellow-100 text-sm">{t('scanner.customerEarnedReward')}</div>
                       </div>
                       <span className="text-3xl ml-3">🎉</span>
                     </div>
@@ -487,7 +489,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                       )}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {scanResult.totalCompletions} {scanResult.totalCompletions === 1 ? 'reward' : 'rewards'} earned!
+                      {scanResult.totalCompletions} {scanResult.totalCompletions === 1 ? t('scanner.reward') : t('scanner.rewards')} {t('scanner.earned')}!
                     </p>
                   </div>
                 )}
@@ -495,7 +497,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                 {/* New cycle indicator with fresh progress data */}
                 {scanResult.prizeFulfilled && (
                   <div className="mb-4 text-gray-600 dark:text-gray-400">
-                    🔄 New cycle started: {scanResult.progress?.currentStamps || 0} of {scanResult.progress?.maxStamps || 5} stamps
+                    🔄 {t('scanner.newCycleStarted')}: {scanResult.progress?.currentStamps || 0} {t('common.of')} {scanResult.progress?.maxStamps || 5} {t('scanner.stamps')}
                   </div>
                 )}
 
@@ -503,7 +505,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                 {scanResult.confirmError && (
                   <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      ⚠️ Prize confirmed but wallet update may be delayed
+                      ⚠️ {t('scanner.walletUpdateDelayed')}
                     </p>
                   </div>
                 )}
@@ -512,10 +514,10 @@ function ScannerTab({ analytics: globalAnalytics }) {
                 {scanResult.tier && scanResult.tierUpgrade && (
                   <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-300 dark:border-purple-700">
                     <p className="text-lg font-bold text-purple-900 dark:text-purple-200 mb-1">
-                      🎉 Tier Upgrade!
+                      🎉 {t('scanner.tierUpgrade')}
                     </p>
                     <p className="text-sm text-purple-700 dark:text-purple-300">
-                      Customer reached {scanResult.tier.currentTier.name}!
+                      {t('scanner.customerReachedTier')} {scanResult.tier.currentTier.name}!
                     </p>
                   </div>
                 )}
@@ -524,7 +526,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                 {scanResult.totalCompletions && [5, 10, 25, 50, 100].includes(scanResult.totalCompletions) && (
                   <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                     <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
-                      🎊 Milestone! {scanResult.totalCompletions} rewards earned!
+                      🎊 {t('scanner.milestone')} {scanResult.totalCompletions} {t('scanner.rewardsEarned')}
                     </p>
                   </div>
                 )}
@@ -535,13 +537,13 @@ function ScannerTab({ analytics: globalAnalytics }) {
                     onClick={() => startCamera()}
                     className="flex-1 bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
                   >
-                    Scan Next Customer
+                    {t('scanner.scanNextCustomer')}
                   </button>
                   <button
                     onClick={clearResults}
                     className="px-4 py-3 bg-white/50 hover:bg-white/70 dark:bg-gray-800/50 dark:hover:bg-gray-800/70 text-green-700 dark:text-green-300 rounded-xl font-medium transition-all"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
@@ -553,13 +555,13 @@ function ScannerTab({ analytics: globalAnalytics }) {
                   <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
                     <span className="text-3xl">🏆</span>
                   </div>
-                  <h4 className="text-2xl font-bold text-yellow-900 dark:text-yellow-100 mb-1">Already Completed!</h4>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">This reward has been earned</p>
+                  <h4 className="text-2xl font-bold text-yellow-900 dark:text-yellow-100 mb-1">{t('scanner.alreadyCompleted')}</h4>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">{t('scanner.rewardEarned')}</p>
                 </div>
 
                 <div className="bg-white/60 dark:bg-gray-800/40 rounded-lg p-4 mb-4">
                   <div className="text-center text-yellow-800 dark:text-yellow-200 font-medium">
-                    Customer has already completed this loyalty program
+                    {t('scanner.customerCompletedProgram')}
                   </div>
                 </div>
 
@@ -567,14 +569,14 @@ function ScannerTab({ analytics: globalAnalytics }) {
                 {(scanResult.progress?.is_completed || scanResult.progress?.isCompleted) && (
                   <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700">
                     <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 text-center">
-                      💡 Want to fulfill this prize and start a new cycle?
+                      💡 {t('scanner.fulfillPrizeQuestion')}
                     </p>
                     <button
                       onClick={handleManualConfirm}
                       disabled={loading}
                       className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed active:scale-[0.98] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
                     >
-                      {loading ? 'Confirming...' : '✓ Confirm Prize & Reset Progress'}
+                      {loading ? t('scanner.confirming') : t('scanner.confirmPrizeReset')}
                     </button>
                   </div>
                 )}
@@ -585,13 +587,13 @@ function ScannerTab({ analytics: globalAnalytics }) {
                     onClick={() => startCamera()}
                     className="flex-1 bg-yellow-600 hover:bg-yellow-700 active:scale-[0.98] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
                   >
-                    Scan Next Customer
+                    {t('scanner.scanNextCustomer')}
                   </button>
                   <button
                     onClick={clearResults}
                     className="px-4 py-3 bg-white/50 hover:bg-white/70 dark:bg-gray-800/50 dark:hover:bg-gray-800/70 text-yellow-700 dark:text-yellow-300 rounded-xl font-medium transition-all"
                   >
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </div>
@@ -608,7 +610,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100 truncate">{scanAnalytics.scansToday || 0}</div>
-                <div className="text-xs text-blue-700 dark:text-blue-300 truncate">Scans Today</div>
+                <div className="text-xs text-blue-700 dark:text-blue-300 truncate">{t('scanner.scansToday')}</div>
               </div>
             </div>
 
@@ -618,7 +620,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold text-green-900 dark:text-green-100 truncate">{scanAnalytics.rewardsEarned || 0}</div>
-                <div className="text-xs text-green-700 dark:text-green-300 truncate">Rewards Earned</div>
+                <div className="text-xs text-green-700 dark:text-green-300 truncate">{t('scanner.rewardsEarned')}</div>
               </div>
             </div>
 
@@ -628,7 +630,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold text-indigo-900 dark:text-indigo-100 truncate">{scanAnalytics.uniqueCustomers || 0}</div>
-                <div className="text-xs text-indigo-700 dark:text-indigo-300 truncate">Unique Customers</div>
+                <div className="text-xs text-indigo-700 dark:text-indigo-300 truncate">{t('scanner.uniqueCustomers')}</div>
               </div>
             </div>
 
@@ -638,7 +640,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold text-purple-900 dark:text-purple-100 truncate">{scanAnalytics.totalScans || 0}</div>
-                <div className="text-xs text-purple-700 dark:text-purple-300 truncate">Total Scans</div>
+                <div className="text-xs text-purple-700 dark:text-purple-300 truncate">{t('scanner.totalScans')}</div>
               </div>
             </div>
           </div>
@@ -649,7 +651,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
             <span className="mr-2">📋</span>
-            Recent Scan History
+            {t('scanner.recentScanHistory')}
           </h3>
 
           {scanHistory.length === 0 ? (
@@ -657,8 +659,8 @@ function ScannerTab({ analytics: globalAnalytics }) {
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <span className="text-xl sm:text-2xl">📊</span>
               </div>
-              <h4 className="text-base sm:text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No scans yet</h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Start scanning customer QR codes to see history here.</p>
+              <h4 className="text-base sm:text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">{t('scanner.noScansYet')}</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('scanner.startScanningToSeeHistory')}</p>
             </div>
           ) : (
             <>
@@ -674,14 +676,14 @@ function ScannerTab({ analytics: globalAnalytics }) {
                       {scan.rewardEarned && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                           <span className="mr-1">🎉</span>
-                          Earned
+                          {t('scanner.earned')}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <span className="text-gray-600 dark:text-gray-400">{scan.progressBefore}</span>
-                        <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-primary rtl-flip" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
                         <span className="font-medium text-primary">{scan.progressAfter}</span>
@@ -697,10 +699,10 @@ function ScannerTab({ analytics: globalAnalytics }) {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Time</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Offer</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Progress</th>
-                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Reward</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('scanner.time')}</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('scanner.offer')}</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('scanner.progress')}</th>
+                      <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('scanner.reward')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -728,7 +730,7 @@ function ScannerTab({ analytics: globalAnalytics }) {
                           {scan.rewardEarned ? (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                               <span className="mr-1">🎉</span>
-                              Earned
+                              {t('scanner.earned')}
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>

@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import QRCodeModal from './QRCodeModal'
 import OfferGrid from './OfferGrid'
 import CompactStatsBar from './CompactStatsBar'
 import { endpoints, secureApi } from '../config/api'
-import { validateSecureOfferId } from '../utils/secureAuth'
 import { CardDesignProvider } from '../contexts/CardDesignContext'
 import CardDesignEditor from './cardDesign/CardDesignEditor'
+import OfferAnalyticsModal from './OfferAnalyticsModal'
 
 function OffersTab({ analytics }) {
+  const { t } = useTranslation('dashboard')
   const [offers, setOffers] = useState([])
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -18,11 +20,13 @@ function OffersTab({ analytics }) {
   const [showEditModal, setShowEditModal] = useState(null)
   const [showQRModal, setShowQRModal] = useState(null)
   const [showCardDesigner, setShowCardDesigner] = useState(null)
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
+  const [selectedOfferForAnalytics, setSelectedOfferForAnalytics] = useState(null)
 
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState('All Status')
-  const [branchFilter, setBranchFilter] = useState('All Branches')
-  const [typeFilter, setTypeFilter] = useState('All Types')
+  // Filter states - use internal constants, not translated strings
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [branchFilter, setBranchFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
   const [filtersExpanded, setFiltersExpanded] = useState(() => {
     const saved = localStorage.getItem('offersFiltersExpanded')
     return saved ? JSON.parse(saved) : false
@@ -101,11 +105,11 @@ function OffersTab({ analytics }) {
         ))
         console.log('🔒 Offer status updated successfully')
       } else {
-        alert('Failed to update offer status')
+        alert(t('offers.statusUpdateFailed'))
       }
     } catch (err) {
       console.error('Error updating offer status:', err)
-      alert('Error updating offer status')
+      alert(t('offers.statusUpdateFailed'))
     }
   }
   
@@ -120,10 +124,10 @@ function OffersTab({ analytics }) {
         await loadOffers() // Reload to get updated data
         console.log('🔒 Offer deleted successfully')
       } else {
-        throw new Error(data.message || 'Failed to delete offer')
+        throw new Error(data.message || t('offers.deleteFailed'))
       }
     } catch (err) {
-      setError(err.message || 'Failed to delete offer')
+      setError(err.message || t('offers.deleteFailed'))
       console.error('Error deleting offer:', err)
       setShowDeleteConfirm(null)
     }
@@ -158,15 +162,17 @@ function OffersTab({ analytics }) {
     }
   }
 
+  const handleAnalytics = (offer) => {
+    console.log('📊 Opening analytics for offer:', offer.public_id)
+    setSelectedOfferForAnalytics(offer)
+    setAnalyticsModalOpen(true)
+  }
 
-  // Filter offers based on selected filters
+  // Filter offers based on selected filters - use constants for comparison
   const filteredOffers = offers.filter(offer => {
-    const statusMatch = statusFilter === 'All Status' || offer.status === statusFilter.toLowerCase()
-    const branchMatch = branchFilter === 'All Branches' || offer.branch === branchFilter
-    const typeMatch = typeFilter === 'All Types' ||
-      (typeFilter === 'Stamp Cards' && offer.type === 'stamps') ||
-      (typeFilter === 'Discounts' && offer.type === 'discount') ||
-      (typeFilter === 'Points' && offer.type === 'points')
+    const statusMatch = statusFilter === 'all' || offer.status === statusFilter
+    const branchMatch = branchFilter === 'all' || offer.branch === branchFilter
+    const typeMatch = typeFilter === 'all' || offer.type === typeFilter
 
     return statusMatch && branchMatch && typeMatch
   })
@@ -175,7 +181,7 @@ function OffersTab({ analytics }) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading offers...</p>
+        <p className="mt-4 text-gray-600">{t('offers.loading')}</p>
       </div>
     )
   }
@@ -188,17 +194,17 @@ function OffersTab({ analytics }) {
       {/* Header Section - Mobile-first: Stack vertically */}
       <div className="flex flex-col space-y-3 compact-header">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Active Offers</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage your loyalty programs and track performance</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('offers.activeOffers')}</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('offers.managePrograms')}</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-2 shadow-lg min-h-[44px] active:scale-95"
+          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2 shadow-lg min-h-[44px] active:scale-95"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          <span>Create Offer</span>
+          <span>{t('offers.createOffer')}</span>
         </button>
       </div>
 
@@ -227,10 +233,10 @@ function OffersTab({ analytics }) {
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
           >
             <span>🔍</span>
-            <span className="font-medium text-gray-900 dark:text-white">Filters</span>
-            {(statusFilter !== 'All Status' || branchFilter !== 'All Branches' || typeFilter !== 'All Types') && (
+            <span className="font-medium text-gray-900 dark:text-white">{t('offers.filters')}</span>
+            {(statusFilter !== 'all' || branchFilter !== 'all' || typeFilter !== 'all') && (
               <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full">
-                {[statusFilter !== 'All Status', branchFilter !== 'All Branches', typeFilter !== 'All Types'].filter(Boolean).length}
+                {[statusFilter !== 'all', branchFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length}
               </span>
             )}
             <svg 
@@ -245,34 +251,34 @@ function OffersTab({ analytics }) {
 
           {/* Quick Filter Pills */}
           <button
-            onClick={() => { setStatusFilter('All Status'); setBranchFilter('All Branches'); setTypeFilter('All Types'); }}
+            onClick={() => { setStatusFilter('all'); setBranchFilter('all'); setTypeFilter('all'); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === 'All Status' && branchFilter === 'All Branches' && typeFilter === 'All Types'
+              statusFilter === 'all' && branchFilter === 'all' && typeFilter === 'all'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            All
+            {t('offers.all')}
           </button>
           <button
-            onClick={() => setStatusFilter('Active')}
+            onClick={() => setStatusFilter('active')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === 'Active'
+              statusFilter === 'active'
                 ? 'bg-green-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            Active
+            {t('offers.active')}
           </button>
           <button
-            onClick={() => setStatusFilter('Inactive')}
+            onClick={() => setStatusFilter('inactive')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === 'Inactive'
+              statusFilter === 'inactive'
                 ? 'bg-yellow-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            Inactive
+            {t('offers.inactive')}
           </button>
         </div>
 
@@ -291,11 +297,11 @@ function OffersTab({ analytics }) {
                   }}
                   className="w-full px-3 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option>All Status</option>
-                  <option>Active</option>
-                  <option>Inactive</option>
-                  <option>Scheduled</option>
-                  <option>Expired</option>
+                  <option value="all">{t('offers.allStatus')}</option>
+                  <option value="active">{t('offers.active')}</option>
+                  <option value="inactive">{t('offers.inactive')}</option>
+                  <option value="scheduled">{t('offers.scheduled')}</option>
+                  <option value="expired">{t('offers.expired')}</option>
                 </select>
               </div>
               <div>
@@ -309,9 +315,9 @@ function OffersTab({ analytics }) {
                   }}
                   className="w-full px-3 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option>All Branches</option>
+                  <option value="all">{t('offers.allBranches')}</option>
                   {branches?.map((branch) => (
-                    <option key={branch.id} value={branch.name}>
+                    <option key={branch.public_id || branch.id} value={branch.name}>
                       {branch.name}
                     </option>
                   ))}
@@ -328,10 +334,10 @@ function OffersTab({ analytics }) {
                   }}
                   className="w-full px-3 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option>All Types</option>
-                  <option>Stamp Cards</option>
-                  <option>Discounts</option>
-                  <option>Points</option>
+                  <option value="all">{t('offers.allTypes')}</option>
+                  <option value="stamps">{t('offers.stampCards')}</option>
+                  <option value="discount">{t('offers.discounts')}</option>
+                  <option value="points">{t('offers.points')}</option>
                 </select>
               </div>
             </div>
@@ -347,11 +353,7 @@ function OffersTab({ analytics }) {
         onDelete={setShowDeleteConfirm}
         onToggleStatus={toggleOfferStatus}
         onQRCode={setShowQRModal}
-        onAnalytics={(offer) => {
-          // Analytics functionality placeholder
-          console.log('View analytics for offer:', offer.public_id || offer.id)
-        }}
-        onDuplicate={duplicateOffer}
+        onAnalytics={handleAnalytics}
         onDesignCard={setShowCardDesigner}
       />
 
@@ -359,23 +361,22 @@ function OffersTab({ analytics }) {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Delete Offer</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('offers.deleteConfirmTitle')}</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this offer? This action cannot be undone.
-              All customer progress will be lost.
+              {t('offers.deleteConfirmMessage')}
             </p>
-            <div className="flex space-x-3">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => deleteOffer(showDeleteConfirm)}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -393,7 +394,7 @@ function OffersTab({ analytics }) {
           }}
           onSave={async (offerData) => {
             try {
-              console.log('� Saving offer data:', JSON.stringify(offerData, null, 2))
+              console.log('💾 Saving offer data:', JSON.stringify(offerData, null, 2))
               
               if (showEditModal) {
                 // Update existing offer using secure ID
@@ -402,7 +403,7 @@ function OffersTab({ analytics }) {
                 const data = await response.json()
                 
                 if (!data.success) {
-                  throw new Error(data.message || 'Failed to update offer')
+                  throw new Error(data.message || t('offers.saveFailed'))
                 }
                 console.log('✅ Offer updated successfully')
               } else {
@@ -412,7 +413,7 @@ function OffersTab({ analytics }) {
                 const data = await response.json()
                 
                 if (!data.success) {
-                  throw new Error(data.message || 'Failed to create offer')
+                  throw new Error(data.message || t('offers.saveFailed'))
                 }
                 console.log('✅ Offer created successfully:', data.data?.public_id)
               }
@@ -426,7 +427,7 @@ function OffersTab({ analytics }) {
                 data: err.response?.data,
                 status: err.response?.status
               })
-              setError(err.message || 'Failed to save offer')
+              setError(err.message || t('offers.saveFailed'))
             }
           }}
         />
@@ -455,15 +456,28 @@ function OffersTab({ analytics }) {
           />
         </CardDesignProvider>
       )}
+
+      {/* Offer Analytics Modal */}
+      {analyticsModalOpen && selectedOfferForAnalytics && (
+        <OfferAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => {
+            setAnalyticsModalOpen(false)
+            setSelectedOfferForAnalytics(null)
+          }}
+          offer={selectedOfferForAnalytics}
+        />
+      )}
     </div>
   )
 }
 
 function CreateOfferModal({ offer, branches, onClose, onSave }) {
+  const { t } = useTranslation('dashboard')
   const [formData, setFormData] = useState({
     title: offer?.title || '',
     description: offer?.description || '',
-    branch: offer?.branch || 'All Branches',
+    branch: offer?.branch || 'all',
     type: offer?.type || 'stamps',
     stamps_required: offer?.stamps_required || 10,
     is_time_limited: offer?.is_time_limited || false,
@@ -553,10 +567,10 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              {offer ? 'Edit Offer' : 'Create New Offer'}
+              {offer ? t('offers.editOffer') : t('offers.createNewOffer')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {offer ? 'Update your loyalty offer details' : 'Set up a new loyalty program for your customers'}
+              {offer ? t('offers.updateOfferDetails') : t('offers.setupNewProgram')}
             </p>
           </div>
           <button
@@ -575,7 +589,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
             {/* Offer Title */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Offer Title *
+                {t('offers.offerTitle')} *
               </label>
               <input
                 type="text"
@@ -583,21 +597,21 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                placeholder="e.g., Buy 10 Get 1 Free Coffee"
+                placeholder={t('offers.offerTitlePlaceholder')}
               />
             </div>
 
             {/* Description */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Description
+                {t('offers.description')}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 className="w-full px-4 py-3 min-h-[88px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 resize-none"
                 rows="3"
-                placeholder="Describe your loyalty offer and its benefits..."
+                placeholder={t('offers.descriptionPlaceholder')}
               />
             </div>
 
@@ -605,14 +619,14 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Branch Location
+                  {t('offers.branchLocation')}
                 </label>
                 <select
                   value={formData.branch}
                   onChange={(e) => setFormData({...formData, branch: e.target.value})}
-                  className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                  className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                 >
-                  <option value="All Branches">All Branches</option>
+                  <option value="all">{t('offers.allBranches')}</option>
                   {branches?.map((branch) => (
                     <option key={branch.id} value={branch.name}>
                       {branch.name}
@@ -623,16 +637,16 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Program Type
+                  {t('offers.programType')}
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 >
-                  <option value="stamps">🎫 Stamp Card</option>
-                  <option value="points">⭐ Points System</option>
-                  <option value="discount">💰 Discount Code</option>
+                  <option value="stamps">🎫 {t('offers.stampCard')}</option>
+                  <option value="points">⭐ {t('offers.pointsSystem')}</option>
+                  <option value="discount">💰 {t('offers.discountCode')}</option>
                 </select>
               </div>
             </div>
@@ -640,7 +654,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
             {/* Requirements */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                {formData.type === 'stamps' ? '🎫 Stamps Required' : formData.type === 'points' ? '⭐ Points Required' : '💰 Minimum Purchase'}
+                {formData.type === 'stamps' ? '🎫 ' + t('offers.stampsRequired') : formData.type === 'points' ? '⭐ ' + t('offers.pointsRequired') : '💰 ' + t('offers.minimumPurchase')}
               </label>
               <input
                 type="number"
@@ -649,13 +663,13 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 value={formData.stamps_required}
                 onChange={(e) => setFormData({...formData, stamps_required: parseInt(e.target.value)})}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                placeholder={formData.type === 'stamps' ? 'e.g., 10' : formData.type === 'points' ? 'e.g., 100' : 'e.g., 50'}
+                placeholder={formData.type === 'stamps' ? t('offers.stampsPlaceholder') : formData.type === 'points' ? t('offers.pointsPlaceholder') : t('offers.minimumPurchasePlaceholder')}
               />
             </div>
 
             {/* Loyalty Tiers Section */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="tiersEnabled"
@@ -664,7 +678,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                   className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                 />
                 <label htmlFor="tiersEnabled" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  🏆 Enable Custom Loyalty Tiers / تفعيل مستويات الولاء المخصصة
+                  🏆 {t('offers.enableTiers')}
                 </label>
               </div>
 
@@ -672,14 +686,14 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 <div className="p-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 space-y-4">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Configure tier names, rewards thresholds, and icons. Customers see their tier in their wallet pass.
+                      {t('offers.tierConfigDesc')}
                     </p>
                     <button
                       type="button"
                       onClick={loadDefaultTiers}
                       className="px-3 py-2 text-xs font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
                     >
-                      Reset to Defaults
+                      {t('offers.resetToDefaults')}
                     </button>
                   </div>
 
@@ -688,10 +702,10 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                     {tiers.map((tier, index) => (
                       <div key={tier.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
                         <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center gap-2">
                             <span className="text-2xl">{tier.icon}</span>
                             <span className="font-semibold text-gray-900 dark:text-white">
-                              Tier {index + 1}
+                              {t('offers.tier')} {index + 1}
                             </span>
                           </div>
                           {tiers.length > 2 && (
@@ -710,7 +724,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Tier Name (English) *
+                              {t('offers.tierNameEnglish')} *
                             </label>
                             <input
                               type="text"
@@ -718,27 +732,27 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                               value={tier.name}
                               onChange={(e) => updateTier(index, 'name', e.target.value)}
                               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder="Gold Member"
+                              placeholder={t('offers.tierNamePlaceholder')}
                             />
                           </div>
 
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Tier Name (Arabic)
+                              {t('offers.tierNameArabic')}
                             </label>
                             <input
                               type="text"
                               value={tier.nameAr}
                               onChange={(e) => updateTier(index, 'nameAr', e.target.value)}
                               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder="عضو ذهبي"
+                              placeholder={t('offers.tierNameArPlaceholder')}
                               dir="rtl"
                             />
                           </div>
 
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Minimum Rewards *
+                              {t('offers.minimumRewards')} *
                             </label>
                             <input
                               type="number"
@@ -752,7 +766,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
 
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Maximum Rewards {index === tiers.length - 1 ? '(empty = unlimited)' : '*'}
+                              {t('offers.maximumRewards')} {index === tiers.length - 1 ? t('offers.emptyUnlimited') : '*'}
                             </label>
                             <input
                               type="number"
@@ -760,13 +774,13 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                               value={tier.maxRewards === null ? '' : tier.maxRewards}
                               onChange={(e) => updateTier(index, 'maxRewards', e.target.value === '' ? null : parseInt(e.target.value))}
                               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder={index === tiers.length - 1 ? 'Unlimited' : ''}
+                              placeholder={index === tiers.length - 1 ? t('offers.unlimited') : ''}
                             />
                           </div>
 
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Icon (Emoji) *
+                              {t('offers.iconEmoji')} *
                             </label>
                             <input
                               type="text"
@@ -774,14 +788,14 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                               value={tier.icon}
                               onChange={(e) => updateTier(index, 'icon', e.target.value)}
                               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                              placeholder="🥇"
+                              placeholder={t('offers.iconPlaceholder')}
                               maxLength="2"
                             />
                           </div>
 
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Icon URL (Optional)
+                              {t('offers.iconUrl')}
                             </label>
                             <input
                               type="url"
@@ -838,7 +852,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
 
             {/* Time Limits Section */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="timeLimited"
@@ -892,14 +906,14 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
             onClick={onClose}
             className="w-full sm:flex-1 px-6 py-3 min-h-[44px] border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 active:scale-95"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             form="offer-form"
             className="w-full sm:flex-1 px-6 py-3 min-h-[44px] bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 transform hover:scale-[1.02] active:scale-95 shadow-lg"
           >
-            {offer ? '✨ Update Offer' : '🎉 Create Offer'}
+            {offer ? '✨ ' + t('offers.updateOffer') : '🎉 ' + t('offers.createOffer')}
           </button>
         </div>
       </div>

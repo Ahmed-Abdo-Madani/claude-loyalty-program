@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import MiniStatCard from './MiniStatCard'
 
 function StatsCardGrid({ analytics }) {
+  const { t } = useTranslation('dashboard')
+  
   // Map existing analytics data to design stats
   const statsCards = [
     {
       id: 'total_customers',
-      title: 'Total Customers',
+      title: t('overview.totalCustomers'),
       value: analytics?.totalCustomers || 0,
       icon: '👥',
       bgGradient: 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30',
@@ -17,7 +20,7 @@ function StatsCardGrid({ analytics }) {
     },
     {
       id: 'active_members',
-      title: 'Active Members',
+      title: t('overview.activeMembers'),
       value: analytics?.activeMembers || analytics?.cardsIssued || 0,
       icon: '✅',
       bgGradient: 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30',
@@ -28,7 +31,7 @@ function StatsCardGrid({ analytics }) {
     },
     {
       id: 'vip_customers',
-      title: 'VIP',
+      title: t('overview.vip'),
       value: analytics?.vipCustomers || 0,
       icon: '👑',
       bgGradient: 'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30',
@@ -39,7 +42,7 @@ function StatsCardGrid({ analytics }) {
     },
     {
       id: 'points_redeemed',
-      title: 'Points Redeemed',
+      title: t('overview.pointsRedeemed'),
       value: analytics?.rewardsRedeemed || 0,
       icon: '💎',
       bgGradient: 'bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/30',
@@ -54,13 +57,13 @@ function StatsCardGrid({ analytics }) {
     <div className="mb-3 sm:mb-4">
       {/* Header with Analytics Link */}
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Performance Overview</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{t('overview.performanceOverview')}</h2>
         <Link 
           to="/dashboard?tab=analytics"
-          className="flex items-center space-x-1 text-sm text-primary dark:text-primary hover:underline font-medium"
+          className="flex items-center gap-1 text-sm text-primary dark:text-primary hover:underline font-medium"
         >
-          <span>📈 Advanced Analytics</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span>{t('overview.advancedAnalytics')}</span>
+          <svg className="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </Link>

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
+import LanguageSwitcher from './LanguageSwitcher'
 
 function DashboardHeader({ user }) {
+  const { t } = useTranslation('dashboard')
   const { isDark, toggleTheme } = useTheme()
   const [logoInfo, setLogoInfo] = useState(null)
 
@@ -43,7 +46,7 @@ function DashboardHeader({ user }) {
         <div className="px-3 sm:px-6 py-2 sm:py-3">
           <div className="flex items-center justify-between">
             {/* Business Title with Logo */}
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {/* Business Logo */}
               {logoInfo && (
                 <div className="flex-shrink-0">
@@ -58,23 +61,26 @@ function DashboardHeader({ user }) {
               {/* Business Name and Dashboard Text */}
               <div className="min-w-0">
                 <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 dark:text-gray-200 truncate">
-                  {user?.businessName?.toUpperCase() || 'BUSINESS'} <span className="font-normal hidden sm:inline">DASHBOARD</span>
+                  {user?.businessName?.toUpperCase() || 'BUSINESS'} <span className="font-normal hidden sm:inline">{t('header.dashboard').toUpperCase()}</span>
                 </h1>
                 {logoInfo && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-                    🏢 Business Logo Active
+                    {t('header.businessLogoActive')}
                   </p>
                 )}
               </div>
             </div>
 
             {/* Header Actions */}
-            <div className="flex items-center flex-shrink-0">
+            <div className="flex items-center flex-shrink-0 gap-2">
+              {/* Language Switcher */}
+              <LanguageSwitcher variant="button" showLabels={false} className="" />
+              
               {/* Dark Mode Toggle - Visible on mobile since sidebar is hidden */}
               <button
                 onClick={toggleTheme}
                 className="flex p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 min-h-[44px] min-w-[44px] items-center justify-center touch-target active:scale-95"
-                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                aria-label={isDark ? t('header.switchToLightMode') : t('header.switchToDarkMode')}
               >
                 {isDark ? (
                   <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

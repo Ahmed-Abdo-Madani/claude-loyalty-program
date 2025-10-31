@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 
 function NotificationModal({ customers = [], notificationType = 'custom', offers = [], onClose, onSuccess }) {
+  const { t } = useTranslation('cardDesign')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -21,39 +23,39 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
   // Notification type configurations
   const notificationTypes = {
     custom: {
-      label: 'Custom Message',
+      label: t('notification.types.custom.label'),
       icon: '💬',
-      description: 'Send a custom notification to selected customers',
+      description: t('notification.types.custom.description'),
       fields: ['header', 'body']
     },
     offer: {
-      label: 'Promotional Offer',
+      label: t('notification.types.offer.label'),
       icon: '🎁',
-      description: 'Promote a specific offer to customers',
+      description: t('notification.types.offer.description'),
       fields: ['offer', 'header', 'body']
     },
     reminder: {
-      label: 'Progress Reminder',
+      label: t('notification.types.reminder.label'),
       icon: '⏰',
-      description: 'Remind customers about their progress',
+      description: t('notification.types.reminder.description'),
       fields: ['offer']
     },
     birthday: {
-      label: 'Birthday Greeting',
+      label: t('notification.types.birthday.label'),
       icon: '🎂',
-      description: 'Send birthday wishes to customers',
+      description: t('notification.types.birthday.description'),
       fields: []
     },
     milestone: {
-      label: 'Milestone Celebration',
+      label: t('notification.types.milestone.label'),
       icon: '🏆',
-      description: 'Celebrate customer achievements',
+      description: t('notification.types.milestone.description'),
       fields: ['milestoneTitle', 'milestoneMessage']
     },
     reengagement: {
-      label: 'Re-engagement',
+      label: t('notification.types.reengagement.label'),
       icon: '💙',
-      description: 'Win back inactive customers',
+      description: t('notification.types.reengagement.description'),
       fields: ['incentiveHeader', 'incentiveBody']
     }
   }
@@ -65,44 +67,44 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
     if (formData.type === 'birthday' && !formData.header) {
       setFormData(prev => ({
         ...prev,
-        header: 'Happy Birthday!',
-        body: 'Celebrate with us! We have a special surprise for you.'
+        header: t('notification.defaults.birthdayHeader'),
+        body: t('notification.defaults.birthdayBody')
       }))
     } else if (formData.type === 'reengagement' && !formData.incentiveHeader) {
       setFormData(prev => ({
         ...prev,
-        incentiveHeader: 'We miss you!',
-        incentiveBody: 'Come back and enjoy exclusive rewards waiting for you.'
+        incentiveHeader: t('notification.defaults.reengagementHeader'),
+        incentiveBody: t('notification.defaults.reengagementBody')
       }))
     }
-  }, [formData.type])
+  }, [formData.type, t])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     if (customers.length === 0) {
-      setError('No customers selected')
+      setError(t('notification.errors.noCustomers'))
       return
     }
 
     // Validation based on type
     if (currentType.fields.includes('header') && !formData.header.trim()) {
-      setError('Message header is required')
+      setError(t('notification.errors.headerRequired'))
       return
     }
 
     if (currentType.fields.includes('body') && !formData.body.trim()) {
-      setError('Message body is required')
+      setError(t('notification.errors.bodyRequired'))
       return
     }
 
     if (currentType.fields.includes('offer') && !formData.offerId) {
-      setError('Please select an offer')
+      setError(t('notification.errors.offerRequired'))
       return
     }
 
     if (currentType.fields.includes('milestoneTitle') && !formData.milestoneTitle.trim()) {
-      setError('Milestone title is required')
+      setError(t('notification.errors.milestoneTitleRequired'))
       return
     }
 
@@ -187,12 +189,12 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
       if (data.success) {
         onSuccess(data.data)
       } else {
-        setError(data.message || 'Failed to send notification')
+        setError(data.message || t('notification.errors.sendFailed', { error: '' }))
       }
 
     } catch (err) {
       console.error('Notification send error:', err)
-      setError('Failed to send notification: ' + err.message)
+      setError(t('notification.errors.sendFailed', { error: err.message }))
     } finally {
       setLoading(false)
     }
@@ -267,7 +269,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <span className="text-2xl">{currentType.icon}</span>
             </div>
@@ -276,7 +278,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
                 {currentType.label}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Sending to {customers.length} customer{customers.length !== 1 ? 's' : ''}
+                {t('notification.sendingTo', { count: customers.length })}
               </p>
             </div>
           </div>
@@ -305,7 +307,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {/* Type Selector */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Notification Type
+              {t('notification.notificationType')}
             </label>
             <select
               value={formData.type}
@@ -327,7 +329,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('offer') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Offer *
+                {t('notification.selectOffer')}
               </label>
               <select
                 value={formData.offerId}
@@ -335,7 +337,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="">Choose an offer...</option>
+                <option value="">{t('notification.chooseOffer')}</option>
                 {offers.map((offer) => (
                   <option key={offer.public_id} value={offer.public_id}>
                     {offer.title}
@@ -349,19 +351,19 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('header') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Message Header *
+                {t('notification.messageHeader')}
               </label>
               <input
                 type="text"
                 value={formData.header}
                 onChange={(e) => setFormData({ ...formData, header: e.target.value.slice(0, HEADER_LIMIT) })}
-                placeholder="e.g., Special Offer Just for You!"
+                placeholder={t('notification.messageHeaderPlaceholder')}
                 maxLength={HEADER_LIMIT}
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
-                {formData.header.length}/{HEADER_LIMIT} characters
+                {t('common:validation.characterLimit', { current: formData.header.length, max: HEADER_LIMIT })}
               </p>
             </div>
           )}
@@ -370,19 +372,19 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('body') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Message Body *
+                {t('notification.messageBody')}
               </label>
               <textarea
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value.slice(0, BODY_LIMIT) })}
-                placeholder="Enter your message here..."
+                placeholder={t('notification.messageBodyPlaceholder')}
                 rows={4}
                 maxLength={BODY_LIMIT}
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
-                {formData.body.length}/{BODY_LIMIT} characters
+                {t('common:validation.characterLimit', { current: formData.body.length, max: BODY_LIMIT })}
               </p>
             </div>
           )}
@@ -391,13 +393,13 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('milestoneTitle') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Milestone Title *
+                {t('notification.milestoneTitle')}
               </label>
               <input
                 type="text"
                 value={formData.milestoneTitle}
                 onChange={(e) => setFormData({ ...formData, milestoneTitle: e.target.value.slice(0, HEADER_LIMIT) })}
-                placeholder="e.g., 10th Visit Milestone!"
+                placeholder={t('notification.milestoneTitlePlaceholder')}
                 maxLength={HEADER_LIMIT}
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -409,12 +411,12 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('milestoneMessage') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Celebration Message
+                {t('notification.celebrationMessage')}
               </label>
               <textarea
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value.slice(0, BODY_LIMIT) })}
-                placeholder="Congratulations on reaching this milestone!"
+                placeholder={t('notification.celebrationPlaceholder')}
                 rows={3}
                 maxLength={BODY_LIMIT}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
@@ -427,25 +429,25 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Greeting Header
+                  {t('notification.greetingHeader')}
                 </label>
                 <input
                   type="text"
                   value={formData.incentiveHeader}
                   onChange={(e) => setFormData({ ...formData, incentiveHeader: e.target.value.slice(0, HEADER_LIMIT) })}
-                  placeholder="We miss you!"
+                  placeholder={t('notification.greetingPlaceholder')}
                   maxLength={HEADER_LIMIT}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Incentive Message
+                  {t('notification.incentiveMessage')}
                 </label>
                 <textarea
                   value={formData.incentiveBody}
                   onChange={(e) => setFormData({ ...formData, incentiveBody: e.target.value.slice(0, BODY_LIMIT) })}
-                  placeholder="Come back and enjoy exclusive rewards..."
+                  placeholder={t('notification.incentivePlaceholder')}
                   rows={3}
                   maxLength={BODY_LIMIT}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
@@ -459,14 +461,14 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center">
                 <span className="mr-2">📱</span>
-                Wallet Notification Preview
+                {t('notification.walletPreview')}
               </h3>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
                 <div className="font-semibold text-gray-900 dark:text-white mb-1">
-                  {formData.header || formData.milestoneTitle || formData.incentiveHeader || 'Your Notification Header'}
+                  {formData.header || formData.milestoneTitle || formData.incentiveHeader || t('notification.yourNotificationHeader')}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {formData.body || formData.incentiveBody || 'Your notification message will appear here...'}
+                  {formData.body || formData.incentiveBody || t('notification.yourNotificationMessage')}
                 </div>
               </div>
             </div>
@@ -477,39 +479,39 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
             <div className="flex items-start">
               <span className="text-blue-600 dark:text-blue-400 mr-3 mt-0.5">ℹ️</span>
               <div className="text-sm text-blue-800 dark:text-blue-300">
-                <p className="font-medium mb-1">Important Notes:</p>
+                <p className="font-medium mb-1">{t('notification.importantNotes')}</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Rate limit: 10 notifications per customer per day</li>
-                  <li>Only customers with active wallet passes will receive notifications</li>
-                  <li>Messages will appear in Apple Wallet and Google Wallet</li>
+                  <li>{t('notification.rateLimit')}</li>
+                  <li>{t('notification.activeWalletOnly')}</li>
+                  <li>{t('notification.appearsInWallets')}</li>
                 </ul>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4">
+          <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
               className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors duration-200"
             >
-              Cancel
+              {t('notification.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading || customers.length === 0}
-              className="flex-1 px-6 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+              className="flex-1 px-6 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Sending...</span>
+                  <span>{t('notification.sending')}</span>
                 </>
               ) : (
                 <>
                   <span>📤</span>
-                  <span>Send Notification</span>
+                  <span>{t('notification.sendNotification')}</span>
                 </>
               )}
             </button>

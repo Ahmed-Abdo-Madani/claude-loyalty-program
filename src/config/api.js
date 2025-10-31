@@ -1,4 +1,5 @@
 import { getSecureAuthHeaders, secureApiRequest } from '../utils/secureAuth'
+import i18n from '../i18n/config.js'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -127,7 +128,11 @@ export const endpoints = {
   branchManagerVerify: `${API_BASE_URL}/api/branch-manager/verify`,
   branchManagerScan: `${API_BASE_URL}/api/branch-manager/scan`,
   branchManagerConfirmPrize: `${API_BASE_URL}/api/branch-manager/confirm-prize`,
-  branchManagerStats: `${API_BASE_URL}/api/branch-manager/stats/today`
+  branchManagerStats: `${API_BASE_URL}/api/branch-manager/stats/today`,
+
+  // Analytics Helper Functions
+  getOfferAnalytics: (offerId) => `${API_BASE_URL}/api/business/my/offers/${offerId}/analytics`,
+  getBranchAnalytics: (branchId) => `${API_BASE_URL}/api/business/my/branches/${branchId}/analytics`
 }
 
 // Secure API helper functions
@@ -168,9 +173,48 @@ export const secureApi = {
   }
 }
 
+// Public API helper functions (no authentication required)
+export const publicApi = {
+  // GET request with language header
+  async get(endpoint, options = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept-Language': i18n.language || 'ar',
+      ...(options.headers || {})
+    }
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      ...options,
+      headers
+    })
+    
+    return response
+  },
+
+  // POST request with language header
+  async post(endpoint, data, options = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept-Language': i18n.language || 'ar',
+      ...(options.headers || {})
+    }
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      ...options,
+      headers
+    })
+    
+    return response
+  }
+}
+
 export default {
   baseURL: API_BASE_URL,
   apiBaseUrl: API_BASE_URL,
   endpoints,
-  secureApi
+  secureApi,
+  publicApi  // NEW: Add publicApi to exports
 }

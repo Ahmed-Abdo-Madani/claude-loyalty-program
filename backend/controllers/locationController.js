@@ -1,5 +1,6 @@
 import LocationService from '../services/LocationService.js'
 import logger from '../config/logger.js'
+import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 
 class LocationController {
   /**
@@ -8,13 +9,14 @@ class LocationController {
    */
   static async searchAll(req, res) {
     try {
-      const { q: query, lang: language = 'ar', limit = 10 } = req.query
+      const language = req.locale || req.query.lang || 'ar'
+      const { q: query, limit = 10 } = req.query
 
       if (!query || query.length < 2) {
         return res.json({
           success: true,
           data: [],
-          message: 'Query must be at least 2 characters'
+          message: getLocalizedMessage('validation.queryMinLength', req.locale)
         })
       }
 
@@ -45,7 +47,7 @@ class LocationController {
       logger.error('❌ Location search failed:', error)
       res.status(500).json({
         success: false,
-        error: 'Location search failed',
+        error: getLocalizedMessage('server.locationSearchFailed', req.locale),
         message: error.message
       })
     }
@@ -57,7 +59,7 @@ class LocationController {
    */
   static async getRegions(req, res) {
     try {
-      const { lang: language = 'ar' } = req.query
+      const language = req.locale || req.query.lang || 'ar'
       const regions = await LocationService.loadRegions()
       
       logger.info(`📍 Retrieved ${regions.length} regions`)
@@ -71,7 +73,7 @@ class LocationController {
       logger.error('❌ Failed to get regions:', error)
       res.status(500).json({
         success: false,
-        error: 'Failed to load regions',
+        error: getLocalizedMessage('server.failedToLoadRegions', req.locale),
         message: error.message
       })
     }
@@ -84,12 +86,13 @@ class LocationController {
   static async getCitiesByRegion(req, res) {
     try {
       const { regionId } = req.params
-      const { lang: language = 'ar', search } = req.query
+      const language = req.locale || req.query.lang || 'ar'
+      const { search } = req.query
 
       if (!regionId) {
         return res.status(400).json({
           success: false,
-          error: 'Region ID is required'
+          error: getLocalizedMessage('validation.regionIdRequired', req.locale)
         })
       }
 
@@ -112,7 +115,7 @@ class LocationController {
       logger.error('❌ Failed to get cities:', error)
       res.status(500).json({
         success: false,
-        error: 'Failed to load cities',
+        error: getLocalizedMessage('server.failedToLoadCities', req.locale),
         message: error.message
       })
     }
@@ -125,12 +128,13 @@ class LocationController {
   static async getDistrictsByCity(req, res) {
     try {
       const { cityId } = req.params
-      const { lang: language = 'ar', search } = req.query
+      const language = req.locale || req.query.lang || 'ar'
+      const { search } = req.query
 
       if (!cityId) {
         return res.status(400).json({
           success: false,
-          error: 'City ID is required'
+          error: getLocalizedMessage('validation.cityIdRequired', req.locale)
         })
       }
 
@@ -153,7 +157,7 @@ class LocationController {
       logger.error('❌ Failed to get districts:', error)
       res.status(500).json({
         success: false,
-        error: 'Failed to load districts',
+        error: getLocalizedMessage('server.failedToLoadDistricts', req.locale),
         message: error.message
       })
     }
@@ -166,7 +170,7 @@ class LocationController {
   static async getLocationById(req, res) {
     try {
       const { type, id } = req.params
-      const { lang: language = 'ar' } = req.query
+      const language = req.locale || req.query.lang || 'ar'
 
       let location
       switch (type) {
@@ -182,14 +186,14 @@ class LocationController {
         default:
           return res.status(400).json({
             success: false,
-            error: 'Invalid location type. Must be: region, city, or district'
+            error: getLocalizedMessage('validation.invalidLocationType', req.locale)
           })
       }
 
       if (!location) {
         return res.status(404).json({
           success: false,
-          error: `${type} not found`,
+          error: getLocalizedMessage('notFound.location', req.locale, { type }),
           id: parseInt(id)
         })
       }
@@ -209,7 +213,7 @@ class LocationController {
       logger.error('❌ Failed to get location by ID:', error)
       res.status(500).json({
         success: false,
-        error: 'Failed to load location',
+        error: getLocalizedMessage('server.failedToLoadLocation', req.locale),
         message: error.message
       })
     }
@@ -222,20 +226,26 @@ class LocationController {
   static async validateLocation(req, res) {
     try {
       const location = req.body
+      const language = req.locale || req.query.lang || 'ar'
 
       const validation = LocationService.validateLocation(location)
       
       if (!validation.valid) {
+        // Check if validation returned an errorKey (new format)
+        const errorMessage = validation.errorKey 
+          ? getLocalizedMessage(validation.errorKey, req.locale, validation.params)
+          : validation.error // Fallback to old format if service not yet updated
+        
         return res.status(400).json({
           success: false,
-          error: 'Invalid location data',
-          message: validation.error,
+          error: getLocalizedMessage('validation.invalidLocationData', req.locale),
+          message: errorMessage,
           data: location
         })
       }
 
       // Get full location details if valid
-      const hierarchy = await LocationService.getLocationHierarchy(location, req.query.lang || 'ar')
+      const hierarchy = await LocationService.getLocationHierarchy(location, language)
       
       res.json({
         success: true,
@@ -249,7 +259,7 @@ class LocationController {
       logger.error('❌ Location validation failed:', error)
       res.status(500).json({
         success: false,
-        error: 'Location validation failed',
+        error: getLocalizedMessage('server.locationValidationFailed', req.locale),
         message: error.message
       })
     }

@@ -21,6 +21,7 @@ import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
 import StampImageGenerator from './services/StampImageGenerator.js'
+import { extractLanguage, getLocalizedMessage } from './middleware/languageMiddleware.js'
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -121,7 +122,8 @@ app.use(cors({
     'x-session-token',
     'x-business-id',
     'x-manager-token',    // Branch manager authentication
-    'x-branch-id'         // Branch manager branch ID
+    'x-branch-id',        // Branch manager branch ID
+    'Accept-Language'     // NEW: Support for language preference
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }))
@@ -150,6 +152,9 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)')
   next()
 })
+
+// Language detection middleware (extract from Accept-Language header or query param)
+app.use(extractLanguage)
 
 // Rate limiting (ALL ENVIRONMENTS - protects against DoS attacks)
 // Note: /health endpoint is exempt (defined above before this middleware)
@@ -205,8 +210,8 @@ app.use((req, res, next) => {
     })
 
     return res.status(429).json({
-      error: 'Too many requests',
-      message: 'Rate limit exceeded. Please try again later.',
+      error: getLocalizedMessage('server.rateLimitExceeded', req.locale || 'ar'),
+      message: getLocalizedMessage('server.rateLimitMessage', req.locale || 'ar', { minutes: Math.ceil(retryAfter / 60) }),
       retryAfter: retryAfter
     })
   }
@@ -250,7 +255,7 @@ app.use((err, req, res, next) => {
     ip: req.ip
   })
   res.status(500).json({
-    error: 'Internal server error',
+    error: getLocalizedMessage('server.internalError', req.locale || 'ar'),
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   })
 })
@@ -258,7 +263,7 @@ app.use((err, req, res, next) => {
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Route not found',
+    error: getLocalizedMessage('server.routeNotFound', req.locale || 'ar'),
     path: req.originalUrl
   })
 })

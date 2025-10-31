@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 
 function BusinessesTable() {
+  const { t } = useTranslation('admin')
   const [businesses, setBusinesses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -49,11 +51,11 @@ function BusinessesTable() {
         const data = await response.json()
         setBusinesses(data.data.businesses || [])
       } else {
-        setError('Failed to fetch businesses')
+        setError(t('businessManagement.failedToFetch'))
       }
     } catch (error) {
       console.error('Error fetching businesses:', error)
-      setError('Failed to load businesses')
+      setError(t('businessManagement.failedToLoad'))
     } finally {
       setLoading(false)
     }
@@ -71,11 +73,11 @@ function BusinessesTable() {
         // Refresh businesses list
         fetchBusinesses()
       } else {
-        setError('Failed to update business status')
+        setError(t('businessManagement.failedToUpdateStatus'))
       }
     } catch (error) {
       console.error('Error updating business status:', error)
-      setError('Failed to update business status')
+      setError(t('businessManagement.failedToUpdateStatus'))
     }
   }
 
@@ -110,11 +112,11 @@ function BusinessesTable() {
         fetchBusinesses()
         setSelectedBusinesses([])
       } else {
-        setError('Failed to approve businesses')
+        setError(t('businessManagement.failedToApprove'))
       }
     } catch (error) {
       console.error('Error approving businesses:', error)
-      setError('Failed to approve businesses')
+      setError(t('businessManagement.failedToApprove'))
     }
   }
 
@@ -125,9 +127,9 @@ function BusinessesTable() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      active: { color: 'bg-green-100 text-green-800', text: 'Active - نشط' },
-      pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending - معلق' },
-      suspended: { color: 'bg-red-100 text-red-800', text: 'Suspended - معلق' }
+      active: { color: 'bg-green-100 text-green-800', text: t('businessManagement.statusBadge.active') },
+      pending: { color: 'bg-yellow-100 text-yellow-800', text: t('businessManagement.statusBadge.pending') },
+      suspended: { color: 'bg-red-100 text-red-800', text: t('businessManagement.statusBadge.suspended') }
     }
 
     const config = statusConfig[status] || statusConfig.pending
@@ -140,10 +142,10 @@ function BusinessesTable() {
 
   const getRegionName = (region) => {
     const regionMap = {
-      'Central Region': 'المنطقة الوسطى',
-      'Western Region': 'المنطقة الغربية',
-      'Eastern Region': 'المنطقة الشرقية',
-      'Saudi Arabia - All Regions': 'جميع مناطق السعودية'
+      'Central Region': t('businessManagement.regionMap.central'),
+      'Western Region': t('businessManagement.regionMap.western'),
+      'Eastern Region': t('businessManagement.regionMap.eastern'),
+      'Saudi Arabia - All Regions': t('businessManagement.regionMap.allRegions')
     }
     return regionMap[region] || region
   }
@@ -152,7 +154,7 @@ function BusinessesTable() {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-        <p className="mt-2 text-gray-600">Loading businesses... جاري تحميل الأعمال</p>
+        <p className="mt-2 text-gray-600">{t('businessManagement.loading')}</p>
       </div>
     )
   }
@@ -160,7 +162,7 @@ function BusinessesTable() {
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Business Management - إدارة الأعمال
+        {t('businessManagement.title')}
       </h2>
 
       {error && (
@@ -178,11 +180,11 @@ function BusinessesTable() {
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search - بحث
+              {t('businessManagement.search')}
             </label>
             <input
               type="text"
-              placeholder="Business name or email..."
+              placeholder={t('businessManagement.searchPlaceholder')}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
@@ -192,51 +194,51 @@ function BusinessesTable() {
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status - الحالة
+              {t('businessManagement.status')}
             </label>
             <select
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               value={filters.status}
               onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
             >
-              <option value="all">All Statuses - جميع الحالات</option>
-              <option value="active">Active - نشط</option>
-              <option value="pending">Pending - معلق</option>
-              <option value="suspended">Suspended - معلق</option>
+              <option value="all">{t('businessManagement.allStatuses')}</option>
+              <option value="active">{t('businessManagement.active')}</option>
+              <option value="pending">{t('businessManagement.pending')}</option>
+              <option value="suspended">{t('businessManagement.suspended')}</option>
             </select>
           </div>
 
           {/* Region Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Region - المنطقة
+              {t('businessManagement.region')}
             </label>
             <select
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               value={filters.region}
               onChange={(e) => setFilters(prev => ({ ...prev, region: e.target.value }))}
             >
-              <option value="all">All Regions - جميع المناطق</option>
-              <option value="Central Region">Central - الوسطى</option>
-              <option value="Western Region">Western - الغربية</option>
-              <option value="Eastern Region">Eastern - الشرقية</option>
+              <option value="all">{t('businessManagement.allRegions')}</option>
+              <option value="Central Region">{t('businessManagement.centralRegion')}</option>
+              <option value="Western Region">{t('businessManagement.westernRegion')}</option>
+              <option value="Eastern Region">{t('businessManagement.easternRegion')}</option>
             </select>
           </div>
 
           {/* Business Type Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type - النوع
+              {t('businessManagement.type')}
             </label>
             <select
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               value={filters.business_type}
               onChange={(e) => setFilters(prev => ({ ...prev, business_type: e.target.value }))}
             >
-              <option value="all">All Types - جميع الأنواع</option>
-              <option value="Restaurant & Cafe">Restaurant - مطعم</option>
-              <option value="Coffee Shop">Coffee Shop - مقهى</option>
-              <option value="Bakery & Sweets">Bakery - مخبز</option>
+              <option value="all">{t('businessManagement.allTypes')}</option>
+              <option value="Restaurant & Cafe">{t('businessManagement.restaurant')}</option>
+              <option value="Coffee Shop">{t('businessManagement.coffeeShop')}</option>
+              <option value="Bakery & Sweets">{t('businessManagement.bakery')}</option>
             </select>
           </div>
         </div>
@@ -247,14 +249,14 @@ function BusinessesTable() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
             <span className="text-sm text-blue-800">
-              {selectedBusinesses.length} businesses selected - {selectedBusinesses.length} أعمال محددة
+              {t('businessManagement.businessesSelected', { count: selectedBusinesses.length })}
             </span>
             <div className="space-x-2">
               <button
                 onClick={handleBulkApprove}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
               >
-                Approve Selected - موافقة على المحدد
+                {t('businessManagement.approveSelected')}
               </button>
             </div>
           </div>
@@ -276,19 +278,19 @@ function BusinessesTable() {
                   />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Business - الأعمال
+                  {t('businessManagement.business')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status - الحالة
+                  {t('businessManagement.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Region - المنطقة
+                  {t('businessManagement.region')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Performance - الأداء
+                  {t('businessManagement.performance')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions - الإجراءات
+                  {t('businessManagement.actions')}
                 </th>
               </tr>
             </thead>
@@ -312,7 +314,7 @@ function BusinessesTable() {
                         {business.email}
                       </div>
                       <div className="text-xs text-gray-400">
-                        Owner: {business.owner_name}
+                        {t('businessManagement.owner')}: {business.owner_name}
                       </div>
                     </div>
                   </td>
@@ -324,9 +326,9 @@ function BusinessesTable() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="space-y-1">
-                      <div>{business.total_branches} branches - فرع</div>
-                      <div>{business.total_customers} customers - عميل</div>
-                      <div>{business.total_offers} offers - عرض</div>
+                      <div>{business.total_branches} {t('businessManagement.branches')}</div>
+                      <div>{business.total_customers} {t('businessManagement.customers')}</div>
+                      <div>{business.total_offers} {t('businessManagement.offers')}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
@@ -334,14 +336,14 @@ function BusinessesTable() {
                       onClick={() => handleViewBusiness(business)}
                       className="text-purple-600 hover:text-purple-900 font-medium"
                     >
-                      View - عرض
+                      {t('businessManagement.view')}
                     </button>
                     {business.status === 'pending' && (
                       <button
                         onClick={() => handleStatusChange(business.public_id, 'active')}
                         className="text-green-600 hover:text-green-900 font-medium"
                       >
-                        Approve - موافقة
+                        {t('businessManagement.approve')}
                       </button>
                     )}
                     {business.status === 'active' && (
@@ -349,7 +351,7 @@ function BusinessesTable() {
                         onClick={() => handleStatusChange(business.public_id, 'suspended')}
                         className="text-red-600 hover:text-red-900 font-medium"
                       >
-                        Suspend - تعليق
+                        {t('businessManagement.suspend')}
                       </button>
                     )}
                     {business.status === 'suspended' && (
@@ -357,7 +359,7 @@ function BusinessesTable() {
                         onClick={() => handleStatusChange(business.public_id, 'active')}
                         className="text-green-600 hover:text-green-900 font-medium"
                       >
-                        Activate - تفعيل
+                        {t('businessManagement.activate')}
                       </button>
                     )}
                   </td>
@@ -370,8 +372,8 @@ function BusinessesTable() {
         {businesses.length === 0 && !loading && (
           <div className="text-center py-8">
             <div className="text-gray-400 text-4xl mb-4">🏢</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No businesses found</h3>
-            <p className="text-gray-500">لا توجد أعمال تجارية مطابقة للفلاتر المحددة</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('businessManagement.noBusinessesFound')}</h3>
+            <p className="text-gray-500">{t('businessManagement.noBusinessesMatchFilters')}</p>
           </div>
         )}
       </div>
@@ -383,7 +385,7 @@ function BusinessesTable() {
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
-                  Business Details - تفاصيل الأعمال
+                  {t('businessManagement.businessDetails')}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
@@ -396,64 +398,64 @@ function BusinessesTable() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Business Name</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.businessName')}</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedBusiness.business_name}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.status')}</label>
                     <div className="mt-1">{getStatusBadge(selectedBusiness.status)}</div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Owner</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.owner')}</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedBusiness.owner_name}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.phone')}</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedBusiness.phone}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.email')}</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedBusiness.email}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">License Number</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.licenseNumber')}</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedBusiness.license_number}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Business Type</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.businessType')}</label>
                     <p className="mt-1 text-sm text-gray-900">{selectedBusiness.business_type}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Region</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('businessManagement.region')}</label>
                     <p className="mt-1 text-sm text-gray-900">{getRegionName(selectedBusiness.region)}</p>
                   </div>
                 </div>
 
                 <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Performance Metrics - مقاييس الأداء</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">{t('businessManagement.performanceMetrics')}</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-purple-600">{selectedBusiness.total_branches}</div>
-                      <div className="text-sm text-gray-500">Branches - فروع</div>
+                      <div className="text-sm text-gray-500">{t('businessManagement.branches')}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">{selectedBusiness.total_customers}</div>
-                      <div className="text-sm text-gray-500">Customers - عملاء</div>
+                      <div className="text-sm text-gray-500">{t('businessManagement.customers')}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-600">{selectedBusiness.total_offers}</div>
-                      <div className="text-sm text-gray-500">Offers - عروض</div>
+                      <div className="text-sm text-gray-500">{t('businessManagement.offers')}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-orange-600">{selectedBusiness.total_redemptions}</div>
-                      <div className="text-sm text-gray-500">Redemptions - استردادات</div>
+                      <div className="text-sm text-gray-500">{t('businessManagement.redemptions')}</div>
                     </div>
                   </div>
                 </div>
 
                 {selectedBusiness.suspension_reason && (
                   <div className="border-t pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Suspension Reason - سبب التعليق</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">{t('businessManagement.suspensionReason')}</h4>
                     <p className="text-sm text-red-600">{selectedBusiness.suspension_reason}</p>
                   </div>
                 )}
@@ -464,7 +466,7 @@ function BusinessesTable() {
                   onClick={() => setShowModal(false)}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md"
                 >
-                  Close - إغلاق
+                  {t('businessManagement.close')}
                 </button>
                 {selectedBusiness.status === 'pending' && (
                   <button
@@ -474,7 +476,7 @@ function BusinessesTable() {
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
                   >
-                    Approve - موافقة
+                    {t('businessManagement.approve')}
                   </button>
                 )}
                 {selectedBusiness.status === 'suspended' && (
@@ -485,7 +487,7 @@ function BusinessesTable() {
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
                   >
-                    Activate - تفعيل
+                    {t('businessManagement.activate')}
                   </button>
                 )}
                 {selectedBusiness.status === 'active' && (
@@ -496,7 +498,7 @@ function BusinessesTable() {
                     }}
                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
                   >
-                    Suspend - تعليق
+                    {t('businessManagement.suspend')}
                   </button>
                 )}
               </div>

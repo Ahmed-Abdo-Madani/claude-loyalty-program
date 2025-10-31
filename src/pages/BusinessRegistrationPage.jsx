@@ -305,7 +305,7 @@ function BusinessRegistrationPage() {
         // Check business name in either language (accept any one)
         const hasBusinessName = formData.business_name.trim() || formData.business_name_ar.trim()
         if (!hasBusinessName) {
-          setError(t.businessNameRequired)
+          setError(t('registration.validation.businessNameRequired'))
           return false
         }
         // Auto-populate the missing language field if only one is filled
@@ -315,15 +315,15 @@ function BusinessRegistrationPage() {
           setFormData(prev => ({ ...prev, business_name: formData.business_name_ar }))
         }
         if (!formData.business_type) {
-          setError(t.businessTypeRequired)
+          setError(t('registration.validation.businessTypeRequired'))
           return false
         }
         if (!formData.license_number.trim()) {
-          setError(t.crNumberRequired)
+          setError(t('registration.validation.crNumberRequired'))
           return false
         }
         if (!validateCRNumber(formData.license_number)) {
-          setError(t.invalidCrFormat)
+          setError(t('registration.validation.invalidCrFormat'))
           return false
         }
         return true
@@ -339,23 +339,23 @@ function BusinessRegistrationPage() {
           return false
         }
         if (!formData.address.trim()) {
-          setError(t.addressRequired)
+          setError(t('registration.validation.addressRequired'))
           return false
         }
         if (!formData.phone.trim()) {
-          setError(t.phoneRequired)
+          setError(t('registration.validation.phoneRequired'))
           return false
         }
         if (!validateSaudiPhone(formData.phone)) {
-          setError(t.invalidPhoneFormat)
+          setError(t('registration.validation.invalidPhoneFormat'))
           return false
         }
         if (!formData.email.trim()) {
-          setError(t.emailRequired)
+          setError(t('registration.validation.emailRequired'))
           return false
         }
         if (!validateEmail(formData.email)) {
-          setError(t.invalidEmailFormat)
+          setError(t('registration.validation.invalidEmailFormat'))
           return false
         }
         return true
@@ -364,7 +364,7 @@ function BusinessRegistrationPage() {
         // Check owner name in either language (accept any one)
         const hasOwnerName = formData.owner_name.trim() || formData.owner_name_ar.trim()
         if (!hasOwnerName) {
-          setError(t.ownerNameRequired)
+          setError(t('registration.validation.ownerNameRequired'))
           return false
         }
         // Auto-populate the missing language field if only one is filled
@@ -374,42 +374,42 @@ function BusinessRegistrationPage() {
           setFormData(prev => ({ ...prev, owner_name: formData.owner_name_ar }))
         }
         if (!formData.owner_id.trim()) {
-          setError(t.ownerIdRequired)
+          setError(t('registration.validation.ownerIdRequired'))
           return false
         }
         if (!formData.owner_phone.trim()) {
-          setError(t.ownerPhoneRequired)
+          setError(t('registration.validation.ownerPhoneRequired'))
           return false
         }
         if (!validateSaudiPhone(formData.owner_phone)) {
-          setError(t.invalidPhoneFormat)
+          setError(t('registration.validation.invalidPhoneFormat'))
           return false
         }
         if (!formData.owner_email.trim()) {
-          setError(t.ownerEmailRequired)
+          setError(t('registration.validation.ownerEmailRequired'))
           return false
         }
         if (!validateEmail(formData.owner_email)) {
-          setError(t.invalidEmailFormat)
+          setError(t('registration.validation.invalidEmailFormat'))
           return false
         }
         return true
 
       case 4:
         if (!formData.password.trim()) {
-          setError(t.passwordRequired)
+          setError(t('registration.validation.passwordRequired'))
           return false
         }
         if (formData.password.length < 6) {
-          setError(t.passwordMinLength)
+          setError(t('registration.validation.passwordMinLength'))
           return false
         }
         if (formData.password !== formData.confirmPassword) {
-          setError(t.passwordsNotMatch)
+          setError(t('registration.validation.passwordsNotMatch'))
           return false
         }
         if (!formData.termsAccepted) {
-          setError(t.termsRequired)
+          setError(t('registration.validation.termsRequired'))
           return false
         }
         return true
@@ -907,7 +907,7 @@ function BusinessRegistrationPage() {
               />
               <span className="text-2xl font-bold text-primary">Madna</span>
             </Link>
-            <nav className="flex space-x-8">
+            <nav className="flex gap-8">
               <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-primary">Home</Link>
               <Link to="/features" className="text-gray-600 dark:text-gray-300 hover:text-primary">Features</Link>
               <Link to="/auth?mode=signin" className="text-gray-600 dark:text-gray-300 hover:text-primary">Sign In</Link>
@@ -931,29 +931,29 @@ function BusinessRegistrationPage() {
         {/* Language Selection - Only show in Step 1 */}
         {currentStep === 1 && (
           <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t.selectLanguage}</h3>
-            <div className="flex space-x-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('registration.language.selectLanguage')}</h3>
+            <div className="flex gap-4">
               <button
                 type="button"
-                onClick={() => setSelectedLanguage('ar')}
+                onClick={() => i18n.changeLanguage('ar')}
                 className={`px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
                   i18n.language === 'ar'
                     ? 'bg-primary text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
-                {content.ar.arabic}
+                {t('registration.language.arabic')}
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedLanguage('en')}
+                onClick={() => i18n.changeLanguage('en')}
                 className={`px-6 py-3 rounded-lg font-medium text-sm transition-colors ${
-                  selectedLanguage === 'en'
+                  i18n.language === 'en'
                     ? 'bg-primary text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
-                {content.en.english}
+                {t('registration.language.english')}
               </button>
             </div>
           </div>
@@ -973,10 +973,10 @@ function BusinessRegistrationPage() {
           </div>
           <div className="flex justify-between mt-4">
             {[
-              { step: 1, label: t.businessInfo },
-              { step: 2, label: t.location },
-              { step: 3, label: t.ownerInfo },
-              { step: 4, label: t.account }
+              { step: 1, label: t('registration.steps.businessInfo') },
+              { step: 2, label: t('registration.steps.location') },
+              { step: 3, label: t('registration.steps.ownerInfo') },
+              { step: 4, label: t('registration.steps.account') }
             ].map((item) => (
               <div key={item.step} className={`text-center ${
                 currentStep >= item.step ? 'text-primary' : 'text-gray-400 dark:text-gray-500'
@@ -1042,7 +1042,7 @@ function BusinessRegistrationPage() {
                       {t('registration.navigation.submitting')}
                     </div>
                   ) : (
-                    t.submitApplication
+                    t('registration.navigation.submitApplication')
                   )}
                 </button>
               )}

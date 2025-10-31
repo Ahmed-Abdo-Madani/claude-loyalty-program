@@ -41,7 +41,7 @@
   "tomorrow": "غداً",
   "now": "الآن",
   "date": "التاريخ",
-  "time": "الوقت",
+  "timeLabel": "الوقت",
   "createdAt": "تاريخ الإنشاء",
   "updatedAt": "تاريخ التحديث",
   "previous": "السابق",
@@ -62,5 +62,66 @@
   "help": "مساعدة",
   "about": "حول",
   "contact": "اتصل بنا",
-  "itemCount": "{{count}} عنصر"
+  "itemCount": "{{count}} عنصر",
+  "locationType": {
+    "region": "منطقة",
+    "city": "مدينة",
+    "district": "حي"
+  },
+  "gender": {
+    "male": "ذكر",
+    "female": "أنثى",
+    "selectGender": "اختر الجنس"
+  },
+  "countryCode": {
+    "label": "رمز الدولة",
+    "selectCountry": "اختر الدولة"
+  },
+  "modal": {
+    "done": "تم",
+    "closeModal": "إغلاق النافذة"
+  },
+  "upload": {
+    "chooseFile": "اختر ملف",
+    "browseFiles": "تصفح الملفات",
+    "dropHere": "أسقط الملف هنا أو",
+    "uploading": "جاري الرفع...",
+    "uploadComplete": "اكتمل الرفع",
+    "uploadError": "خطأ في الرفع",
+    "invalidFileType": "نوع ملف غير صالح",
+    "fileTooLarge": "حجم الملف كبير جداً",
+    "uploadHeroImage": "رفع صورة البطل",
+    "skipHeroImage": "تخطي",
+    "removeImage": "إزالة الصورة",
+    "uploadYourLogo": "ارفع شعارك",
+    "dragAndDrop": "اسحب وأفلت، أو انقر للتصفح",
+    "maxFileSize": "PNG أو JPG • الحد الأقصى 5 ميجابايت",
+    "uploadDifferentImage": "ارفع صورة مختلفة",
+    "uploadingProcessing": "جاري الرفع والمعالجة...",
+    "logoPreview": "معاينة الشعار",
+    "remove": "إزالة",
+    "suggestedColor": "لون مقترح",
+    "fromYourLogo": "💡 من شعارك",
+    "applyColor": "تطبيق اللون",
+    "tipSquareLogos": "نصيحة: استخدم شعارات مربعة للحصول على أفضل النتائج",
+    "showTechnicalDetails": "إظهار التفاصيل التقنية",
+    "hideTechnicalDetails": "إخفاء التفاصيل التقنية",
+    "googleWalletCircular": "Google Wallet: مقصوص إلى دائرة (660x660 بكسل كحد أدنى)",
+    "appleWalletRectangular": "Apple Wallet: مستطيل (320x100 بكسل @ 2x)",
+    "keepContentCentered": "احتفظ بالمحتوى المهم في المركز"
+  },
+  "validation": {
+    "requiredField": "هذا الحقل مطلوب",
+    "invalidFormat": "تنسيق غير صالح",
+    "characterLimit": "{{current}}/{{max}} حرف"
+  },
+  "time": {
+    "justNow": "الآن",
+    "minutesAgo": "منذ {{count}} دقيقة",
+    "hoursAgo": "منذ {{count}} ساعة",
+    "daysAgo": "منذ {{count}} يوم"
+  },
+  "location": {
+    "searchPlaceholder": "ابحث عن المنطقة أو المدينة أو الحي..."
+  }
 }

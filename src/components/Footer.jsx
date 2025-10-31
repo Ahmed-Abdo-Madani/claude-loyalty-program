@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import LanguageSwitcher from './LanguageSwitcher'
 
 function Footer() {
+  const { t } = useTranslation('landing')
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="container-max section-padding py-12">
@@ -14,14 +18,13 @@ function Footer() {
                 className="w-8 h-8 mr-3"
               />
               <div className="text-2xl font-bold text-primary">
-                Madna Platform
+                {t('footer.companyName')}
               </div>
             </div>
             <p className="text-gray-400 mb-6 max-w-md">
-              Helping businesses build lasting customer relationships through simple,
-              effective loyalty programs. No complexity, just results.
+              {t('footer.description')}
             </p>
-            <div className="flex space-x-4">
+            <div className="flex gap-4">
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
@@ -42,22 +45,22 @@ function Footer() {
 
           {/* Links columns */}
           <div>
-            <h3 className="font-semibold mb-4">Product</h3>
+            <h3 className="font-semibold mb-4">{t('footer.product')}</h3>
             <ul className="space-y-2 text-gray-400">
-              <li><Link to="/features" className="hover:text-white transition-colors">Features</Link></li>
-              <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-              <li><Link to="/integrations" className="hover:text-white transition-colors">Integrations</Link></li>
-              <li><Link to="/api-docs" className="hover:text-white transition-colors">API Documentation</Link></li>
+              <li><Link to="/features" className="hover:text-white transition-colors">{t('footer.features')}</Link></li>
+              <li><Link to="/pricing" className="hover:text-white transition-colors">{t('footer.pricing')}</Link></li>
+              <li><Link to="/integrations" className="hover:text-white transition-colors">{t('footer.integrations')}</Link></li>
+              <li><Link to="/api-docs" className="hover:text-white transition-colors">{t('footer.apiDocs')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Support</h3>
+            <h3 className="font-semibold mb-4">{t('footer.support')}</h3>
             <ul className="space-y-2 text-gray-400">
-              <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
-              <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-              <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link to="/help" className="hover:text-white transition-colors">{t('footer.helpCenter')}</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">{t('footer.contactUs')}</Link></li>
+              <li><Link to="/privacy" className="hover:text-white transition-colors">{t('footer.privacyPolicy')}</Link></li>
+              <li><Link to="/terms" className="hover:text-white transition-colors">{t('footer.termsOfService')}</Link></li>
             </ul>
           </div>
         </div>
@@ -65,14 +68,15 @@ function Footer() {
         {/* Bottom section */}
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div className="text-gray-400 text-sm">
-            © 2024 Madna Platform. All rights reserved.
+            {t('footer.copyright')}
           </div>
-          <div className="flex space-x-6 mt-4 md:mt-0">
+          <div className="flex items-center gap-6 mt-4 md:mt-0">
+            <LanguageSwitcher variant="button" className="text-sm" />
             <Link to="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Privacy Policy
+              {t('footer.privacyPolicy')}
             </Link>
             <Link to="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Terms of Service
+              {t('footer.termsOfService')}
             </Link>
           </div>
         </div>

@@ -1,0 +1,299 @@
+{
+  "editor": {
+    "title": "🎨 Design Card",
+    "loadingDesign": "Loading design...",
+    "loyaltyCard": "Loyalty Card",
+    "unsavedChanges": "Unsaved changes",
+    "confirmClose": "You have unsaved changes. Are you sure you want to close?",
+    "setupProgress": "Setup Progress",
+    "of": "of",
+    "complete": "Complete",
+    "tabs": {
+      "design": "Design",
+      "preview": "Preview",
+      "check": "Check"
+    },
+    "browseTemplates": "📋 Browse Templates",
+    "sections": {
+      "colors": "Colors",
+      "logo": "Logo",
+      "stamps": "Stamp Display",
+      "progress": "Progress Display",
+      "hero": "Hero Image"
+    },
+    "badges": {
+      "required": "Required",
+      "optional": "Optional"
+    },
+    "colors": {
+      "background": "Background Color",
+      "text": "Text Color",
+      "label": "Label Color"
+    },
+    "stamps": {
+      "businessLogo": "Business Logo",
+      "svgIcon": "SVG Icon",
+      "useLogoAsStamp": "Use logo as stamp",
+      "chooseFromLibrary": "Choose from library",
+      "logoRequired": "⚠️ Logo stamp requires logo upload above"
+    },
+    "progress": {
+      "progressBar": "Progress Bar",
+      "stampGrid": "Stamp Grid",
+      "simpleBar": "Simple bar",
+      "visualStamps": "Visual stamps"
+    },
+    "actions": {
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "saveDesign": "💾 Save Design",
+      "saving": "Saving..."
+    },
+    "validation": {
+      "fixErrors": "⚠️ Fix errors before saving"
+    }
+  },
+  "qrCode": {
+    "title": "📱 QR Code Generator",
+    "generateFor": "Generate and manage QR code for \"{{offerTitle}}\"",
+    "closeModal": "Close modal",
+    "scanToAccess": "Scan to access loyalty program",
+    "failedToGenerate": "Failed to generate QR code",
+    "performanceAnalytics": "📊 Performance Analytics",
+    "scans": "Scans",
+    "signups": "Signups",
+    "downloads": "Downloads",
+    "conversionRate": "📈 Conversion Rate: {{rate}}%",
+    "downloadOptions": "📥 Download Options",
+    "pngFormat": "📱 PNG Format",
+    "svgFormat": "🎨 SVG Format",
+    "pngUse": "Digital use, social media, apps",
+    "svgUse": "Scalable, professional printing, web",
+    "configuration": "⚙️ Configuration",
+    "qrCodeSize": "📏 QR Code Size",
+    "size": {
+      "small": "📱 Small (128px)",
+      "medium": "💻 Medium (256px)",
+      "large": "🖥️ Large (512px)"
+    },
+    "sourceTracking": "📍 Source Tracking",
+    "source": {
+      "dashboard": "🏢 Dashboard",
+      "checkout": "🛒 Checkout Counter",
+      "table": "🍽️ Table Tent",
+      "window": "🪟 Window Display",
+      "social": "📱 Social Media",
+      "print": "🖨️ Print Marketing"
+    },
+    "advancedOptions": "🚀 Advanced Options",
+    "landingPageUrl": "🔗 Landing Page URL",
+    "copyUrl": "📋 Copy URL",
+    "regenerateQR": "🔄 Regenerate QR Code",
+    "previewExperience": "👀 Preview Customer Experience",
+    "done": "✨ Done"
+  },
+  "notification": {
+    "types": {
+      "custom": {
+        "label": "Custom Message",
+        "description": "Send a custom notification to selected customers"
+      },
+      "offer": {
+        "label": "Promotional Offer",
+        "description": "Promote a specific offer to customers"
+      },
+      "reminder": {
+        "label": "Progress Reminder",
+        "description": "Remind customers about their progress"
+      },
+      "birthday": {
+        "label": "Birthday Greeting",
+        "description": "Send birthday wishes to customers"
+      },
+      "milestone": {
+        "label": "Milestone Celebration",
+        "description": "Celebrate customer milestones"
+      },
+      "reengagement": {
+        "label": "Re-engagement",
+        "description": "Win back inactive customers"
+      }
+    },
+    "sendingTo": "Sending to {{count}} customer",
+    "sendingTo_plural": "Sending to {{count}} customers",
+    "notificationType": "Notification Type",
+    "selectOffer": "Select Offer *",
+    "chooseOffer": "Choose an offer...",
+    "messageHeader": "Message Header *",
+    "messageHeaderPlaceholder": "e.g., Special Offer Just for You!",
+    "messageBody": "Message Body *",
+    "messageBodyPlaceholder": "Enter your message here...",
+    "milestoneTitle": "Milestone Title *",
+    "milestoneTitlePlaceholder": "e.g., 10th Visit Milestone!",
+    "celebrationMessage": "Celebration Message",
+    "celebrationPlaceholder": "Congratulations on reaching this milestone!",
+    "greetingHeader": "Greeting Header",
+    "greetingPlaceholder": "We miss you!",
+    "incentiveMessage": "Incentive Message",
+    "incentivePlaceholder": "Come back and enjoy exclusive rewards waiting for you...",
+    "walletPreview": "📱 Wallet Notification Preview",
+    "yourNotificationHeader": "Your Notification Header",
+    "yourNotificationMessage": "Your notification message will appear here...",
+    "importantNotes": "Important Notes:",
+    "rateLimit": "Rate limit: 10 notifications per customer per day",
+    "activeWalletOnly": "Only customers with active wallet passes will receive notifications",
+    "appearsInWallets": "Messages will appear in Apple Wallet and Google Wallet",
+    "cancel": "Cancel",
+    "sendNotification": "📤 Send Notification",
+    "sending": "Sending...",
+    "errors": {
+      "noCustomers": "No customers selected",
+      "headerRequired": "Message header is required",
+      "bodyRequired": "Message body is required",
+      "offerRequired": "Please select an offer",
+      "milestoneTitleRequired": "Milestone title is required",
+      "sendFailed": "Failed to send notification: {{error}}"
+    },
+    "defaults": {
+      "birthdayHeader": "Happy Birthday!",
+      "birthdayBody": "Celebrate with us! We have a special surprise for you.",
+      "reengagementHeader": "We miss you!",
+      "reengagementBody": "Come back and enjoy exclusive rewards waiting for you."
+    }
+  },
+  "preview": {
+    "apple": {
+      "title": "Apple Wallet Preview",
+      "fullDesignControl": "Full Design Control",
+      "fullDesignControlDesc": "Apple Wallet supports all your design choices including progress display style (bar/grid), custom colors, logo, and stamp icons. What you see here is exactly what your customers will see."
+    },
+    "google": {
+      "title": "Google Wallet Preview",
+      "limitations": "Google Wallet Limitations",
+      "limitationsDesc": "This shows exactly what customers will see in Google Wallet. Progress display style (bar/grid) doesn't affect Google Wallet - it only works for Apple Wallet. Google only supports text star display (⭐). Your colors, logo, and hero image work as designed."
+    },
+    "labels": {
+      "progress": "Progress",
+      "stampsCollected": "Stamps Collected",
+      "completed": "Completed",
+      "member": "Member",
+      "memberSince": "Member Since",
+      "reward": "Reward",
+      "pointsBalance": "Points Balance",
+      "nextReward": "Next Reward",
+      "scanToCollect": "Scan to collect stamps"
+    },
+    "mockData": {
+      "loyaltyCard": "Loyalty Card",
+      "loyaltyRewards": "Your loyalty rewards",
+      "businessName": "Business Name",
+      "customerName": "John Doe",
+      "freeItem": "Free Item"
+    },
+    "progress": {
+      "yourProgress": "Your Progress",
+      "rewardReady": "🎉 Reward Ready!",
+      "oneMoreStamp": "Only 1 more stamp to go! 🎯",
+      "stampsUntilReward": "{{count}} more stamps until reward! 🎁",
+      "stampsCollectedCount": "{{current}} of {{max}} stamps collected",
+      "moreToNextReward": "{{count}} more to next reward"
+    },
+    "tier": {
+      "newMember": "New Member"
+    }
+  },
+  "validation": {
+    "status": {
+      "perfect": "Perfect!",
+      "hasWarnings": "Good with suggestions",
+      "hasErrors": "Needs fixes"
+    },
+    "ready": "Ready ✓",
+    "fixIssues": "Fix Issues",
+    "fixBeforeUse": "Fix the issues below to use your card design.",
+    "canImprove": "Your design works, but you can improve it further.",
+    "perfectDesign": "Perfect! Your card design is ready to use. 🎉",
+    "issuesToFix": "❌ Issues to Fix ({{count}})",
+    "suggestions": "⚠️ Suggestions ({{count}})",
+    "mustFixBeforeUse": "🚫 Must Fix Before Use",
+    "fixBeforeLive": "Fix these before your card can go live:",
+    "cardChecklist": "Card Checklist",
+    "checklist": {
+      "colorsSelected": "Colors selected",
+      "easyToRead": "Easy to read colors",
+      "logoAdded": "Logo added",
+      "readyToUse": "Ready to use"
+    },
+    "quickTips": "💡 Quick Tips",
+    "tips": {
+      "highContrast": "• Use high-contrast colors for readability",
+      "testBothModes": "• Test on both light and dark phones",
+      "uploadLogo": "• Upload your logo for brand recognition"
+    },
+    "actions": {
+      "fixColors": "→ Fix Colors",
+      "improveColors": "→ Improve Colors",
+      "addLogo": "→ Add Logo"
+    },
+    "errors": {
+      "backgroundColorRequired": "Please choose a background color",
+      "foregroundColorRequired": "Please choose a text color",
+      "hardToRead": "Hard to read",
+      "tooSimilar": "Too close in color",
+      "insufficientContrast": "Hard to read",
+      "readableColors": "readable colors",
+      "readable": "readable",
+      "colorDifference": "color difference"
+    },
+    "warnings": {
+      "maximumReadability": "Maximum readability",
+      "goodReadability": "Good readability",
+      "suggested": "Suggested",
+      "colorDifference": "color difference",
+      "recommended": "recommended",
+      "readability": "readability",
+      "liveUse": "live use",
+      "published": "published",
+      "checked": "checked"
+    }
+  },
+  "stampPicker": {
+    "title": "Choose Stamp Icon",
+    "searchPlaceholder": "Search icons...",
+    "loading": "Loading icons...",
+    "noIconsFound": "No icons found",
+    "category": "Category",
+    "allCategories": "All Categories"
+  },
+  "templates": {
+    "title": "Choose Template",
+    "apply": "Apply Template",
+    "cancel": "Cancel",
+    "categories": {
+      "popular": "Popular",
+      "modern": "Modern",
+      "classic": "Classic"
+    }
+  },
+  "mobilePreview": {
+    "title": "Preview",
+    "close": "Close",
+    "swipeToClose": "Swipe down to close",
+    "enterFullscreen": "Enter fullscreen",
+    "exitFullscreen": "Exit fullscreen"
+  },
+  "colorPicker": {
+    "showTechnicalDetails": "Show technical details",
+    "hideTechnicalDetails": "Hide technical details",
+    "invalidFormat": "Invalid color format (use #RRGGBB)",
+    "autoContrast": "✨ Auto-Contrast",
+    "useLogoColor": "Use Logo Color",
+    "showMore": "Show More ({{count}} more)",
+    "showLess": "Show Less",
+    "colorsTooSimilar": "Colors are too similar",
+    "customersTroubleReading": "Customers may have trouble reading text with these colors. Try the Auto-Contrast button above.",
+    "contrastRatio": "Contrast Ratio",
+    "wcagLevel": "WCAG Level",
+    "wcagGuidance": "WCAG requires 4.5:1 minimum for readable text (AA). 7:1 is AAA (enhanced)."
+  }
+}

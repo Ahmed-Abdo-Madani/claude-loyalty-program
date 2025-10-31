@@ -23,6 +23,7 @@
       "female": "Female",
       "countryCode": "Country Code",
       "joinAddToWallet": "Register",
+      "signingUp": "Signing up...",
       "byJoining": "By joining, you agree to receive promotional messages and offers",
       "required": "*",
       "arabicNumbersSupported": "Arabic numerals are supported"

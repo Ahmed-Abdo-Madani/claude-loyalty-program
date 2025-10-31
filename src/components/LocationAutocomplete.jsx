@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import LocationService from '../services/LocationService'
 
 const LocationAutocomplete = ({
   value,
   onChange,
-  placeholder = 'ابحث عن المنطقة أو المدينة أو الحي...',
-  placeholderEn = 'Search for region, city, or district...',
-  language = 'ar',
   disabled = false,
   required = false,
   className = '',
@@ -14,6 +12,8 @@ const LocationAutocomplete = ({
   onLocationSelect = null,
   maxResults = 10
 }) => {
+  const { t, i18n } = useTranslation('common')
+  const language = i18n.language
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [isOpen, setIsOpen] = useState(false)
@@ -133,7 +133,6 @@ const LocationAutocomplete = ({
   }, [value, language])
 
   const isRTL = language === 'ar'
-  const currentPlaceholder = language === 'ar' ? placeholder : placeholderEn
 
   return (
     <div className={`relative ${className}`}>
@@ -150,7 +149,7 @@ const LocationAutocomplete = ({
               setIsOpen(true)
             }
           }}
-          placeholder={currentPlaceholder}
+          placeholder={t('location.searchPlaceholder')}
           disabled={disabled}
           required={required}
           dir={isRTL ? 'rtl' : 'ltr'}
@@ -231,10 +230,7 @@ const LocationAutocomplete = ({
                   )}
                 </div>
                 <div className="text-xs text-gray-400 capitalize">
-                  {language === 'ar' 
-                    ? (location.type === 'region' ? 'منطقة' : location.type === 'city' ? 'مدينة' : 'حي')
-                    : location.type
-                  }
+                  {t(`locationType.${location.type}`)}
                 </div>
               </div>
             </div>
@@ -254,7 +250,7 @@ const LocationAutocomplete = ({
             ${isRTL ? 'text-right' : 'text-left'}
           `}
         >
-          {language === 'ar' ? 'لا توجد نتائج' : 'No results found'}
+          {t('noResults')}
         </div>
       )}
     </div>

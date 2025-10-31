@@ -1,17 +1,20 @@
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
+import LanguageSwitcher from './LanguageSwitcher'
 
 function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
+  const { t } = useTranslation('dashboard')
   const { isDark, toggleTheme } = useTheme()
 
   // Navigation items with icons - preserving exact existing functionality
   const navigationItems = [
-    { id: 'overview', label: 'Overview', icon: '🏠' },
-    { id: 'offers', label: 'My Offers', icon: '🎁' },
-    { id: 'scanner', label: 'QR Scanner', icon: '📱' },
-    { id: 'branches', label: 'Branches', icon: '📍' },
-    { id: 'customers', label: 'Customers', icon: '👥', disabled: true, comingSoon: true },
-    { id: 'wallet', label: 'Mobile Wallets', icon: '💳' },
-    { id: 'analytics', label: 'Analytics', icon: '📊' }
+    { id: 'overview', label: t('sidebar.overview'), icon: '🏠' },
+    { id: 'offers', label: t('sidebar.myOffers'), icon: '🎁' },
+    { id: 'scanner', label: t('sidebar.qrScanner'), icon: '📱' },
+    { id: 'branches', label: t('sidebar.branches'), icon: '📍' },
+    { id: 'customers', label: t('sidebar.customers'), icon: '👥', disabled: true, comingSoon: true },
+    { id: 'wallet', label: t('sidebar.mobileWallets'), icon: '💳' },
+    { id: 'analytics', label: t('sidebar.analytics'), icon: '📊' }
   ]
 
   const handleTabClick = (tabId) => {
@@ -64,7 +67,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
                   onClick={() => handleTabClick(item.id)}
                   disabled={item.disabled}
                   className={`
-                    w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 relative
+                    w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 relative
                     ${item.disabled
                       ? 'text-white/40 cursor-not-allowed'
                       : activeTab === item.id
@@ -74,11 +77,11 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
                   `}
                 >
                   <span className="text-xl flex-shrink-0">{item.icon}</span>
-                  <div className="font-medium flex items-center space-x-2">
+                  <div className="font-medium flex items-center gap-2">
                     <span>{item.label}</span>
                     {item.comingSoon && (
                       <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30">
-                        Soon
+                        {t('tabs.comingSoon')}
                       </span>
                     )}
                   </div>
@@ -105,26 +108,31 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
 
           {/* Action Buttons */}
           <div className="space-y-2">
+            {/* Language Switcher */}
+            <div className="px-4 py-2">
+              <LanguageSwitcher variant="tabs" showLabels={true} className="w-full" />
+            </div>
+
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center space-x-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className="w-full flex items-center gap-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
             >
               <span className="text-lg flex-shrink-0">
                 {isDark ? '☀️' : '🌙'}
               </span>
               <span className="font-medium">
-                {isDark ? 'Light Mode' : 'Dark Mode'}
+                {isDark ? t('sidebar.lightMode') : t('sidebar.darkMode')}
               </span>
             </button>
 
             {/* Sign Out */}
             <button
               onClick={onSignOut}
-              className="w-full flex items-center space-x-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className="w-full flex items-center gap-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
             >
               <span className="text-lg flex-shrink-0">🚪</span>
-              <span className="font-medium">Sign Out</span>
+              <span className="font-medium">{t('sidebar.signOut')}</span>
             </button>
           </div>
         </div>

@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 import InteractiveLogo from '../components/InteractiveLogo'
 
 function AuthPage() {
+  const { t } = useTranslation('auth')
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const mode = searchParams.get('mode') || 'signin' // 'signin' or 'signup'
@@ -69,7 +71,7 @@ function AuthPage() {
       }
     } catch (error) {
       console.error('Authentication error:', error)
-      setError('Network error. Please try again.')
+      setError(t('businessAuth.networkError'))
     } finally {
       setLoading(false)
     }
@@ -87,26 +89,26 @@ function AuthPage() {
           </Link>
 
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {mode === 'signin' ? 'Welcome Back' : 'Get Started'}
+            {mode === 'signin' ? t('businessAuth.welcomeBack') : t('businessAuth.getStarted')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {mode === 'signin' ? 'Sign in to your business account' : 'Create your business account'}
+            {mode === 'signin' ? t('businessAuth.signInToAccount') : t('businessAuth.createBusinessAccount')}
           </p>
 
           {/* Mode Toggle */}
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {mode === 'signin' ? (
               <>
-                Don't have an account?{' '}
+                {t('businessAuth.dontHaveAccount')}{' '}
                 <Link to="/business/register" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
-                  Sign up for free
+                  {t('businessAuth.signUpForFree')}
                 </Link>
               </>
             ) : (
               <>
-                Already have an account?{' '}
+                {t('businessAuth.alreadyHaveAccount')}{' '}
                 <Link to="/auth?mode=signin" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
-                  Sign in
+                  {t('businessAuth.signIn')}
                 </Link>
               </>
             )}
@@ -129,7 +131,7 @@ function AuthPage() {
                 <>
                   <div>
                     <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Business Name
+                      {t('businessAuth.businessName')}
                     </label>
                     <input
                       id="businessName"
@@ -139,13 +141,13 @@ function AuthPage() {
                       value={formData.businessName}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                      placeholder="Your Business Name"
+                      placeholder={t('businessAuth.businessNamePlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Phone Number
+                      {t('businessAuth.phoneNumber')}
                     </label>
                     <input
                       id="phoneNumber"
@@ -155,7 +157,7 @@ function AuthPage() {
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder={t('businessAuth.phonePlaceholder')}
                     />
                   </div>
                 </>
@@ -163,7 +165,7 @@ function AuthPage() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email address
+                  {t('businessAuth.emailAddress')}
                 </label>
                 <input
                   id="email"
@@ -174,13 +176,13 @@ function AuthPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                  placeholder="you@example.com"
+                  placeholder={t('businessAuth.emailPlaceholder')}
                 />
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Password
+                  {t('businessAuth.password')}
                 </label>
                 <input
                   id="password"
@@ -191,14 +193,14 @@ function AuthPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                  placeholder="Password"
+                  placeholder={t('businessAuth.passwordPlaceholder')}
                 />
               </div>
 
               {mode === 'signup' && (
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Confirm Password
+                    {t('businessAuth.confirmPassword')}
                   </label>
                   <input
                     id="confirmPassword"
@@ -208,7 +210,7 @@ function AuthPage() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                    placeholder="Confirm Password"
+                    placeholder={t('businessAuth.confirmPasswordPlaceholder')}
                   />
                 </div>
               )}
@@ -223,13 +225,13 @@ function AuthPage() {
                       className="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                     />
                     <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                      Remember me
+                      {t('businessAuth.rememberMe')}
                     </label>
                   </div>
 
                   <div className="text-sm">
                     <a href="#" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
-                      Forgot password?
+                      {t('businessAuth.forgotPassword')}
                     </a>
                   </div>
                 </div>
@@ -246,10 +248,10 @@ function AuthPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    {mode === 'signin' ? 'Signing in...' : 'Creating account...'}
+                    {mode === 'signin' ? t('businessAuth.signingIn') : t('businessAuth.creatingAccount')}
                   </div>
                 ) : (
-                  mode === 'signin' ? 'Sign in' : 'Create account'
+                  mode === 'signin' ? t('businessAuth.signIn') : t('businessAuth.createAccount')
                 )}
               </button>
             </form>
@@ -261,7 +263,7 @@ function AuthPage() {
                     <div className="w-full border-t border-gray-300 dark:border-gray-600" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">What's included</span>
+                    <span className="px-3 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">{t('businessAuth.whatsIncluded')}</span>
                   </div>
                 </div>
 
@@ -270,25 +272,25 @@ function AuthPage() {
                     <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Unlimited loyalty programs</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('businessAuth.unlimitedPrograms')}</span>
                   </div>
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Mobile wallet integration</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('businessAuth.mobileWalletIntegration')}</span>
                   </div>
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">QR code generation</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('businessAuth.qrCodeGeneration')}</span>
                   </div>
                   <div className="flex items-center">
                     <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">24/7 customer support</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('businessAuth.customerSupport')}</span>
                   </div>
                 </div>
               </div>

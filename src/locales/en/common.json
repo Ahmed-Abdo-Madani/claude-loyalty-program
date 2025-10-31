@@ -41,7 +41,7 @@
   "tomorrow": "Tomorrow",
   "now": "Now",
   "date": "Date",
-  "time": "Time",
+  "timeLabel": "Time",
   "createdAt": "Created At",
   "updatedAt": "Updated At",
   "previous": "Previous",
@@ -63,5 +63,69 @@
   "about": "About",
   "contact": "Contact Us",
   "itemCount": "{{count}} item",
-  "itemCount_plural": "{{count}} items"
+  "itemCount_plural": "{{count}} items",
+  "locationType": {
+    "region": "Region",
+    "city": "City",
+    "district": "District"
+  },
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "selectGender": "Select Gender"
+  },
+  "countryCode": {
+    "label": "Country Code",
+    "selectCountry": "Select Country"
+  },
+  "modal": {
+    "done": "Done",
+    "closeModal": "Close modal"
+  },
+  "upload": {
+    "chooseFile": "Choose File",
+    "browseFiles": "Browse Files",
+    "dropHere": "Drop file here or",
+    "uploading": "Uploading...",
+    "uploadComplete": "Upload Complete",
+    "uploadError": "Upload Error",
+    "invalidFileType": "Invalid file type",
+    "fileTooLarge": "File too large",
+    "uploadHeroImage": "Upload Hero Image",
+    "skipHeroImage": "Skip",
+    "removeImage": "Remove Image",
+    "uploadYourLogo": "Upload Your Logo",
+    "dragAndDrop": "Drag and drop, or tap to browse",
+    "maxFileSize": "PNG or JPG • Max 5MB",
+    "uploadDifferentImage": "Upload Different Image",
+    "uploadingProcessing": "Uploading and processing...",
+    "logoPreview": "Logo Preview",
+    "remove": "Remove",
+    "suggestedColor": "Suggested Color",
+    "fromYourLogo": "💡 From your logo",
+    "applyColor": "Apply Color",
+    "tipSquareLogos": "Tip: Use square logos for best results",
+    "showTechnicalDetails": "Show technical details",
+    "hideTechnicalDetails": "Hide technical details",
+    "googleWalletCircular": "Google Wallet: Cropped to circle (660x660px min)",
+    "appleWalletRectangular": "Apple Wallet: Rectangular (320x100px @ 2x)",
+    "keepContentCentered": "Keep important content centered"
+  },
+  "validation": {
+    "requiredField": "This field is required",
+    "invalidFormat": "Invalid format",
+    "characterLimit": "{{current}}/{{max}} characters"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} minute ago",
+    "minutesAgo_plural": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hour ago",
+    "hoursAgo_plural": "{{count}} hours ago",
+    "daysAgo": "{{count}} day ago",
+    "daysAgo_plural": "{{count}} days ago"
+  },
+  "location": {
+    "searchPlaceholder": "Search for region, city, or district..."
+  }
 }

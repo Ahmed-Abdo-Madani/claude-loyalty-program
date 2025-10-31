@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import { Op } from 'sequelize'
 import PlatformAdmin from '../models/PlatformAdmin.js'
 import AdminSession from '../models/AdminSession.js'
+import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 
 class AdminAuthController {
   // Admin login
@@ -19,7 +20,7 @@ class AdminAuthController {
       if (!email || !password) {
         return res.status(400).json({
           success: false,
-          message: 'Email and password are required'
+          message: getLocalizedMessage('validation.emailPasswordRequired', req.locale)
         })
       }
 
@@ -32,7 +33,7 @@ class AdminAuthController {
         console.log('❌ Admin not found:', email)
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials'
+          message: getLocalizedMessage('auth.invalidCredentials', req.locale)
         })
       }
 
@@ -43,7 +44,7 @@ class AdminAuthController {
         console.log('❌ Admin account not active:', admin.status)
         return res.status(401).json({
           success: false,
-          message: 'Account is not active'
+          message: getLocalizedMessage('auth.accountNotActive', req.locale)
         })
       }
 
@@ -54,7 +55,7 @@ class AdminAuthController {
         console.log('❌ Invalid password for admin:', email)
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials'
+          message: getLocalizedMessage('auth.invalidCredentials', req.locale)
         })
       }
 
@@ -96,7 +97,7 @@ class AdminAuthController {
       // Return success response
       res.json({
         success: true,
-        message: 'Login successful',
+        message: getLocalizedMessage('auth.loginSuccess', req.locale),
         data: {
           admin: {
             id: admin.id,
@@ -114,7 +115,7 @@ class AdminAuthController {
       console.error('❌ Admin login error:', error)
       res.status(500).json({
         success: false,
-        message: 'Internal server error during login'
+        message: getLocalizedMessage('server.internalError', req.locale)
       })
     }
   }
@@ -139,14 +140,14 @@ class AdminAuthController {
 
       res.json({
         success: true,
-        message: 'Logout successful'
+        message: getLocalizedMessage('auth.logoutSuccess', req.locale)
       })
 
     } catch (error) {
       console.error('❌ Admin logout error:', error)
       res.status(500).json({
         success: false,
-        message: 'Internal server error during logout'
+        message: getLocalizedMessage('server.internalError', req.locale)
       })
     }
   }
@@ -159,7 +160,7 @@ class AdminAuthController {
       if (!admin) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid or expired token'
+          message: getLocalizedMessage('auth.invalidOrExpiredToken', req.locale)
         })
       }
 
@@ -178,7 +179,7 @@ class AdminAuthController {
       console.error('Token verification error:', error)
       res.status(500).json({
         success: false,
-        message: 'Internal server error during token verification'
+        message: getLocalizedMessage('server.internalError', req.locale)
       })
     }
   }
@@ -192,7 +193,7 @@ class AdminAuthController {
       if (!session_token || !adminId) {
         return res.status(400).json({
           success: false,
-          message: 'Session token and admin ID are required'
+          message: getLocalizedMessage('validation.sessionTokenRequired', req.locale)
         })
       }
 
@@ -209,7 +210,7 @@ class AdminAuthController {
       if (!session) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid or expired session'
+          message: getLocalizedMessage('auth.invalidOrExpiredSession', req.locale)
         })
       }
 
@@ -239,7 +240,7 @@ class AdminAuthController {
       console.error('Token refresh error:', error)
       res.status(500).json({
         success: false,
-        message: 'Internal server error during token refresh'
+        message: getLocalizedMessage('server.internalError', req.locale)
       })
     }
   }
@@ -254,14 +255,14 @@ class AdminAuthController {
       if (!current_password || !new_password) {
         return res.status(400).json({
           success: false,
-          message: 'Current password and new password are required'
+          message: getLocalizedMessage('validation.passwordsRequired', req.locale)
         })
       }
 
       if (new_password.length < 8) {
         return res.status(400).json({
           success: false,
-          message: 'New password must be at least 8 characters long'
+          message: getLocalizedMessage('validation.passwordMinLength', req.locale)
         })
       }
 
@@ -270,7 +271,7 @@ class AdminAuthController {
       if (!admin) {
         return res.status(404).json({
           success: false,
-          message: 'Admin not found'
+          message: getLocalizedMessage('notFound.admin', req.locale)
         })
       }
 
@@ -279,7 +280,7 @@ class AdminAuthController {
       if (!isCurrentPasswordValid) {
         return res.status(401).json({
           success: false,
-          message: 'Current password is incorrect'
+          message: getLocalizedMessage('auth.currentPasswordIncorrect', req.locale)
         })
       }
 
@@ -292,14 +293,14 @@ class AdminAuthController {
 
       res.json({
         success: true,
-        message: 'Password changed successfully'
+        message: getLocalizedMessage('auth.passwordChangeSuccess', req.locale)
       })
 
     } catch (error) {
       console.error('Password change error:', error)
       res.status(500).json({
         success: false,
-        message: 'Internal server error during password change'
+        message: getLocalizedMessage('server.internalError', req.locale)
       })
     }
   }

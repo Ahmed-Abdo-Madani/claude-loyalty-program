@@ -1,4 +1,5 @@
 import { endpoints } from '../config/api'
+import i18n from '../i18n/config.js'
 
 class LocationService {
   static cache = {
@@ -48,7 +49,12 @@ class LocationService {
 
     try {
       const response = await fetch(
-        `${endpoints.locationSearch}?q=${encodeURIComponent(query)}&lang=${language}&limit=${maxResults}`
+        `${endpoints.locationSearch}?q=${encodeURIComponent(query)}&lang=${language}&limit=${maxResults}`,
+        {
+          headers: {
+            'Accept-Language': i18n.language || language || 'ar'
+          }
+        }
       )
       
       if (!response.ok) {
@@ -134,7 +140,11 @@ class LocationService {
     }
 
     try {
-      const response = await fetch(`${endpoints.locationRegions}?lang=${language}`)
+      const response = await fetch(`${endpoints.locationRegions}?lang=${language}`, {
+        headers: {
+          'Accept-Language': i18n.language || language || 'ar'
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to load regions: ${response.status}`)
@@ -159,7 +169,11 @@ class LocationService {
    */
   static async getCitiesByRegion(regionId, language = 'ar') {
     try {
-      const response = await fetch(`${endpoints.locations}/regions/${regionId}/cities?lang=${language}`)
+      const response = await fetch(`${endpoints.locations}/regions/${regionId}/cities?lang=${language}`, {
+        headers: {
+          'Accept-Language': i18n.language || language || 'ar'
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to load cities: ${response.status}`)
@@ -183,7 +197,11 @@ class LocationService {
    */
   static async getDistrictsByCity(cityId, language = 'ar') {
     try {
-      const response = await fetch(`${endpoints.locations}/cities/${cityId}/districts?lang=${language}`)
+      const response = await fetch(`${endpoints.locations}/cities/${cityId}/districts?lang=${language}`, {
+        headers: {
+          'Accept-Language': i18n.language || language || 'ar'
+        }
+      })
       
       if (!response.ok) {
         throw new Error(`Failed to load districts: ${response.status}`)
@@ -210,7 +228,8 @@ class LocationService {
       const response = await fetch(`${endpoints.locationValidate}?lang=${language}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept-Language': i18n.language || language || 'ar'
         },
         body: JSON.stringify(location)
       })

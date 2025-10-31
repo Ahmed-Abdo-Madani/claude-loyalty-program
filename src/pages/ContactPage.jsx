@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
 
 function ContactPage() {
+  const { t } = useTranslation('landing')
+  
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <DarkModeToggle />
@@ -13,12 +16,12 @@ function ContactPage() {
           <div className="flex justify-between items-center py-6">
             <Link to="/" className="flex items-center">
               <img src="/assets/images/madna-logo.svg" alt="Madna Logo" className="w-8 h-8 mr-3" />
-              <span className="text-2xl font-bold text-primary">Madna</span>
+              <span className="text-2xl font-bold text-primary">{t('header.logoText')}</span>
             </Link>
-            <nav className="flex space-x-8">
-              <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-primary">Home</Link>
-              <Link to="/features" className="text-gray-600 dark:text-gray-300 hover:text-primary">Features</Link>
-              <Link to="/pricing" className="text-gray-600 dark:text-gray-300 hover:text-primary">Pricing</Link>
+            <nav className="flex gap-8">
+              <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-primary">{t('header.home')}</Link>
+              <Link to="/features" className="text-gray-600 dark:text-gray-300 hover:text-primary">{t('header.features')}</Link>
+              <Link to="/pricing" className="text-gray-600 dark:text-gray-300 hover:text-primary">{t('header.pricing')}</Link>
             </nav>
           </div>
         </div>
@@ -27,9 +30,9 @@ function ContactPage() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary to-blue-700 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold mb-6">Get in Touch</h1>
+          <h1 className="text-5xl font-bold mb-6">{t('contact.title')}</h1>
           <p className="text-xl mb-8 max-w-3xl mx-auto">
-            Have questions about Madna? We're here to help you build the perfect loyalty program for your business.
+            {t('contact.subtitle')}
           </p>
         </div>
       </section>
@@ -40,13 +43,13 @@ function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Contact Form */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-lg">
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Send us a message</h2>
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">{t('contact.form.title')}</h2>
 
               <form className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      First Name
+                      {t('contact.form.firstName')}
                     </label>
                     <input
                       type="text"
@@ -57,7 +60,7 @@ function ContactPage() {
                   </div>
                   <div>
                     <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Last Name
+                      {t('contact.form.lastName')}
                     </label>
                     <input
                       type="text"
@@ -70,7 +73,7 @@ function ContactPage() {
 
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Email Address
+                    {t('contact.form.email')}
                   </label>
                   <input
                     type="email"
@@ -82,7 +85,7 @@ function ContactPage() {
 
                 <div>
                   <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Company (Optional)
+                    {t('contact.form.company')}
                   </label>
                   <input
                     type="text"
@@ -93,31 +96,31 @@ function ContactPage() {
 
                 <div>
                   <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Subject
+                    {t('contact.form.subject')}
                   </label>
                   <select
                     id="subject"
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     required
                   >
-                    <option value="">Select a topic</option>
-                    <option value="sales">Sales Inquiry</option>
-                    <option value="support">Technical Support</option>
-                    <option value="billing">Billing Question</option>
-                    <option value="partnership">Partnership</option>
-                    <option value="other">Other</option>
+                    <option value="">{t('contact.form.selectTopic')}</option>
+                    <option value="sales">{t('contact.form.salesInquiry')}</option>
+                    <option value="support">{t('contact.form.technicalSupport')}</option>
+                    <option value="billing">{t('contact.form.billingQuestion')}</option>
+                    <option value="partnership">{t('contact.form.partnership')}</option>
+                    <option value="other">{t('contact.form.other')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Message
+                    {t('contact.form.message')}
                   </label>
                   <textarea
                     id="message"
                     rows={6}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Tell us how we can help you..."
+                    placeholder={t('contact.form.messagePlaceholder')}
                     required
                   />
                 </div>
@@ -126,22 +129,22 @@ function ContactPage() {
                   type="submit"
                   className="w-full bg-primary hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
                 >
-                  Send Message
+                  {t('contact.form.sendMessage')}
                 </button>
               </form>
             </div>
 
             {/* Contact Information */}
             <div>
-              <h2 className="text-2xl font-bold mb-8 text-gray-900 dark:text-white">Other ways to reach us</h2>
+              <h2 className="text-2xl font-bold mb-8 text-gray-900 dark:text-white">{t('contact.otherWays.title')}</h2>
 
               <div className="space-y-8">
                 <div className="flex items-start">
                   <div className="text-primary text-2xl mr-4">📧</div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Email Support</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('contact.emailSupport.title')}</h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-2">
-                      Get help with your account or technical questions
+                      {t('contact.emailSupport.description')}
                     </p>
                     <a href="mailto:support@madna.com" className="text-primary hover:underline">
                       support@madna.com
@@ -152,9 +155,9 @@ function ContactPage() {
                 <div className="flex items-start">
                   <div className="text-primary text-2xl mr-4">💼</div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Sales Team</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('contact.salesTeam.title')}</h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-2">
-                      Learn about our enterprise solutions
+                      {t('contact.salesTeam.description')}
                     </p>
                     <a href="mailto:sales@madna.com" className="text-primary hover:underline">
                       sales@madna.com
@@ -165,9 +168,9 @@ function ContactPage() {
                 <div className="flex items-start">
                   <div className="text-primary text-2xl mr-4">📞</div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Phone Support</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('contact.phoneSupport.title')}</h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-2">
-                      Available Monday-Friday, 9am-6pm EST
+                      {t('contact.phoneSupport.description')}
                     </p>
                     <a href="tel:+1-555-123-4567" className="text-primary hover:underline">
                       +1 (555) 123-4567
@@ -178,12 +181,12 @@ function ContactPage() {
                 <div className="flex items-start">
                   <div className="text-primary text-2xl mr-4">💬</div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Live Chat</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('contact.liveChat.title')}</h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-2">
-                      Chat with our support team in real-time
+                      {t('contact.liveChat.description')}
                     </p>
                     <button className="text-primary hover:underline">
-                      Start Live Chat
+                      {t('contact.liveChat.action')}
                     </button>
                   </div>
                 </div>
@@ -191,12 +194,12 @@ function ContactPage() {
 
               {/* Office Information */}
               <div className="mt-12 bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Our Office</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('contact.office.title')}</h3>
                 <div className="text-gray-600 dark:text-gray-300">
-                  <p>Madna Platform Inc.</p>
-                  <p>123 Innovation Drive</p>
-                  <p>San Francisco, CA 94105</p>
-                  <p>United States</p>
+                  <p>{t('contact.office.name')}</p>
+                  <p>{t('contact.office.address1')}</p>
+                  <p>{t('contact.office.address2')}</p>
+                  <p>{t('contact.office.country')}</p>
                 </div>
               </div>
             </div>

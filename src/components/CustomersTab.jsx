@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 import CompactStatsBar from './CompactStatsBar'
 import NotificationModal from './NotificationModal'
 
 function CustomersTab({ analytics: globalAnalytics }) {
+  const { t } = useTranslation('dashboard')
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -109,7 +111,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
   // Notification handlers
   const handleSendNotificationClick = () => {
     if (selectedCustomers.size === 0) {
-      setError('Please select at least one customer')
+      setError(t('customers.selectAtLeastOne'))
       return
     }
     setNotificationType('custom')
@@ -138,7 +140,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
     }
 
     if (targetCustomers.length === 0) {
-      setError(`No ${filter || ''} customers found`)
+      setError(t('customers.noCustomersWithFilter', { filter: filter || '' }))
       return
     }
 
@@ -153,7 +155,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
     setSelectedCustomers(new Set())
     setSelectedCustomer(null)
 
-    const message = `✅ Notification sent successfully to ${result.successful_customers} customer(s)!`
+    const message = t('customers.notificationSuccess', { count: result.successful_customers })
     setSuccessMessage(message)
 
     // Auto-hide success message after 5 seconds
@@ -260,7 +262,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">Loading customers...</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('customers.loading')}</p>
       </div>
     )
   }
@@ -272,8 +274,8 @@ function CustomersTab({ analytics: globalAnalytics }) {
       
       {/* Header Section - Mobile-first */}
       <div className="compact-header">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Customer Management</h2>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your customers and send targeted notifications</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('customers.customerManagement')}</h2>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('customers.manageAndNotify')}</p>
       </div>
 
       {/* Error Display */}
@@ -304,7 +306,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
             <div className="relative mb-3">
               <input
                 type="text"
-                placeholder="Search customers..."
+                placeholder={t('customers.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary touch-target"
@@ -326,7 +328,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  All
+                  {t('customers.all')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('active')}
@@ -336,7 +338,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  Active
+                  {t('customers.active')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('vip')}
@@ -346,7 +348,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  VIP
+                  {t('customers.vip')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('inactive')}
@@ -356,7 +358,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  Inactive
+                  {t('customers.inactive')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('churning')}
@@ -366,7 +368,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  At Risk
+                  {t('customers.atRisk')}
                 </button>
               </div>
 
@@ -375,10 +377,10 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 <button
                   onClick={handleSendNotificationClick}
                   disabled={selectedCustomers.size === 0}
-                  className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center space-x-2 touch-target"
+                  className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 touch-target"
                 >
                   <span>📧</span>
-                  <span>Send Notification</span>
+                  <span>{t('customers.sendNotification')}</span>
                 </button>
               </div>
             </div>
@@ -388,7 +390,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
           {selectedCustomers.size > 0 && (
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <span className="text-blue-800 dark:text-blue-300 text-sm">
-                {selectedCustomers.size} customer{selectedCustomers.size !== 1 ? 's' : ''} selected
+                {selectedCustomers.size} {t('customers.selected')}
               </span>
             </div>
           )}
@@ -400,7 +402,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
             {paginatedCustomers.map((customer) => (
               <div key={customer.customer_id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
                 <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-start space-x-2 flex-1 min-w-0">
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
                     <input
                       type="checkbox"
                       checked={selectedCustomers.has(customer.customer_id)}
@@ -464,7 +466,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleSendToCustomer(customer)}
-                    className="flex-1 px-3 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center space-x-2 touch-target"
+                    className="flex-1 px-3 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 touch-target"
                   >
                     <span>📧</span>
                     <span>Notify</span>
@@ -493,11 +495,11 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       className="rounded border-gray-300 text-primary focus:ring-primary"
                     />
                   </th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Customer</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Activity</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Offers</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.customerName')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.status')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.lastActivity')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.activeCards')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -517,7 +519,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       />
                     </td>
                     <td className="py-3 px-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                           {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                         </div>
@@ -533,32 +535,32 @@ function CustomersTab({ analytics: globalAnalytics }) {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}>
                           {customer.status}
                         </span>
-                        <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                           <span>{getLifecycleIcon(customer.lifecycle_stage)}</span>
                           <span>{customer.lifecycle_stage.replace('_', ' ')}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-2">
-                      <div className="text-sm space-y-1">
-                        <div className="text-gray-900 dark:text-white">{customer.total_visits} visits</div>
-                        <div className="text-gray-500 dark:text-gray-400">{customer.total_stamps_earned} stamps</div>
-                        <div className="text-xs text-gray-400 dark:text-gray-500">
-                          Last: {formatDate(customer.last_activity_date)}
+                        <div className="text-sm space-y-1">
+                          <div className="text-gray-900 dark:text-white">{customer.total_visits} {t('customers.visits')}</div>
+                          <div className="text-gray-500 dark:text-gray-400">{customer.total_stamps_earned} {t('customers.stamps')}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            {t('customers.lastActivity')}: {formatDate(customer.last_activity_date)}
+                          </div>
                         </div>
-                      </div>
                     </td>
                     <td className="py-4 px-2">
                       <div className="text-sm space-y-1">
                         {customer.progress && customer.progress.length > 0 ? (
                           <>
                             {customer.progress.slice(0, 1).map((prog, idx) => (
-                              <div key={idx} className="flex items-center space-x-2">
+                              <div key={idx} className="flex items-center gap-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-gray-900 dark:text-white truncate text-xs">
                                     {prog.offer?.title || 'Unknown Offer'}
                                   </div>
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                     <span>{prog.current_stamps}/{prog.max_stamps}</span>
                                     {prog.is_completed && <span className="text-green-500">✓</span>}
                                   </div>
@@ -577,7 +579,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       </div>
                     </td>
                     <td className="py-4 px-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSendToCustomer(customer)}
                           title="Send notification"
@@ -608,11 +610,11 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">👥</span>
                 </div>
-                <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No customers found</h3>
+                <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">{t('customers.noCustomersFound')}</h3>
                 <p className="text-gray-500 dark:text-gray-400">
                   {searchTerm || filterStatus !== 'all'
-                    ? 'Try adjusting your search or filter criteria.'
-                    : 'Customers will appear here as they sign up for your loyalty program.'
+                    ? t('customers.tryAdjustingFilters')
+                    : t('customers.customersWillAppear')
                   }
                 </p>
               </div>
@@ -626,10 +628,10 @@ function CustomersTab({ analytics: globalAnalytics }) {
             {/* Page Info and Items Per Page */}
             <div className="flex flex-col sm:flex-row items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
               <span>
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+                {t('customers.showing')} {startIndex + 1}-{Math.min(endIndex, filteredCustomers.length)} {t('customers.of')} {filteredCustomers.length} {t('customers.customers')}
               </span>
               <div className="flex items-center gap-2">
-                <label htmlFor="itemsPerPage" className="whitespace-nowrap">Items per page:</label>
+                <label htmlFor="itemsPerPage" className="whitespace-nowrap">{t('customers.itemsPerPage')}:</label>
                 <select
                   id="itemsPerPage"
                   value={itemsPerPage}
@@ -651,12 +653,12 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 disabled={currentPage === 1}
                 className="px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                ← Previous
+                ← {t('customers.previous')}
               </button>
 
               {/* Mobile: Simple page indicator */}
               <div className="sm:hidden px-3 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                Page {currentPage} of {totalPages}
+                {t('customers.page')} {currentPage} {t('customers.of')} {totalPages}
               </div>
 
               {/* Desktop: Page numbers */}
@@ -694,7 +696,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 disabled={currentPage === totalPages}
                 className="px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Next →
+                {t('customers.next')} →
               </button>
             </div>
           </div>
@@ -704,43 +706,43 @@ function CustomersTab({ analytics: globalAnalytics }) {
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
           <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-4 flex items-center">
             <span className="mr-2">🚀</span>
-            Quick Actions
+            {t('customers.quickActions')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => handleQuickAction('birthday', 'birthday')}
-              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
             >
               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">🎂</span>
               </div>
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">Birthday Offers</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Send to upcoming birthdays</div>
+                <div className="font-medium text-gray-900 dark:text-white">{t('customers.birthdayOffers')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('customers.birthdayOffersDesc')}</div>
               </div>
             </button>
             <button
               onClick={() => handleQuickAction('reengagement', 'inactive')}
-              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
             >
               <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">📧</span>
               </div>
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">Re-engagement</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Win back inactive customers</div>
+                <div className="font-medium text-gray-900 dark:text-white">{t('customers.reEngagement')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('customers.reEngagementDesc')}</div>
               </div>
             </button>
             <button
               onClick={() => handleQuickAction('offer', 'vip')}
-              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
             >
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">👑</span>
               </div>
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">VIP Rewards</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Special offers for VIP customers</div>
+                <div className="font-medium text-gray-900 dark:text-white">{t('customers.vipRewards')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('customers.vipRewardsDesc')}</div>
               </div>
             </button>
           </div>

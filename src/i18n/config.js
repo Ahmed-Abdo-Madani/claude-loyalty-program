@@ -13,6 +13,10 @@ import adminAr from '../locales/ar/admin.json';
 import adminEn from '../locales/en/admin.json';
 import customerAr from '../locales/ar/customer.json';
 import customerEn from '../locales/en/customer.json';
+import landingAr from '../locales/ar/landing.json';
+import landingEn from '../locales/en/landing.json';
+import cardDesignAr from '../locales/ar/cardDesign.json';
+import cardDesignEn from '../locales/en/cardDesign.json';
 
 // Configure i18next
 i18n
@@ -27,6 +31,8 @@ i18n
         dashboard: dashboardAr,
         admin: adminAr,
         customer: customerAr,
+        landing: landingAr,
+        cardDesign: cardDesignAr,
       },
       en: {
         common: commonEn,
@@ -34,11 +40,13 @@ i18n
         dashboard: dashboardEn,
         admin: adminEn,
         customer: customerEn,
+        landing: landingEn,
+        cardDesign: cardDesignEn,
       },
     },
 
-    // Fallback language is English
-    fallbackLng: 'en',
+    // Fallback language is Arabic (primary language for Saudi market)
+    fallbackLng: 'ar',
 
     // Restrict to supported languages only
     supportedLngs: ['ar', 'en'],
@@ -47,7 +55,7 @@ i18n
     defaultNS: 'common',
 
     // Namespaces to load by default
-    ns: ['common', 'auth', 'dashboard', 'admin', 'customer'],
+    ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign'],
 
     // Language detection options
     detection: {
