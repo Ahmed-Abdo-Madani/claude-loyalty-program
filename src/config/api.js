@@ -89,6 +89,7 @@ export const endpoints = {
   // Notification APIs
   notifications: `${API_BASE_URL}/api/notifications`,
   notificationCampaigns: `${API_BASE_URL}/api/notifications/campaigns`,
+  notificationCampaignsPromotional: `${API_BASE_URL}/api/notifications/campaigns/promotional`,
   notificationLogs: `${API_BASE_URL}/api/notifications/logs`,
   notificationAnalytics: `${API_BASE_URL}/api/notifications/analytics`,
 
@@ -107,6 +108,7 @@ export const endpoints = {
   segmentsHighValue: `${API_BASE_URL}/api/segments/predefined/high-value`,
   segmentsAtRisk: `${API_BASE_URL}/api/segments/predefined/at-risk`,
   segmentsBirthday: `${API_BASE_URL}/api/segments/predefined/birthday`,
+  segmentSendNotification: (segmentId) => `${API_BASE_URL}/api/segments/${segmentId}/send-notification`,
 
   // Location APIs
   locationBase: `${API_BASE_URL}/api/locations`,

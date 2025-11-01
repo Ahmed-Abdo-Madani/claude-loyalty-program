@@ -1,4 +1,4 @@
-import { DataTypes } from 'sequelize'
+import { DataTypes, Op } from 'sequelize'
 import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
@@ -37,6 +37,12 @@ const NotificationCampaign = sequelize.define('NotificationCampaign', {
     allowNull: false,
     defaultValue: 'manual'
   },
+  campaign_type: {
+    type: DataTypes.ENUM('lifecycle', 'promotional', 'transactional', 'new_offer_announcement', 'custom_promotion', 'seasonal_campaign'),
+    allowNull: true,
+    defaultValue: null,
+    comment: 'Specific campaign category for promotional and marketing campaigns'
+  },
   channels: {
     type: DataTypes.JSON,
     allowNull: false,
@@ -67,6 +73,15 @@ const NotificationCampaign = sequelize.define('NotificationCampaign', {
     type: DataTypes.JSON,
     allowNull: true,
     comment: 'Custom filtering criteria for dynamic targeting'
+  },
+  linked_offer_id: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    references: {
+      model: 'offers',
+      key: 'public_id'
+    },
+    comment: 'Optional offer ID for tracking conversions from campaign'
   },
   // Message Content
   message_template: {
@@ -228,10 +243,16 @@ const NotificationCampaign = sequelize.define('NotificationCampaign', {
     },
     {
       fields: ['started_at']
+    },
+    {
+      fields: ['campaign_type']
+    },
+    {
+      fields: ['linked_offer_id']
     }
   ],
   hooks: {
-    beforeCreate: async (campaign) => {
+    beforeValidate: async (campaign) => {
       if (!campaign.campaign_id) {
         campaign.campaign_id = SecureIDGenerator.generateCampaignID()
       }
@@ -266,6 +287,58 @@ NotificationCampaign.prototype.getROI = function() {
   const averageConversionValue = 50
   const totalRevenue = this.total_converted * averageConversionValue
   return Math.round(((totalRevenue - this.total_cost) / this.total_cost) * 100)
+}
+
+NotificationCampaign.prototype.getConversionMetrics = async function() {
+  // Dynamic ESM imports
+  const { default: NotificationLog } = await import('./NotificationLog.js')
+  
+  // Fetch conversion data from NotificationLog
+  const conversions = await NotificationLog.findAll({
+    where: {
+      campaign_id: this.campaign_id,
+      status: 'converted'
+    },
+    attributes: ['customer_id', 'converted_at', 'conversion_value', 'created_at']
+  })
+  
+  const conversionCount = conversions.length
+  const conversionRate = this.total_delivered > 0 
+    ? Math.round((conversionCount / this.total_delivered) * 100) 
+    : 0
+  
+  // Calculate average time to conversion
+  let avgTimeToConvert = 0
+  if (conversionCount > 0) {
+    const totalTime = conversions.reduce((sum, log) => {
+      const sentTime = new Date(log.created_at).getTime()
+      const convertTime = new Date(log.converted_at).getTime()
+      return sum + (convertTime - sentTime)
+    }, 0)
+    avgTimeToConvert = Math.round(totalTime / conversionCount / (1000 * 60 * 60)) // hours
+  }
+  
+  // If linked offer exists, fetch offer redemption data
+  let offerRedemptions = 0
+  if (this.linked_offer_id) {
+    const { default: CustomerProgress } = await import('./CustomerProgress.js')
+    offerRedemptions = await CustomerProgress.count({
+      where: {
+        offer_id: this.linked_offer_id,
+        is_completed: true,
+        updated_at: {
+          [Op.gte]: this.started_at || this.created_at
+        }
+      }
+    })
+  }
+  
+  return {
+    conversions: conversionCount,
+    conversion_rate: conversionRate,
+    avg_time_to_convert: avgTimeToConvert,
+    offer_redemptions: offerRedemptions
+  }
 }
 
 NotificationCampaign.prototype.canSend = function() {

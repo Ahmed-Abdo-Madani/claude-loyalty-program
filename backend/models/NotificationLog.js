@@ -32,7 +32,7 @@ const NotificationLog = sequelize.define('NotificationLog', {
   },
   // Notification Details
   notification_type: {
-    type: DataTypes.ENUM('campaign', 'trigger', 'manual', 'system'),
+    type: DataTypes.ENUM('campaign', 'trigger', 'manual', 'system', 'auto_reengagement'),
     defaultValue: 'campaign'
   },
   channel: {

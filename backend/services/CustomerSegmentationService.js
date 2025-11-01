@@ -58,6 +58,21 @@ class CustomerSegmentationService {
   }
 
   /**
+   * Get just the customer list for a segment (convenience method for notifications)
+   * @param {string} segmentId - The segment ID
+   * @returns {Array<Customer>} Array of customer instances
+   */
+  static async getSegmentCustomers(segmentId) {
+    try {
+      const result = await this.getCustomersInSegment(segmentId)
+      return result.customers || []
+    } catch (error) {
+      logger.error('Failed to get segment customers', { segmentId, error: error.message })
+      return [] // Return empty array on error for graceful handling
+    }
+  }
+
+  /**
    * Calculate and update segment size
    */
   static async calculateSegmentSize(segmentId) {
@@ -144,13 +159,25 @@ class CustomerSegmentationService {
       if (segment.last_activity_days !== null) {
         const cutoffDate = new Date()
         cutoffDate.setDate(cutoffDate.getDate() - segment.last_activity_days)
-        whereClause.last_activity_date = { [Op.gte]: cutoffDate }
+        // Select customers whose last activity is BEFORE cutoff (inactive)
+        // Also include customers with NULL last_activity_date as inactive
+        whereClause[Op.or] = [
+          { last_activity_date: { [Op.lt]: cutoffDate } },
+          { last_activity_date: null }
+        ]
       }
 
       // Apply visit frequency filter
       if (segment.visit_frequency) {
+        const visitFilter = {}
         if (segment.visit_frequency.min_visits) {
-          whereClause.total_visits = { [Op.gte]: segment.visit_frequency.min_visits }
+          visitFilter[Op.gte] = segment.visit_frequency.min_visits
+        }
+        if (segment.visit_frequency.max_visits) {
+          visitFilter[Op.lte] = segment.visit_frequency.max_visits
+        }
+        if (Object.keys(visitFilter).length > 0) {
+          whereClause.total_visits = visitFilter
         }
       }
 

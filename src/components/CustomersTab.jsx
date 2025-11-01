@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 import CompactStatsBar from './CompactStatsBar'
 import NotificationModal from './NotificationModal'
+import CampaignBuilder from './CampaignBuilder'
+import CampaignHistory from './CampaignHistory'
 
 function CustomersTab({ analytics: globalAnalytics }) {
   const { t } = useTranslation('dashboard')
@@ -24,6 +26,18 @@ function CustomersTab({ analytics: globalAnalytics }) {
   const [offers, setOffers] = useState([])
   const [successMessage, setSuccessMessage] = useState('')
 
+  // Segment state
+  const [segments, setSegments] = useState([])
+  const [selectedSegment, setSelectedSegment] = useState(null)
+  const [selectedSegmentData, setSelectedSegmentData] = useState(null)
+  const [loadingSegments, setLoadingSegments] = useState(false)
+  const [audienceMode, setAudienceMode] = useState('all') // 'all' | 'selected' | 'segment'
+
+  // Campaign state
+  const [activeTab, setActiveTab] = useState('customers') // 'customers' | 'campaigns'
+  const [showCampaignBuilder, setShowCampaignBuilder] = useState(false)
+  const [campaignRefreshTrigger, setCampaignRefreshTrigger] = useState(0)
+
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1)
@@ -33,6 +47,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
   useEffect(() => {
     loadCustomers()
     loadOffers()
+    loadSegments()
   }, [])
 
   const loadCustomers = async () => {
@@ -108,6 +123,33 @@ function CustomersTab({ analytics: globalAnalytics }) {
     }
   }
 
+  const loadSegments = async () => {
+    try {
+      setLoadingSegments(true)
+      console.log('🔒 Loading segments with secure authentication...')
+
+      const response = await secureApi.get(endpoints.segments)
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        // Extract segments array and filter for active segments only
+        const segmentsArray = data.data.segments || []
+        const activeSegments = segmentsArray.filter(s => s.is_active)
+        setSegments(activeSegments)
+        console.log('🔒 Segments loaded successfully:', activeSegments.length)
+      } else {
+        console.warn('⚠️ No segments data received from API')
+        setSegments([])
+      }
+    } catch (err) {
+      console.error('Failed to load segments:', err)
+      // Don't block UI - segments are optional feature
+      setSegments([])
+    } finally {
+      setLoadingSegments(false)
+    }
+  }
+
   // Notification handlers
   const handleSendNotificationClick = () => {
     if (selectedCustomers.size === 0) {
@@ -150,12 +192,66 @@ function CustomersTab({ analytics: globalAnalytics }) {
     setShowNotificationModal(true)
   }
 
-  const handleNotificationSuccess = (result) => {
+  const handleSendToSegment = async () => {
+    try {
+      if (!selectedSegment) {
+        setError('Please select a segment')
+        return
+      }
+
+      // Find the segment object
+      const segment = segments.find(s => s.segment_id === selectedSegment)
+      if (!segment || segment.customer_count === 0) {
+        setError('Selected segment has no customers')
+        return
+      }
+
+      setLoading(true)
+      console.log('🔒 Fetching segment customers:', selectedSegment)
+
+      // Fetch segment customers
+      const response = await secureApi.get(`${endpoints.segments}/${selectedSegment}/customers`)
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        const segmentCustomers = data.data.customers || []
+        
+        // Set these customers as selected
+        setSelectedCustomers(new Set(segmentCustomers.map(c => c.customer_id)))
+        
+        // Store segment metadata
+        setSelectedSegmentData({
+          segmentId: selectedSegment,
+          segmentName: segment.name,
+          customerCount: segmentCustomers.length
+        })
+
+        // Open notification modal in segment mode
+        setNotificationType('segment')
+        setShowNotificationModal(true)
+      } else {
+        throw new Error(data.message || 'Failed to fetch segment customers')
+      }
+    } catch (err) {
+      console.error('Error fetching segment customers:', err)
+      setError(err.message || 'Failed to load segment customers')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleNotificationSuccess = (results) => {
     setShowNotificationModal(false)
     setSelectedCustomers(new Set())
     setSelectedCustomer(null)
+    
+    // Clear segment selection and audience mode
+    setSelectedSegment(null)
+    setSelectedSegmentData(null)
+    setAudienceMode('all')
 
-    const message = t('customers.notificationSuccess', { count: result.successful_customers })
+    const count = results.successful_customers || results.successful || 0
+    const message = t('customers.notificationSuccess', { count })
     setSuccessMessage(message)
 
     // Auto-hide success message after 5 seconds
@@ -274,8 +370,46 @@ function CustomersTab({ analytics: globalAnalytics }) {
       
       {/* Header Section - Mobile-first */}
       <div className="compact-header">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('customers.customerManagement')}</h2>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('customers.manageAndNotify')}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('customers.customerManagement')}</h2>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('customers.manageAndNotify')}</p>
+          </div>
+          <button
+            onClick={() => setShowCampaignBuilder(true)}
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+          >
+            <span className="text-xl">📢</span>
+            <span className="hidden sm:inline">Create Campaign</span>
+            <span className="sm:hidden">Campaign</span>
+          </button>
+        </div>
+        
+        {/* Tab Navigation */}
+        <div className="mt-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                activeTab === 'customers'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              👥 Customers
+            </button>
+            <button
+              onClick={() => setActiveTab('campaigns')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                activeTab === 'campaigns'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              📢 Campaigns
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -298,6 +432,8 @@ function CustomersTab({ analytics: globalAnalytics }) {
         </div>
       )}
 
+      {/* Tab Content */}
+      {activeTab === 'customers' && (
       <div className="compact-spacing">
         {/* Search and Filters */}
         <div className="compact-card mobile-compact">
@@ -372,15 +508,79 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 </button>
               </div>
 
+              {/* Target Audience Selector */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('customers.targetAudience', { defaultValue: 'Target Audience' })}
+                </label>
+                <select
+                  value={audienceMode === 'segment' ? selectedSegment : audienceMode}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    if (value === 'all') {
+                      setAudienceMode('all')
+                      setSelectedSegment(null)
+                      setSelectedCustomers(new Set())
+                    } else if (value === 'selected') {
+                      setAudienceMode('selected')
+                      setSelectedSegment(null)
+                    } else {
+                      // It's a segment ID
+                      setAudienceMode('segment')
+                      setSelectedSegment(value)
+                      setSelectedCustomers(new Set())
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="all">
+                    {t('customers.allCustomers', { defaultValue: 'All Customers' })}
+                  </option>
+                  <option 
+                    value="selected" 
+                    disabled={selectedCustomers.size === 0}
+                  >
+                    {t('customers.selectedCustomers', { 
+                      defaultValue: `Selected Customers (${selectedCustomers.size})`,
+                      count: selectedCustomers.size 
+                    })}
+                  </option>
+                  
+                  {/* Segments Section */}
+                  {!loadingSegments && segments.length > 0 && (
+                    <>
+                      <option disabled>--- {t('customers.segments', { defaultValue: 'Segments' })} ---</option>
+                      {segments.map(segment => (
+                        <option key={segment.segment_id} value={segment.segment_id}>
+                          {segment.name} ({segment.customer_count || 0} {t('customers.customers', { defaultValue: 'customers' })})
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
+
               {/* Action Button Row */}
               <div className="flex justify-stretch sm:justify-end">
                 <button
-                  onClick={handleSendNotificationClick}
-                  disabled={selectedCustomers.size === 0}
+                  onClick={audienceMode === 'segment' ? handleSendToSegment : handleSendNotificationClick}
+                  disabled={audienceMode === 'all' || (audienceMode === 'selected' && selectedCustomers.size === 0)}
                   className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 touch-target"
                 >
                   <span>📧</span>
-                  <span>{t('customers.sendNotification')}</span>
+                  <span>
+                    {audienceMode === 'segment'
+                      ? t('customers.sendToSegment', { defaultValue: 'Send to Segment' })
+                      : audienceMode === 'selected' && selectedCustomers.size > 0
+                      ? t('customers.sendToSelected', { 
+                          defaultValue: `Send to Selected (${selectedCustomers.size})`,
+                          count: selectedCustomers.size 
+                        })
+                      : t('customers.selectCustomersOrSegment', { 
+                          defaultValue: 'Select customers or segment' 
+                        })
+                    }
+                  </span>
                 </button>
               </div>
             </div>
@@ -748,6 +948,17 @@ function CustomersTab({ analytics: globalAnalytics }) {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Campaigns Tab */}
+      {activeTab === 'campaigns' && (
+        <div className="compact-spacing">
+          <CampaignHistory 
+            onCreateCampaign={() => setShowCampaignBuilder(true)}
+            refreshTrigger={campaignRefreshTrigger}
+          />
+        </div>
+      )}
 
       {/* Notification Modal */}
       {showNotificationModal && (
@@ -755,11 +966,27 @@ function CustomersTab({ analytics: globalAnalytics }) {
           customers={selectedCustomer ? [selectedCustomer] : customers.filter(c => selectedCustomers.has(c.customer_id))}
           notificationType={notificationType}
           offers={offers}
+          segmentData={selectedSegmentData}
+          segmentId={audienceMode === 'segment' ? selectedSegment : null}
           onClose={() => {
             setShowNotificationModal(false)
             setSelectedCustomer(null)
           }}
           onSuccess={handleNotificationSuccess}
+        />
+      )}
+
+      {/* Campaign Builder Modal */}
+      {showCampaignBuilder && (
+        <CampaignBuilder
+          onClose={() => setShowCampaignBuilder(false)}
+          onSuccess={(campaign) => {
+            setShowCampaignBuilder(false)
+            setSuccessMessage(`Campaign "${campaign.name}" created successfully!`)
+            setCampaignRefreshTrigger(prev => prev + 1)
+            setActiveTab('campaigns')
+            setTimeout(() => setSuccessMessage(''), 5000)
+          }}
         />
       )}
     </div>

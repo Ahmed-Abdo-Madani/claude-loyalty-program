@@ -1,0 +1,89 @@
+{
+  "types": {
+    "custom": {
+      "label": "Custom Message",
+      "description": "Send a custom message to customers"
+    },
+    "offer": {
+      "label": "Offer Announcement",
+      "description": "Announce a new offer or promotion"
+    },
+    "reminder": {
+      "label": "Progress Reminder",
+      "description": "Remind customers of their progress"
+    },
+    "birthday": {
+      "label": "Birthday Greeting",
+      "description": "Send birthday wishes to customers"
+    },
+    "milestone": {
+      "label": "Milestone Achievement",
+      "description": "Celebrate customer milestones"
+    },
+    "reengagement": {
+      "label": "Re-engagement Incentive",
+      "description": "Win back inactive customers"
+    }
+  },
+  "estimatedTime": {
+    "instant": "Instant",
+    "seconds": "~{{seconds}} seconds",
+    "minutes": "~{{minutes}} minute{{s}}"
+  },
+  "defaults": {
+    "birthdayHeader": "🎂 Happy Birthday!",
+    "birthdayBody": "Wishing you a wonderful birthday! Enjoy a special reward on us.",
+    "reengagementHeader": "We miss you!",
+    "reengagementBody": "Come back and enjoy exclusive rewards!"
+  },
+  "errors": {
+    "noCustomers": "No customers selected",
+    "headerRequired": "Header is required",
+    "bodyRequired": "Message body is required",
+    "offerRequired": "Please select an offer",
+    "milestoneTitleRequired": "Milestone title is required",
+    "milestoneMessageRequired": "Milestone message is required",
+    "sendFailed": "Failed to send notification: {{error}}"
+  },
+  "results": {
+    "title": "Notification Results",
+    "success": "Delivery Complete",
+    "successful": "Successful",
+    "failed": "Failed",
+    "successRate": "Success Rate",
+    "errors": "Errors",
+    "moreErrors": "... and {{count}} more",
+    "close": "Close"
+  },
+  "sendingToSegment": "Sending to segment: {{name}} ({{count}} customers)",
+  "sendingTo": "Sending to {{count}} customers",
+  "progress": {
+    "sending": "Sending notifications...",
+    "estimatedTime": "⏱️ Estimated time: {{time}}"
+  },
+  "notificationType": "Notification Type",
+  "selectOffer": "Select Offer",
+  "chooseOffer": "Choose an offer...",
+  "messageHeader": "Message Header",
+  "messageHeaderPlaceholder": "Enter notification header...",
+  "messageBody": "Message Body",
+  "messageBodyPlaceholder": "Enter notification message...",
+  "milestoneTitle": "Milestone Title",
+  "milestoneTitlePlaceholder": "e.g., \"10 Visits Achieved!\"",
+  "celebrationMessage": "Celebration Message",
+  "celebrationPlaceholder": "Congratulate your customer...",
+  "greetingHeader": "Greeting Header",
+  "greetingHeaderPlaceholder": "e.g., \"🎂 Happy Birthday!\"",
+  "greetingMessage": "Greeting Message",
+  "greetingPlaceholder": "Write a birthday message...",
+  "incentiveHeader": "Incentive Header",
+  "incentiveHeaderPlaceholder": "e.g., \"We miss you!\"",
+  "incentiveMessage": "Incentive Message",
+  "incentivePlaceholder": "Offer an incentive...",
+  "characterLimits": "Character Limits",
+  "headerLimit": "{{current}}/{{max}} characters",
+  "bodyLimit": "{{current}}/{{max}} characters",
+  "cancel": "Cancel",
+  "sending": "Sending...",
+  "sendNotification": "Send Notification"
+}

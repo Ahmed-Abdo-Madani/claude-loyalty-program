@@ -2,8 +2,20 @@ import express from 'express'
 import { Op } from 'sequelize'
 import CustomerSegmentationService from '../services/CustomerSegmentationService.js'
 import { CustomerSegment, Customer, Business } from '../models/index.js'
+import logger from '../config/logger.js'
 
 const router = express.Router()
+
+// Allowed sort fields for validation (prevents SQL injection and invalid column errors)
+const ALLOWED_SORT_FIELDS = [
+  'created_at',
+  'updated_at',
+  'name',
+  'customer_count',
+  'description',
+  'is_active',
+  'auto_update'
+]
 
 // Middleware to verify business session - reused from business.js pattern
 const requireBusinessAuth = async (req, res, next) => {
@@ -47,7 +59,16 @@ const requireBusinessAuth = async (req, res, next) => {
 router.get('/', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.business.public_id
-    const { page = 1, limit = 20, is_active, auto_update, sort = 'created_at', order = 'DESC' } = req.query
+    let { page = 1, limit = 20, is_active, auto_update, sort = 'created_at', order = 'DESC' } = req.query
+
+    // Validate sort field (prevent SQL injection)
+    if (!ALLOWED_SORT_FIELDS.includes(sort)) {
+      logger.warn(`Invalid sort field attempted: ${sort}`)
+      sort = 'created_at'
+    }
+
+    // Validate order direction
+    const validOrder = ['ASC', 'DESC'].includes(order.toUpperCase()) ? order.toUpperCase() : 'DESC'
 
     // Build where clause
     const whereClause = { business_id: businessId }
@@ -68,7 +89,7 @@ router.get('/', requireBusinessAuth, async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [[sort, order.toUpperCase()]]
+      order: [[sort, validOrder]]
     })
 
     // Calculate pagination info
@@ -260,7 +281,28 @@ router.get('/:segmentId/customers', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.business.public_id
     const { segmentId } = req.params
-    const { page = 1, limit = 50, sort = 'last_activity_date', order = 'DESC' } = req.query
+    let { page = 1, limit = 50, sort = 'last_activity_date', order = 'DESC' } = req.query
+
+    // Allowed sort fields for customers
+    const ALLOWED_CUSTOMER_SORT_FIELDS = [
+      'last_activity_date',
+      'created_at',
+      'updated_at',
+      'name',
+      'email',
+      'phone',
+      'total_stamps',
+      'completed_cards'
+    ]
+
+    // Validate sort field
+    if (!ALLOWED_CUSTOMER_SORT_FIELDS.includes(sort)) {
+      logger.warn(`Invalid customer sort field attempted: ${sort}`)
+      sort = 'last_activity_date'
+    }
+
+    // Validate order direction
+    const validOrder = ['ASC', 'DESC'].includes(order.toUpperCase()) ? order.toUpperCase() : 'DESC'
 
     // Verify segment belongs to business
     const segment = await CustomerSegment.findOne({
@@ -284,7 +326,7 @@ router.get('/:segmentId/customers', requireBusinessAuth, async (req, res) => {
     const segmentData = await CustomerSegmentationService.getCustomersInSegment(segmentId, {
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [[sort, order.toUpperCase()]]
+      order: [[sort, validOrder]]
     })
 
     // Calculate pagination info
@@ -557,6 +599,250 @@ router.post('/refresh-all', requireBusinessAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to refresh all segments',
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/segments/:segmentId/send-notification
+ * Send wallet notifications to all customers in a specific segment (parameterized route)
+ */
+router.post('/:segmentId/send-notification', requireBusinessAuth, async (req, res) => {
+  try {
+    // Extract and validate inputs
+    const businessId = req.business.public_id
+    const { segmentId } = req.params
+    const { message_header, message_body, message_type } = req.body
+
+    if (!message_header || !message_body) {
+      return res.status(400).json({
+        success: false,
+        message: 'message_header and message_body are required'
+      })
+    }
+
+    // Verify segment ownership
+    const segment = await CustomerSegment.findOne({
+      where: {
+        segment_id: segmentId,
+        business_id: businessId
+      }
+    })
+
+    if (!segment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Segment not found or does not belong to your business'
+      })
+    }
+
+    // Get customers in segment
+    const customers = await CustomerSegmentationService.getSegmentCustomers(segmentId)
+
+    if (customers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No customers found in this segment',
+        data: {
+          segment_id: segmentId,
+          customer_count: 0
+        }
+      })
+    }
+
+    logger.info('Sending notification to segment', {
+      segmentId,
+      customer_count: customers.length,
+      businessId
+    })
+
+    // Extract customer IDs
+    const customerIds = customers.map(c => c.customer_id)
+
+    // Prepare message data
+    const messageData = {
+      header: message_header,
+      body: message_body
+    }
+
+    const messageType = message_type || 'segment_notification'
+
+    // Send bulk notifications
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+    const result = await WalletNotificationService.sendBulkNotifications(
+      businessId,
+      customerIds,
+      messageData,
+      messageType
+    )
+
+    // Update segment notification timestamp only if notifications were actually sent
+    if (result.success && result.successful_customers > 0) {
+      await segment.updateLastNotificationSent()
+      await segment.incrementUsage()
+    }
+
+    logger.info('Segment notification completed', {
+      segmentId,
+      segment_name: segment.name,
+      customer_count: customers.length,
+      successful: result.successful_customers,
+      failed: result.failed_customers
+    })
+
+    res.json({
+      success: true,
+      message: 'Notifications sent to segment successfully',
+      data: {
+        segment_id: segmentId,
+        segment_name: segment.name,
+        result: {
+          total: customers.length,
+          successful: result.successful_customers,
+          failed: result.failed_customers,
+          details: result.details,
+          errors: result.errors
+        }
+      }
+    })
+
+  } catch (error) {
+    logger.error('Error sending segment notification:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send segment notification',
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/segments/send-notification
+ * Send wallet notifications to all customers in a segment (legacy route - body param)
+ * @deprecated Use /:segmentId/send-notification instead
+ */
+router.post('/send-notification', requireBusinessAuth, async (req, res) => {
+  try {
+    // Extract and validate inputs
+    const businessId = req.business.public_id
+    const { segment_id, message_header, message_body, message_type } = req.body
+
+    // Validate required fields
+    if (!segment_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'segment_id is required'
+      })
+    }
+
+    if (!message_header || !message_body) {
+      return res.status(400).json({
+        success: false,
+        message: 'message_header and message_body are required'
+      })
+    }
+
+    // Verify segment ownership
+    const segment = await CustomerSegment.findOne({
+      where: {
+        segment_id: segment_id,
+        business_id: businessId
+      }
+    })
+
+    if (!segment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Segment not found or does not belong to your business'
+      })
+    }
+
+    // Get customers in segment
+    const customers = await CustomerSegmentationService.getSegmentCustomers(segment_id)
+
+    if (customers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No customers found in this segment',
+        data: {
+          segment_id: segment_id,
+          customer_count: 0
+        }
+      })
+    }
+
+    logger.info('Sending notification to segment', {
+      segmentId: segment_id,
+      customer_count: customers.length,
+      businessId
+    })
+
+    // Extract customer IDs
+    const customerIds = customers.map(c => c.customer_id)
+
+    // Prepare message data
+    const messageData = {
+      header: message_header,
+      body: message_body
+    }
+
+    const messageType = message_type || 'segment_notification'
+
+    // Send bulk notifications
+    const WalletNotificationService = (await import('../services/WalletNotificationService.js')).default
+    const result = await WalletNotificationService.sendBulkNotifications(
+      businessId,
+      customerIds,
+      messageData,
+      messageType
+    )
+
+    // Update segment notification timestamp only if notifications were actually sent
+    if (result.success && result.successful_customers > 0) {
+      await segment.updateLastNotificationSent()
+      await segment.incrementUsage()
+    }
+
+    logger.info('Segment notification completed', {
+      segmentId: segment_id,
+      segment_name: segment.name,
+      customer_count: customers.length,
+      successful: result.successful_customers,
+      failed: result.failed_customers
+    })
+
+    // Return response
+    res.status(200).json({
+      success: true,
+      message: 'Notifications sent to segment',
+      data: {
+        segment_id: segment_id,
+        segment_name: segment.name,
+        customer_count: customers.length,
+        result: {
+          success: result.success,
+          total_customers: result.total_customers,
+          successful_customers: result.successful_customers,
+          failed_customers: result.failed_customers,
+          total_passes: result.total_passes,
+          successful_passes: result.successful_passes,
+          failed_passes: result.failed_passes
+        }
+      }
+    })
+
+  } catch (error) {
+    logger.error('Error sending notification to segment', {
+      segmentId: req.body.segment_id,
+      businessId: req.business?.public_id,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send notifications to segment',
       error: error.message
     })
   }

@@ -71,6 +71,16 @@ class SecureIDGenerator {
   }
 
   /**
+   * Generate a secure auto-engagement config ID
+   * @returns {string} Auto-engagement config ID in format: aec_[20chars]
+   */
+  static generateAutoEngagementConfigID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `aec_${randomString}`
+  }
+
+  /**
    * Validate if an ID follows secure format
    * @param {string} id - The ID to validate
    * @param {string} type - The expected type (business, offer, customer, branch)
@@ -85,8 +95,9 @@ class SecureIDGenerator {
       customer: /^cust_[a-f0-9]{20}$/,
       branch: /^branch_[a-f0-9]{20}$/,
       campaign: /^camp_[a-f0-9]{20}$/,
-      segment: /^seg_[a-f0-9]{20}$/
-    }
+      segment: /^seg_[a-f0-9]{20}$/,
+      auto_engagement_config: /^aec_[a-f0-9]{20}$/
+    };
 
     return patterns[type]?.test(id) || false
   }
@@ -105,6 +116,7 @@ class SecureIDGenerator {
     if (id.startsWith('branch_')) return 'branch'
     if (id.startsWith('camp_')) return 'campaign'
     if (id.startsWith('seg_')) return 'segment'
+    if (id.startsWith('aec_')) return 'auto_engagement_config'
 
     return null
   }
@@ -122,8 +134,9 @@ class SecureIDGenerator {
       customer: this.generateCustomerID,
       branch: this.generateBranchID,
       campaign: this.generateCampaignID,
-      segment: this.generateSegmentID
-    }
+      segment: this.generateSegmentID,
+      auto_engagement_config: this.generateAutoEngagementConfigID
+    };
 
     const generator = generators[type]
     if (!generator) {
@@ -149,6 +162,7 @@ export const {
   generateBranchID,
   generateCampaignID,
   generateSegmentID,
+  generateAutoEngagementConfigID,
   validateSecureID,
   getIDType,
   generateBatch

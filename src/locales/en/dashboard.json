@@ -442,7 +442,15 @@
     "filter": "Filter",
     "export": "Export",
     "exportCSV": "Export CSV",
-    "exportExcel": "Export Excel"
+    "exportExcel": "Export Excel",
+    "targetAudience": "Target Audience",
+    "allCustomers": "All Customers",
+    "selectedCustomers": "{{count}} Selected Customers",
+    "selectCustomersOrSegment": "Select customers or segment",
+    "segments": "Segments",
+    "customers": "customers",
+    "sendToSegment": "Send to Segment",
+    "sendToSelected": "Send to {{count}} Selected"
   },
   "scanner": {
     "title": "QR Scanner",

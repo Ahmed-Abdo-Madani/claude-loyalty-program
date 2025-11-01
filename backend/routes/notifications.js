@@ -2,9 +2,22 @@ import express from 'express'
 import { Op } from 'sequelize'
 import sequelize from '../config/database.js'
 import NotificationService from '../services/NotificationService.js'
-import { NotificationCampaign, NotificationLog, Customer, Business } from '../models/index.js'
+import { NotificationCampaign, NotificationLog, Customer, Business, CustomerSegment, Offer } from '../models/index.js'
+import logger from '../config/logger.js'
 
 const router = express.Router()
+
+// Allowed sort fields for campaign validation
+const ALLOWED_CAMPAIGN_SORT_FIELDS = [
+  'created_at',
+  'updated_at',
+  'status',
+  'scheduled_at',
+  'sent_at',
+  'name',
+  'campaign_type',
+  'priority'
+]
 
 // Middleware to verify business session - reused from business.js pattern
 const requireBusinessAuth = async (req, res, next) => {
@@ -48,7 +61,16 @@ const requireBusinessAuth = async (req, res, next) => {
 router.get('/campaigns', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.business.public_id
-    const { page = 1, limit = 20, status, campaign_type, sort = 'created_at', order = 'DESC' } = req.query
+    let { page = 1, limit = 20, status, campaign_type, sort = 'created_at', order = 'DESC' } = req.query
+
+    // Validate sort field (prevent SQL injection)
+    if (!ALLOWED_CAMPAIGN_SORT_FIELDS.includes(sort)) {
+      logger.warn(`Invalid campaign sort field attempted: ${sort}`)
+      sort = 'created_at'
+    }
+
+    // Validate order direction
+    const validOrder = ['ASC', 'DESC'].includes(order.toUpperCase()) ? order.toUpperCase() : 'DESC'
 
     // Build where clause
     const whereClause = { business_id: businessId }
@@ -69,7 +91,7 @@ router.get('/campaigns', requireBusinessAuth, async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [[sort, order.toUpperCase()]]
+      order: [[sort, validOrder]]
     })
 
     // Calculate pagination info
@@ -162,6 +184,14 @@ router.post('/campaigns', requireBusinessAuth, async (req, res) => {
       })
     }
 
+    // Defensive fallback: Ensure campaign_id is set before create
+    // This guards against hook failures or initialization issues
+    if (!campaignData.campaign_id) {
+      const SecureIDGenerator = await import('../utils/secureIdGenerator.js')
+      campaignData.campaign_id = SecureIDGenerator.default.generateCampaignID()
+      logger.warn('⚠️  campaign_id was not set by hook, generated manually:', campaignData.campaign_id)
+    }
+
     // Create campaign
     const campaign = await NotificationCampaign.create(campaignData)
 
@@ -203,11 +233,11 @@ router.put('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    // Check if campaign can be updated
-    if (campaign.status === 'sent') {
+    // Check if campaign can be updated (terminal statuses)
+    if (campaign.status === 'completed' || campaign.status === 'cancelled') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot update campaign that has already been sent'
+        message: `Cannot update campaign that has been ${campaign.status}`
       })
     }
 
@@ -255,17 +285,17 @@ router.delete('/campaigns/:campaignId', requireBusinessAuth, async (req, res) =>
       })
     }
 
-    // Check if campaign can be deleted
-    if (campaign.status === 'sent') {
+    // Check if campaign can be deleted (terminal statuses)
+    if (campaign.status === 'completed' || campaign.status === 'cancelled') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete campaign that has already been sent'
+        message: `Cannot delete campaign that has been ${campaign.status}`
       })
     }
 
-    // Soft delete campaign
+    // Soft delete campaign by marking as cancelled
     await campaign.update({
-      status: 'deleted',
+      status: 'cancelled',
       updated_at: new Date()
     })
 
@@ -314,17 +344,24 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
       })
     }
 
+    // Instantiate NotificationService
+    const notificationService = new NotificationService()
+
     // Send campaign using NotificationService
     let result
     if (test_mode) {
-      result = await NotificationService.sendTestCampaign(campaignId, test_recipients)
+      // Test mode not yet implemented - return error
+      return res.status(501).json({
+        success: false,
+        message: 'Test mode not yet implemented'
+      })
     } else {
-      result = await NotificationService.sendCampaign(campaignId)
+      result = await notificationService.sendCampaign(campaignId)
     }
 
     res.json({
       success: true,
-      message: test_mode ? 'Test campaign sent successfully' : 'Campaign sent successfully',
+      message: 'Campaign sent successfully',
       data: result
     })
 
@@ -333,6 +370,193 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
     res.status(500).json({
       success: false,
       message: 'Failed to send campaign',
+      error: error.message
+    })
+  }
+})
+
+// POST /api/notifications/campaigns/promotional - Create and optionally send promotional campaign
+router.post('/campaigns/promotional', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const {
+      name,
+      description,
+      campaign_type,
+      message_header,
+      message_body,
+      target_type,
+      target_segment_id,
+      target_criteria,
+      linked_offer_id,
+      channels = ['wallet'],
+      send_immediately = true,
+      scheduled_at,
+      tags = []
+    } = req.body
+
+    logger.info('Creating promotional campaign', { business_id: businessId, campaign_type })
+
+    // Validate required fields
+    if (!name || !campaign_type || !message_header || !message_body || !target_type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, campaign_type, message_header, message_body, target_type'
+      })
+    }
+
+    // Validate campaign_type
+    const validCampaignTypes = ['new_offer_announcement', 'custom_promotion', 'seasonal_campaign']
+    if (!validCampaignTypes.includes(campaign_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid campaign_type. Must be one of: ${validCampaignTypes.join(', ')}`
+      })
+    }
+
+    // Validate targeting
+    if (target_type === 'segment') {
+      if (!target_segment_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'target_segment_id is required when target_type is segment'
+        })
+      }
+
+      // Verify segment exists and belongs to business
+      const segment = await CustomerSegment.findOne({
+        where: {
+          segment_id: target_segment_id,
+          business_id: businessId
+        }
+      })
+
+      if (!segment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Segment not found or does not belong to business'
+        })
+      }
+    }
+
+    if (target_type === 'custom_filter') {
+      if (!target_criteria || Object.keys(target_criteria).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'target_criteria is required when target_type is custom_filter'
+        })
+      }
+    }
+
+    // Validate offer linking if provided
+    if (linked_offer_id) {
+      const offer = await Offer.findOne({
+        where: {
+          public_id: linked_offer_id,
+          business_id: businessId
+        }
+      })
+
+      if (!offer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Linked offer not found or does not belong to business'
+        })
+      }
+    }
+
+    // Validate scheduling
+    if (scheduled_at) {
+      const scheduledDate = new Date(scheduled_at)
+      if (scheduledDate <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'scheduled_at must be a future date'
+        })
+      }
+    }
+
+    // Build campaign data
+    const campaignData = {
+      business_id: businessId,
+      name,
+      description,
+      type: 'manual',
+      campaign_type,
+      target_type,
+      target_segment_id: target_segment_id || null,
+      target_criteria: target_criteria || null,
+      linked_offer_id: linked_offer_id || null,
+      message_template: {
+        header: message_header,
+        body: message_body
+      },
+      channels,
+      send_immediately,
+      scheduled_at: scheduled_at || null,
+      status: 'draft',
+      tags
+    }
+
+    // Create campaign
+    const campaign = await NotificationCampaign.create(campaignData)
+    logger.info('Promotional campaign created', { campaign_id: campaign.campaign_id })
+
+    // Send or schedule
+    let sendResults = null
+    if (send_immediately) {
+      // Update status to active
+      campaign.status = 'active'
+      await campaign.save()
+
+      // Instantiate NotificationService
+      const notificationService = new NotificationService()
+
+      // Send campaign
+      sendResults = await notificationService.sendCampaign(campaign.campaign_id)
+      logger.info('Promotional campaign sent', { campaign_id: campaign.campaign_id, results: sendResults })
+
+      // Reload campaign to get updated stats
+      await campaign.reload()
+
+      return res.status(201).json({
+        success: true,
+        message: 'Promotional campaign created and sent',
+        data: {
+          campaign: {
+            campaign_id: campaign.campaign_id,
+            name: campaign.name,
+            campaign_type: campaign.campaign_type,
+            status: campaign.status,
+            total_recipients: campaign.total_recipients,
+            total_sent: campaign.total_sent,
+            total_failed: campaign.total_failed
+          },
+          send_results: sendResults
+        }
+      })
+    } else {
+      // Keep as draft for scheduled send
+      return res.status(201).json({
+        success: true,
+        message: 'Campaign created and scheduled',
+        data: {
+          campaign: {
+            campaign_id: campaign.campaign_id,
+            name: campaign.name,
+            campaign_type: campaign.campaign_type,
+            status: campaign.status,
+            scheduled_at: campaign.scheduled_at
+          }
+        }
+      })
+    }
+
+  } catch (error) {
+    logger.error('Failed to create promotional campaign', { error: error.message, stack: error.stack })
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create promotional campaign',
       error: error.message
     })
   }
@@ -539,26 +763,13 @@ router.post('/send-quick', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    // Verify customers belong to business
-    const customers = await Customer.findAll({
-      where: {
-        customer_id: { [Op.in]: customer_ids },
-        business_id: businessId,
-        status: 'active'
-      }
-    })
+    // Instantiate NotificationService
+    const notificationService = new NotificationService()
 
-    if (customers.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No valid customers found'
-      })
-    }
-
-    // Send quick notification
-    const result = await NotificationService.sendQuickNotification({
+    // Send quick notification (service will validate and filter customers)
+    const result = await notificationService.sendQuickNotification({
       business_id: businessId,
-      customer_ids: customers.map(c => c.customer_id),
+      customer_ids: customer_ids,
       channels,
       subject,
       message,

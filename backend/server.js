@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import cron from 'node-cron'
 import logger from './config/logger.js'
 import sequelize from './config/database.js'
 import walletRoutes from './routes/wallet.js'
@@ -17,10 +18,12 @@ import locationRoutes from './routes/locations.js'
 import cardDesignRoutes from './routes/cardDesign.js'
 import stampIconsRoutes from './routes/stampIcons.js'
 import branchManagerRoutes from './routes/branchManager.js'
+import autoEngagementRoutes from './routes/autoEngagement.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
 import StampImageGenerator from './services/StampImageGenerator.js'
+import AutoEngagementService from './services/AutoEngagementService.js'
 import { extractLanguage, getLocalizedMessage } from './middleware/languageMiddleware.js'
 
 // Get __dirname equivalent in ES modules
@@ -244,6 +247,7 @@ app.use('/api/locations', locationRoutes)
 app.use('/api/card-design', cardDesignRoutes)
 app.use('/api/stamp-icons', stampIconsRoutes)
 app.use('/api/branch-manager', branchManagerRoutes)
+app.use('/api/auto-engagement', autoEngagementRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -432,6 +436,27 @@ async function initializeDatabase() {
       logger.info(`🏢 Business API: ${baseUrl}/api/business`)
       logger.info(`👥 Customer API: ${baseUrl}/api/customers`)
       logger.info(`📱 Wallet API: ${baseUrl}/api/wallet`)
+
+      // Initialize auto-engagement cron job
+      if (process.env.DISABLE_AUTO_ENGAGEMENT !== 'true') {
+        // Run daily at 9:00 AM UTC
+        cron.schedule('0 9 * * *', async () => {
+          logger.info('🔔 Running scheduled auto-engagement check...');
+          try {
+            await AutoEngagementService.runDailyCheck();
+            logger.info('✅ Scheduled auto-engagement check completed');
+          } catch (error) {
+            logger.error('❌ Scheduled auto-engagement check failed', {
+              error: error.message,
+              stack: error.stack
+            });
+          }
+        });
+
+        logger.info('⏰ Auto-engagement cron job initialized (daily at 9:00 AM UTC)');
+      } else {
+        logger.info('⏸️ Auto-engagement cron job disabled (DISABLE_AUTO_ENGAGEMENT=true)');
+      }
     })
 
     // Graceful shutdown

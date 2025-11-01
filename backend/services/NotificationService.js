@@ -106,6 +106,174 @@ class NotificationService {
   }
 
   /**
+   * Send quick notification to multiple customers
+   * Used by the /api/notifications/send-quick route
+   */
+  async sendQuickNotification({ business_id, customer_ids, channels, subject, message, send_immediately = true }) {
+    try {
+      // Input validation
+      if (!business_id || typeof business_id !== 'string' || business_id.trim() === '') {
+        return {
+          success: false,
+          error: 'business_id is required and must be a non-empty string',
+          total: 0,
+          successful: 0,
+          failed: 0
+        }
+      }
+
+      if (!customer_ids || !Array.isArray(customer_ids) || customer_ids.length === 0) {
+        return {
+          success: false,
+          error: 'customer_ids must be a non-empty array',
+          total: 0,
+          successful: 0,
+          failed: 0
+        }
+      }
+
+      if (!channels || !Array.isArray(channels) || channels.length === 0) {
+        return {
+          success: false,
+          error: 'channels must be a non-empty array',
+          total: 0,
+          successful: 0,
+          failed: customer_ids.length
+        }
+      }
+
+      // Normalize and deduplicate channels
+      const normalizedChannels = [...new Set(channels.map(ch => String(ch).toLowerCase().trim()))]
+
+      // Validate channel types
+      const validChannels = ['email', 'sms', 'push', 'wallet']
+      const invalidChannels = normalizedChannels.filter(ch => !validChannels.includes(ch))
+      if (invalidChannels.length > 0) {
+        return {
+          success: false,
+          error: `Invalid channels: ${invalidChannels.join(', ')}. Valid channels are: ${validChannels.join(', ')}`,
+          total: 0,
+          successful: 0,
+          failed: customer_ids.length
+        }
+      }
+
+      if (!message || typeof message !== 'string' || message.trim() === '') {
+        return {
+          success: false,
+          error: 'message is required and must be a non-empty string',
+          total: 0,
+          successful: 0,
+          failed: customer_ids.length
+        }
+      }
+
+      logger.info('📧 Sending quick notification', {
+        business_id,
+        customer_count: customer_ids.length,
+        channels: normalizedChannels
+      })
+
+      // Customer verification - find active customers that belong to the business
+      const customers = await Customer.findAll({
+        where: {
+          customer_id: { [Op.in]: customer_ids },
+          business_id: business_id,
+          status: 'active'
+        },
+        attributes: ['customer_id']
+      })
+
+      if (customers.length === 0) {
+        logger.warn('No valid active customers found for quick notification', {
+          business_id,
+          requested_count: customer_ids.length
+        })
+        return {
+          success: false,
+          error: 'No valid active customers found',
+          total: 0,
+          successful: 0,
+          failed: customer_ids.length
+        }
+      }
+
+      // Log if some customers were filtered out
+      if (customers.length < customer_ids.length) {
+        logger.warn('Some customer IDs were filtered out (inactive or not found)', {
+          business_id,
+          requested: customer_ids.length,
+          valid: customers.length,
+          filtered_out: customer_ids.length - customers.length
+        })
+      }
+
+      logger.info('Verified customers for quick notification', {
+        requested: customer_ids.length,
+        valid: customers.length
+      })
+
+      // Prepare message object with structure expected by sendBulkNotifications
+      const messageObject = {
+        subject: subject || 'Notification',
+        content: message,
+        body: message
+      }
+
+      // Extract valid customer IDs
+      const validCustomerIds = customers.map(c => c.customer_id)
+
+      // Delegate to sendBulkNotifications with proper options
+      const result = await this.sendBulkNotifications(
+        validCustomerIds,
+        business_id,
+        messageObject,
+        normalizedChannels,
+        {
+          notification_type: 'quick',
+          send_immediately
+        }
+      )
+
+      // Add metadata to response
+      const response = {
+        ...result,
+        notification_type: 'quick',
+        channels: normalizedChannels,
+        timestamp: new Date()
+      }
+
+      logger.info('Quick notification completed', {
+        business_id,
+        total: result.total,
+        successful: result.successful,
+        failed: result.failed,
+        channels: normalizedChannels
+      })
+
+      return response
+
+    } catch (error) {
+      logger.error('Failed to send quick notification', {
+        business_id,
+        customer_count: customer_ids ? customer_ids.length : 0,
+        channels,
+        error: error.message,
+        stack: error.stack
+      })
+
+      return {
+        success: false,
+        error: 'Failed to send quick notification',
+        message: error.message,
+        total: customer_ids ? customer_ids.length : 0,
+        successful: 0,
+        failed: customer_ids ? customer_ids.length : 0
+      }
+    }
+  }
+
+  /**
    * Send a campaign to targeted customers
    */
   async sendCampaign(campaignId) {
@@ -118,6 +286,12 @@ class NotificationService {
 
       if (!campaign) {
         throw new Error(`Campaign ${campaignId} not found`)
+      }
+
+      // Check if campaign is scheduled for later
+      if (campaign.scheduled_at && new Date(campaign.scheduled_at) > new Date() && !campaign.send_immediately) {
+        logger.info(`Campaign ${campaignId} is scheduled for later`, { scheduled_at: campaign.scheduled_at })
+        return { success: true, message: 'Campaign scheduled for later', sent: 0 }
       }
 
       if (!campaign.canSend()) {
@@ -204,7 +378,7 @@ class NotificationService {
         campaign_id: options.campaign_id || null,
         customer_id: customer.customer_id,
         business_id: customer.business_id,
-        notification_type: options.campaign_id ? 'campaign' : 'manual',
+        notification_type: options.notification_type || (options.campaign_id ? 'campaign' : 'manual'),
         channel,
         subject: message.subject,
         message_content: message.content || message.body,
@@ -424,8 +598,13 @@ class NotificationService {
           break
 
         case 'segment':
-          // This would be handled by CustomerSegmentationService
-          // For now, return empty array
+          // Fetch customers from segment using CustomerSegmentationService
+          if (campaign.target_segment_id) {
+            const CustomerSegmentationService = (await import('./CustomerSegmentationService.js')).default
+            const segmentCustomers = await CustomerSegmentationService.getSegmentCustomers(campaign.target_segment_id)
+            return segmentCustomers
+          }
+          logger.warn('Segment targeting requested but no target_segment_id provided', { campaign_id: campaign.campaign_id })
           return []
 
         case 'custom_filter':
@@ -463,9 +642,16 @@ class NotificationService {
       filter.lifecycle_stage = { [Op.in]: Array.isArray(criteria.lifecycle_stage) ? criteria.lifecycle_stage : [criteria.lifecycle_stage] }
     }
 
+    // CAUTION: Semantics for "inactive for N days"
+    // If intent is "inactive for N days", use Op.lte (last_activity_date <= cutoff)
+    // Current implementation uses Op.gte (active within N days)
+    // TODO: When enabling custom filter UI, align field names with backend keys
+    // and add server-side validation for criteria structure
     if (criteria.last_activity_days) {
       const cutoffDate = new Date()
       cutoffDate.setDate(cutoffDate.getDate() - criteria.last_activity_days)
+      // Current: finds customers active within N days (last_activity_date >= cutoff)
+      // For "inactive for N days": use { [Op.lte]: cutoffDate }
       filter.last_activity_date = { [Op.gte]: cutoffDate }
     }
 
@@ -550,6 +736,58 @@ class NotificationService {
 
     } catch (error) {
       logger.error('Webhook processing failed', { error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Track campaign conversion
+   * @param {string} campaignId - Campaign ID
+   * @param {string} customerId - Customer ID
+   * @param {object} conversionData - Additional conversion data
+   */
+  async trackCampaignConversion(campaignId, customerId, conversionData = {}) {
+    try {
+      logger.info('Tracking campaign conversion', { campaign_id: campaignId, customer_id: customerId })
+
+      // Find NotificationLog entry for campaign and customer
+      const logEntry = await NotificationLog.findOne({
+        where: {
+          campaign_id: campaignId,
+          customer_id: customerId
+        }
+      })
+
+      if (!logEntry) {
+        logger.warn('No notification log found for campaign conversion', { campaign_id: campaignId, customer_id: customerId })
+        return { success: false, message: 'Notification log not found' }
+      }
+
+      // Mark as converted
+      await logEntry.markAsConverted(conversionData)
+
+      // Update campaign stats
+      const campaign = await NotificationCampaign.findOne({
+        where: { campaign_id: campaignId }
+      })
+
+      if (campaign) {
+        campaign.total_converted += 1
+        await campaign.save()
+
+        // If campaign has linked_offer_id, record offer conversion
+        if (campaign.linked_offer_id) {
+          logger.info('Campaign conversion linked to offer', { 
+            campaign_id: campaignId, 
+            offer_id: campaign.linked_offer_id 
+          })
+        }
+      }
+
+      return { success: true }
+
+    } catch (error) {
+      logger.error('Failed to track campaign conversion', { error: error.message })
       throw error
     }
   }
