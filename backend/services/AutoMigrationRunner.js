@@ -540,7 +540,14 @@ class AutoMigrationRunner {
     
     // Migrations that should NEVER run automatically (manual only)
     const excludedMigrations = [
-      '20250121-cleanup-old-apple-wallet-passes.js' // Data deletion - production safety
+      // Data deletion migrations - manual only for production safety
+      '20250121-cleanup-old-apple-wallet-passes.js',
+      
+      // Legacy standalone migrations - already applied manually, don't follow { up, down } pattern
+      '20000102-add-secure-ids-cautious.js',
+      '20000103-simplify-branch-location-fields.js',
+      '20000104-create-offer-card-designs-table.js',
+      '20000105-aggressive-security-migration.js'
     ]
     
     return files
