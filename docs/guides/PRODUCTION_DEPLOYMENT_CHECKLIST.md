@@ -96,6 +96,51 @@ npm run migrate:auto
 
 ---
 
+### Migration Idempotency Verification
+
+**CRITICAL**: All migrations must be idempotent (safe to run multiple times)
+
+**Run verification script**:
+```bash
+npm run migrate:verify
+```
+
+**Expected output**:
+- ✅ All migration files have valid exports
+- ✅ All files follow naming convention
+- ✅ All migrations have existence checks before adding columns/tables
+- ✅ No syntax errors detected
+
+**If verification fails**:
+- Fix the reported issues before deploying
+- Re-run verification until all checks pass
+- Do NOT deploy with non-idempotent migrations
+
+**Common Idempotency Patterns**:
+
+```javascript
+// ✅ GOOD - Check before adding column
+const [columns] = await sequelize.query(
+  `SELECT column_name FROM information_schema.columns 
+   WHERE table_name = 'your_table' AND column_name = 'your_column'`
+)
+
+if (columns.length === 0) {
+  await queryInterface.addColumn('your_table', 'your_column', { ... })
+}
+
+// ✅ GOOD - Use IF NOT EXISTS for tables
+CREATE TABLE IF NOT EXISTS your_table ( ... )
+
+// ✅ GOOD - Use IF EXISTS for drops
+DROP TABLE IF EXISTS your_table
+
+// ❌ BAD - No existence check
+await queryInterface.addColumn('your_table', 'your_column', { ... })
+```
+
+---
+
 ## ✅ PRE-DEPLOYMENT VERIFICATION
 
 **Before running migrations, complete the Pre-Deployment Verification checklist above.**
@@ -115,6 +160,8 @@ npm run migrate:auto
 - [ ] No failed migrations in schema_migrations table
 - [ ] All pending migrations identified and reviewed
 - [ ] Migration checksums validated (npm run migrate:validate)
+- [ ] All migrations are idempotent (verified with npm run migrate:verify)
+- [ ] No migrations will fail if columns/tables already exist
 - [ ] AutoEngagementConfig table migration created and applied
 - [ ] campaign_type CHECK constraint migration applied (20250131)
 - [ ] Only ONE CHECK constraint exists on notification_campaigns.campaign_type
@@ -156,6 +203,15 @@ npm run migrate:auto
 ## 📦 DEPLOYMENT STEPS
 
 ### Step 1: Verify Auto-Migration System ⏳
+
+**Verify migrations are safe**:
+```bash
+# Run verification script
+npm run migrate:verify
+
+# Expected: All checks pass
+# If any fail: Fix issues before proceeding
+```
 
 **Check migration status locally**:
 ```bash

@@ -548,7 +548,11 @@ class AutoMigrationRunner {
       '20000102-add-secure-ids-cautious.js',
       '20000103-simplify-branch-location-fields.js',
       '20000104-create-offer-card-designs-table.js',
-      '20000105-aggressive-security-migration.js'
+      '20000105-aggressive-security-migration.js',
+      
+      // Constraint fix migration - integrated into 20250127-add-pass-lifecycle-fields.js
+      // Only needed for databases that ran lifecycle migration before constraint fix was added
+      '20250128-fix-pass-status-constraint.js'
     ]
     
     return files

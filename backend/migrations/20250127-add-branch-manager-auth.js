@@ -22,30 +22,57 @@ async function up() {
   logger.info('🔄 Starting migration: Add branch manager authentication fields...')
   
   try {
-    // Add manager_pin column
-    await queryInterface.addColumn('branches', 'manager_pin', {
-      type: sequelize.Sequelize.STRING(255),
-      allowNull: true,
-      comment: 'Bcrypt-hashed PIN for branch manager authentication (4-6 digits)'
-    })
-    logger.info('✅ Added manager_pin column')
+    // Check if manager_pin column exists
+    const [managerPinColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'branches' AND column_name = 'manager_pin'`
+    )
+
+    if (managerPinColumn.length === 0) {
+      await queryInterface.addColumn('branches', 'manager_pin', {
+        type: sequelize.Sequelize.STRING(255),
+        allowNull: true,
+        comment: 'Bcrypt-hashed PIN for branch manager authentication (4-6 digits)'
+      })
+      logger.info('✅ Added manager_pin column')
+    } else {
+      logger.info('⏭️  manager_pin column already exists, skipping')
+    }
     
-    // Add manager_pin_enabled column
-    await queryInterface.addColumn('branches', 'manager_pin_enabled', {
-      type: sequelize.Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      comment: 'Whether manager PIN authentication is enabled for this branch'
-    })
-    logger.info('✅ Added manager_pin_enabled column')
+    // Check if manager_pin_enabled column exists
+    const [managerPinEnabledColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'branches' AND column_name = 'manager_pin_enabled'`
+    )
+
+    if (managerPinEnabledColumn.length === 0) {
+      await queryInterface.addColumn('branches', 'manager_pin_enabled', {
+        type: sequelize.Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Whether manager PIN authentication is enabled for this branch'
+      })
+      logger.info('✅ Added manager_pin_enabled column')
+    } else {
+      logger.info('⏭️  manager_pin_enabled column already exists, skipping')
+    }
     
-    // Add manager_last_login column
-    await queryInterface.addColumn('branches', 'manager_last_login', {
-      type: sequelize.Sequelize.DATE,
-      allowNull: true,
-      comment: 'Timestamp of last successful manager login'
-    })
-    logger.info('✅ Added manager_last_login column')
+    // Check if manager_last_login column exists
+    const [managerLastLoginColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'branches' AND column_name = 'manager_last_login'`
+    )
+
+    if (managerLastLoginColumn.length === 0) {
+      await queryInterface.addColumn('branches', 'manager_last_login', {
+        type: sequelize.Sequelize.DATE,
+        allowNull: true,
+        comment: 'Timestamp of last successful manager login'
+      })
+      logger.info('✅ Added manager_last_login column')
+    } else {
+      logger.info('⏭️  manager_last_login column already exists, skipping')
+    }
     
     logger.info('✅ Migration completed successfully!')
     

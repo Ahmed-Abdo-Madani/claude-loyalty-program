@@ -49,29 +49,42 @@ async function up() {
       { transaction }
     );
     
-    // Then add the column using the existing type
-    await queryInterface.sequelize.query(
-      `ALTER TABLE customers 
-       ADD COLUMN gender enum_customers_gender NOT NULL DEFAULT 'male';`,
+    // Check if gender column already exists
+    const [genderColumn] = await queryInterface.sequelize.query(
+      `SELECT column_name 
+       FROM information_schema.columns 
+       WHERE table_name = 'customers' 
+       AND column_name = 'gender'`,
       { transaction }
-    );
-    
-    // Add comment to the column
-    await queryInterface.sequelize.query(
-      `COMMENT ON COLUMN customers.gender IS 'Customer gender (male or female)';`,
-      { transaction }
-    );
-    
-    console.log('✓ Successfully added gender column to customers table');
-    console.log('  - Type: ENUM(\'male\', \'female\')');
-    console.log('  - NOT NULL with default value: \'male\'');
-    console.log('  - All existing customers will have gender set to \'male\'');
+    )
+
+    if (genderColumn.length === 0) {
+      // Column doesn't exist, add it
+      await queryInterface.sequelize.query(
+        `ALTER TABLE customers 
+         ADD COLUMN gender enum_customers_gender NOT NULL DEFAULT 'male';`,
+        { transaction }
+      )
+      
+      // Add comment to the column
+      await queryInterface.sequelize.query(
+        `COMMENT ON COLUMN customers.gender IS 'Customer gender (male or female)';`,
+        { transaction }
+      );
+      
+      logger.info('✅ Added gender column to customers table')
+      logger.info('  - Type: ENUM(\'male\', \'female\')')
+      logger.info('  - NOT NULL with default value: \'male\'')
+      logger.info('  - All existing customers will have gender set to \'male\'')
+    } else {
+      logger.info('⏭️  gender column already exists, skipping')
+    }
     
     await transaction.commit();
-    console.log('Migration completed successfully!');
+    logger.info('Migration completed successfully!');
   } catch (error) {
     await transaction.rollback();
-    console.error('Migration failed:', error);
+    logger.error('Migration failed:', error);
     throw error;
   }
 }

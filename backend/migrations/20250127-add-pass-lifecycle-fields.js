@@ -48,30 +48,57 @@ async function up() {
   try {
     // === WALLET_PASSES TABLE ===
     
-    // Add scheduled_expiration_at column
-    await queryInterface.addColumn('wallet_passes', 'scheduled_expiration_at', {
-      type: sequelize.Sequelize.DATE,
-      allowNull: true,
-      comment: 'When this pass should expire (typically 30 days after completion)'
-    })
-    logger.info('✅ Added scheduled_expiration_at column to wallet_passes')
+    // Check if scheduled_expiration_at exists
+    const [schedExpColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'wallet_passes' AND column_name = 'scheduled_expiration_at'`
+    )
+
+    if (schedExpColumn.length === 0) {
+      await queryInterface.addColumn('wallet_passes', 'scheduled_expiration_at', {
+        type: sequelize.Sequelize.DATE,
+        allowNull: true,
+        comment: 'When this pass should expire (typically 30 days after completion)'
+      })
+      logger.info('✅ Added scheduled_expiration_at column to wallet_passes')
+    } else {
+      logger.info('⏭️  scheduled_expiration_at column already exists, skipping')
+    }
     
-    // Add expiration_notified column
-    await queryInterface.addColumn('wallet_passes', 'expiration_notified', {
-      type: sequelize.Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      comment: 'Whether customer has been notified about impending expiration'
-    })
-    logger.info('✅ Added expiration_notified column to wallet_passes')
+    // Check if expiration_notified exists
+    const [expNotifiedColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'wallet_passes' AND column_name = 'expiration_notified'`
+    )
+
+    if (expNotifiedColumn.length === 0) {
+      await queryInterface.addColumn('wallet_passes', 'expiration_notified', {
+        type: sequelize.Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Whether customer has been notified about impending expiration'
+      })
+      logger.info('✅ Added expiration_notified column to wallet_passes')
+    } else {
+      logger.info('⏭️  expiration_notified column already exists, skipping')
+    }
     
-    // Add deleted_at column
-    await queryInterface.addColumn('wallet_passes', 'deleted_at', {
-      type: sequelize.Sequelize.DATE,
-      allowNull: true,
-      comment: 'Soft delete timestamp (for expired passes after 90 days)'
-    })
-    logger.info('✅ Added deleted_at column to wallet_passes')
+    // Check if deleted_at exists
+    const [deletedAtColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'wallet_passes' AND column_name = 'deleted_at'`
+    )
+
+    if (deletedAtColumn.length === 0) {
+      await queryInterface.addColumn('wallet_passes', 'deleted_at', {
+        type: sequelize.Sequelize.DATE,
+        allowNull: true,
+        comment: 'Soft delete timestamp (for expired passes after 90 days)'
+      })
+      logger.info('✅ Added deleted_at column to wallet_passes')
+    } else {
+      logger.info('⏭️  deleted_at column already exists, skipping')
+    }
     
     // Update pass_status enum to include 'completed'
     // Use dynamic query to find actual enum type name
@@ -159,60 +186,88 @@ async function up() {
     
     // === CUSTOMER_PROGRESS TABLE ===
     
-    // Add reward_fulfilled_at column
-    await queryInterface.addColumn('customer_progress', 'reward_fulfilled_at', {
-      type: sequelize.Sequelize.DATE,
-      allowNull: true,
-      comment: 'When prize was physically given to customer'
-    })
-    logger.info('✅ Added reward_fulfilled_at column to customer_progress')
-    
-    // Add fulfilled_by_branch column
-    // Only add foreign key if branches table exists
-    try {
-      const [branchesExists] = await sequelize.query(`
-        SELECT 1 FROM information_schema.tables 
-        WHERE table_name = 'branches'
-        LIMIT 1;
-      `)
-      
-      if (branchesExists && branchesExists.length > 0) {
-        await queryInterface.addColumn('customer_progress', 'fulfilled_by_branch', {
-          type: sequelize.Sequelize.STRING(50),
-          allowNull: true,
-          references: {
-            model: 'branches',
-            key: 'public_id'
-          },
-          comment: 'Which branch fulfilled the reward (branch_*)'
-        })
-        logger.info('✅ Added fulfilled_by_branch column with foreign key to customer_progress')
-      } else {
-        await queryInterface.addColumn('customer_progress', 'fulfilled_by_branch', {
-          type: sequelize.Sequelize.STRING(50),
-          allowNull: true,
-          comment: 'Which branch fulfilled the reward (branch_*)'
-        })
-        logger.info('✅ Added fulfilled_by_branch column to customer_progress (no FK - branches table not found)')
-      }
-    } catch (branchError) {
-      logger.warn(`⚠️  Error checking branches table: ${branchError.message}`)
-      // Add column without foreign key as fallback
-      await queryInterface.addColumn('customer_progress', 'fulfilled_by_branch', {
-        type: sequelize.Sequelize.STRING(50),
+    // Check if reward_fulfilled_at exists
+    const [rewardFulfilledColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'customer_progress' AND column_name = 'reward_fulfilled_at'`
+    )
+
+    if (rewardFulfilledColumn.length === 0) {
+      await queryInterface.addColumn('customer_progress', 'reward_fulfilled_at', {
+        type: sequelize.Sequelize.DATE,
         allowNull: true,
-        comment: 'Which branch fulfilled the reward (branch_*)'
+        comment: 'When prize was physically given to customer'
       })
-      logger.info('✅ Added fulfilled_by_branch column to customer_progress (no FK)')
+      logger.info('✅ Added reward_fulfilled_at column to customer_progress')
+    } else {
+      logger.info('⏭️  reward_fulfilled_at column already exists, skipping')
     }
     
-    // Add fulfillment_notes column
-    await queryInterface.addColumn('customer_progress', 'fulfillment_notes', {
-      type: sequelize.Sequelize.TEXT,
-      allowNull: true,
-      comment: 'Optional notes from branch manager about prize fulfillment'
-    })
-    logger.info('✅ Added fulfillment_notes column to customer_progress')
+    // Check if fulfilled_by_branch exists
+    const [fulfilledByBranchColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'customer_progress' AND column_name = 'fulfilled_by_branch'`
+    )
+
+    if (fulfilledByBranchColumn.length === 0) {
+      // Add fulfilled_by_branch column
+      // Only add foreign key if branches table exists
+      try {
+        const [branchesExists] = await sequelize.query(`
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_name = 'branches'
+          LIMIT 1;
+        `)
+        
+        if (branchesExists && branchesExists.length > 0) {
+          await queryInterface.addColumn('customer_progress', 'fulfilled_by_branch', {
+            type: sequelize.Sequelize.STRING(50),
+            allowNull: true,
+            references: {
+              model: 'branches',
+              key: 'public_id'
+            },
+            comment: 'Which branch fulfilled the reward (branch_*)'
+          })
+          logger.info('✅ Added fulfilled_by_branch column with foreign key to customer_progress')
+        } else {
+          await queryInterface.addColumn('customer_progress', 'fulfilled_by_branch', {
+            type: sequelize.Sequelize.STRING(50),
+            allowNull: true,
+            comment: 'Which branch fulfilled the reward (branch_*)'
+          })
+          logger.info('✅ Added fulfilled_by_branch column to customer_progress (no FK - branches table not found)')
+        }
+      } catch (branchError) {
+        logger.warn(`⚠️  Error checking branches table: ${branchError.message}`)
+        // Add column without foreign key as fallback
+        await queryInterface.addColumn('customer_progress', 'fulfilled_by_branch', {
+          type: sequelize.Sequelize.STRING(50),
+          allowNull: true,
+          comment: 'Which branch fulfilled the reward (branch_*)'
+        })
+        logger.info('✅ Added fulfilled_by_branch column to customer_progress (no FK)')
+      }
+    } else {
+      logger.info('⏭️  fulfilled_by_branch column already exists, skipping')
+    }
+    
+    // Check if fulfillment_notes exists
+    const [fulfillmentNotesColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'customer_progress' AND column_name = 'fulfillment_notes'`
+    )
+
+    if (fulfillmentNotesColumn.length === 0) {
+      await queryInterface.addColumn('customer_progress', 'fulfillment_notes', {
+        type: sequelize.Sequelize.TEXT,
+        allowNull: true,
+        comment: 'Optional notes from branch manager about prize fulfillment'
+      })
+      logger.info('✅ Added fulfillment_notes column to customer_progress')
+    } else {
+      logger.info('⏭️  fulfillment_notes column already exists, skipping')
+    }
     
     logger.info('✅ Migration completed successfully!')
     

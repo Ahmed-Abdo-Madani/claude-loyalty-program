@@ -17,7 +17,8 @@ VALUES
   ('20000102-add-secure-ids-cautious', NOW(), 'success', 0, NULL),
   ('20000103-simplify-branch-location-fields', NOW(), 'success', 0, NULL),
   ('20000104-create-offer-card-designs-table', NOW(), 'success', 0, NULL),
-  ('20000105-aggressive-security-migration', NOW(), 'success', 0, NULL)
+  ('20000105-aggressive-security-migration', NOW(), 'success', 0, NULL),
+  ('20250128-fix-pass-status-constraint', NOW(), 'success', 0, NULL)
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- Verify insertion
@@ -26,10 +27,10 @@ SELECT
   applied_at, 
   status 
 FROM schema_migrations 
-WHERE migration_name LIKE '20000%' 
+WHERE migration_name LIKE '20000%' OR migration_name = '20250128-fix-pass-status-constraint'
 ORDER BY migration_name;
 
--- Expected output: 4 rows with status='success'
+-- Expected output: 5 rows with status='success'
 
 -- ========================================
 -- Verification Queries

@@ -65,25 +65,35 @@ async function up() {
   const transaction = await sequelize.transaction()
   
   try {
-    // Add loyalty_tiers column
-    await queryInterface.addColumn(
-      'offers',
-      'loyalty_tiers',
-      {
-        type: sequelize.Sequelize.JSON,
-        allowNull: true,
-        defaultValue: null
-      },
+    // Check if loyalty_tiers column exists
+    const [loyaltyTiersColumn] = await sequelize.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'offers' AND column_name = 'loyalty_tiers'`,
       { transaction }
     )
-    logger.info('✅ Added loyalty_tiers column to offers table')
-    
-    // Add column comment
-    await sequelize.query(
-      `COMMENT ON COLUMN offers.loyalty_tiers IS 'Customizable tier/medal system for perpetual loyalty passes'`,
-      { transaction }
-    )
-    logger.info('✅ Added column comment')
+
+    if (loyaltyTiersColumn.length === 0) {
+      await queryInterface.addColumn(
+        'offers',
+        'loyalty_tiers',
+        {
+          type: sequelize.Sequelize.JSON,
+          allowNull: true,
+          defaultValue: null
+        },
+        { transaction }
+      )
+      logger.info('✅ Added loyalty_tiers column to offers table')
+      
+      // Add column comment only if column was just created
+      await sequelize.query(
+        `COMMENT ON COLUMN offers.loyalty_tiers IS 'Customizable tier/medal system for perpetual loyalty passes'`,
+        { transaction }
+      )
+      logger.info('✅ Added column comment')
+    } else {
+      logger.info('⏭️  loyalty_tiers column already exists, skipping')
+    }
     
     await transaction.commit()
     logger.info('✅ Migration completed successfully!')
