@@ -172,7 +172,8 @@ class AutoMigrationRunner {
           }
           
           // Execute migration (it should handle its own transaction)
-          await upFunction(sequelize.getQueryInterface())
+          // Pass both queryInterface and Sequelize for migrations that need Sequelize.literal() etc.
+          await upFunction(sequelize.getQueryInterface(), sequelize.Sequelize)
           
           const executionTime = Date.now() - migrationStart
           

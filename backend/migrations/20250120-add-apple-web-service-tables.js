@@ -115,8 +115,40 @@ export async function up() {
     logger.info('🔐 Adding authentication_token column to wallet_passes...')
     await sequelize.query(`
       ALTER TABLE wallet_passes
-      ADD COLUMN IF NOT EXISTS authentication_token VARCHAR(64) UNIQUE;
+      ADD COLUMN IF NOT EXISTS authentication_token VARCHAR(64);
     `)
+
+    logger.info('🔐 Ensuring unique constraint on authentication_token...')
+    // Check if unique constraint/index already exists
+    const [constraintCheck] = await sequelize.query(`
+      SELECT 
+        COUNT(*) as constraint_count
+      FROM pg_indexes 
+      WHERE tablename = 'wallet_passes' 
+        AND indexdef LIKE '%UNIQUE%' 
+        AND indexdef LIKE '%authentication_token%'
+      UNION ALL
+      SELECT 
+        COUNT(*) as constraint_count
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu 
+        ON tc.constraint_name = ccu.constraint_name
+      WHERE tc.table_name = 'wallet_passes' 
+        AND tc.constraint_type = 'UNIQUE'
+        AND ccu.column_name = 'authentication_token'
+    `)
+    
+    const hasUniqueConstraint = constraintCheck.some(row => parseInt(row.constraint_count) > 0)
+    
+    if (!hasUniqueConstraint) {
+      logger.info('   Creating unique index on authentication_token...')
+      await sequelize.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_passes_auth_token_unique 
+        ON wallet_passes(authentication_token);
+      `)
+    } else {
+      logger.info('   ✅ Unique constraint already exists on authentication_token')
+    }
 
     logger.info('🏷️  Adding last_updated_tag column to wallet_passes...')
     // ⚠️ WARNING: This field is Apple Wallet-specific and MUST allow NULL for Google Wallet
@@ -135,10 +167,6 @@ export async function up() {
     `)
 
     logger.info('📇 Creating index on authentication_token...')
-    await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_wallet_passes_auth_token ON wallet_passes(authentication_token);
-    `)
-
     logger.info('📇 Creating index on last_updated_tag...')
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS idx_wallet_passes_updated_tag ON wallet_passes(last_updated_tag);

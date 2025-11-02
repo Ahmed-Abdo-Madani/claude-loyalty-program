@@ -196,6 +196,9 @@ DeviceRegistration.getPassesForDevice = async function(deviceId) {
  * @returns {Promise<string[]>} Array of serial numbers
  */
 DeviceRegistration.getUpdatedPassesForDevice = async function(deviceId, passTypeId, updatesSinceTag) {
+  // Coerce updatesSinceTag to integer for numeric comparison with BIGINT column
+  const since = Number.parseInt(updatesSinceTag || '0', 10)
+  
   // Query registrations with wallet passes that have been updated since the given tag
   const registrations = await this.findAll({
     where: { device_id: deviceId },
@@ -206,7 +209,7 @@ DeviceRegistration.getUpdatedPassesForDevice = async function(deviceId, passType
         wallet_type: 'apple',
         pass_status: 'active',
         last_updated_tag: {
-          [sequelize.Sequelize.Op.gt]: updatesSinceTag || '0'
+          [sequelize.Sequelize.Op.gt]: since
         }
       },
       required: true

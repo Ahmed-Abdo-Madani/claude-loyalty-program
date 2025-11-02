@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
+import crypto from 'crypto'
 
 const WalletPass = sequelize.define('WalletPass', {
   id: {
@@ -211,7 +212,6 @@ WalletPass.prototype.updateLastPush = async function() {
  * @returns {string} 32-character authentication token
  */
 WalletPass.generateAuthToken = function(customerId, offerId) {
-  const crypto = require('crypto')
   const data = `${customerId}:${offerId}:${Date.now()}`
   return crypto.createHash('sha256').update(data).digest('hex').substring(0, 32)
 }
