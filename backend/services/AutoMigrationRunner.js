@@ -541,18 +541,33 @@ class AutoMigrationRunner {
     
     // Migrations that should NEVER run automatically (manual only)
     const excludedMigrations = [
-      // Data deletion migrations - manual only for production safety
-      '20250121-cleanup-old-apple-wallet-passes.js',
-      
       // Legacy standalone migrations - already applied manually, don't follow { up, down } pattern
       '20000102-add-secure-ids-cautious.js',
       '20000103-simplify-branch-location-fields.js',
       '20000104-create-offer-card-designs-table.js',
       '20000105-aggressive-security-migration.js',
       
-      // Constraint fix migration - integrated into 20250127-add-pass-lifecycle-fields.js
-      // Only needed for databases that ran lifecycle migration before constraint fix was added
-      '20250128-fix-pass-status-constraint.js'
+      // Core migrations - already applied in production
+      '19990101-create-schema-migrations-table.js',
+      '20000101-create-wallet-passes-table.js',
+      '20250113-add-customer-name-fields.js',
+      '20250114-add-wallet-notification-tracking.js',
+      '20250119-add-stamp-display-type.js',
+      '20250120-add-apple-web-service-tables.js',
+      '20250121-cleanup-old-apple-wallet-passes.js',
+      '20250122-add-manifest-etag-to-wallet-passes.js',
+      '20250125-fix-last-updated-tag-nullable.js',
+      '20250126-add-gender-to-customers.js',
+      '20250127-add-branch-manager-auth.js',
+      '20250127-add-device-logs-table.js',
+      '20250127-add-pass-lifecycle-fields.js',
+      '20250128-fix-pass-status-constraint.js',
+      '20250129-add-loyalty-tiers-to-offers.js',
+      
+      // ONLY ALLOW THESE TO RUN:
+      // - 20250131-add-notification-campaign-fields.js
+      // - 20250201-create-auto-engagement-configs-table.js
+      // - 20250202-create-or-sync-business-sessions.js
     ]
     
     return files
