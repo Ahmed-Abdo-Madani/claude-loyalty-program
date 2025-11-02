@@ -19,7 +19,7 @@ import logger from '../config/logger.js'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -140,10 +140,12 @@ class AutoMigrationRunner {
           
           const migrationStart = Date.now()
           
-          // Insert record with status='running'
+          // Insert record with status='running' (UPSERT to handle re-runs of failed migrations)
           await sequelize.query(
             `INSERT INTO schema_migrations (migration_name, status, applied_at)
-             VALUES (:name, 'running', NOW())`,
+             VALUES (:name, 'running', NOW())
+             ON CONFLICT (migration_name) 
+             DO UPDATE SET status='running', error_message=NULL, applied_at=NOW()`,
             {
               replacements: { name: migrationName },
               type: sequelize.QueryTypes.INSERT
@@ -153,8 +155,8 @@ class AutoMigrationRunner {
           // Calculate checksum
           const checksum = this.calculateChecksum(migrationPath)
           
-          // Import and execute migration
-          const migration = await import(migrationPath)
+          // Import and execute migration (use file URL for cross-platform compatibility)
+          const migration = await import(pathToFileURL(migrationPath).href)
           const upFunction = migration.up || migration.default?.up
           
           if (!upFunction) {
@@ -454,13 +456,13 @@ class AutoMigrationRunner {
       if (tables.length === 0) {
         logger.info('   📋 schema_migrations table not found, creating...')
         
-        // Import and run the tracking table migration
+        // Import and run the tracking table migration (use file URL for cross-platform compatibility)
         const trackingMigrationPath = path.join(
           __dirname, 
           '../migrations/20250203-create-schema-migrations-table.js'
         )
         
-        const trackingMigration = await import(trackingMigrationPath)
+        const trackingMigration = await import(pathToFileURL(trackingMigrationPath).href)
         await trackingMigration.up(sequelize.getQueryInterface())
         
         logger.info('   ✅ Tracking table created')
