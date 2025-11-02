@@ -28,13 +28,16 @@
   "estimatedTime": {
     "instant": "Instant",
     "seconds": "~{{seconds}} seconds",
-    "minutes": "~{{minutes}} minute{{s}}"
+    "minutes_one": "~{{count}} minute",
+    "minutes_other": "~{{count}} minutes"
   },
   "defaults": {
     "birthdayHeader": "🎂 Happy Birthday!",
     "birthdayBody": "Wishing you a wonderful birthday! Enjoy a special reward on us.",
     "reengagementHeader": "We miss you!",
-    "reengagementBody": "Come back and enjoy exclusive rewards!"
+    "reengagementBody": "Come back and enjoy exclusive rewards!",
+    "reminderHeader": "Progress Reminder",
+    "reminderBody": "Check your progress on our loyalty program!"
   },
   "errors": {
     "noCustomers": "No customers selected",
@@ -85,5 +88,18 @@
   "bodyLimit": "{{current}}/{{max}} characters",
   "cancel": "Cancel",
   "sending": "Sending...",
-  "sendNotification": "Send Notification"
+  "sendNotification": "Send Notification",
+  "walletPreview": "Wallet Preview",
+  "yourNotificationHeader": "Your notification header",
+  "yourNotificationMessage": "Your notification message will appear here",
+  "importantNotes": "Important Notes",
+  "rateLimit": "Rate limits apply (max 10 notifications per second)",
+  "activeWalletOnly": "Only customers with active wallet passes will receive notifications",
+  "appearsInWallets": "Notifications appear on lock screen and in wallet app",
+  "summary": {
+    "recipientCount": "Recipients: {{count}}",
+    "estimatedDelivery": "⏱️ Estimated delivery time: {{time}}"
+  },
+  "notify": "Notify",
+  "notifyButton": "Notify"
 }

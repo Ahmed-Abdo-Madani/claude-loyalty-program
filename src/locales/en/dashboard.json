@@ -443,14 +443,27 @@
     "export": "Export",
     "exportCSV": "Export CSV",
     "exportExcel": "Export Excel",
+    "tabs": {
+      "customers": "Customers",
+      "campaigns": "Campaigns"
+    },
+    "createCampaign": "Create Campaign",
+    "createCampaignButton": "+ New Campaign",
+    "campaignShort": "Campaign",
     "targetAudience": "Target Audience",
     "allCustomers": "All Customers",
-    "selectedCustomers": "{{count}} Selected Customers",
+    "selectedCustomers": "Selected Customers ({{count}})",
     "selectCustomersOrSegment": "Select customers or segment",
-    "segments": "Segments",
-    "customers": "customers",
     "sendToSegment": "Send to Segment",
-    "sendToSelected": "Send to {{count}} Selected"
+    "sendToSelected": "Send to {{count}} Selected",
+    "segmentSelector": {
+      "label": "Select Segment",
+      "placeholder": "Choose a segment...",
+      "allCustomers": "All Customers",
+      "selectedCustomers": "Selected Customers",
+      "segments": "--- Segments ---",
+      "customersCount": "{{count}} customers"
+    }
   },
   "scanner": {
     "title": "QR Scanner",

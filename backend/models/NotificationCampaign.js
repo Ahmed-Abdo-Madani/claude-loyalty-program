@@ -38,9 +38,15 @@ const NotificationCampaign = sequelize.define('NotificationCampaign', {
     defaultValue: 'manual'
   },
   campaign_type: {
-    type: DataTypes.ENUM('lifecycle', 'promotional', 'transactional', 'new_offer_announcement', 'custom_promotion', 'seasonal_campaign'),
+    type: DataTypes.STRING(50),
     allowNull: true,
     defaultValue: null,
+    validate: {
+      isIn: {
+        args: [['lifecycle', 'promotional', 'transactional', 'new_offer_announcement', 'custom_promotion', 'seasonal_campaign']],
+        msg: 'campaign_type must be one of: lifecycle, promotional, transactional, new_offer_announcement, custom_promotion, seasonal_campaign'
+      }
+    },
     comment: 'Specific campaign category for promotional and marketing campaigns'
   },
   channels: {

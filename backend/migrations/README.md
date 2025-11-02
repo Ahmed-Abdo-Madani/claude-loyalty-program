@@ -134,7 +134,56 @@ try {
 }
 ```
 
-### 3. Test on Development First
+### 3. Type Strategy: STRING + CHECK Constraint (Not Postgres ENUM)
+
+**Policy:** For enumerated values, use `VARCHAR` columns with `CHECK` constraints instead of native Postgres `ENUM` types.
+
+**Rationale:**
+- Easier migrations when adding/removing values (no `ALTER TYPE` complexity)
+- Simpler rollback procedures (drop constraint vs recreating entire type)
+- Model validation via Sequelize `validate.isIn` provides application-level type safety
+- CHECK constraint provides database-level enforcement
+
+**Example in Model:**
+```javascript
+campaign_type: {
+  type: DataTypes.STRING(50),
+  allowNull: true,
+  validate: {
+    isIn: {
+      args: [['lifecycle', 'promotional', 'transactional', 'new_offer_announcement', 'custom_promotion', 'seasonal_campaign']],
+      msg: 'campaign_type must be one of: lifecycle, promotional, transactional, ...'
+    }
+  }
+}
+```
+
+**Example in Migration:**
+```javascript
+// Add column as VARCHAR
+await sequelize.query(`
+  ALTER TABLE notification_campaigns 
+  ADD COLUMN campaign_type VARCHAR(50)
+`)
+
+// Add CHECK constraint
+await sequelize.query(`
+  ALTER TABLE notification_campaigns 
+  ADD CONSTRAINT check_campaign_type 
+  CHECK (campaign_type IN (
+    'lifecycle', 
+    'promotional', 
+    'transactional', 
+    'new_offer_announcement', 
+    'custom_promotion', 
+    'seasonal_campaign'
+  ))
+`)
+```
+
+**Do NOT use:** `DataTypes.ENUM` in models or `CREATE TYPE` in migrations unless there's a specific architectural decision to change this policy documented here.
+
+### 4. Test on Development First
 
 **Never** run a migration directly in production without testing:
 

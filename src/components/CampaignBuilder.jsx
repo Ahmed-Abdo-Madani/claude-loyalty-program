@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 
 function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['campaign', 'common'])
+  
+  // Determine mode: 'create' or 'edit'
+  const mode = initialData ? 'edit' : 'create'
   
   // State management
   const [currentStep, setCurrentStep] = useState(1)
@@ -15,7 +18,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
   const [offers, setOffers] = useState([])
   const [validationErrors, setValidationErrors] = useState({})
   
-  const [formData, setFormData] = useState(initialData || {
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
     campaign_type: '',
@@ -34,6 +37,27 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
   // Character limits
   const HEADER_LIMIT = 50
   const BODY_LIMIT = 200
+
+  // Pre-populate form data in edit mode
+  useEffect(() => {
+    if (initialData && mode === 'edit') {
+      setFormData({
+        name: initialData.name || '',
+        description: initialData.description || '',
+        campaign_type: initialData.campaign_type || '',
+        target_type: initialData.target_type || 'all_customers',
+        target_segment_id: initialData.target_segment_id || null,
+        target_criteria: initialData.target_criteria || {},
+        linked_offer_id: initialData.linked_offer_id || null,
+        message_header: initialData.message_template?.header || '',
+        message_body: initialData.message_template?.body || '',
+        channels: initialData.channels || ['wallet'],
+        send_immediately: initialData.send_immediately ?? true,
+        scheduled_at: initialData.scheduled_at || null,
+        tags: initialData.tags || []
+      })
+    }
+  }, [initialData, mode])
 
   // Load segments and offers on mount
   useEffect(() => {
@@ -82,37 +106,37 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
     const errors = {}
     
     if (step === 1) {
-      if (!formData.name.trim()) errors.name = 'Campaign name is required'
-      if (!formData.campaign_type) errors.campaign_type = 'Campaign type is required'
+      if (!formData.name.trim()) errors.name = t('campaign:validation.nameRequired')
+      if (!formData.campaign_type) errors.campaign_type = t('campaign:validation.typeRequired')
     }
     
     if (step === 2) {
-      if (!formData.target_type) errors.target_type = 'Target type is required'
+      if (!formData.target_type) errors.target_type = t('campaign:validation.targetRequired')
       if (formData.target_type === 'segment' && !formData.target_segment_id) {
-        errors.target_segment_id = 'Please select a segment'
+        errors.target_segment_id = t('campaign:validation.segmentRequired')
       }
       if (formData.target_type === 'custom_filter' && Object.keys(formData.target_criteria).length === 0) {
-        errors.target_criteria = 'Please define custom criteria'
+        errors.target_criteria = t('campaign:validation.criteriaRequired')
       }
     }
     
     if (step === 3) {
-      if (!formData.message_header.trim()) errors.message_header = 'Header is required'
+      if (!formData.message_header.trim()) errors.message_header = t('campaign:validation.headerRequired')
       if (formData.message_header.length > HEADER_LIMIT) {
-        errors.message_header = `Header must be ${HEADER_LIMIT} characters or less`
+        errors.message_header = t('campaign:validation.headerTooLong', { max: HEADER_LIMIT })
       }
-      if (!formData.message_body.trim()) errors.message_body = 'Message body is required'
+      if (!formData.message_body.trim()) errors.message_body = t('campaign:validation.bodyRequired')
       if (formData.message_body.length > BODY_LIMIT) {
-        errors.message_body = `Body must be ${BODY_LIMIT} characters or less`
+        errors.message_body = t('campaign:validation.bodyTooLong', { max: BODY_LIMIT })
       }
     }
     
     if (step === 4) {
       if (!formData.send_immediately && !formData.scheduled_at) {
-        errors.scheduled_at = 'Please select a schedule date'
+        errors.scheduled_at = t('campaign:validation.scheduleRequired')
       }
       if (formData.scheduled_at && new Date(formData.scheduled_at) <= new Date()) {
-        errors.scheduled_at = 'Schedule date must be in the future'
+        errors.scheduled_at = t('campaign:validation.scheduleFuture')
       }
     }
     
@@ -153,7 +177,19 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
         tags: formData.tags
       }
 
-      const response = await secureApi.post(endpoints.notificationCampaignsPromotional, payload)
+      // Determine endpoint and method based on mode
+      let response
+      if (mode === 'edit') {
+        // Update existing campaign
+        response = await secureApi.put(
+          `${endpoints.notificationCampaigns}/${initialData.campaign_id}`,
+          payload
+        )
+      } else {
+        // Create new campaign
+        response = await secureApi.post(endpoints.notificationCampaignsPromotional, payload)
+      }
+
       const data = await response.json()
 
       if (data.success) {
@@ -163,33 +199,29 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
           onSuccess(data.data.campaign)
         }
       } else {
-        setError(data.message || 'Failed to create campaign')
+        setError(data.message || t(mode === 'edit' ? 'campaign:edit.failed' : 'campaign:errors.createFailed'))
       }
     } catch (err) {
-      console.error('Campaign creation error:', err)
-      setError(err.message || 'Failed to create campaign')
+      console.error(`Campaign ${mode} error:`, err)
+      setError(err.message || t(mode === 'edit' ? 'campaign:edit.failed' : 'campaign:errors.createFailed'))
     } finally {
       setLoading(false)
     }
   }
 
   const getPlaceholder = (field) => {
-    const placeholders = {
-      new_offer_announcement: {
-        header: '🎁 New Offer Available!',
-        body: 'Check out our latest promotion just for you!'
-      },
-      custom_promotion: {
-        header: '✨ Special Promotion',
-        body: 'Exclusive offer for our valued customers!'
-      },
-      seasonal_campaign: {
-        header: '🎉 Seasonal Special',
-        body: 'Celebrate with us this season with amazing rewards!'
-      }
+    const typeMap = {
+      new_offer_announcement: 'newOffer',
+      custom_promotion: 'customPromotion',
+      seasonal_campaign: 'seasonal'
     }
     
-    return placeholders[formData.campaign_type]?.[field] || ''
+    const translationKey = typeMap[formData.campaign_type]
+    if (!translationKey) return ''
+    
+    return field === 'header'
+      ? t(`campaign:step3.placeholders.${translationKey}.header`)
+      : t(`campaign:step3.placeholders.${translationKey}.body`)
   }
 
   // Success View
@@ -200,31 +232,34 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
           <div className="p-8 text-center">
             <div className="text-6xl mb-4">✅</div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Campaign Created Successfully!
+              {mode === 'edit' ? t('campaign:edit.success') : t('campaign:success.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {formData.send_immediately 
-                ? 'Your campaign has been created and is being sent to customers.'
-                : 'Your campaign has been scheduled and will be sent at the specified time.'}
+              {mode === 'edit' 
+                ? 'Campaign has been updated successfully'
+                : (formData.send_immediately 
+                  ? t('campaign:success.messageSent')
+                  : t('campaign:success.messageScheduled'))
+              }
             </p>
             
             <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 mb-6 text-left">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Campaign Details</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('campaign:success.detailsTitle')}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Campaign ID:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.campaignId')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{createdCampaign.campaign_id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Name:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.name')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{createdCampaign.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Type:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.type')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">{createdCampaign.campaign_type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.status')}</span>
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     createdCampaign.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                   }`}>
@@ -233,18 +268,18 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 </div>
                 {createdCampaign.total_recipients && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Recipients:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.recipients')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">{createdCampaign.total_recipients}</span>
                   </div>
                 )}
                 {formData.send_immediately && createdCampaign.total_sent !== undefined && (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Sent:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.sent')}</span>
                       <span className="font-medium text-green-600">{createdCampaign.total_sent}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Failed:</span>
+                      <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.failed')}</span>
                       <span className="font-medium text-red-600">{createdCampaign.total_failed || 0}</span>
                     </div>
                   </>
@@ -257,7 +292,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 onClick={onClose}
                 className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
-                Close
+                {t('campaign:success.closeButton')}
               </button>
               <button
                 onClick={() => {
@@ -282,7 +317,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 }}
                 className="flex-1 px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors"
               >
-                Create Another Campaign
+                {t('campaign:success.createAnotherButton')}
               </button>
             </div>
           </div>
@@ -298,10 +333,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Create Promotional Campaign
+              {mode === 'edit' ? t('campaign:edit.title', { defaultValue: 'Edit Campaign' }) : t('campaign:title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Step {currentStep} of 4
+              {t('campaign:subtitle', { current: currentStep, total: 4 })}
             </p>
           </div>
           <button
@@ -335,10 +370,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
             ))}
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-600 dark:text-gray-400">
-            <span>Type</span>
-            <span>Target</span>
-            <span>Message</span>
-            <span>Schedule</span>
+            <span>{t('campaign:steps.type')}</span>
+            <span>{t('campaign:steps.target')}</span>
+            <span>{t('campaign:steps.message')}</span>
+            <span>{t('campaign:steps.schedule')}</span>
           </div>
         </div>
 
@@ -359,13 +394,13 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Campaign Name *
+                  {t('campaign:step1.nameLabel')} *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Summer Sale Announcement"
+                  placeholder={t('campaign:step1.namePlaceholder')}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
                 {validationErrors.name && (
@@ -375,12 +410,12 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description (Optional)
+                  {t('campaign:step1.descriptionLabel')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of the campaign..."
+                  placeholder={t('campaign:step1.descriptionPlaceholder')}
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                 />
@@ -388,48 +423,58 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Campaign Type *
+                  {t('campaign:step1.typeLabel')} *
                 </label>
+                {mode === 'edit' && (
+                  <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      {t('campaign:edit.typeCannotChange', { defaultValue: 'Campaign type cannot be changed after creation' })}
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, campaign_type: 'new_offer_announcement' })}
+                    onClick={() => !mode || mode === 'create' ? setFormData({ ...formData, campaign_type: 'new_offer_announcement' }) : null}
+                    disabled={mode === 'edit'}
                     className={`p-4 border-2 rounded-xl text-left transition-all ${
                       formData.campaign_type === 'new_offer_announcement'
                         ? 'border-primary bg-primary/5'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                    }`}
+                    } ${mode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="text-3xl mb-2">🎁</div>
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      New Offer Announcement
+                      {t('campaign:step1.types.newOffer.title')}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Announce a new offer or promotion to your customers
+                      {t('campaign:step1.types.newOffer.description')}
                     </p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, campaign_type: 'custom_promotion' })}
+                    onClick={() => !mode || mode === 'create' ? setFormData({ ...formData, campaign_type: 'custom_promotion' }) : null}
+                    disabled={mode === 'edit'}
                     className={`p-4 border-2 rounded-xl text-left transition-all ${
                       formData.campaign_type === 'custom_promotion'
                         ? 'border-primary bg-primary/5'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                    }`}
+                    } ${mode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="text-3xl mb-2">💬</div>
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      Custom Promotion
+                      {t('campaign:step1.types.customPromotion.title')}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Create a custom promotional message for any occasion
+                      {t('campaign:step1.types.customPromotion.description')}
                     </p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, campaign_type: 'seasonal_campaign' })}
+                    onClick={() => !mode || mode === 'create' ? setFormData({ ...formData, campaign_type: 'seasonal_campaign' }) : null}
+                    disabled={mode === 'edit'}
                     className={`p-4 border-2 rounded-xl text-left transition-all ${
                       formData.campaign_type === 'seasonal_campaign'
                         ? 'border-primary bg-primary/5'
@@ -438,10 +483,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                   >
                     <div className="text-3xl mb-2">🎉</div>
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      Seasonal Campaign
+                      {t('campaign:step1.types.seasonal.title')}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Seasonal promotions like holidays, events, or special occasions
+                      {t('campaign:step1.types.seasonal.description')}
                     </p>
                   </button>
                 </div>
@@ -453,14 +498,14 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
               {formData.campaign_type === 'new_offer_announcement' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Link to Offer (Optional)
+                    {t('campaign:step1.offerLinkLabel')}
                   </label>
                   <select
                     value={formData.linked_offer_id || ''}
                     onChange={(e) => setFormData({ ...formData, linked_offer_id: e.target.value || null })}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
-                    <option value="">No linked offer</option>
+                    <option value="">{t('campaign:step1.noLinkedOffer')}</option>
                     {offers.map((offer) => (
                       <option key={offer.public_id} value={offer.public_id}>
                         {offer.title} ({offer.stamps_required} stamps)
@@ -468,7 +513,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Link an offer to track conversions from this campaign
+                    {t('campaign:step1.offerLinkHelper')}
                   </p>
                 </div>
               )}
@@ -480,7 +525,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Target Audience *
+                  {t('campaign:step2.targetLabel')} *
                 </label>
                 <div className="space-y-3">
                   <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
@@ -500,11 +545,11 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">👥</span>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          All Customers
+                          {t('campaign:step2.targets.allCustomers.title')}
                         </h3>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Send to all active customers in your database
+                        {t('campaign:step2.targets.allCustomers.description')}
                       </p>
                     </div>
                   </label>
@@ -526,11 +571,11 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🎯</span>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          Specific Segment
+                          {t('campaign:step2.targets.segment.title')}
                         </h3>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Target a specific customer segment
+                        {t('campaign:step2.targets.segment.description')}
                       </p>
                       {formData.target_type === 'segment' && (
                         <select
@@ -538,7 +583,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                           onChange={(e) => setFormData({ ...formData, target_segment_id: e.target.value })}
                           className="mt-3 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         >
-                          <option value="">Select a segment...</option>
+                          <option value="">{t('campaign:step2.targets.segment.selectPlaceholder')}</option>
                           {segments.map((segment) => (
                             <option key={segment.segment_id} value={segment.segment_id}>
                               {segment.name} ({segment.customer_count || 0} customers)
@@ -566,15 +611,15 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🔍</span>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          Custom Filter
+                          {t('campaign:step2.targets.customFilter.title')}
                         </h3>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Define custom targeting criteria
+                        {t('campaign:step2.targets.customFilter.description')}
                       </p>
                       {formData.target_type === 'custom_filter' && (
                         <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm text-gray-600 dark:text-gray-400">
-                          Custom filter builder coming soon. Use segments for now.
+                          {t('campaign:step2.targets.customFilter.comingSoon')}
                         </div>
                       )}
                     </div>
@@ -595,7 +640,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Message Header * ({formData.message_header.length}/{HEADER_LIMIT})
+                  {t('campaign:step3.headerLabel', { current: formData.message_header.length, max: HEADER_LIMIT })}
                 </label>
                 <input
                   type="text"
@@ -612,7 +657,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Message Body * ({formData.message_body.length}/{BODY_LIMIT})
+                  {t('campaign:step3.bodyLabel', { current: formData.message_body.length, max: BODY_LIMIT })}
                 </label>
                 <textarea
                   value={formData.message_body}
@@ -632,14 +677,14 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center">
                     <span className="mr-2">📱</span>
-                    Wallet Preview
+                    {t('campaign:step3.previewTitle')}
                   </h3>
                   <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
                     <div className="font-semibold text-gray-900 dark:text-white mb-1">
-                      {formData.message_header || 'Your notification header'}
+                      {formData.message_header || t('campaign:step3.previewHeaderDefault')}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {formData.message_body || 'Your notification message will appear here'}
+                      {formData.message_body || t('campaign:step3.previewBodyDefault')}
                     </div>
                   </div>
                 </div>
@@ -652,7 +697,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Scheduling Options
+                  {t('campaign:step4.schedulingLabel')}
                 </label>
                 <div className="space-y-3">
                   <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
@@ -671,11 +716,11 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">⚡</span>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          Send Now
+                          {t('campaign:step4.sendNow.title')}
                         </h3>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Send immediately after creation
+                        {t('campaign:step4.sendNow.description')}
                       </p>
                     </div>
                   </label>
@@ -696,11 +741,11 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                       <div className="flex items-center gap-2">
                         <span className="text-xl">📅</span>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          Schedule for Later
+                          {t('campaign:step4.scheduleLater.title')}
                         </h3>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Schedule campaign for a specific date and time
+                        {t('campaign:step4.scheduleLater.description')}
                       </p>
                       {!formData.send_immediately && (
                         <input
@@ -722,31 +767,31 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
               {/* Campaign Summary */}
               <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-6">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                  Campaign Summary
+                  {t('campaign:step4.summaryTitle')}
                 </h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Campaign Name:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('campaign:step4.summaryFields.name')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">{formData.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Type:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('campaign:step4.summaryFields.type')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">
                       {formData.campaign_type?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Target:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('campaign:step4.summaryFields.target')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {formData.target_type === 'all_customers' && 'All Customers'}
+                      {formData.target_type === 'all_customers' && t('campaign:step2.targets.allCustomers.title')}
                       {formData.target_type === 'segment' && segments.find(s => s.segment_id === formData.target_segment_id)?.name}
-                      {formData.target_type === 'custom_filter' && 'Custom Filter'}
+                      {formData.target_type === 'custom_filter' && t('campaign:step2.targets.customFilter.title')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Schedule:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('campaign:step4.summaryFields.schedule')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {formData.send_immediately ? 'Send Now' : new Date(formData.scheduled_at).toLocaleString()}
+                      {formData.send_immediately ? t('campaign:step4.sendNow.title') : new Date(formData.scheduled_at).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -762,7 +807,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 onClick={handleBack}
                 className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
               >
-                Back
+                {t('campaign:navigation.back')}
               </button>
             )}
             <div className="flex-1" />
@@ -772,7 +817,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 onClick={handleNext}
                 className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors"
               >
-                Next
+                {t('campaign:navigation.next')}
               </button>
             ) : (
               <button
@@ -784,12 +829,21 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Creating...</span>
+                    <span>{mode === 'edit' ? t('common:updating', { defaultValue: 'Updating...' }) : t('campaign:navigation.creating')}</span>
                   </>
                 ) : (
                   <>
                     <span>
-                      {formData.send_immediately ? 'Create & Send Campaign' : 'Create Campaign'}
+                      {mode === 'edit' 
+                        ? (formData.send_immediately 
+                          ? t('campaign:edit.updateAndSend', { defaultValue: 'Update & Send Campaign' })
+                          : t('campaign:edit.updateCampaign', { defaultValue: 'Update Campaign' })
+                        )
+                        : (formData.send_immediately 
+                          ? t('campaign:navigation.createAndSend') 
+                          : t('campaign:navigation.createCampaign')
+                        )
+                      }
                     </span>
                   </>
                 )}

@@ -90,6 +90,10 @@ export const endpoints = {
   notifications: `${API_BASE_URL}/api/notifications`,
   notificationCampaigns: `${API_BASE_URL}/api/notifications/campaigns`,
   notificationCampaignsPromotional: `${API_BASE_URL}/api/notifications/campaigns/promotional`,
+  notificationCampaignUpdate: (campaignId) => `${API_BASE_URL}/api/notifications/campaigns/${campaignId}`,
+  notificationCampaignDelete: (campaignId) => `${API_BASE_URL}/api/notifications/campaigns/${campaignId}`,
+  notificationCampaignStatus: (campaignId) => `${API_BASE_URL}/api/notifications/campaigns/${campaignId}/status`,
+  notificationCampaignSend: (campaignId) => `${API_BASE_URL}/api/notifications/campaigns/${campaignId}/send`,
   notificationLogs: `${API_BASE_URL}/api/notifications/logs`,
   notificationAnalytics: `${API_BASE_URL}/api/notifications/analytics`,
 

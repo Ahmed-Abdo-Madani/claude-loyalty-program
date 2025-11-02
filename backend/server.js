@@ -315,6 +315,109 @@ async function initializeDatabase() {
     // Initialize database first
     await initializeDatabase()
 
+    // Validate campaign_type schema matches model definition (Comment 5)
+    if (process.env.SKIP_SCHEMA_CHECKS !== 'true') {
+      try {
+        // Allow bypassing validation in development
+        if (process.env.SKIP_SCHEMA_VALIDATION === 'true') {
+          logger.warn('⚠️ Schema validation bypassed (SKIP_SCHEMA_VALIDATION=true)')
+          logger.warn('   This should only be used during development!')
+        } else {
+          logger.info('🔍 Validating campaign_type schema...')
+          
+          // Expected values from NotificationCampaign model
+          const expectedValues = [
+            'lifecycle',
+            'promotional',
+            'transactional',
+            'new_offer_announcement',
+            'custom_promotion',
+            'seasonal_campaign'
+          ].sort()
+        
+          // Query database for ALL CHECK constraints on campaign_type (Comment 1)
+          const [constraints] = await sequelize.query(`
+            SELECT con.conname AS constraint_name, pg_get_constraintdef(con.oid) AS constraint_def
+            FROM pg_constraint con
+            INNER JOIN pg_class rel ON rel.oid = con.conrelid
+            INNER JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+            INNER JOIN pg_attribute attr ON attr.attnum = ANY(con.conkey) AND attr.attrelid = con.conrelid
+            WHERE rel.relname = 'notification_campaigns'
+            AND con.contype = 'c'
+            AND attr.attname = 'campaign_type'
+          `)
+          
+          if (constraints.length === 0) {
+            logger.error('🔴 SCHEMA MISMATCH: No CHECK constraint found on campaign_type column')
+            logger.error('   Expected constraint: check_campaign_type on notification_campaigns.campaign_type')
+            logger.error('   Remediation: Run migration 20250131-add-notification-campaign-fields.js')
+            logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
+            
+            if (process.env.NODE_ENV === 'production') {
+              logger.error('🛑 Exiting in production due to schema mismatch')
+              process.exit(1)
+            } else {
+              logger.warn('⚠️ Continuing in development mode despite schema mismatch')
+            }
+          } else if (constraints.length > 1) {
+            // Multiple CHECK constraints exist - must be consolidated (Comment 1)
+            logger.error('🔴 SCHEMA ERROR: Multiple CHECK constraints found on campaign_type column')
+            logger.error(`   Found ${constraints.length} constraints: ${constraints.map(c => c.constraint_name).join(', ')}`)
+            logger.error('   Only one CHECK constraint should exist')
+            logger.error('   Remediation: Run migration 20250131-add-notification-campaign-fields.js to consolidate')
+            logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
+            
+            if (process.env.NODE_ENV === 'production') {
+              logger.error('🛑 Exiting in production due to multiple constraints')
+              process.exit(1)
+            } else {
+              logger.warn('⚠️ Continuing in development mode despite multiple constraints')
+            }
+          } else {
+            // Parse constraint definition using robust quoted token extractor (Comment 1)
+            const constraintDef = constraints[0].constraint_def
+            const constraintName = constraints[0].constraint_name
+            
+            // Extract all quoted values using matchAll - handles Postgres casts like ::text, ::character varying
+            const quotedMatches = [...constraintDef.matchAll(/'([^']+)'/g)]
+            const dbValues = [...new Set(quotedMatches.map(match => match[1]))].sort()
+            
+            if (dbValues.length === 0) {
+              logger.warn('⚠️ Could not extract values from constraint definition')
+              logger.warn(`   Constraint: ${constraintDef}`)
+              logger.warn('   Schema validation skipped - manual verification recommended')
+            } else {
+              const isMatch = JSON.stringify(dbValues) === JSON.stringify(expectedValues)
+              
+              if (isMatch) {
+                logger.info(`✅ campaign_type schema validated: ${dbValues.length} values match model definition`)
+                logger.info(`   Constraint name: ${constraintName}`)
+              } else {
+                logger.error('🔴 SCHEMA MISMATCH: Database constraint does not match model definition')
+                logger.error(`   Model expects: ${expectedValues.join(', ')}`)
+                logger.error(`   Database has: ${dbValues.join(', ')}`)
+                logger.error(`   Constraint name: ${constraintName}`)
+                logger.error('   Remediation: Run migration 20250131-add-notification-campaign-fields.js')
+                logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
+                
+                if (process.env.NODE_ENV === 'production') {
+                  logger.error('🛑 Exiting in production due to schema mismatch')
+                  process.exit(1)
+                } else {
+                  logger.warn('⚠️ Continuing in development mode despite schema mismatch')
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        logger.error('❌ Campaign type schema validation failed:', error.message)
+        logger.warn('⚠️ Continuing startup - manual schema verification recommended')
+      }
+    } else {
+      logger.info('⏭️ Schema validation checks skipped (SKIP_SCHEMA_CHECKS=true)')
+    }
+
     // Initialize Apple Wallet certificates
     try {
       const certValidation = await appleCertificateValidator.validateAndLoad()

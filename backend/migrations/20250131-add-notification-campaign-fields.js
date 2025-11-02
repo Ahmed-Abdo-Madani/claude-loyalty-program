@@ -114,32 +114,85 @@ export async function up() {
       console.log('✅ Added campaign_type column')
     }
 
-    // Step 3b: Check and create CHECK constraint for campaign_type (independent of column creation)
-    console.log('🔍 Checking for check_campaign_type constraint...')
-    const [campaignTypeConstraintCheck] = await sequelize.query(`
-      SELECT constraint_name 
-      FROM information_schema.table_constraints 
-      WHERE table_name = 'notification_campaigns' 
-      AND constraint_name = 'check_campaign_type'
+    // Step 3b: Drop ALL existing CHECK constraints on campaign_type, normalize data, then create new constraint
+    console.log('🔍 Querying ALL CHECK constraints on campaign_type...')
+    const [existingConstraints] = await sequelize.query(`
+      SELECT con.conname AS constraint_name
+      FROM pg_constraint con
+      INNER JOIN pg_class rel ON rel.oid = con.conrelid
+      INNER JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+      INNER JOIN pg_attribute attr ON attr.attnum = ANY(con.conkey) AND attr.attrelid = con.conrelid
+      WHERE rel.relname = 'notification_campaigns'
+      AND con.contype = 'c'
+      AND attr.attname = 'campaign_type'
     `, { transaction })
 
-    if (campaignTypeConstraintCheck.length === 0) {
-      console.log('➕ Creating check_campaign_type constraint...')
-      await sequelize.query(`
-        ALTER TABLE notification_campaigns 
-        ADD CONSTRAINT check_campaign_type 
-        CHECK (campaign_type IN (
-          'lifecycle', 
-          'promotional', 
-          'transactional', 
-          'new_offer_announcement', 
-          'custom_promotion', 
-          'seasonal_campaign'
-        ))
-      `, { transaction })
-      console.log('✅ Created check_campaign_type constraint')
+    console.log(`📋 Found ${existingConstraints.length} CHECK constraint(s) on campaign_type`)
+
+    // Drop all existing CHECK constraints on campaign_type
+    if (existingConstraints.length > 0) {
+      for (const constraint of existingConstraints) {
+        console.log(`🗑️  Dropping legacy CHECK constraint: ${constraint.constraint_name}`)
+        await sequelize.query(`
+          ALTER TABLE notification_campaigns 
+          DROP CONSTRAINT IF EXISTS ${constraint.constraint_name}
+        `, { transaction })
+        console.log(`✅ Dropped constraint: ${constraint.constraint_name}`)
+      }
     } else {
-      console.log('⚠️  Constraint check_campaign_type already exists, skipping...')
+      console.log('✅ No existing CHECK constraints found on campaign_type')
+    }
+
+    // Normalize legacy data: map invalid values to 'lifecycle'
+    console.log('🔄 Normalizing legacy campaign_type values to lifecycle...')
+    const [updateResult] = await sequelize.query(`
+      UPDATE notification_campaigns 
+      SET campaign_type = 'lifecycle'
+      WHERE campaign_type IS NULL 
+      OR campaign_type NOT IN (
+        'lifecycle', 
+        'promotional', 
+        'transactional', 
+        'new_offer_announcement', 
+        'custom_promotion', 
+        'seasonal_campaign'
+      )
+    `, { transaction })
+    console.log(`✅ Normalized ${updateResult.rowCount || 0} rows to 'lifecycle'`)
+
+    // Create the new CHECK constraint with all 6 values
+    console.log('➕ Creating check_campaign_type constraint with 6 allowed values...')
+    await sequelize.query(`
+      ALTER TABLE notification_campaigns 
+      ADD CONSTRAINT check_campaign_type 
+      CHECK (campaign_type IN (
+        'lifecycle', 
+        'promotional', 
+        'transactional', 
+        'new_offer_announcement', 
+        'custom_promotion', 
+        'seasonal_campaign'
+      ))
+    `, { transaction })
+    console.log('✅ Created check_campaign_type constraint with 6 values')
+
+    // Verify constraint was created correctly
+    console.log('🔍 Verifying constraint creation...')
+    const [verifyConstraint] = await sequelize.query(`
+      SELECT con.conname, pg_get_constraintdef(con.oid) AS constraint_def
+      FROM pg_constraint con
+      INNER JOIN pg_class rel ON rel.oid = con.conrelid
+      INNER JOIN pg_attribute attr ON attr.attnum = ANY(con.conkey) AND attr.attrelid = con.conrelid
+      WHERE rel.relname = 'notification_campaigns'
+      AND con.contype = 'c'
+      AND attr.attname = 'campaign_type'
+      AND con.conname = 'check_campaign_type'
+    `, { transaction })
+
+    if (verifyConstraint.length === 1) {
+      console.log('✅ Constraint verified:', verifyConstraint[0].constraint_def)
+    } else {
+      console.warn('⚠️  Warning: Could not verify constraint creation')
     }
 
     // Step 3c: Check and create index for campaign_type (independent of column creation)

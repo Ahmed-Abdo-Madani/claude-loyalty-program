@@ -185,11 +185,10 @@ router.post('/campaigns', requireBusinessAuth, async (req, res) => {
     }
 
     // Defensive fallback: Ensure campaign_id is set before create
-    // This guards against hook failures or initialization issues
     if (!campaignData.campaign_id) {
       const SecureIDGenerator = await import('../utils/secureIdGenerator.js')
       campaignData.campaign_id = SecureIDGenerator.default.generateCampaignID()
-      logger.warn('⚠️  campaign_id was not set by hook, generated manually:', campaignData.campaign_id)
+      logger.info('Generated campaign_id pre-create:', campaignData.campaign_id)
     }
 
     // Create campaign
@@ -241,12 +240,43 @@ router.put('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    // Update campaign
-    await campaign.update({
-      ...updateData,
-      updated_by: req.business.user_id || null,
-      updated_at: new Date()
-    })
+    // Restrict field updates after campaign has been sent
+    if (campaign.status === 'active' || campaign.status === 'paused') {
+      // Only allow certain fields to be updated after sending
+      const allowedFields = ['name', 'description', 'tags', 'notes', 'status']
+      const restrictedFields = ['target_type', 'target_segment_id', 'target_criteria', 'message_template', 'campaign_type']
+      
+      const attemptedRestrictedFields = restrictedFields.filter(field => field in updateData)
+      if (attemptedRestrictedFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot modify ${attemptedRestrictedFields.join(', ')} after campaign has been sent`
+        })
+      }
+
+      // Filter to only allowed fields
+      const filteredData = {}
+      allowedFields.forEach(field => {
+        if (field in updateData) {
+          filteredData[field] = updateData[field]
+        }
+      })
+
+      await campaign.update({
+        ...filteredData,
+        updated_by: req.business.user_id || null,
+        updated_at: new Date()
+      })
+    } else {
+      // Draft campaigns can update all fields
+      await campaign.update({
+        ...updateData,
+        updated_by: req.business.user_id || null,
+        updated_at: new Date()
+      })
+    }
+
+    logger.info('Campaign updated', { campaign_id: campaignId, business_id: businessId, status: campaign.status })
 
     res.json({
       success: true,
@@ -264,7 +294,7 @@ router.put('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
   }
 })
 
-// DELETE /api/notifications/campaigns/:id - Delete campaign
+// DELETE /api/notifications/campaigns/:id - Delete campaign (soft delete)
 router.delete('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.business.public_id
@@ -299,6 +329,8 @@ router.delete('/campaigns/:campaignId', requireBusinessAuth, async (req, res) =>
       updated_at: new Date()
     })
 
+    logger.info('Campaign soft deleted', { campaign_id: campaignId, business_id: businessId })
+
     res.json({
       success: true,
       message: 'Campaign deleted successfully'
@@ -309,6 +341,80 @@ router.delete('/campaigns/:campaignId', requireBusinessAuth, async (req, res) =>
     res.status(500).json({
       success: false,
       message: 'Failed to delete campaign',
+      error: error.message
+    })
+  }
+})
+
+// PATCH /api/notifications/campaigns/:id/status - Quick status update
+router.patch('/campaigns/:campaignId/status', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const { campaignId } = req.params
+    const { status } = req.body
+
+    // Validate status
+    const validStatuses = ['draft', 'active', 'paused', 'completed', 'cancelled']
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      })
+    }
+
+    // Find campaign
+    const campaign = await NotificationCampaign.findOne({
+      where: {
+        campaign_id: campaignId,
+        business_id: businessId
+      }
+    })
+
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        message: 'Campaign not found'
+      })
+    }
+
+    // Validate state transitions
+    const currentStatus = campaign.status
+    const invalidTransitions = {
+      'completed': ['draft', 'active', 'paused'], // completed campaigns cannot be reactivated
+      'cancelled': ['draft', 'active', 'paused']  // cancelled campaigns cannot be reactivated
+    }
+
+    if (invalidTransitions[currentStatus]?.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change status from ${currentStatus} to ${status}`
+      })
+    }
+
+    // Update status
+    await campaign.update({
+      status,
+      updated_at: new Date()
+    })
+
+    logger.info('Campaign status updated', { 
+      campaign_id: campaignId, 
+      business_id: businessId,
+      from: currentStatus,
+      to: status
+    })
+
+    res.json({
+      success: true,
+      message: 'Campaign status updated successfully',
+      data: { campaign }
+    })
+
+  } catch (error) {
+    console.error('Error updating campaign status:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update campaign status',
       error: error.message
     })
   }
@@ -336,11 +442,11 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
       })
     }
 
-    // Check campaign status
-    if (campaign.status !== 'draft') {
+    // Check campaign status - allow draft and paused campaigns to be sent
+    if (campaign.status !== 'draft' && campaign.status !== 'paused') {
       return res.status(400).json({
         success: false,
-        message: 'Only draft campaigns can be sent'
+        message: 'Only draft or paused campaigns can be sent'
       })
     }
 
@@ -357,16 +463,34 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
       })
     } else {
       result = await notificationService.sendCampaign(campaignId)
+      
+      // Update campaign status after successful send
+      const newStatus = result.total_recipients > 0 ? 'active' : 'completed'
+      await campaign.update({
+        status: newStatus,
+        updated_at: new Date()
+      })
+
+      logger.info('Campaign sent', { 
+        campaign_id: campaignId, 
+        business_id: businessId,
+        recipients: result.total_recipients,
+        status: newStatus
+      })
     }
 
     res.json({
       success: true,
       message: 'Campaign sent successfully',
-      data: result
+      data: {
+        ...result,
+        campaign_status: campaign.status
+      }
     })
 
   } catch (error) {
     console.error('Error sending campaign:', error)
+    logger.error('Campaign send failed', { campaign_id: req.params.campaignId, error: error.message })
     res.status(500).json({
       success: false,
       message: 'Failed to send campaign',
@@ -496,6 +620,13 @@ router.post('/campaigns/promotional', requireBusinessAuth, async (req, res) => {
       scheduled_at: scheduled_at || null,
       status: 'draft',
       tags
+    }
+
+    // Defensive fallback: Ensure campaign_id is set before create
+    if (!campaignData.campaign_id) {
+      const SecureIDGenerator = await import('../utils/secureIdGenerator.js')
+      campaignData.campaign_id = SecureIDGenerator.default.generateCampaignID()
+      logger.info('Generated campaign_id pre-create:', campaignData.campaign_id)
     }
 
     // Create campaign

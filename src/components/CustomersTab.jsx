@@ -7,7 +7,7 @@ import CampaignBuilder from './CampaignBuilder'
 import CampaignHistory from './CampaignHistory'
 
 function CustomersTab({ analytics: globalAnalytics }) {
-  const { t } = useTranslation('dashboard')
+  const { t } = useTranslation(['dashboard', 'notification'])
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -37,6 +37,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
   const [activeTab, setActiveTab] = useState('customers') // 'customers' | 'campaigns'
   const [showCampaignBuilder, setShowCampaignBuilder] = useState(false)
   const [campaignRefreshTrigger, setCampaignRefreshTrigger] = useState(0)
+  const [campaignToEdit, setCampaignToEdit] = useState(null)
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -380,8 +381,8 @@ function CustomersTab({ analytics: globalAnalytics }) {
             className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
           >
             <span className="text-xl">📢</span>
-            <span className="hidden sm:inline">Create Campaign</span>
-            <span className="sm:hidden">Campaign</span>
+            <span className="hidden sm:inline">{t('dashboard:customers.createCampaignButton')}</span>
+            <span className="sm:hidden">{t('dashboard:customers.campaignShort')}</span>
           </button>
         </div>
         
@@ -396,7 +397,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              👥 Customers
+              👥 {t('dashboard:customers.tabs.customers')}
             </button>
             <button
               onClick={() => setActiveTab('campaigns')}
@@ -406,7 +407,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              📢 Campaigns
+              📢 {t('dashboard:customers.tabs.campaigns')}
             </button>
           </div>
         </div>
@@ -511,7 +512,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
               {/* Target Audience Selector */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t('customers.targetAudience', { defaultValue: 'Target Audience' })}
+                  {t('dashboard:customers.targetAudience')}
                 </label>
                 <select
                   value={audienceMode === 'segment' ? selectedSegment : audienceMode}
@@ -534,25 +535,22 @@ function CustomersTab({ analytics: globalAnalytics }) {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="all">
-                    {t('customers.allCustomers', { defaultValue: 'All Customers' })}
+                    {t('dashboard:customers.allCustomers')}
                   </option>
                   <option 
                     value="selected" 
                     disabled={selectedCustomers.size === 0}
                   >
-                    {t('customers.selectedCustomers', { 
-                      defaultValue: `Selected Customers (${selectedCustomers.size})`,
-                      count: selectedCustomers.size 
-                    })}
+                    {t('dashboard:customers.selectedCustomers', { count: selectedCustomers.size })}
                   </option>
                   
                   {/* Segments Section */}
                   {!loadingSegments && segments.length > 0 && (
                     <>
-                      <option disabled>--- {t('customers.segments', { defaultValue: 'Segments' })} ---</option>
+                      <option disabled>{t('dashboard:customers.segmentSelector.segments')}</option>
                       {segments.map(segment => (
                         <option key={segment.segment_id} value={segment.segment_id}>
-                          {segment.name} ({segment.customer_count || 0} {t('customers.customers', { defaultValue: 'customers' })})
+                          {segment.name} ({t('dashboard:customers.segmentSelector.customersCount', { count: segment.customer_count || 0 })})
                         </option>
                       ))}
                     </>
@@ -570,15 +568,10 @@ function CustomersTab({ analytics: globalAnalytics }) {
                   <span>📧</span>
                   <span>
                     {audienceMode === 'segment'
-                      ? t('customers.sendToSegment', { defaultValue: 'Send to Segment' })
+                      ? t('dashboard:customers.sendToSegment')
                       : audienceMode === 'selected' && selectedCustomers.size > 0
-                      ? t('customers.sendToSelected', { 
-                          defaultValue: `Send to Selected (${selectedCustomers.size})`,
-                          count: selectedCustomers.size 
-                        })
-                      : t('customers.selectCustomersOrSegment', { 
-                          defaultValue: 'Select customers or segment' 
-                        })
+                      ? t('dashboard:customers.sendToSelected', { count: selectedCustomers.size })
+                      : t('dashboard:customers.selectCustomersOrSegment')
                     }
                   </span>
                 </button>
@@ -669,7 +662,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                     className="flex-1 px-3 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 touch-target"
                   >
                     <span>📧</span>
-                    <span>Notify</span>
+                    <span>{t('notification:notifyButton')}</span>
                   </button>
                   <button className="px-3 py-2 min-h-[44px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-all active:scale-95 flex items-center justify-center touch-target">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -954,7 +947,10 @@ function CustomersTab({ analytics: globalAnalytics }) {
       {activeTab === 'campaigns' && (
         <div className="compact-spacing">
           <CampaignHistory 
-            onCreateCampaign={() => setShowCampaignBuilder(true)}
+            onCreateCampaign={(campaign) => {
+              setCampaignToEdit(campaign || null)
+              setShowCampaignBuilder(true)
+            }}
             refreshTrigger={campaignRefreshTrigger}
           />
         </div>
@@ -979,10 +975,15 @@ function CustomersTab({ analytics: globalAnalytics }) {
       {/* Campaign Builder Modal */}
       {showCampaignBuilder && (
         <CampaignBuilder
-          onClose={() => setShowCampaignBuilder(false)}
+          initialData={campaignToEdit}
+          onClose={() => {
+            setShowCampaignBuilder(false)
+            setCampaignToEdit(null)
+          }}
           onSuccess={(campaign) => {
             setShowCampaignBuilder(false)
-            setSuccessMessage(`Campaign "${campaign.name}" created successfully!`)
+            setCampaignToEdit(null)
+            setSuccessMessage(`Campaign "${campaign.name}" ${campaignToEdit ? 'updated' : 'created'} successfully!`)
             setCampaignRefreshTrigger(prev => prev + 1)
             setActiveTab('campaigns')
             setTimeout(() => setSuccessMessage(''), 5000)

@@ -442,7 +442,28 @@
     "filter": "تصفية",
     "export": "تصدير",
     "exportCSV": "تصدير CSV",
-    "exportExcel": "تصدير Excel"
+    "exportExcel": "تصدير Excel",
+    "tabs": {
+      "customers": "العملاء",
+      "campaigns": "الحملات"
+    },
+    "createCampaign": "إنشاء حملة",
+    "createCampaignButton": "+ حملة جديدة",
+    "campaignShort": "حملة",
+    "targetAudience": "الجمهور المستهدف",
+    "allCustomers": "جميع العملاء",
+    "selectedCustomers": "العملاء المحددون ({{count}})",
+    "selectCustomersOrSegment": "اختر عملاء أو شريحة",
+    "sendToSegment": "إرسال إلى الشريحة",
+    "sendToSelected": "إرسال إلى {{count}} محدد",
+    "segmentSelector": {
+      "label": "اختر شريحة",
+      "placeholder": "اختر شريحة...",
+      "allCustomers": "جميع العملاء",
+      "selectedCustomers": "العملاء المحددون",
+      "segments": "--- الشرائح ---",
+      "customersCount": "{{count}} عميل"
+    }
   },
   "scanner": {
     "title": "ماسح رمز QR",

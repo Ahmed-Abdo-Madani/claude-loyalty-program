@@ -17,6 +17,10 @@ import landingAr from '../locales/ar/landing.json';
 import landingEn from '../locales/en/landing.json';
 import cardDesignAr from '../locales/ar/cardDesign.json';
 import cardDesignEn from '../locales/en/cardDesign.json';
+import notificationAr from '../locales/ar/notification.json';
+import notificationEn from '../locales/en/notification.json';
+import campaignAr from '../locales/ar/campaign.json';
+import campaignEn from '../locales/en/campaign.json';
 
 // Configure i18next
 i18n
@@ -33,6 +37,8 @@ i18n
         customer: customerAr,
         landing: landingAr,
         cardDesign: cardDesignAr,
+        notification: notificationAr,
+        campaign: campaignAr,
       },
       en: {
         common: commonEn,
@@ -42,6 +48,8 @@ i18n
         customer: customerEn,
         landing: landingEn,
         cardDesign: cardDesignEn,
+        notification: notificationEn,
+        campaign: campaignEn,
       },
     },
 
@@ -55,7 +63,7 @@ i18n
     defaultNS: 'common',
 
     // Namespaces to load by default
-    ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign'],
+    ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign', 'notification', 'campaign'],
 
     // Language detection options
     detection: {

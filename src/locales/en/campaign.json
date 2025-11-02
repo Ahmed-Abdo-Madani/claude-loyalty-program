@@ -1,0 +1,270 @@
+{
+  "title": "Create Promotional Campaign",
+  "subtitle": "Step {{current}} of {{total}}",
+  "close": "Close",
+  
+  "edit": {
+    "title": "Edit Campaign",
+    "updateAndSend": "Update & Send Campaign",
+    "updateCampaign": "Update Campaign",
+    "success": "Campaign Updated Successfully!",
+    "failed": "Failed to update campaign",
+    "typeCannotChange": "Campaign type cannot be changed after creation"
+  },
+  
+  "steps": {
+    "type": "Type",
+    "target": "Target",
+    "message": "Message",
+    "schedule": "Schedule"
+  },
+  
+  "step1": {
+    "title": "Campaign Type",
+    "nameLabel": "Campaign Name *",
+    "namePlaceholder": "e.g., Summer Sale Announcement",
+    "descriptionLabel": "Description (Optional)",
+    "descriptionPlaceholder": "Brief description of the campaign...",
+    "typeLabel": "Campaign Type *",
+    "types": {
+      "newOffer": {
+        "title": "New Offer Announcement",
+        "description": "Announce a new offer or promotion to your customers",
+        "icon": "🎁"
+      },
+      "customPromotion": {
+        "title": "Custom Promotion",
+        "description": "Create a custom promotional message for any occasion",
+        "icon": "💬"
+      },
+      "seasonal": {
+        "title": "Seasonal Campaign",
+        "description": "Seasonal promotions like holidays, events, or special occasions",
+        "icon": "🎉"
+      }
+    },
+    "linkOfferLabel": "Link to Offer (Optional)",
+    "linkOfferPlaceholder": "No linked offer",
+    "linkOfferHelp": "Link an offer to track conversions from this campaign"
+  },
+  
+  "step2": {
+    "title": "Target Audience",
+    "targetLabel": "Target Audience *",
+    "targets": {
+      "allCustomers": {
+        "title": "All Customers",
+        "description": "Send to all active customers in your database",
+        "icon": "👥"
+      },
+      "segment": {
+        "title": "Specific Segment",
+        "description": "Target a specific customer segment",
+        "icon": "🎯",
+        "selectPlaceholder": "Select a segment...",
+        "customersCount": "{{count}} customers"
+      },
+      "customFilter": {
+        "title": "Custom Filter",
+        "description": "Define custom targeting criteria",
+        "icon": "🔍",
+        "comingSoon": "Custom filter builder coming soon. Use segments for now."
+      }
+    }
+  },
+  
+  "step3": {
+    "title": "Message Composition",
+    "headerLabel": "Message Header * ({{current}}/{{max}})",
+    "headerPlaceholder": "Enter notification header...",
+    "bodyLabel": "Message Body * ({{current}}/{{max}})",
+    "bodyPlaceholder": "Enter notification message...",
+    "previewTitle": "Wallet Preview",
+    "previewIcon": "📱",
+    "previewHeaderDefault": "Your notification header",
+    "previewBodyDefault": "Your notification message will appear here",
+    "placeholders": {
+      "newOffer": {
+        "header": "🎁 New Offer Available!",
+        "body": "Check out our latest promotion just for you!"
+      },
+      "customPromotion": {
+        "header": "✨ Special Promotion",
+        "body": "Exclusive offer for our valued customers!"
+      },
+      "seasonal": {
+        "header": "🎉 Seasonal Special",
+        "body": "Celebrate with us this season with amazing rewards!"
+      }
+    }
+  },
+  
+  "step4": {
+    "title": "Schedule & Review",
+    "schedulingLabel": "Scheduling Options",
+    "sendNow": {
+      "title": "Send Now",
+      "description": "Send immediately after creation",
+      "icon": "⚡"
+    },
+    "scheduleLater": {
+      "title": "Schedule for Later",
+      "description": "Schedule campaign for a specific date and time",
+      "icon": "📅"
+    },
+    "summaryTitle": "Campaign Summary",
+    "summaryFields": {
+      "name": "Campaign Name:",
+      "type": "Type:",
+      "target": "Target:",
+      "schedule": "Schedule:"
+    }
+  },
+  
+  "navigation": {
+    "back": "Back",
+    "next": "Next",
+    "createAndSend": "Create & Send Campaign",
+    "createCampaign": "Create Campaign",
+    "creating": "Creating..."
+  },
+  
+  "success": {
+    "title": "Campaign Created Successfully!",
+    "messageSent": "Your campaign has been created and is being sent to customers.",
+    "messageScheduled": "Your campaign has been scheduled and will be sent at the specified time.",
+    "detailsTitle": "Campaign Details",
+    "fields": {
+      "campaignId": "Campaign ID:",
+      "name": "Name:",
+      "type": "Type:",
+      "status": "Status:",
+      "recipients": "Recipients:",
+      "sent": "Sent:",
+      "failed": "Failed:"
+    },
+    "closeButton": "Close",
+    "createAnotherButton": "Create Another Campaign"
+  },
+  
+  "validation": {
+    "nameRequired": "Campaign name is required",
+    "typeRequired": "Campaign type is required",
+    "targetRequired": "Target type is required",
+    "segmentRequired": "Please select a segment",
+    "criteriaRequired": "Please define custom criteria",
+    "headerRequired": "Header is required",
+    "headerTooLong": "Header must be {{max}} characters or less",
+    "bodyRequired": "Message body is required",
+    "bodyTooLong": "Body must be {{max}} characters or less",
+    "scheduleRequired": "Please select a schedule date",
+    "scheduleFuture": "Schedule date must be in the future"
+  },
+  
+  "errors": {
+    "createFailed": "Failed to create campaign",
+    "loadSegmentsFailed": "Failed to load segments",
+    "loadOffersFailed": "Failed to load offers",
+    "loadHistoryFailed": "Failed to load campaigns"
+  },
+  
+  "history": {
+    "title": "Campaign History",
+    "emptyState": {
+      "title": "No Campaigns Yet",
+      "description": "Create your first promotional campaign to engage with customers",
+      "createButton": "Create Campaign"
+    },
+    "noResults": {
+      "title": "No Campaigns Found",
+      "description": "Try adjusting your filters"
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Campaign name...",
+      "campaignType": "Campaign Type",
+      "status": "Status",
+      "dateFrom": "Date From",
+      "dateTo": "Date To",
+      "clearFilters": "Clear Filters",
+      "allTypes": "All Types",
+      "allStatuses": "All Statuses"
+    },
+    "table": {
+      "campaign": "Campaign",
+      "type": "Type",
+      "status": "Status",
+      "recipients": "Recipients",
+      "engagement": "Engagement",
+      "created": "Created",
+      "actions": "Actions",
+      "viewDetails": "View Details",
+      "sent": "Sent",
+      "opens": "opens",
+      "openRate": "{{rate}}%"
+    },
+    "pagination": {
+      "showing": "Showing {{from}} to {{to}} of {{total}} campaigns",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "types": {
+      "new_offer_announcement": "New Offer Announcement",
+      "custom_promotion": "Custom Promotion",
+      "seasonal_campaign": "Seasonal Campaign",
+      "lifecycle": "Lifecycle",
+      "transactional": "Transactional"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "details": {
+      "title": "Campaign Details",
+      "overview": "Overview",
+      "targeting": "Targeting",
+      "message": "Message",
+      "engagement": "Engagement Metrics",
+      "timeline": "Timeline",
+      "targetType": "Target Type",
+      "deliveryRate": "Delivery Rate",
+      "openRate": "Open Rate",
+      "failed": "Failed",
+      "converted": "Converted",
+      "campaignCreated": "Campaign Created",
+      "campaignSent": "Campaign Sent",
+      "campaignCompleted": "Campaign Completed",
+      "close": "Close",
+      "noHeader": "No header",
+      "noMessage": "No message body"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "resend": "Resend",
+      "duplicate": "Duplicate",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete Campaign?",
+      "confirmDeleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+      "confirmActivate": "Activate Campaign?",
+      "confirmActivateMessage": "This will make the campaign active. Continue?",
+      "confirmDeactivate": "Deactivate Campaign?",
+      "confirmDeactivateMessage": "This will pause the campaign. Continue?",
+      "confirmResend": "Resend Campaign?",
+      "confirmResendMessage": "This will send the campaign again to all recipients. Continue?",
+      "deleteSuccess": "Campaign deleted successfully",
+      "deleteFailed": "Failed to delete campaign",
+      "updateSuccess": "Campaign updated successfully",
+      "updateFailed": "Failed to update campaign",
+      "resendSuccess": "Campaign resent successfully",
+      "resendFailed": "Failed to resend campaign",
+      "cannotEditCompleted": "Cannot edit completed or cancelled campaigns",
+      "cannotDeleteCompleted": "Cannot delete completed or cancelled campaigns",
+      "onlyDraftCanSend": "Only draft campaigns can be sent"
+    }
+  }
+}
