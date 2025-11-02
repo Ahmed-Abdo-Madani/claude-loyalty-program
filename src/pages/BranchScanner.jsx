@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getManagerAuthData, managerLogout, isManagerAuthenticated } from '../utils/secureAuth'
 import EnhancedQRScanner from '../components/EnhancedQRScanner'
 import { endpoints } from '../config/api'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function BranchScanner() {
+  const { t } = useTranslation('admin')
   const navigate = useNavigate()
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState(null)
@@ -179,19 +182,22 @@ export default function BranchScanner() {
         <div className="bg-white dark:bg-gray-800 shadow-sm px-4 py-4 flex items-center justify-between sticky top-0 z-10">
           <div>
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {branchInfo?.branchName || 'Branch Manager'}
+              {branchInfo?.branchName || t('branchScanner.branchManager')}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Scans today: {todayStats.scansToday}
+              {t('branchScanner.scansToday', { count: todayStats.scansToday })}
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-4 focus:ring-red-500/50"
-            aria-label="Logout from branch manager portal"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="button" showLabels={false} className="" />
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors focus:outline-none focus:ring-4 focus:ring-red-500/50"
+              aria-label="Logout from branch manager portal"
+            >
+              {t('branchScanner.logout')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -207,8 +213,7 @@ export default function BranchScanner() {
             <svg className="w-16 h-16 lg:w-20 lg:h-20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
-            <span className="text-xl lg:text-2xl font-bold">Start Scanner</span>
-            <span className="text-xl lg:text-2xl font-bold mt-1">ابدأ المسح</span>
+            <span className="text-xl lg:text-2xl font-bold">{t('branchScanner.startScanner')}</span>
           </button>
         )}
 
@@ -229,7 +234,7 @@ export default function BranchScanner() {
           <div className="fixed inset-0 bg-white/90 dark:bg-gray-900/90 flex items-center justify-center z-40">
             <div className="text-center">
               <div className="animate-spin w-20 h-20 lg:w-16 lg:h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-lg lg:text-base text-gray-600 dark:text-gray-400">Processing...</p>
+              <p className="text-lg lg:text-base text-gray-600 dark:text-gray-400">{t('branchScanner.processing')}</p>
             </div>
           </div>
         )}
@@ -247,14 +252,14 @@ export default function BranchScanner() {
               <svg className="w-20 h-20 lg:w-16 lg:h-16 text-red-600 dark:text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">Error</h3>
+              <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">{t('branchScanner.error')}</h3>
               <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
               <button
                 onClick={handleScanNext}
                 className="w-full lg:w-auto px-6 py-4 lg:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
                 aria-label="Scan next customer"
               >
-                Scan Next
+                {t('branchScanner.scanNext')}
               </button>
             </div>
           </div>
@@ -275,7 +280,7 @@ export default function BranchScanner() {
               <>
                 <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
                 <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
-                  Prize Confirmed!
+                  {t('branchScanner.prizeConfirmed')}
                 </h2>
                 
                 {/* Display tier information if available */}
@@ -289,21 +294,24 @@ export default function BranchScanner() {
                       )}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {scanResult.totalCompletions} {scanResult.totalCompletions === 1 ? 'reward' : 'rewards'} earned!
+                      {t('branchScanner.rewardsEarned', { count: scanResult.totalCompletions })}
                     </p>
                   </div>
                 )}
                 
                 {/* New cycle indicator with fresh progress data */}
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  🔄 New cycle started: {scanResult.progress?.currentStamps || 0} of {scanResult.progress?.maxStamps || 5} stamps
+                  {t('branchScanner.newCycleStarted', { 
+                    current: scanResult.progress?.currentStamps || 0, 
+                    max: scanResult.progress?.maxStamps || 5 
+                  })}
                 </p>
                 
                 {/* Show confirmation error if auto-confirm failed */}
                 {scanResult.confirmError && (
                   <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      ⚠️ Prize confirmed but wallet update may be delayed
+                      ⚠️ {t('branchScanner.prizeConfirmedButDelayed')}
                     </p>
                   </div>
                 )}
@@ -312,10 +320,10 @@ export default function BranchScanner() {
                 {scanResult.tier && scanResult.tierUpgrade && (
                   <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-300 dark:border-purple-700">
                     <p className="text-lg font-bold text-purple-900 dark:text-purple-200 mb-1">
-                      🎉 Tier Upgrade!
+                      🎉 {t('branchScanner.tierUpgrade')}
                     </p>
                     <p className="text-sm text-purple-700 dark:text-purple-300">
-                      Customer reached {scanResult.tier.currentTier.name}!
+                      {t('branchScanner.customerReachedTier', { tierName: scanResult.tier.currentTier.name })}
                     </p>
                   </div>
                 )}
@@ -324,7 +332,7 @@ export default function BranchScanner() {
                 {scanResult.totalCompletions && [5, 10, 25, 50, 100].includes(scanResult.totalCompletions) && (
                   <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                     <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
-                      🎊 Milestone! {scanResult.totalCompletions} rewards earned!
+                      {t('branchScanner.milestone', { count: scanResult.totalCompletions })}
                     </p>
                   </div>
                 )}
@@ -334,7 +342,7 @@ export default function BranchScanner() {
                   className="w-full py-5 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xl lg:text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
                   aria-label="Scan next customer after prize confirmation"
                 >
-                  Scan Next Customer
+                  {t('branchScanner.scanNextCustomer')}
                 </button>
               </>
             ) : (
@@ -342,12 +350,12 @@ export default function BranchScanner() {
               <>
                 <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
                 <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
-                  Stamp Added!
+                  {t('branchScanner.stampAdded')}
                 </h2>
                 
                 <div className="my-6">
                   <p className="text-4xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {scanResult.progress.currentStamps} of {scanResult.progress.maxStamps}
+                    {t('branchScanner.progress', { current: scanResult.progress.currentStamps, max: scanResult.progress.maxStamps })}
                   </p>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-6 lg:h-4">
                     <div
@@ -362,7 +370,7 @@ export default function BranchScanner() {
                   className="w-full py-5 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xl lg:text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
                   aria-label="Scan next customer after stamp added"
                 >
-                  Scan Next Customer
+                  {t('branchScanner.scanNextCustomer')}
                 </button>
               </>
             )}

@@ -95,7 +95,7 @@ function TemplateSelector({ onApply, onClose }) {
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               {previewTemplate.description}
             </p>
-            <div className="flex items-center justify-end space-x-3">
+            <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => setPreviewTemplate(null)}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -133,12 +133,12 @@ function TemplateSelector({ onApply, onClose }) {
       {/* Category Filter - Horizontal Scrollable on Mobile */}
       {categories.length > 1 && (
         <div className="overflow-x-auto pb-2 -mx-1 px-1">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setCategoryFilter(category)}
-                className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center space-x-1
+                className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1
                   ${categoryFilter === category
                     ? 'bg-primary text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -193,7 +193,7 @@ function TemplateSelector({ onApply, onClose }) {
               )}
 
               {/* Color Preview */}
-              <div className="flex items-center space-x-1 mt-2">
+              <div className="flex items-center gap-1 mt-2">
                 <div
                   className="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
                   style={{ backgroundColor: template.config.background_color }}
@@ -231,7 +231,7 @@ function TemplateSelector({ onApply, onClose }) {
       {/* Selected Template Details */}
       {selectedTemplate && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
+          <div className="flex items-start gap-3">
             <div
               className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0"
               style={{
@@ -270,7 +270,7 @@ function TemplateSelector({ onApply, onClose }) {
         <button
           onClick={handleApply}
           disabled={!selectedTemplate || applying}
-          className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 order-1 sm:order-2"
+          className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
         >
           {applying ? (
             <>
@@ -288,7 +288,7 @@ function TemplateSelector({ onApply, onClose }) {
 
       {/* Warning */}
       <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-        <div className="flex items-start space-x-2">
+        <div className="flex items-start gap-2">
           <span className="text-yellow-600 dark:text-yellow-400 mt-0.5">⚠️</span>
           <p className="text-xs text-yellow-800 dark:text-yellow-300">
             Applying a template will replace your current design settings.

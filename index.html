@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/loyalty-icon.svg" />
@@ -9,6 +9,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Set dir/lang from localStorage before hydration to prevent mismatch -->
+    <script>
+      (function() {
+        try {
+          const lng = localStorage.getItem('i18nextLng') || 'ar';
+          const dir = lng === 'ar' ? 'rtl' : 'ltr';
+          document.documentElement.setAttribute('lang', lng);
+          document.documentElement.setAttribute('dir', dir);
+        } catch (e) {
+          // Fallback to Arabic if localStorage fails
+          console.warn('Failed to read i18nextLng from localStorage', e);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

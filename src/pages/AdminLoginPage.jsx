@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 
 function AdminLoginPage() {
+  const { t } = useTranslation('auth')
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
@@ -53,7 +55,7 @@ function AdminLoginPage() {
 
     } catch (error) {
       console.error('Admin login error:', error)
-      setError('Connection error. Please try again.')
+      setError(t('adminAuth.connectionError'))
     } finally {
       setLoading(false)
     }
@@ -67,10 +69,10 @@ function AdminLoginPage() {
             <span className="text-white text-2xl font-bold">👑</span>
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">
-            Platform Admin
+            {t('adminAuth.platformAdmin')}
           </h2>
           <p className="text-purple-200">
-            Sign in to manage the loyalty platform
+            {t('adminAuth.signInToManage')}
           </p>
         </div>
       </div>
@@ -81,7 +83,7 @@ function AdminLoginPage() {
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Admin Email
+                {t('adminAuth.adminEmail')}
               </label>
               <div className="mt-1">
                 <input
@@ -93,7 +95,7 @@ function AdminLoginPage() {
                   value={formData.email}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                  placeholder="Enter your admin email"
+                  placeholder={t('adminAuth.emailPlaceholder')}
                 />
               </div>
             </div>
@@ -101,7 +103,7 @@ function AdminLoginPage() {
             {/* Password Input */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                {t('adminAuth.password')}
               </label>
               <div className="mt-1">
                 <input
@@ -113,7 +115,7 @@ function AdminLoginPage() {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                  placeholder="Enter your password"
+                  placeholder={t('adminAuth.passwordPlaceholder')}
                 />
               </div>
             </div>
@@ -142,10 +144,10 @@ function AdminLoginPage() {
                 {loading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Signing in...
+                    {t('adminAuth.signingIn')}
                   </div>
                 ) : (
-                  'Sign in to Admin Panel'
+                  t('adminAuth.signInToPanel')
                 )}
               </button>
             </div>
@@ -158,26 +160,26 @@ function AdminLoginPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Admin Features</span>
+                <span className="px-2 bg-white text-gray-500">{t('adminAuth.adminFeatures')}</span>
               </div>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-gray-600">
               <div className="flex items-center">
                 <span className="text-purple-500 mr-1">📊</span>
-                Platform Analytics
+                {t('adminAuth.platformAnalytics')}
               </div>
               <div className="flex items-center">
                 <span className="text-purple-500 mr-1">🏢</span>
-                Business Management
+                {t('adminAuth.businessManagement')}
               </div>
               <div className="flex items-center">
                 <span className="text-purple-500 mr-1">⚙️</span>
-                System Settings
+                {t('adminAuth.systemSettings')}
               </div>
               <div className="flex items-center">
                 <span className="text-purple-500 mr-1">🎯</span>
-                User Support
+                {t('adminAuth.userSupport')}
               </div>
             </div>
           </div>
@@ -188,7 +190,7 @@ function AdminLoginPage() {
               to="/"
               className="text-sm text-purple-600 hover:text-purple-800 transition-colors"
             >
-              ← Back to main site
+              {t('adminAuth.backToMainSite')}
             </Link>
           </div>
         </div>
@@ -197,7 +199,7 @@ function AdminLoginPage() {
       {/* Footer */}
       <div className="mt-8 text-center">
         <p className="text-purple-200 text-sm">
-          Loyalty Platform Admin Panel v1.0
+          {t('adminAuth.adminPanelVersion')}
         </p>
       </div>
     </div>

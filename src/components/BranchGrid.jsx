@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import BranchCard from './BranchCard'
 
 function BranchGrid({
@@ -6,10 +7,11 @@ function BranchGrid({
   onEdit,
   onDelete,
   onToggleStatus,
-  onDuplicate,
   onAnalytics,
   onManageOffers
 }) {
+  const { t } = useTranslation('dashboard')
+  
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-SA', {
       style: 'currency',
@@ -21,7 +23,7 @@ function BranchGrid({
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">Loading branches...</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('branches.loading')}</p>
       </div>
     )
   }
@@ -33,13 +35,13 @@ function BranchGrid({
           <span className="text-3xl">🏪</span>
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          No branches found
+          {t('branches.noBranchesFound')}
         </h3>
         <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-          You haven't created any branch locations yet. Start by adding your first business location to manage offers and track performance.
+          {t('branches.noBranchesDesc')}
         </p>
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Try adjusting your filters or add a new branch to get started.
+          {t('branches.tryAdjustingFilters')}
         </div>
       </div>
     )
@@ -56,7 +58,6 @@ function BranchGrid({
             onEdit={onEdit}
             onDelete={onDelete}
             onToggleStatus={onToggleStatus}
-            onDuplicate={onDuplicate}
             onAnalytics={onAnalytics}
             onManageOffers={onManageOffers}
           />
@@ -70,7 +71,7 @@ function BranchGrid({
             {branches.length}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Total
+            {t('branches.total')}
           </div>
         </div>
         <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
@@ -78,7 +79,7 @@ function BranchGrid({
             {branches.filter(branch => branch.status === 'active').length}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Active
+            {t('branches.active')}
           </div>
         </div>
         <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
@@ -86,7 +87,7 @@ function BranchGrid({
             {branches.reduce((sum, branch) => sum + (branch.customers || 0), 0)}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Customers
+            {t('branches.customers')}
           </div>
         </div>
         <div className="flex-1 text-center">
@@ -94,7 +95,7 @@ function BranchGrid({
             {formatCurrency(branches.reduce((sum, branch) => sum + (branch.monthlyRevenue || 0), 0))}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Revenue
+            {t('branches.revenue')}
           </div>
         </div>
       </div>

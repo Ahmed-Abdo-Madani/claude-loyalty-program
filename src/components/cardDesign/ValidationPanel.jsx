@@ -12,9 +12,12 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getValidationStatusUI, isDesignProductionReady } from '../../utils/designValidation'
 
 function ValidationPanel({ validation, design, onNavigateToSection }) {
+  const { t } = useTranslation('cardDesign')
+  
   if (!validation) return null
 
   const { isValid, hasWarnings, hasErrors, errors = [], warnings = [] } = validation
@@ -22,7 +25,7 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
   const [showWarnings, setShowWarnings] = useState(false)
   const [showBlockers, setShowBlockers] = useState(false)
 
-  const statusUI = getValidationStatusUI(isValid, hasWarnings)
+  const statusUI = getValidationStatusUI(isValid, hasWarnings, t)
   const productionStatus = isDesignProductionReady(design || {}, validation)
 
   return (
@@ -38,30 +41,30 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
           </div>
           {productionStatus.ready ? (
             <span className="px-2.5 sm:px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold rounded-full whitespace-nowrap flex-shrink-0">
-              Ready ✓
+              {t('validation.ready')} ✓
             </span>
           ) : (
             <span className="px-2.5 sm:px-3 py-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs font-semibold rounded-full whitespace-nowrap flex-shrink-0">
-              Fix Issues
+              {t('validation.fixIssues')}
             </span>
           )}
         </div>
 
         {!isValid && (
           <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">
-            Fix the issues below to use your card design.
+            {t('validation.fixBeforeUse')}
           </p>
         )}
 
         {isValid && hasWarnings && (
           <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">
-            Your design works, but you can improve it further.
+            {t('validation.canImprove')}
           </p>
         )}
 
         {isValid && !hasWarnings && (
           <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">
-            Perfect! Your card design is ready to use. 🎉
+            {t('validation.perfectDesign')}
           </p>
         )}
       </div>
@@ -75,7 +78,7 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
           >
             <h4 className="text-sm sm:text-base font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
               <span>❌</span>
-              <span>Issues to Fix ({errors.length})</span>
+              <span>{t('validation.issuesToFix', { count: errors.length })}</span>
             </h4>
             <span className="text-red-700 dark:text-red-400 text-xl flex-shrink-0 ml-2">
               {showErrors ? '▼' : '▶'}
@@ -90,14 +93,14 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
                   className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 sm:p-4"
                 >
                   <p className="text-sm sm:text-base text-red-800 dark:text-red-300 mb-2">
-                    {translateError(error)}
+                    {translateError(error, t)}
                   </p>
-                  {getFixAction(error, onNavigateToSection) && (
+                  {getFixAction(error, onNavigateToSection, t) && (
                     <button
-                      onClick={() => getFixAction(error, onNavigateToSection).action()}
+                      onClick={() => getFixAction(error, onNavigateToSection, t).action()}
                       className="mt-2 px-3 py-1.5 bg-red-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-red-700 transition-colors duration-200 min-h-[36px]"
                     >
-                      {getFixAction(error, onNavigateToSection).label}
+                      {getFixAction(error, onNavigateToSection, t).label}
                     </button>
                   )}
                 </div>
@@ -116,7 +119,7 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
           >
             <h4 className="text-sm sm:text-base font-semibold text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
               <span>⚠️</span>
-              <span>Suggestions ({warnings.length})</span>
+              <span>{t('validation.suggestions', { count: warnings.length })}</span>
             </h4>
             <span className="text-yellow-700 dark:text-yellow-400 text-xl flex-shrink-0 ml-2">
               {showWarnings ? '▼' : '▶'}
@@ -131,7 +134,7 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
                   className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 sm:p-4"
                 >
                   <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-300">
-                    {translateWarning(warning)}
+                    {translateWarning(warning, t)}
                   </p>
                 </div>
               ))}
@@ -149,7 +152,7 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
           >
             <h4 className="text-sm sm:text-base font-semibold text-orange-700 dark:text-orange-400 flex items-center gap-2">
               <span>🚫</span>
-              <span>Must Fix Before Use</span>
+              <span>{t('validation.mustFixBeforeUse')}</span>
             </h4>
             <span className="text-orange-700 dark:text-orange-400 text-xl flex-shrink-0 ml-2">
               {showBlockers ? '▼' : '▶'}
@@ -159,13 +162,13 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
           {showBlockers && (
             <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300 mb-3">
-                Fix these before your card can go live:
+                {t('validation.fixBeforeLive')}
               </p>
               <ul className="space-y-2">
                 {productionStatus.blockers.map((blocker, index) => (
                   <li key={index} className="text-sm sm:text-base text-orange-800 dark:text-orange-300 flex items-start gap-2">
                     <span className="mt-0.5 flex-shrink-0">•</span>
-                    <span className="flex-1">{translateBlocker(blocker)}</span>
+                    <span className="flex-1">{translateBlocker(blocker, t)}</span>
                   </li>
                 ))}
               </ul>
@@ -177,24 +180,24 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
       {/* Simplified Checklist - Essential Items Only */}
       <div className="space-y-2 sm:space-y-3">
         <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300">
-          Card Checklist
+          {t('validation.cardChecklist')}
         </h4>
         <div className="space-y-2 sm:space-y-2.5">
           <ChecklistItem
-            label="Colors selected"
+            label={t('validation.checklist.colorsSelected')}
             checked={design?.background_color && design?.foreground_color}
           />
           <ChecklistItem
-            label="Easy to read colors"
+            label={t('validation.checklist.easyToRead')}
             checked={isValid}
           />
           <ChecklistItem
-            label="Logo added"
+            label={t('validation.checklist.logoAdded')}
             checked={design?.logo_url || design?.logo_google_url || design?.logo_apple_url}
           />
           {/* Only show on desktop or if there are blockers */}
           <ChecklistItem
-            label="Ready to use"
+            label={t('validation.checklist.readyToUse')}
             checked={productionStatus.ready}
             className="hidden sm:flex"
           />
@@ -206,11 +209,11 @@ function ValidationPanel({ validation, design, onNavigateToSection }) {
         <div className="flex items-start gap-2 sm:gap-3">
           <span className="text-blue-600 dark:text-blue-400 mt-0.5 text-lg sm:text-base flex-shrink-0">💡</span>
           <div className="flex-1 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-            <p className="font-semibold mb-1.5 sm:mb-2">Quick Tips</p>
+            <p className="font-semibold mb-1.5 sm:mb-2">{t('validation.quickTips')}</p>
             <ul className="space-y-1 sm:space-y-1.5 opacity-90">
-              <li>• Use high-contrast colors for readability</li>
-              <li>• Test on both light and dark phones</li>
-              <li className="hidden sm:block">• Upload your logo for brand recognition</li>
+              <li>{t('validation.tips.highContrast')}</li>
+              <li>{t('validation.tips.testBothModes')}</li>
+              <li className="hidden sm:block">{t('validation.tips.uploadLogo')}</li>
             </ul>
           </div>
         </div>
@@ -245,15 +248,15 @@ function ChecklistItem({ label, checked, className = '' }) {
 /**
  * Translate technical error messages to business-friendly language
  */
-function translateError(error) {
+function translateError(error, t) {
   const translations = {
-    'Background color is required': 'Please choose a background color',
-    'Foreground color is required': 'Please choose a text color',
-    'WCAG AA': 'easy to read colors',
-    'WCAG': 'readable',
-    'contrast ratio': 'color difference',
-    'too similar': 'too close in color',
-    'insufficient contrast': 'hard to read'
+    'Background color is required': t('validation.errors.backgroundColorRequired'),
+    'Foreground color is required': t('validation.errors.foregroundColorRequired'),
+    'WCAG AA': t('validation.errors.readableColors'),
+    'WCAG': t('validation.errors.readable'),
+    'contrast ratio': t('validation.errors.colorDifference'),
+    'too similar': t('validation.errors.tooSimilar'),
+    'insufficient contrast': t('validation.errors.hardToRead')
   }
   
   let translated = error
@@ -267,13 +270,13 @@ function translateError(error) {
 /**
  * Translate technical warning messages to business-friendly language
  */
-function translateWarning(warning) {
+function translateWarning(warning, t) {
   const translations = {
-    'WCAG AAA': 'maximum readability',
-    'WCAG AA': 'good readability',
-    'contrast ratio': 'color difference',
-    'recommended': 'suggested',
-    'accessibility': 'readability'
+    'WCAG AAA': t('validation.warnings.maximumReadability'),
+    'WCAG AA': t('validation.warnings.goodReadability'),
+    'contrast ratio': t('validation.warnings.colorDifference'),
+    'recommended': t('validation.warnings.recommended'),
+    'accessibility': t('validation.warnings.readability')
   }
   
   let translated = warning
@@ -287,13 +290,13 @@ function translateWarning(warning) {
 /**
  * Translate production blocker messages to business-friendly language
  */
-function translateBlocker(blocker) {
+function translateBlocker(blocker, t) {
   const translations = {
-    'WCAG AA': 'readable colors',
-    'contrast': 'color difference',
-    'production': 'live use',
-    'deployed': 'published',
-    'validated': 'checked'
+    'WCAG AA': t('validation.errors.readableColors'),
+    'contrast': t('validation.errors.colorDifference'),
+    'production': t('validation.warnings.liveUse'),
+    'deployed': t('validation.warnings.published'),
+    'validated': t('validation.warnings.checked')
   }
   
   let translated = blocker
@@ -307,28 +310,28 @@ function translateBlocker(blocker) {
 /**
  * Get fix action button for common errors
  */
-function getFixAction(error, onNavigateToSection) {
+function getFixAction(error, onNavigateToSection, t) {
   if (!onNavigateToSection) return null
   
   const errorLower = error.toLowerCase()
   
   if (errorLower.includes('background color') || errorLower.includes('foreground color')) {
     return {
-      label: '→ Fix Colors',
+      label: t('validation.actions.fixColors'),
       action: () => onNavigateToSection('colors')
     }
   }
   
   if (errorLower.includes('contrast') || errorLower.includes('similar')) {
     return {
-      label: '→ Improve Colors',
+      label: t('validation.actions.improveColors'),
       action: () => onNavigateToSection('colors')
     }
   }
   
   if (errorLower.includes('logo')) {
     return {
-      label: '→ Add Logo',
+      label: t('validation.actions.addLogo'),
       action: () => onNavigateToSection('logo')
     }
   }

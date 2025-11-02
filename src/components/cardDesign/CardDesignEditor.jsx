@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCardDesign } from '../../contexts/CardDesignContext'
 import { useIsDesktop } from '../../hooks/useMediaQuery'
 import ColorPicker from './ColorPicker'
@@ -45,6 +46,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
     isDirty
   } = useCardDesign()
 
+  const { t } = useTranslation('cardDesign')
   const isDesktop = useIsDesktop() // Detect desktop viewport
   const [activeTab, setActiveTab] = useState('design') // 'design', 'preview', 'validation'
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
@@ -107,9 +109,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
 
   const handleClose = () => {
     if (isDirty) {
-      const confirmed = window.confirm(
-        'You have unsaved changes. Are you sure you want to close?'
-      )
+      const confirmed = window.confirm(t('editor.confirmClose'))
       if (!confirmed) return
     }
     onClose()
@@ -162,7 +162,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading design...</p>
+            <p className="text-gray-600 dark:text-gray-400">{t('editor.loadingDesign')}</p>
           </div>
         </div>
       </div>
@@ -176,10 +176,10 @@ function CardDesignEditor({ offer, onClose, onSave }) {
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              🎨 Design Card
+              {t('editor.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {offer?.title || 'Loyalty Card'}
+              {offer?.title || t('editor.loyaltyCard')}
             </p>
           </div>
           <button
@@ -196,7 +196,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <span className="text-red-600 dark:text-red-400">⚠️</span>
                 <span className="text-sm text-red-800 dark:text-red-300">{error}</span>
               </div>
@@ -220,10 +220,10 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      Setup Progress
+                      {t('editor.setupProgress')}
                     </span>
                     <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                      {completedCount} of {totalCount} Complete
+                      {completedCount} {t('editor.of')} {totalCount} {t('editor.complete')}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -245,7 +245,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     : 'text-gray-600 dark:text-gray-400'
                   }`}
               >
-                Design
+                {t('editor.tabs.design')}
                 {activeTab === 'design' && completedCount < totalCount && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full"></span>
                 )}
@@ -256,7 +256,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   onClick={() => setShowMobilePreview(true)}
                   className="flex-1 px-3 py-2.5 rounded-md text-sm font-medium transition-colors min-h-[44px] text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-gray-800/50"
                 >
-                  Preview
+                  {t('editor.tabs.preview')}
                 </button>
               )}
               <button
@@ -267,7 +267,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     : 'text-gray-600 dark:text-gray-400'
                   }`}
               >
-                Check
+                {t('editor.tabs.check')}
                 {validation && !validation.isValid && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                 )}
@@ -283,21 +283,21 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     className="w-full px-4 py-3.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 min-h-[52px]"
                   >
                     <span>📋</span>
-                    <span>Browse Templates</span>
+                    <span>{t('editor.browseTemplates')}</span>
                   </button>
 
                   {/* 1. Colors Section - Collapsible */}
                   <CollapsibleSection
                     sectionId="colors"
-                    title="Colors"
-                    badge="Required"
+                    title={t('editor.sections.colors')}
+                    required={true}
                     completed={completion.colors}
                     isOpen={isDesktop || openSection === 'colors'}
                     onToggle={() => handleToggleSection('colors')}
                   >
                   <div className="space-y-4">
                     <ColorPicker
-                      label="Background Color"
+                      label={t('editor.colors.background')}
                       value={currentDesign?.background_color}
                       onChange={(color) => updateDesignField('background_color', color)}
                       contrastWith={currentDesign?.foreground_color}
@@ -305,7 +305,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     />
 
                     <ColorPicker
-                      label="Text Color"
+                      label={t('editor.colors.text')}
                       value={currentDesign?.foreground_color}
                       onChange={(color) => updateDesignField('foreground_color', color)}
                       contrastWith={currentDesign?.background_color}
@@ -313,7 +313,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     />
 
                     <ColorPicker
-                      label="Label Color"
+                      label={t('editor.colors.label')}
                       value={currentDesign?.label_color}
                       onChange={(color) => updateDesignField('label_color', color)}
                       contrastWith={currentDesign?.background_color}
@@ -325,8 +325,8 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   {/* 2. Logo Section - Collapsible */}
                   <CollapsibleSection
                     sectionId="logo"
-                    title="Logo"
-                    badge="Required"
+                    title={t('editor.sections.logo')}
+                    required={true}
                     completed={completion.logo}
                     isOpen={isDesktop || openSection === 'logo'}
                     onToggle={() => handleToggleSection('logo')}
@@ -345,8 +345,8 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   {/* 3. Stamps Section - Collapsible */}
                   <CollapsibleSection
                     sectionId="stamps"
-                    title="Stamp Display"
-                    badge="Optional"
+                    title={t('editor.sections.stamps')}
+                    optional={true}
                     completed={completion.stamps}
                     isOpen={isDesktop || openSection === 'stamps'}
                     onToggle={() => handleToggleSection('stamps')}
@@ -364,9 +364,9 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                           }
                           ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <div className="font-medium text-sm sm:text-base">Business Logo</div>
+                        <div className="font-medium text-sm sm:text-base">{t('editor.stamps.businessLogo')}</div>
                         <div className="text-xs opacity-75 mt-1">
-                          Use logo as stamp
+                          {t('editor.stamps.useLogoAsStamp')}
                         </div>
                       </button>
                       <button
@@ -379,9 +379,9 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                           }
                           ${(uploading || saving) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <div className="font-medium text-sm sm:text-base">SVG Icon</div>
+                        <div className="font-medium text-sm sm:text-base">{t('editor.stamps.svgIcon')}</div>
                         <div className="text-xs opacity-75 mt-1">
-                          Choose from library
+                          {t('editor.stamps.chooseFromLibrary')}
                         </div>
                       </button>
                     </div>
@@ -401,7 +401,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                     {(currentDesign?.stamp_display_type || 'logo') === 'logo' && !currentDesign?.logo_url && (
                       <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                         <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">
-                          ⚠️ Logo stamp requires logo upload above
+                          {t('editor.stamps.logoRequired')}
                         </p>
                       </div>
                     )}
@@ -411,16 +411,16 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   {/* 4. Progress Style Section - Collapsible */}
                   <CollapsibleSection
                     sectionId="progress"
-                    title="Progress Display"
-                    badge="Optional"
+                    title={t('editor.sections.progress')}
+                    optional={true}
                     completed={completion.progress}
                     isOpen={isDesktop || openSection === 'progress'}
                     onToggle={() => handleToggleSection('progress')}
                   >
                   <div className="space-y-2">
                     {[
-                      { value: 'bar', label: 'Progress Bar', icon: '━', desc: 'Simple bar' },
-                      { value: 'grid', label: 'Stamp Grid', icon: '⊞', desc: 'Visual stamps' }
+                      { value: 'bar', label: t('editor.progress.progressBar'), icon: '━', desc: t('editor.progress.simpleBar') },
+                      { value: 'grid', label: t('editor.progress.stampGrid'), icon: '⊞', desc: t('editor.progress.visualStamps') }
                     ].map((style) => (
                       <button
                         key={style.value}
@@ -444,8 +444,8 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   {/* 5. Hero Image Section - Collapsible */}
                   <CollapsibleSection
                     sectionId="hero"
-                    title="Hero Image"
-                    badge="Optional"
+                    title={t('editor.sections.hero')}
+                    optional={true}
                     completed={completion.hero}
                     isOpen={isDesktop || openSection === 'hero'}
                     onToggle={() => handleToggleSection('hero')}
@@ -488,12 +488,12 @@ function CardDesignEditor({ offer, onClose, onSave }) {
             {isDirty && (
               <span className="text-xs sm:text-sm text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                <span>Unsaved changes</span>
+                <span>{t('editor.unsavedChanges')}</span>
               </span>
             )}
             {validation && !validation.isValid && (
               <span className="text-xs sm:text-sm text-red-600 dark:text-red-400">
-                ⚠️ Fix errors before saving
+                ⚠️ {t('editor.validation.fixErrors')}
               </span>
             )}
           </div>
@@ -504,13 +504,13 @@ function CardDesignEditor({ offer, onClose, onSave }) {
               disabled={!isDirty}
               className="flex-1 sm:flex-initial px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm min-h-[44px]"
             >
-              Reset
+              {t('editor.actions.reset')}
             </button>
             <button
               onClick={handleClose}
               className="flex-1 sm:flex-initial px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium text-sm min-h-[44px]"
             >
-              Cancel
+              {t('editor.actions.cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -520,12 +520,11 @@ function CardDesignEditor({ offer, onClose, onSave }) {
               {saving ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Saving...</span>
+                  <span>{t('editor.actions.saving')}</span>
                 </>
               ) : (
                 <>
-                  <span>💾</span>
-                  <span>Save Design</span>
+                  <span>{t('editor.actions.saveDesign')}</span>
                 </>
               )}
             </button>

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import { Op } from 'sequelize'
 import PlatformAdmin from '../models/PlatformAdmin.js'
 import AdminSession from '../models/AdminSession.js'
+import logger from '../config/logger.js'
 
 // Middleware to verify admin JWT token
 export const verifyAdminToken = async (req, res, next) => {
@@ -23,9 +24,18 @@ export const verifyAdminToken = async (req, res, next) => {
     // Verify JWT token
     let decoded
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-admin-jwt-secret')
+      if (!process.env.JWT_SECRET) {
+        logger.error('❌ CRITICAL: JWT_SECRET not configured')
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Server configuration error',
+          hint: 'JWT_SECRET environment variable must be set'
+        })
+      }
+
+      decoded = jwt.verify(token, process.env.JWT_SECRET)
     } catch (jwtError) {
-      console.log('JWT verification failed:', jwtError.message)
+      logger.warn('JWT verification failed', { error: jwtError.message })
 
       return res.status(401).json({
         success: false,
@@ -72,7 +82,7 @@ export const verifyAdminToken = async (req, res, next) => {
     next()
 
   } catch (error) {
-    console.error('Admin token verification error:', error)
+    logger.error('Admin token verification error', { error: error.message, stack: error.stack })
     return res.status(500).json({
       success: false,
       message: 'Internal server error during authentication',
@@ -114,7 +124,7 @@ export const requireAdminRole = (allowedRoles = []) => {
       next()
 
     } catch (error) {
-      console.error('Role verification error:', error)
+      logger.error('Role verification error', { error: error.message, stack: error.stack })
       return res.status(500).json({
         success: false,
         message: 'Internal server error during role verification',
@@ -160,7 +170,7 @@ export const verifyAdminSession = async (req, res, next) => {
     next()
 
   } catch (error) {
-    console.error('Session verification error:', error)
+    logger.error('Session verification error', { error: error.message, stack: error.stack })
     return res.status(500).json({
       success: false,
       message: 'Internal server error during session verification',

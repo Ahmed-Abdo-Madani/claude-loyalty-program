@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { managerLogin } from '../utils/secureAuth'
 
 export default function BranchManagerLogin() {
+  const { t } = useTranslation('auth')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [branchId, setBranchId] = useState('')
@@ -26,12 +28,12 @@ export default function BranchManagerLogin() {
     e.preventDefault()
     
     if (!branchId.trim()) {
-      setError('Please enter a branch ID')
+      setError(t('branchManagerAuth.errors.branchIdRequired'))
       return
     }
 
     if (!branchId.startsWith('branch_')) {
-      setError('Invalid branch ID format. Must start with "branch_"')
+      setError(t('branchManagerAuth.errors.invalidBranchIdFormat'))
       return
     }
 
@@ -43,17 +45,17 @@ export default function BranchManagerLogin() {
     e.preventDefault()
     
     if (!pin.trim()) {
-      setError('Please enter your PIN')
+      setError(t('branchManagerAuth.errors.pinRequired'))
       return
     }
 
     if (pin.length < 4 || pin.length > 6) {
-      setError('PIN must be 4-6 digits')
+      setError(t('branchManagerAuth.errors.pinLength'))
       return
     }
 
     if (!/^\d+$/.test(pin)) {
-      setError('PIN must contain only numbers')
+      setError(t('branchManagerAuth.errors.pinNumericOnly'))
       return
     }
 
@@ -66,10 +68,10 @@ export default function BranchManagerLogin() {
       if (result.success) {
         navigate('/branch-scanner')
       } else {
-        setError(result.error || 'Login failed')
+        setError(result.error || t('branchManagerAuth.errors.loginFailed'))
       }
     } catch (err) {
-      setError('Login failed. Please try again.')
+      setError(t('branchManagerAuth.errors.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -90,13 +92,10 @@ export default function BranchManagerLogin() {
             <span className="text-6xl">🏪</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Branch Manager Login
+            {t('branchManagerAuth.title')}
           </h1>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2" dir="rtl">
-            دخول مدير الفرع
-          </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Scan customer loyalty cards - مسح بطاقات الولاء
+            {t('branchManagerAuth.subtitle')}
           </p>
         </div>
 
@@ -119,18 +118,18 @@ export default function BranchManagerLogin() {
             <form onSubmit={handleBranchIdSubmit}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Branch ID - معرف الفرع
+                  {t('branchManagerAuth.branchId')}
                 </label>
                 <input
                   type="text"
                   value={branchId}
                   onChange={(e) => setBranchId(e.target.value)}
-                  placeholder="branch_abc123..."
+                  placeholder={t('branchManagerAuth.branchIdPlaceholder')}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   autoFocus
                 />
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Enter your branch ID or scan the QR code
+                  {t('branchManagerAuth.branchIdHelp')}
                 </p>
               </div>
 
@@ -138,7 +137,7 @@ export default function BranchManagerLogin() {
                 type="submit"
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200"
               >
-                Next - التالي
+                {t('branchManagerAuth.next')}
               </button>
             </form>
           ) : (
@@ -152,19 +151,19 @@ export default function BranchManagerLogin() {
                 <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Back
+                {t('branchManagerAuth.back')}
               </button>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Manager PIN - رمز المدير
+                  {t('branchManagerAuth.managerPin')}
                 </label>
                 <div className="relative">
                   <input
                     type={showPin ? 'text' : 'password'}
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    placeholder="Enter 4-6 digit PIN"
+                    placeholder={t('branchManagerAuth.pinPlaceholder')}
                     className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-2xl tracking-widest text-center"
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -189,7 +188,7 @@ export default function BranchManagerLogin() {
                   </button>
                 </div>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  4-6 digit PIN provided by business owner
+                  {t('branchManagerAuth.pinHelp')}
                 </p>
               </div>
 
@@ -198,7 +197,7 @@ export default function BranchManagerLogin() {
                 disabled={loading}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors duration-200 disabled:cursor-not-allowed"
               >
-                {loading ? 'Logging in...' : 'Login - دخول'}
+                {loading ? t('branchManagerAuth.loggingIn') : t('branchManagerAuth.login')}
               </button>
             </form>
           )}
@@ -207,10 +206,7 @@ export default function BranchManagerLogin() {
         {/* Help Section */}
         <div className="mt-6 text-center space-y-2">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Forgot PIN? Contact your business owner
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            نسيت الرمز؟ اتصل بصاحب العمل
+            {t('branchManagerAuth.forgotPin')}
           </p>
         </div>
       </div>

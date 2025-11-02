@@ -2,6 +2,7 @@
 // Handles secure business ID authentication headers
 
 import { endpoints } from '../config/api.js'
+import i18n from '../i18n/config.js'
 
 /**
  * Get stored authentication data
@@ -25,14 +26,16 @@ export function getSecureAuthHeaders() {
   if (!sessionToken || !businessId) {
     console.warn('⚠️ Missing authentication data for secure headers')
     return {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept-Language': i18n.language || 'ar'  // NEW: Include language preference
     }
   }
 
   return {
     'Content-Type': 'application/json',
     'x-session-token': sessionToken,
-    'x-business-id': businessId // Secure business ID (biz_*)
+    'x-business-id': businessId, // Secure business ID (biz_*)
+    'Accept-Language': i18n.language || 'ar'  // NEW: Include language preference
   }
 }
 
@@ -165,16 +168,18 @@ export function getManagerAuthHeaders() {
   const { managerToken, branchId } = getManagerAuthData()
   
   if (!managerToken || !branchId) {
-    console.warn('?? Missing manager authentication data')
+    console.warn('⚠️ Missing manager authentication data')
     return {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept-Language': i18n.language || 'ar'  // NEW: Include language preference
     }
   }
 
   return {
     'Content-Type': 'application/json',
     'x-manager-token': managerToken,
-    'x-branch-id': branchId
+    'x-branch-id': branchId,
+    'Accept-Language': i18n.language || 'ar'  // NEW: Include language preference
   }
 }
 

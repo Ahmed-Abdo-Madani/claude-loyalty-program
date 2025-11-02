@@ -1,21 +1,23 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 const GENDER_OPTIONS = [
-  { value: 'male', labelEn: 'Male', labelAr: 'ذكر', emoji: '🙋‍♂️' },
-  { value: 'female', labelEn: 'Female', labelAr: 'أنثى', emoji: '🙋‍♀️' },
+  { value: 'male', emoji: '🙋‍♂️' },
+  { value: 'female', emoji: '🙋‍♀️' },
 ];
 
 const GenderSelector = ({ 
   value, 
   onChange, 
-  language = 'en', 
   required = false, 
   className = '',
   primaryColor = '#3B82F6',
   backgroundColor = '#F3F4F6',
   textColor = '#374151'
 }) => {
+  const { t, i18n } = useTranslation('common');
+  const language = i18n.language;
   const isRTL = language === 'ar';
   const options = isRTL ? [...GENDER_OPTIONS].reverse() : GENDER_OPTIONS;
 
@@ -49,7 +51,7 @@ const GenderSelector = ({
               : { backgroundColor: backgroundColor, color: textColor }
           }
           aria-pressed={value === option.value}
-          aria-label={`${language === 'ar' ? option.labelAr : option.labelEn}`}
+          aria-label={t(`gender.${option.value}`)}
           role="radio"
           aria-checked={value === option.value}
         >
@@ -57,7 +59,7 @@ const GenderSelector = ({
             <span className="text-xl" role="img" aria-label={option.value}>
               {option.emoji}
             </span>
-            <span>{language === 'ar' ? option.labelAr : option.labelEn}</span>
+            <span>{t(`gender.${option.value}`)}</span>
           </span>
         </button>
       ))}
@@ -68,7 +70,6 @@ const GenderSelector = ({
 GenderSelector.propTypes = {
   value: PropTypes.oneOf(['male', 'female']).isRequired,
   onChange: PropTypes.func.isRequired,
-  language: PropTypes.string,
   required: PropTypes.bool,
   className: PropTypes.string,
   primaryColor: PropTypes.string,

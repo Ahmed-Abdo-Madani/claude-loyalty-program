@@ -6,10 +6,11 @@ import logger from '../config/logger.js'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
-import { Business, Offer, CustomerProgress, Branch, OfferCardDesign } from '../models/index.js'
+import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession } from '../models/index.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
+import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 
 const router = express.Router()
 
@@ -936,7 +937,7 @@ router.post('/customers/signup', async (req, res) => {
     if (!customerData?.customerId || !offerId) {
       return res.status(400).json({
         success: false,
-        message: 'Customer ID and offer ID are required'
+        message: getLocalizedMessage('validation.customerIdOfferIdRequired', req.locale)
       })
     }
 
@@ -944,7 +945,7 @@ router.post('/customers/signup', async (req, res) => {
     if (!customerData.customerId.startsWith('cust_')) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid customer ID format. Must start with cust_'
+        message: getLocalizedMessage('validation.invalidCustomerIdFormat', req.locale)
       })
     }
 
@@ -961,7 +962,7 @@ router.post('/customers/signup', async (req, res) => {
     if (!phone || phone.trim() === '') {
       return res.status(400).json({
         success: false,
-        message: 'Phone number is required'
+        message: getLocalizedMessage('validation.phoneRequired', req.locale)
       })
     }
 
@@ -970,7 +971,7 @@ router.post('/customers/signup', async (req, res) => {
     if (phoneDigits.length < 7 || phoneDigits.length > 15) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid phone number. Must contain 7-15 digits'
+        message: getLocalizedMessage('validation.invalidPhoneFormat', req.locale)
       })
     }
 
@@ -978,7 +979,7 @@ router.post('/customers/signup', async (req, res) => {
     if (customerData.gender && !['male', 'female'].includes(customerData.gender)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid gender value. Must be male or female'
+        message: getLocalizedMessage('validation.invalidGender', req.locale)
       })
     }
 
@@ -990,7 +991,7 @@ router.post('/customers/signup', async (req, res) => {
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: getLocalizedMessage('notFound.offer', req.locale)
       })
     }
 
@@ -1034,14 +1035,14 @@ router.post('/customers/signup', async (req, res) => {
           status: progress.is_completed ? 'completed' : 'active'
         }
       },
-      message: 'Customer registered successfully'
+      message: getLocalizedMessage('customer.registrationSuccess', req.locale)
     })
 
   } catch (error) {
     console.error('❌ Customer signup failed:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to register customer',
+      message: getLocalizedMessage('server.customerRegistrationFailed', req.locale),
       error: error.message
     })
   }
@@ -1060,7 +1061,7 @@ const requireBusinessAuth = async (req, res, next) => {
     if (!sessionToken || !businessId) {
       return res.status(401).json({
         success: false,
-        message: 'Authentication required'
+        message: getLocalizedMessage('auth.authRequired', req.locale || 'ar')
       })
     }
 
@@ -1070,7 +1071,7 @@ const requireBusinessAuth = async (req, res, next) => {
     if (!business || business.status !== 'active') {
       return res.status(401).json({
         success: false,
-        message: 'Invalid business or account not active'
+        message: getLocalizedMessage('auth.invalidBusinessOrNotActive', req.locale || 'ar')
       })
     }
 
@@ -1080,7 +1081,7 @@ const requireBusinessAuth = async (req, res, next) => {
     console.error('Auth middleware error:', error)
     res.status(500).json({
       success: false,
-      message: 'Authentication failed'
+      message: getLocalizedMessage('auth.authFailed', req.locale || 'ar')
     })
   }
 }
@@ -1106,7 +1107,7 @@ router.get('/my/offers', requireBusinessAuth, async (req, res) => {
     console.error('Get business offers error:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to get offers'
+      message: getLocalizedMessage('server.failedToGetOffers', req.locale)
     })
   }
 })
@@ -1131,7 +1132,7 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
     console.error('Get my branches error:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch branches',
+      message: getLocalizedMessage('server.failedToGetBranches', req.locale),
       error: error.message
     })
   }
@@ -1421,6 +1422,166 @@ router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
   }
 })
 
+// Get offer analytics - SECURE VERSION
+router.get('/my/offers/:offerId/analytics', requireBusinessAuth, async (req, res) => {
+  try {
+    const offerId = req.params.offerId
+    const businessId = req.business.public_id
+    const period = req.query.period || '30d'
+    
+    // Validate period
+    const validPeriods = ['7d', '30d', '90d', 'all']
+    if (!validPeriods.includes(period)) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidPeriod', req.locale)
+      })
+    }
+    
+    // Verify offer ownership
+    const offer = await Offer.findOne({
+      where: { 
+        public_id: offerId,
+        business_id: businessId
+      }
+    })
+    
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('notFound.offer', req.locale)
+      })
+    }
+    
+    // Calculate date range
+    let startDate = null
+    const now = new Date()
+    if (period === '7d') {
+      startDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
+    } else if (period === '30d') {
+      startDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
+    } else if (period === '90d') {
+      startDate = new Date(now - 90 * 24 * 60 * 60 * 1000)
+    }
+    
+    // Build where clause
+    const whereClause = { offer_id: offerId }
+    if (startDate) {
+      const { Op } = await import('sequelize')
+      whereClause.created_at = { [Op.gte]: startDate }
+    }
+    
+    // Get customer progress data
+    const progressRecords = await CustomerProgress.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: ['customer_id', 'name', 'email']
+        }
+      ]
+    })
+    
+    // Calculate overview metrics
+    const totalSignups = progressRecords.length
+    const activeCustomers = progressRecords.filter(p => p.status === 'active').length
+    const completedRewards = progressRecords.reduce((sum, p) => sum + (p.total_completions || 0), 0)
+    const totalStamps = progressRecords.reduce((sum, p) => sum + (p.current_stamps || 0), 0)
+    const avgStampsPerCustomer = totalSignups > 0 ? totalStamps / totalSignups : 0
+    
+    // Mock scan data (TODO: implement actual scan tracking)
+    const totalScans = Math.round(totalSignups * 1.5) // Estimate
+    const conversionRate = totalScans > 0 ? (totalSignups / totalScans * 100).toFixed(1) : 0
+    const redemptionRate = totalSignups > 0 ? (completedRewards / totalSignups * 100).toFixed(1) : 0
+    const engagementRate = totalSignups > 0 ? (activeCustomers / totalSignups * 100).toFixed(1) : 0
+    const churnRate = (100 - engagementRate).toFixed(1)
+    
+    // Top customers by stamps
+    const topCustomers = progressRecords
+      .sort((a, b) => (b.current_stamps || 0) - (a.current_stamps || 0))
+      .slice(0, 10)
+      .map(p => ({
+        name: p.customer?.name || 'Unknown',
+        stamps: p.current_stamps || 0
+      }))
+    
+    // Recent signups
+    const recentSignups = progressRecords
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10)
+      .map(p => ({
+        name: p.customer?.name || 'Unknown',
+        date: p.created_at
+      }))
+    
+    // Close to reward
+    const stampsRequired = offer.stamps_required || 10
+    const closeToReward = progressRecords
+      .filter(p => {
+        const remaining = stampsRequired - (p.current_stamps || 0)
+        return remaining > 0 && remaining <= 2
+      })
+      .slice(0, 10)
+      .map(p => ({
+        name: p.customer?.name || 'Unknown',
+        remaining: stampsRequired - (p.current_stamps || 0)
+      }))
+    
+    // Mock trends data (TODO: implement time-series aggregation)
+    const trends = {
+      signups: [],
+      scans: []
+    }
+    
+    // Mock source data
+    const sources = {
+      checkout: Math.round(totalScans * 0.4),
+      table: Math.round(totalScans * 0.3),
+      window: Math.round(totalScans * 0.2),
+      social: Math.round(totalScans * 0.08),
+      other: Math.round(totalScans * 0.02)
+    }
+    
+    const analytics = {
+      overview: {
+        totalScans,
+        totalSignups,
+        conversionRate: parseFloat(conversionRate),
+        activeCustomers,
+        completedRewards,
+        redemptionRate: parseFloat(redemptionRate)
+      },
+      trends,
+      customers: {
+        topCustomers,
+        recentSignups,
+        closeToReward
+      },
+      sources,
+      performance: {
+        engagementRate: parseFloat(engagementRate),
+        churnRate: parseFloat(churnRate),
+        avgStampsPerCustomer: parseFloat(avgStampsPerCustomer.toFixed(1)),
+        avgVisitsPerCustomer: parseFloat((avgStampsPerCustomer * 1.2).toFixed(1)),
+        avgDaysToComplete: 14 // Mock value
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: analytics
+    })
+  } catch (error) {
+    console.error('❌ Get offer analytics error:', error)
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.failedToGetAnalytics', req.locale),
+      error: error.message
+    })
+  }
+})
+
 // Create business branch - SECURE VERSION
 router.post('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
@@ -1694,6 +1855,218 @@ router.put('/my/branches/:id/manager-pin', requireBusinessAuth, async (req, res)
   }
 })
 
+// Get branch analytics - SECURE VERSION
+router.get('/my/branches/:branchId/analytics', requireBusinessAuth, async (req, res) => {
+  try {
+    const branchId = req.params.branchId
+    const businessId = req.business.public_id
+    const period = req.query.period || '30d'
+    
+    // Validate period
+    const validPeriods = ['7d', '30d', '90d', 'all']
+    if (!validPeriods.includes(period)) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidPeriod', req.locale)
+      })
+    }
+    
+    // Verify branch ownership
+    const branch = await Branch.findOne({
+      where: { 
+        public_id: branchId,
+        business_id: businessId
+      }
+    })
+    
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('notFound.branch', req.locale)
+      })
+    }
+    
+    // Calculate date range
+    let startDate = null
+    const now = new Date()
+    if (period === '7d') {
+      startDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
+    } else if (period === '30d') {
+      startDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
+    } else if (period === '90d') {
+      startDate = new Date(now - 90 * 24 * 60 * 60 * 1000)
+    }
+    
+    // Get offers at this branch (match by branch name, not branchId)
+    // Include both branch-specific offers and all-branch offers
+    const { Op } = await import('sequelize')
+    const branchOffers = await Offer.findAll({
+      where: {
+        business_id: businessId,
+        branch: {
+          [Op.or]: [
+            branch.name,
+            'All Branches',
+            'جميع الفروع - All Branches'
+          ]
+        }
+      }
+    })
+    
+    const activeOffers = branchOffers.filter(o => o.status === 'active')
+    const offerIds = branchOffers.map(o => o.public_id)
+    
+    // Early return if no offers found for this branch
+    if (offerIds.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          overview: {
+            totalCustomers: 0,
+            activeCustomers: 0,
+            totalOffers: 0,
+            activeOffers: 0,
+            totalScans: 0,
+            monthlyRevenue: 0
+          },
+          trends: {
+            signups: [],
+            scans: [],
+            revenue: []
+          },
+          customers: {
+            topCustomers: [],
+            recentSignups: []
+          },
+          performance: {
+            retentionRate: 0,
+            offerPerformance: [],
+            manager: {
+              totalScans: 0,
+              recentActivity: []
+            }
+          }
+        }
+      })
+    }
+    
+    // Build where clause for customer progress
+    const whereClause = { offer_id: { [Op.in]: offerIds } }
+    if (startDate) {
+      whereClause.created_at = { [Op.gte]: startDate }
+    }
+    
+    // Get customer progress data for all offers at this branch
+    const progressRecords = await CustomerProgress.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Customer,
+          as: 'customer',
+          attributes: ['customer_id', 'name', 'email']
+        }
+      ]
+    })
+    
+    // Calculate overview metrics
+    const totalCustomers = new Set(progressRecords.map(p => p.customer_id)).size
+    const activeCustomers = progressRecords.filter(p => p.status === 'active').length
+    const totalScans = Math.round(progressRecords.length * 1.5) // Estimate
+    const monthlyRevenue = branchOffers.reduce((sum, o) => sum + (o.base_reward_value || 0), 0) * 10 // Mock
+    
+    // Top customers by visits
+    const customerVisits = {}
+    progressRecords.forEach(p => {
+      const custId = p.customer_id
+      customerVisits[custId] = (customerVisits[custId] || 0) + (p.current_stamps || 0)
+    })
+    
+    const topCustomers = Object.entries(customerVisits)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([custId, visits]) => {
+        const record = progressRecords.find(p => p.customer_id === custId)
+        return {
+          name: record?.customer?.name || 'Unknown',
+          visits
+        }
+      })
+    
+    // Recent signups
+    const recentSignups = progressRecords
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10)
+      .map(p => ({
+        name: p.customer?.name || 'Unknown',
+        date: p.created_at
+      }))
+    
+    // Retention rate calculation
+    const returningCustomers = progressRecords.filter(p => (p.current_stamps || 0) > 1).length
+    const retentionRate = totalCustomers > 0 ? ((returningCustomers / totalCustomers) * 100).toFixed(1) : 0
+    
+    // Offer performance
+    const offerPerformance = branchOffers.map(offer => {
+      const offerProgress = progressRecords.filter(p => p.offer_id === offer.public_id)
+      const signups = offerProgress.length
+      const active = offerProgress.filter(p => p.status === 'active').length
+      const completed = offerProgress.filter(p => (p.total_completions || 0) > 0).length
+      const completionRate = signups > 0 ? ((completed / signups) * 100).toFixed(1) : 0
+      
+      return {
+        name: offer.title,
+        signups,
+        activeCustomers: active,
+        completionRate: parseFloat(completionRate)
+      }
+    })
+    
+    // Mock trends data
+    const trends = {
+      signups: [],
+      scans: [],
+      revenue: []
+    }
+    
+    // Mock manager activity
+    const manager = {
+      totalScans: Math.round(totalScans * 0.7), // Mock: 70% by manager
+      recentActivity: []
+    }
+    
+    const analytics = {
+      overview: {
+        totalCustomers,
+        activeCustomers,
+        totalOffers: branchOffers.length,
+        activeOffers: activeOffers.length,
+        totalScans,
+        monthlyRevenue
+      },
+      trends,
+      customers: {
+        topCustomers,
+        recentSignups,
+        retentionRate: parseFloat(retentionRate)
+      },
+      offers: offerPerformance,
+      manager
+    }
+    
+    res.json({
+      success: true,
+      data: analytics
+    })
+  } catch (error) {
+    console.error('❌ Get branch analytics error:', error)
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.failedToGetAnalytics', req.locale),
+      error: error.message
+    })
+  }
+})
+
 // ===============================
 // BUSINESS AUTHENTICATION ROUTES
 // ===============================
@@ -1707,7 +2080,7 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: getLocalizedMessage('validation.emailPasswordRequired', req.locale)
       })
     }
 
@@ -1716,7 +2089,7 @@ router.post('/login', async (req, res) => {
     if (!business) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: getLocalizedMessage('auth.invalidCredentials', req.locale)
       })
     }
 
@@ -1725,8 +2098,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({
         success: false,
         message: business.status === 'pending'
-          ? 'Your business registration is pending approval'
-          : 'Your business account is suspended'
+          ? getLocalizedMessage('auth.accountPendingApproval', req.locale)
+          : getLocalizedMessage('auth.accountSuspended', req.locale)
       })
     }
 
@@ -1735,12 +2108,24 @@ router.post('/login', async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: getLocalizedMessage('auth.invalidCredentials', req.locale)
       })
     }
 
     // Generate simple session token (in production, use JWT)
     const sessionToken = Date.now().toString() + Math.random().toString(36)
+
+    // Persist session to database for validation
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30) // 30-day session
+
+    await BusinessSession.create({
+      business_id: business.public_id,
+      session_token: sessionToken,
+      expires_at: expiresAt,
+      is_active: true,
+      last_used_at: new Date()
+    })
 
     // Update last activity
     await business.update({ last_activity_at: new Date() })
@@ -1751,9 +2136,16 @@ router.post('/login', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Login successful',
+      message: getLocalizedMessage('auth.loginSuccess', req.locale),
       data: {
-        business: businessData,
+        business: {
+          ...businessData,
+          // Include both language variants for business name
+          business_name: businessData.business_name,
+          business_name_ar: businessData.business_name_ar,
+          owner_name: businessData.owner_name,
+          owner_name_ar: businessData.owner_name_ar
+        },
         session_token: sessionToken,
         business_id: business.public_id // Return secure ID for frontend use
       }
@@ -1763,7 +2155,7 @@ router.post('/login', async (req, res) => {
     console.error('Business login error:', error)
     res.status(500).json({
       success: false,
-      message: 'Login failed'
+      message: getLocalizedMessage('server.loginFailed', req.locale)
     })
   }
 })
@@ -1793,7 +2185,7 @@ router.post('/register', async (req, res) => {
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`
+        message: getLocalizedMessage('validation.missingRequiredFields', req.locale, { fields: missingFields.join(', ') })
       })
     }
 
@@ -1802,7 +2194,7 @@ router.post('/register', async (req, res) => {
     if (existingBusiness) {
       return res.status(400).json({
         success: false,
-        message: 'Business with this email already exists'
+        message: getLocalizedMessage('validation.emailAlreadyExists', req.locale)
       })
     }
 
@@ -1843,14 +2235,14 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       success: true,
       data: businessResponse,
-      message: 'Business registration submitted successfully. Your application is under review.'
+      message: getLocalizedMessage('auth.registrationSuccess', req.locale)
     })
 
   } catch (error) {
     console.error('Business registration error:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to register business'
+      message: getLocalizedMessage('server.registrationFailed', req.locale)
     })
   }
 })

@@ -1,43 +1,48 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import LanguageSwitcher from './LanguageSwitcher'
 
 function Header() {
+  const { t } = useTranslation('landing')
+
   return (
     <header className="bg-white shadow-sm">
       <div className="container-max section-padding">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
             <div className="text-2xl font-bold text-primary">
-              🎯 Loyalty Platform
+              🎯 {t('header.logoText')}
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-gray-600 hover:text-primary transition-colors">
-              Features
+              {t('header.features')}
             </a>
             <a href="#how-it-works" className="text-gray-600 hover:text-primary transition-colors">
-              How it Works
+              {t('header.howItWorks')}
             </a>
             <a href="#pricing" className="text-gray-600 hover:text-primary transition-colors">
-              Pricing
+              {t('header.pricing')}
             </a>
             <a href="#support" className="text-gray-600 hover:text-primary transition-colors">
-              Support
+              {t('header.support')}
             </a>
           </nav>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher variant="button" className="hidden md:block" />
             <Link
               to="/auth?mode=signin"
               className="text-primary hover:text-blue-600 font-medium transition-colors"
             >
-              Sign In
+              {t('header.signIn')}
             </Link>
             <Link
               to="/business/register"
               className="btn-primary"
             >
-              Register Business
+              {t('header.registerBusiness')}
             </Link>
           </div>
 

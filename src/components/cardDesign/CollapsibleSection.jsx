@@ -4,16 +4,21 @@
  * Phase 4 - Mobile Optimization
  */
 
+import { useTranslation } from 'react-i18next'
+
 function CollapsibleSection({
   title,
   icon,
   isOpen,
   onToggle,
   children,
-  badge = null,
+  required = false, // Changed from badge string to boolean
+  optional = false, // Explicit optional prop
   sectionId = null, // NEW: Explicit section ID for navigation
   completed = false
 }) {
+  const { t } = useTranslation('cardDesign')
+  
   // Generate stable ID from sectionId prop or fallback to title-based ID
   const contentId = sectionId ? `section-${sectionId}` : `section-${title.replace(/\s+/g, '-').toLowerCase()}`
   
@@ -27,7 +32,7 @@ function CollapsibleSection({
         aria-controls={contentId}
         type="button"
       >
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           {/* Icon */}
           {icon && (
             <span className="text-xl sm:text-2xl flex-shrink-0">
@@ -36,24 +41,25 @@ function CollapsibleSection({
           )}
           
           {/* Title and Badge */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
               {title}
             </h3>
-            {badge && (
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full
-                ${badge === 'Required' 
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                }`}>
-                {badge}
+            {required && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                {t('editor.badges.required')}
+              </span>
+            )}
+            {optional && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                {t('editor.badges.optional')}
               </span>
             )}
           </div>
         </div>
 
         {/* Right Side - Completion Check and Chevron */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           {completed && (
             <span className="text-green-500 text-lg">✓</span>
           )}

@@ -1,4 +1,8 @@
+import { useTranslation } from 'react-i18next'
+
 function ActivityFeed({ recentActivity }) {
+  const { t } = useTranslation('dashboard')
+  
   // Sample activity icons based on activity type
   const getActivityIcon = (message) => {
     const msg = message.toLowerCase()
@@ -20,7 +24,7 @@ function ActivityFeed({ recentActivity }) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-lg">
-      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Activity</h3>
+      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('activityFeed.title')}</h3>
 
       {recentActivity && recentActivity.length > 0 ? (
         <div className="space-y-3 sm:space-y-4">
@@ -59,7 +63,7 @@ function ActivityFeed({ recentActivity }) {
           {/* View All Activities Link */}
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
             <button className="text-sm text-primary hover:text-primary/80 font-medium transition-colors duration-200 min-h-[44px] touch-target">
-              View all activity →
+              {t('activityFeed.viewAll')}
             </button>
           </div>
         </div>
@@ -69,9 +73,9 @@ function ActivityFeed({ recentActivity }) {
           <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">📋</span>
           </div>
-          <div className="text-base sm:text-lg mb-2 text-gray-600 dark:text-gray-400">👋 Welcome to your dashboard!</div>
+          <div className="text-base sm:text-lg mb-2 text-gray-600 dark:text-gray-400">{t('activityFeed.welcome')}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400 px-4">
-            Start creating offers and managing branches to see activity here.
+            {t('activityFeed.getStarted')}
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { apiBaseUrl, endpoints } from '../config/api'
 
 /**
@@ -6,6 +7,7 @@ import { apiBaseUrl, endpoints } from '../config/api'
  * Allows super admins to manage stamp icons
  */
 const IconLibraryManager = () => {
+  const { t } = useTranslation('admin')
   // State management
   const [icons, setIcons] = useState([])
   const [categories, setCategories] = useState([])
@@ -106,13 +108,13 @@ const IconLibraryManager = () => {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Upload failed')
+        throw new Error(data.message || t('iconLibrary.uploadFailed'))
       }
 
       setUploadProgress({ status: 'complete', percent: 100 })
       // Show generated ID in success message
       const generatedId = data.data?.id || 'unknown'
-      setSuccessMessage(`Icon uploaded successfully! Generated ID: ${generatedId}`)
+      setSuccessMessage(t('iconLibrary.iconUploaded', { id: generatedId }))
       setShowUploadModal(false)
       await fetchIcons() // Refresh list
     } catch (err) {
@@ -136,11 +138,11 @@ const IconLibraryManager = () => {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Update failed')
+        throw new Error(data.message || t('iconLibrary.updateFailed'))
       }
 
       setUploadProgress({ status: 'complete', percent: 100 })
-      setSuccessMessage('Icon updated successfully!')
+      setSuccessMessage(t('iconLibrary.iconUpdated'))
       setShowEditModal(false)
       setSelectedIcon(null)
       await fetchIcons() // Refresh list
@@ -153,7 +155,7 @@ const IconLibraryManager = () => {
 
   // Handle icon deletion
   const handleDeleteIcon = async (iconId) => {
-    if (!window.confirm('Are you sure you want to delete this icon? This action cannot be undone.')) {
+    if (!window.confirm(t('iconLibrary.confirmDelete'))) {
       return
     }
 
@@ -166,10 +168,10 @@ const IconLibraryManager = () => {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Delete failed')
+        throw new Error(data.message || t('iconLibrary.deleteFailed'))
       }
 
-      setSuccessMessage('Icon deleted successfully!')
+      setSuccessMessage(t('iconLibrary.iconDeleted'))
       await fetchIcons() // Refresh list
     } catch (err) {
       console.error('Error deleting icon:', err)
@@ -179,7 +181,7 @@ const IconLibraryManager = () => {
 
   // Handle regenerate previews
   const handleRegeneratePreviews = async () => {
-    if (!window.confirm('Regenerate all preview images? This may take a few moments.')) {
+    if (!window.confirm(t('iconLibrary.confirmRegeneratePreviews'))) {
       return
     }
 
@@ -194,10 +196,10 @@ const IconLibraryManager = () => {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Regeneration failed')
+        throw new Error(data.message || t('iconLibrary.regenerationFailed'))
       }
 
-      setSuccessMessage(`Regenerated ${data.data.successCount} of ${data.data.total} previews`)
+      setSuccessMessage(t('iconLibrary.regeneratedPreviews', { successCount: data.data.successCount, total: data.data.total }))
       await fetchIcons() // Refresh list
     } catch (err) {
       console.error('Error regenerating previews:', err)
@@ -224,10 +226,10 @@ const IconLibraryManager = () => {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Failed to add category')
+        throw new Error(data.message || t('iconLibrary.failedToAddCategory'))
       }
 
-      setSuccessMessage('Category added successfully!')
+      setSuccessMessage(t('iconLibrary.categoryAdded'))
       setShowCategoryModal(false)
       await fetchIcons() // Refresh list (includes categories)
     } catch (err) {
@@ -268,10 +270,10 @@ const IconLibraryManager = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-xl font-semibold text-gray-900">
-            Icon Library - مكتبة الأيقونات
+            {t('iconLibrary.title')}
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Manage stamp icons for loyalty cards
+            {t('iconLibrary.manageStampIcons')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -280,21 +282,21 @@ const IconLibraryManager = () => {
             className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             disabled={loading}
           >
-            🏷️ Manage Categories
+            🏷️ {t('iconLibrary.manageCategories')}
           </button>
           <button
             onClick={handleRegeneratePreviews}
             className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             disabled={loading}
           >
-            🔄 Regenerate Previews
+            🔄 {t('iconLibrary.regeneratePreviews')}
           </button>
           <button
             onClick={() => setShowUploadModal(true)}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             disabled={loading}
           >
-            ➕ Upload Icon
+            ➕ {t('iconLibrary.uploadIcon')}
           </button>
         </div>
       </div>
@@ -345,14 +347,14 @@ const IconLibraryManager = () => {
           {/* Category Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category - الفئة
+              {t('iconLibrary.category')}
             </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Categories - جميع الفئات</option>
+              <option value="all">{t('iconLibrary.allCategories')}</option>
               {(categories || []).map(cat => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -364,13 +366,13 @@ const IconLibraryManager = () => {
           {/* Search Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search - بحث
+              {t('iconLibrary.search')}
             </label>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or ID..."
+              placeholder={t('iconLibrary.searchPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -378,7 +380,7 @@ const IconLibraryManager = () => {
 
         {/* Results Count */}
         <div className="mt-3 text-sm text-gray-600">
-          Showing {filteredIcons.length} of {icons.length} icons
+          {t('iconLibrary.showingCount', { filtered: filteredIcons.length, total: icons.length })}
         </div>
       </div>
 
@@ -386,7 +388,7 @@ const IconLibraryManager = () => {
       {loading && (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading icons...</p>
+          <p className="mt-4 text-gray-600">{t('iconLibrary.loading')}</p>
         </div>
       )}
 
@@ -411,11 +413,11 @@ const IconLibraryManager = () => {
       {!loading && filteredIcons.length === 0 && (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🎨</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Icons Found</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('iconLibrary.noIconsFound')}</h3>
           <p className="text-gray-600">
             {searchQuery || selectedCategory !== 'all'
-              ? 'Try adjusting your filters'
-              : 'Upload your first icon to get started'}
+              ? t('iconLibrary.tryAdjustingFilters')
+              : t('iconLibrary.uploadFirstIcon')}
           </p>
         </div>
       )}
@@ -464,6 +466,7 @@ const IconLibraryManager = () => {
  * Icon Card Component
  */
 const IconCard = ({ icon, onEdit, onDelete }) => {
+  const { t } = useTranslation('admin')
   const [imageError, setImageError] = useState(false)
   const previewUrl = `${apiBaseUrl}/api/stamp-icons/${icon.id}/preview`
 
@@ -506,13 +509,13 @@ const IconCard = ({ icon, onEdit, onDelete }) => {
           onClick={onEdit}
           className="flex-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
         >
-          ✏️ Edit
+          ✏️ {t('iconLibrary.edit')}
         </button>
         <button
           onClick={onDelete}
           className="flex-1 px-3 py-2 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
         >
-          🗑️ Delete
+          🗑️ {t('iconLibrary.delete')}
         </button>
       </div>
     </div>
@@ -523,6 +526,7 @@ const IconCard = ({ icon, onEdit, onDelete }) => {
  * Upload Icon Modal Component
  */
 const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
+  const { t } = useTranslation('admin')
   const [formData, setFormData] = useState({
     name: '',
     category: categories[0]?.id || '',
@@ -539,17 +543,17 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
 
     // Validate name
     if (!formData.name) {
-      newErrors.name = 'Icon name is required'
+      newErrors.name = t('iconLibrary.iconNameRequired')
     }
 
     // Validate category
     if (!formData.category) {
-      newErrors.category = 'Category is required'
+      newErrors.category = t('iconLibrary.categoryRequired')
     }
 
     // Validate files
     if (!files.filled) {
-      newErrors.filled = 'Filled variant SVG is required'
+      newErrors.filled = t('iconLibrary.filledRequired')
     }
 
     setErrors(newErrors)
@@ -585,7 +589,7 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h3 className="text-xl font-semibold text-gray-900">
-            Upload New Icon - رفع أيقونة جديدة
+            {t('iconLibrary.uploadNewIcon')}
           </h3>
           <button
             onClick={onClose}
@@ -601,7 +605,7 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
           {/* Icon Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Icon Name * (ID will be auto-generated)
+              {t('iconLibrary.iconName')}
             </label>
             <input
               type="text"
@@ -614,14 +618,14 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
             />
             {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
             <p className="text-xs text-gray-500 mt-1">
-              A unique ID will be automatically generated from the name
+              {t('iconLibrary.idAutoGenerated')}
             </p>
           </div>
 
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category *
+              {t('iconLibrary.categoryLabel')}
             </label>
             <select
               value={formData.category}
@@ -640,21 +644,21 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              {t('iconLibrary.description')}
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows="3"
-              placeholder="Optional description..."
+              placeholder={t('iconLibrary.descriptionPlaceholder')}
             />
           </div>
 
           {/* Filled Variant File */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filled Variant SVG *
+              {t('iconLibrary.filledVariant')}
             </label>
             <input
               type="file"
@@ -665,13 +669,13 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
               }`}
             />
             {errors.filled && <p className="text-red-600 text-sm mt-1">{errors.filled}</p>}
-            <p className="text-xs text-gray-500 mt-1">Maximum 500KB</p>
+            <p className="text-xs text-gray-500 mt-1">{t('iconLibrary.maxFileSize')}</p>
           </div>
 
           {/* Stroke Variant File */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Stroke Variant SVG (Optional)
+              {t('iconLibrary.strokeVariant')}
             </label>
             <input
               type="file"
@@ -679,7 +683,7 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
               onChange={(e) => setFiles({ ...files, stroke: e.target.files[0] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
-            <p className="text-xs text-gray-500 mt-1">Maximum 500KB</p>
+            <p className="text-xs text-gray-500 mt-1">{t('iconLibrary.maxFileSize')}</p>
           </div>
 
           {/* Upload Progress */}
@@ -688,12 +692,12 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
               {uploadProgress.status === 'uploading' && (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                  <span className="text-sm text-gray-700">Uploading...</span>
+                  <span className="text-sm text-gray-700">{t('iconLibrary.uploading')}</span>
                 </div>
               )}
               {uploadProgress.status === 'error' && (
                 <div className="text-red-600 text-sm">
-                  Error: {uploadProgress.message}
+                  {t('iconLibrary.uploadError')}: {uploadProgress.message}
                 </div>
               )}
             </div>
@@ -707,14 +711,14 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
               className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               disabled={uploadProgress?.status === 'uploading'}
             >
-              Cancel
+              {t('iconLibrary.cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={uploadProgress?.status === 'uploading'}
             >
-              {uploadProgress?.status === 'uploading' ? 'Uploading...' : 'Upload Icon'}
+              {uploadProgress?.status === 'uploading' ? t('iconLibrary.uploading') : t('iconLibrary.uploadIconButton')}
             </button>
           </div>
         </form>
@@ -727,6 +731,7 @@ const UploadIconModal = ({ categories, onClose, onSubmit, uploadProgress }) => {
  * Edit Icon Modal Component
  */
 const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) => {
+  const { t } = useTranslation('admin')
   const [formData, setFormData] = useState({
     name: icon.name,
     category: icon.category,
@@ -763,7 +768,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h3 className="text-xl font-semibold text-gray-900">
-            Edit Icon - تعديل الأيقونة
+            {t('iconLibrary.editIcon')}
           </h3>
           <button
             onClick={onClose}
@@ -794,7 +799,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
           {/* Icon Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Icon Name *
+              {t('iconLibrary.iconName')}
             </label>
             <input
               type="text"
@@ -808,7 +813,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category *
+              {t('iconLibrary.categoryLabel')}
             </label>
             <select
               value={formData.category}
@@ -825,7 +830,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
+              {t('iconLibrary.description')}
             </label>
             <textarea
               value={formData.description}
@@ -838,7 +843,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
           {/* Replace Filled Variant */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Replace Filled Variant SVG (Optional)
+              {t('iconLibrary.replaceFilledVariant')}
             </label>
             <input
               type="file"
@@ -846,13 +851,13 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
               onChange={(e) => setFiles({ ...files, filled: e.target.files[0] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
-            <p className="text-xs text-gray-500 mt-1">Only upload if replacing existing file</p>
+            <p className="text-xs text-gray-500 mt-1">{t('iconLibrary.replaceFileNote')}</p>
           </div>
 
           {/* Replace Stroke Variant */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Replace Stroke Variant SVG (Optional)
+              {t('iconLibrary.replaceStrokeVariant')}
             </label>
             <input
               type="file"
@@ -860,7 +865,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
               onChange={(e) => setFiles({ ...files, stroke: e.target.files[0] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
-            <p className="text-xs text-gray-500 mt-1">Only upload if replacing existing file</p>
+            <p className="text-xs text-gray-500 mt-1">{t('iconLibrary.replaceFileNote')}</p>
           </div>
 
           {/* Upload Progress */}
@@ -869,12 +874,12 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
               {uploadProgress.status === 'uploading' && (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                  <span className="text-sm text-gray-700">Updating...</span>
+                  <span className="text-sm text-gray-700">{t('iconLibrary.updating')}</span>
                 </div>
               )}
               {uploadProgress.status === 'error' && (
                 <div className="text-red-600 text-sm">
-                  Error: {uploadProgress.message}
+                  {t('iconLibrary.uploadError')}: {uploadProgress.message}
                 </div>
               )}
             </div>
@@ -888,14 +893,14 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
               className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               disabled={uploadProgress?.status === 'uploading'}
             >
-              Cancel
+              {t('iconLibrary.cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={uploadProgress?.status === 'uploading'}
             >
-              {uploadProgress?.status === 'uploading' ? 'Saving...' : 'Save Changes'}
+              {uploadProgress?.status === 'uploading' ? t('iconLibrary.updating') : t('iconLibrary.saveChanges')}
             </button>
           </div>
         </form>
@@ -908,6 +913,7 @@ const EditIconModal = ({ icon, categories, onClose, onSubmit, uploadProgress }) 
  * Category Management Modal Component
  */
 const CategoryModal = ({ categories, onClose, onSubmit }) => {
+  const { t } = useTranslation('admin')
   const [formData, setFormData] = useState({
     name: ''
     // ID and order will be auto-generated server-side
@@ -920,7 +926,7 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
 
     // Validate name
     if (!formData.name) {
-      newErrors.name = 'Category name is required'
+      newErrors.name = t('iconLibrary.categoryNameRequired')
     }
 
     setErrors(newErrors)
@@ -952,7 +958,7 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h3 className="text-xl font-semibold text-gray-900">
-            Manage Categories - إدارة الفئات
+            {t('iconLibrary.manageCategoriesTitle')}
           </h3>
           <button
             onClick={onClose}
@@ -968,7 +974,7 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
           {/* Existing Categories List */}
           <div className="mb-6">
             <h4 className="text-sm font-medium text-gray-700 mb-3">
-              Existing Categories ({(categories || []).length})
+              {t('iconLibrary.existingCategories', { count: (categories || []).length })}
             </h4>
             <div className="max-h-40 overflow-y-auto space-y-2">
               {(categories || []).map(cat => (
@@ -980,7 +986,7 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
                     <span className="font-medium text-gray-900">{cat.name}</span>
                     <span className="text-xs text-gray-500 ml-2">({cat.id})</span>
                   </div>
-                  <span className="text-xs text-gray-500">Order: {cat.order}</span>
+                  <span className="text-xs text-gray-500">{t('iconLibrary.order')}: {cat.order}</span>
                 </div>
               ))}
             </div>
@@ -990,12 +996,12 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-3">
-                Add New Category
+                {t('iconLibrary.addNewCategory')}
               </h4>
               {/* Category Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category Name * (ID and order will be auto-generated)
+                  {t('iconLibrary.categoryNameLabel')}
                 </label>
                 <input
                   type="text"
@@ -1004,12 +1010,12 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                     errors.name ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Automotive"
+                  placeholder={t('iconLibrary.categoryNamePlaceholder')}
                   disabled={isSubmitting}
                 />
                 {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
                 <p className="text-xs text-gray-500 mt-1">
-                  A unique ID will be automatically generated from the name
+                  {t('iconLibrary.idAutoGeneratedFromName')}
                 </p>
               </div>
             </div>
@@ -1022,14 +1028,14 @@ const CategoryModal = ({ categories, onClose, onSubmit }) => {
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 disabled={isSubmitting}
               >
-                Cancel
+                {t('iconLibrary.cancel')}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Adding...' : 'Add Category'}
+                {isSubmitting ? t('iconLibrary.adding') : t('iconLibrary.addCategory')}
               </button>
             </div>
           </form>

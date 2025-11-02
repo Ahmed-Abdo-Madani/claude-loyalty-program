@@ -181,6 +181,11 @@ const CustomerSegment = sequelize.define('CustomerSegment', {
     defaultValue: 0.00,
     comment: 'Monthly churn rate from segment'
   },
+  last_notification_sent_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Timestamp of last notification sent to this segment'
+  },
   // Settings and Configuration
   refresh_frequency: {
     type: DataTypes.ENUM('real_time', 'hourly', 'daily', 'weekly', 'manual'),
@@ -240,10 +245,13 @@ const CustomerSegment = sequelize.define('CustomerSegment', {
     },
     {
       fields: ['customer_count']
+    },
+    {
+      fields: ['last_notification_sent_at']
     }
   ],
   hooks: {
-    beforeCreate: async (segment) => {
+    beforeValidate: async (segment) => {
       if (!segment.segment_id) {
         segment.segment_id = SecureIDGenerator.generateSegmentID()
       }
@@ -306,6 +314,12 @@ CustomerSegment.prototype.incrementUsage = async function() {
   return this
 }
 
+CustomerSegment.prototype.updateLastNotificationSent = async function() {
+  this.last_notification_sent_at = new Date()
+  await this.save()
+  return this
+}
+
 CustomerSegment.prototype.isEligible = function(customer) {
   // Basic eligibility check based on criteria
   // This is a simplified version - full implementation would be in CustomerSegmentationService
@@ -346,63 +360,71 @@ CustomerSegment.createPredefinedSegments = async function(businessId) {
   const predefinedSegments = [
     {
       business_id: businessId,
-      name: 'High Value Customers',
-      description: 'Customers with high lifetime value and frequent visits',
+      name: 'Inactive 7 Days',
+      description: 'Customers who haven\'t visited in the last 7 days',
       type: 'behavioral',
       is_predefined: true,
-      color: '#10B981',
-      criteria: {
-        total_lifetime_value: { min: 500 },
-        total_visits: { min: 10 }
-      },
-      loyalty_tier: 'gold'
+      auto_update: true,
+      color: '#F59E0B',
+      last_activity_days: 7,
+      customer_status: ['active', 'churning']
     },
     {
       business_id: businessId,
-      name: 'At Risk Customers',
-      description: 'Customers who haven\'t visited recently and may churn',
+      name: 'Inactive 14 Days',
+      description: 'Customers who haven\'t visited in the last 14 days',
       type: 'behavioral',
       is_predefined: true,
+      auto_update: true,
+      color: '#F97316',
+      last_activity_days: 14,
+      customer_status: ['active', 'churning']
+    },
+    {
+      business_id: businessId,
+      name: 'Inactive 30 Days',
+      description: 'Customers who haven\'t visited in the last 30 days',
+      type: 'behavioral',
+      is_predefined: true,
+      auto_update: true,
       color: '#EF4444',
-      criteria: {
-        last_activity_days: 30,
-        total_visits: { min: 3 }
-      },
-      customer_status: ['churning']
+      last_activity_days: 30,
+      customer_status: ['active', 'churning', 'inactive']
     },
     {
       business_id: businessId,
       name: 'New Customers',
-      description: 'Recently acquired customers (last 30 days)',
+      description: 'Recently acquired customers (1-2 visits)',
       type: 'demographic',
       is_predefined: true,
+      auto_update: true,
       color: '#3B82F6',
-      criteria: {
-        signup_days: { max: 30 }
-      },
-      lifecycle_stages: ['new_customer']
+      lifecycle_stages: ['new_customer'],
+      visit_frequency: { min_visits: 1, max_visits: 2 }
     },
     {
       business_id: businessId,
-      name: 'Birthday This Month',
-      description: 'Customers with birthdays in the current month',
-      type: 'demographic',
+      name: 'Repeat Customers',
+      description: 'Customers with 3-9 visits',
+      type: 'behavioral',
       is_predefined: true,
-      color: '#F59E0B',
-      criteria: {
-        birthday_month: new Date().getMonth() + 1
-      }
+      auto_update: true,
+      color: '#10B981',
+      lifecycle_stages: ['repeat_customer'],
+      visit_frequency: { min_visits: 3, max_visits: 9 }
     },
     {
       business_id: businessId,
-      name: 'Highly Engaged',
-      description: 'Customers with high engagement scores',
-      type: 'engagement',
+      name: 'VIP Customers',
+      description: 'High-value customers with 10+ visits or high lifetime value',
+      type: 'behavioral',
       is_predefined: true,
+      auto_update: true,
       color: '#8B5CF6',
-      criteria: {
-        engagement_score: { min: 80 }
-      }
+      lifecycle_stages: ['loyal_customer', 'vip_customer'],
+      visit_frequency: { min_visits: 10 },
+      spending_range: { min_amount: 500 },
+      customer_status: ['active', 'vip']
     }
   ]
 

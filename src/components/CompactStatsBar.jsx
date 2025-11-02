@@ -6,9 +6,12 @@
  * Target height: 40-50px vs 200-300px of full StatsCardGrid.
  */
 
+import { useTranslation } from 'react-i18next'
 import MiniStatCard from './MiniStatCard'
 
 function CompactStatsBar({ analytics }) {
+  const { t } = useTranslation('dashboard')
+  
   if (!analytics) {
     return null
   }
@@ -16,7 +19,7 @@ function CompactStatsBar({ analytics }) {
   const stats = [
     {
       icon: '👥',
-      label: 'Customers',
+      label: t('compactStats.customers'),
       value: analytics.totalCustomers || 0,
       bgGradient: 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30',
       border: 'border-l-4 border-blue-500',
@@ -26,7 +29,7 @@ function CompactStatsBar({ analytics }) {
     },
     {
       icon: '✅',
-      label: 'Active',
+      label: t('compactStats.active'),
       value: analytics.activeMembers || analytics.cardsIssued || 0,
       bgGradient: 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30',
       border: 'border-l-4 border-green-500',
@@ -36,7 +39,7 @@ function CompactStatsBar({ analytics }) {
     },
     {
       icon: '👑',
-      label: 'VIP',
+      label: t('compactStats.vip'),
       value: analytics.vipCustomers || 0,
       bgGradient: 'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30',
       border: 'border-l-4 border-purple-500',
@@ -46,7 +49,7 @@ function CompactStatsBar({ analytics }) {
     },
     {
       icon: '💎',
-      label: 'Redeemed',
+      label: t('compactStats.redeemed'),
       value: analytics.rewardsRedeemed || 0,
       bgGradient: 'bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/30',
       border: 'border-l-4 border-indigo-500',

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 import BusinessesTable from '../components/BusinessesTable'
 import IconLibraryManager from '../components/IconLibraryManager'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 function AdminDashboard() {
+  const { t } = useTranslation('admin')
   const [activeTab, setActiveTab] = useState('overview')
   const [adminInfo, setAdminInfo] = useState(null)
   const [platformData, setPlatformData] = useState(null)
@@ -76,7 +79,7 @@ function AdminDashboard() {
 
     } catch (error) {
       console.error('Error fetching platform data:', error)
-      setError('Failed to load platform data')
+      setError(t('dashboard.failedToLoad'))
     } finally {
       setLoading(false)
     }
@@ -99,7 +102,7 @@ function AdminDashboard() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+          <p className="mt-4 text-gray-600">{t('dashboard.loadingDashboard')}</p>
         </div>
       </div>
     )
@@ -116,11 +119,12 @@ function AdminDashboard() {
                 <span className="text-white text-sm font-bold">👑</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Platform Admin</h1>
-                <p className="text-sm text-gray-500">Loyalty Program Management</p>
+                <h1 className="text-xl font-bold text-gray-900">{t('dashboard.title')}</h1>
+                <p className="text-sm text-gray-500">{t('dashboard.subtitle')}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
+              <LanguageSwitcher variant="button" showLabels={false} className="" />
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{adminInfo.full_name}</p>
                 <p className="text-xs text-gray-500 capitalize">{adminInfo.role.replace('_', ' ')}</p>
@@ -129,7 +133,7 @@ function AdminDashboard() {
                 onClick={handleSignOut}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                Sign Out
+                {t('dashboard.signOut')}
               </button>
             </div>
           </div>
@@ -139,12 +143,12 @@ function AdminDashboard() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="flex gap-8">
             {[
-              { id: 'overview', name: 'Overview', icon: '📊' },
-              { id: 'businesses', name: 'Businesses', icon: '🏢' },
-              { id: 'analytics', name: 'Analytics', icon: '📈' },
-              { id: 'settings', name: 'Settings', icon: '⚙️' }
+              { id: 'overview', name: t('tabs.overview'), icon: '📊' },
+              { id: 'businesses', name: t('tabs.businesses'), icon: '🏢' },
+              { id: 'analytics', name: t('tabs.analytics'), icon: '📈' },
+              { id: 'settings', name: t('tabs.settings'), icon: '⚙️' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -168,7 +172,7 @@ function AdminDashboard() {
         {loading && (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading platform data...</p>
+            <p className="mt-2 text-gray-600">{t('dashboard.loadingPlatformData')}</p>
           </div>
         )}
 
@@ -184,7 +188,7 @@ function AdminDashboard() {
         {/* Overview Tab */}
         {activeTab === 'overview' && analytics && (
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Platform Overview</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('overview.title')}</h2>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -194,7 +198,7 @@ function AdminDashboard() {
                     <span className="text-blue-600 text-xl">🏢</span>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-gray-500">Total Businesses</p>
+                    <p className="text-sm text-gray-500">{t('overview.totalBusinesses')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatNumber(analytics.total_businesses)}</p>
                   </div>
                 </div>
@@ -206,7 +210,7 @@ function AdminDashboard() {
                     <span className="text-green-600 text-xl">✅</span>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-gray-500">Active Businesses</p>
+                    <p className="text-sm text-gray-500">{t('overview.activeBusinesses')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatNumber(analytics.active_businesses)}</p>
                   </div>
                 </div>
@@ -218,7 +222,7 @@ function AdminDashboard() {
                     <span className="text-purple-600 text-xl">👥</span>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-gray-500">Total Customers</p>
+                    <p className="text-sm text-gray-500">{t('overview.totalCustomers')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatNumber(analytics.total_customers)}</p>
                   </div>
                 </div>
@@ -230,7 +234,7 @@ function AdminDashboard() {
                     <span className="text-orange-600 text-xl">🎯</span>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm text-gray-500">Total Redemptions</p>
+                    <p className="text-sm text-gray-500">{t('overview.totalRedemptions')}</p>
                     <p className="text-2xl font-bold text-gray-900">{formatNumber(analytics.total_redemptions)}</p>
                   </div>
                 </div>
@@ -239,24 +243,24 @@ function AdminDashboard() {
 
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('overview.quickActions')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition-colors">
                   <div className="text-2xl mb-2">⏳</div>
-                  <h4 className="font-medium text-gray-900">Pending Approvals</h4>
-                  <p className="text-sm text-gray-500">{analytics.pending_businesses} businesses waiting</p>
+                  <h4 className="font-medium text-gray-900">{t('overview.pendingApprovals')}</h4>
+                  <p className="text-sm text-gray-500">{t('overview.businessesWaiting', { count: analytics.pending_businesses })}</p>
                 </button>
 
                 <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition-colors">
                   <div className="text-2xl mb-2">📊</div>
-                  <h4 className="font-medium text-gray-900">Analytics Report</h4>
-                  <p className="text-sm text-gray-500">Generate monthly report</p>
+                  <h4 className="font-medium text-gray-900">{t('overview.analyticsReport')}</h4>
+                  <p className="text-sm text-gray-500">{t('overview.generateMonthlyReport')}</p>
                 </button>
 
                 <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left transition-colors">
                   <div className="text-2xl mb-2">🔧</div>
-                  <h4 className="font-medium text-gray-900">System Health</h4>
-                  <p className="text-sm text-gray-500">Monitor platform status</p>
+                  <h4 className="font-medium text-gray-900">{t('overview.systemHealth')}</h4>
+                  <p className="text-sm text-gray-500">{t('overview.monitorPlatformStatus')}</p>
                 </button>
               </div>
             </div>
@@ -264,7 +268,7 @@ function AdminDashboard() {
             {/* Recent Businesses */}
             {businesses.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Businesses</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('overview.recentBusinesses')}</h3>
                 <div className="space-y-3">
                   {businesses.slice(0, 5).map((business) => (
                     <div key={business.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
@@ -280,7 +284,7 @@ function AdminDashboard() {
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {business.status}
+                          {t(`businessManagement.statusBadge.${business.status}`)}
                         </span>
                       </div>
                     </div>
@@ -300,9 +304,9 @@ function AdminDashboard() {
         {activeTab === 'analytics' && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📈</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Analytics Dashboard</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('analytics.analyticsDashboard')}</h2>
             <p className="text-gray-600">
-              Advanced analytics and reporting features coming soon
+              {t('analytics.advancedAnalyticsComingSoon')}
             </p>
           </div>
         )}
@@ -311,7 +315,7 @@ function AdminDashboard() {
         {activeTab === 'settings' && (
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Platform Settings - إعدادات المنصة
+              {t('settings.platformSettings')}
             </h2>
             
             {/* Settings Sections */}
@@ -321,11 +325,11 @@ function AdminDashboard() {
                 <div className="flex items-center mb-4">
                   <span className="text-2xl mr-3">🎨</span>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Icon Library - مكتبة الأيقونات
+                    {t('settings.iconLibrarySection')}
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600 mb-4">
-                  Manage stamp icons for loyalty cards - إدارة أيقونات الطوابع لبطاقات الولاء
+                  {t('settings.manageStampIcons')}
                 </p>
                 <IconLibraryManager />
               </div>
@@ -335,11 +339,11 @@ function AdminDashboard() {
                 <div className="flex items-center mb-4">
                   <span className="text-2xl mr-3">⚙️</span>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    System Configuration - إعدادات النظام
+                    {t('settings.systemConfiguration')}
                   </h3>
                 </div>
                 <p className="text-sm text-gray-500">
-                  Additional platform settings coming soon - إعدادات إضافية قريباً
+                  {t('settings.additionalSettingsComingSoon')}
                 </p>
               </div>
             </div>

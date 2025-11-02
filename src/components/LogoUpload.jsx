@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function LogoUpload({ onLogoUpdate }) {
+  const { t } = useTranslation('dashboard')
   const [logoInfo, setLogoInfo] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -70,13 +72,13 @@ function LogoUpload({ onLogoUpdate }) {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
-      setError('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.')
+      setError(t('logoUpload.invalidFileType'))
       return
     }
 
     // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      setError('File size too large. Maximum size is 5MB.')
+      setError(t('logoUpload.fileTooLarge'))
       return
     }
 
@@ -89,7 +91,7 @@ function LogoUpload({ onLogoUpdate }) {
       const businessId = localStorage.getItem('businessId')
 
       if (!sessionToken || !businessId) {
-        throw new Error('Authentication required')
+        throw new Error(t('logoUpload.authRequired'))
       }
 
       const formData = new FormData()
@@ -149,7 +151,7 @@ function LogoUpload({ onLogoUpdate }) {
       }
     } catch (error) {
       console.error('Logo upload error:', error)
-      setError(error.message || 'Failed to upload logo')
+      setError(error.message || t('logoUpload.uploadFailed'))
       setUploadProgress(0)
     } finally {
       setIsUploading(false)
@@ -157,7 +159,7 @@ function LogoUpload({ onLogoUpdate }) {
   }
 
   const handleDelete = async () => {
-    if (!logoInfo || !window.confirm('Are you sure you want to delete your business logo?')) {
+    if (!logoInfo || !window.confirm(t('logoUpload.confirmDelete'))) {
       return
     }
 
@@ -166,7 +168,7 @@ function LogoUpload({ onLogoUpdate }) {
       const businessId = localStorage.getItem('businessId')
 
       if (!sessionToken || !businessId) {
-        throw new Error('Authentication required')
+        throw new Error(t('logoUpload.authRequired'))
       }
 
       const response = await fetch('/api/business/my/logo', {
@@ -190,7 +192,7 @@ function LogoUpload({ onLogoUpdate }) {
       }
     } catch (error) {
       console.error('Logo delete error:', error)
-      setError(error.message || 'Failed to delete logo')
+      setError(error.message || t('logoUpload.deleteFailed'))
     }
   }
 
@@ -206,15 +208,15 @@ function LogoUpload({ onLogoUpdate }) {
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          🏢 Business Logo
+          {t('logoUpload.title')}
         </h3>
         {logoInfo && (
           <button
             onClick={handleDelete}
             className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors duration-200"
-            title="Delete Logo"
+            title={t('logoUpload.delete')}
           >
-            🗑️ Delete
+            {t('logoUpload.delete')}
           </button>
         )}
       </div>
@@ -246,7 +248,7 @@ function LogoUpload({ onLogoUpdate }) {
             </div>
             <div className="flex-shrink-0">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                ✅ Active
+                {t('logoUpload.active')}
               </span>
             </div>
           </div>
@@ -257,7 +259,7 @@ function LogoUpload({ onLogoUpdate }) {
             disabled={isUploading}
             className="w-full px-4 py-2 bg-primary hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
           >
-            {isUploading ? 'Uploading...' : '🔄 Replace Logo'}
+            {isUploading ? t('logoUpload.uploading') : t('logoUpload.replaceLogo')}
           </button>
         </div>
       ) : (
@@ -283,7 +285,7 @@ function LogoUpload({ onLogoUpdate }) {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Uploading logo...</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{t('logoUpload.uploadingLogo')}</p>
                   <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-primary h-2 rounded-full transition-all duration-300"
@@ -302,16 +304,16 @@ function LogoUpload({ onLogoUpdate }) {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Drop your logo here or{' '}
+                    {t('logoUpload.dropHere')}{' '}
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="text-primary hover:text-blue-700 font-semibold"
                     >
-                      browse files
+                      {t('logoUpload.browseFiles')}
                     </button>
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    JPEG, PNG, GIF, WebP • Max 5MB
+                    {t('logoUpload.fileTypes')}
                   </p>
                 </div>
               </div>

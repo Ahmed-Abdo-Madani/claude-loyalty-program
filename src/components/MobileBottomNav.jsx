@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { 
   HomeIcon, 
   GiftIcon, 
@@ -24,40 +25,41 @@ import {
  * Hidden on desktop where sidebar is used instead
  */
 function MobileBottomNav() {
+  const { t } = useTranslation('dashboard')
   const location = useLocation()
   
   // Navigation items - Streamlined to 5 primary tabs (Analytics moved to Overview)
   const navigationItems = [
     {
-      name: 'Overview',
+      name: t('mobileNav.overview'),
       path: '/dashboard?tab=overview',
       icon: HomeIcon,
       iconSolid: HomeIconSolid,
       tabName: 'overview'
     },
     {
-      name: 'Offers',
+      name: t('mobileNav.offers'),
       path: '/dashboard?tab=offers',
       icon: GiftIcon,
       iconSolid: GiftIconSolid,
       tabName: 'offers'
     },
     {
-      name: 'Scanner',
+      name: t('mobileNav.scanner'),
       path: '/dashboard?tab=scanner',
       icon: QrCodeIcon,
       iconSolid: QrCodeIconSolid,
       tabName: 'scanner'
     },
     {
-      name: 'Branches',
+      name: t('mobileNav.branches'),
       path: '/dashboard?tab=branches',
       icon: MapPinIcon,
       iconSolid: MapPinIconSolid,
       tabName: 'branches'
     },
     {
-      name: 'Customers',
+      name: t('mobileNav.customers'),
       path: '/dashboard?tab=customers',
       icon: UsersIcon,
       iconSolid: UsersIconSolid,
@@ -83,7 +85,7 @@ function MobileBottomNav() {
       className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-area-bottom"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-between items-center h-16 px-1">
         {navigationItems.map((item) => {
           const active = isActive(item)
           const Icon = active ? item.iconSolid : item.icon
@@ -94,7 +96,7 @@ function MobileBottomNav() {
               to={item.path}
               className={`
                 flex flex-col items-center justify-center
-                min-h-[44px] min-w-[44px] px-3 py-2
+                flex-1 min-h-[44px] min-w-[44px] px-2 py-2
                 transition-all duration-200
                 touch-target
                 ${active 

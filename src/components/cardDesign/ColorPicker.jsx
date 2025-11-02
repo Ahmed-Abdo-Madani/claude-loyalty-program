@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { 
   validateColorContrast, 
   isValidHex, 
@@ -25,6 +26,7 @@ function ColorPicker({
   suggestedColor = null, // Suggested color from logo
   onApplySuggested = null
 }) {
+  const { t } = useTranslation('cardDesign')
   const [inputValue, setInputValue] = useState(value || '#3B82F6')
   const [isValid, setIsValid] = useState(true)
   const [contrast, setContrast] = useState(null)
@@ -92,7 +94,7 @@ function ColorPicker({
     const message = getSimplifiedContrastMessage(contrastWith, inputValue)
 
     return (
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-2">
         <span className="text-lg">{icon}</span>
         <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
           {message}
@@ -116,7 +118,7 @@ function ColorPicker({
       </div>
 
       {/* Color Input Row */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:gap-3">
         {/* Color Swatch */}
         <div className="relative w-20 h-16 sm:flex-shrink-0">
           <input
@@ -155,14 +157,14 @@ function ColorPicker({
             onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
             className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline"
           >
-            {showTechnicalDetails ? 'Hide' : 'Show'} technical details
+            {showTechnicalDetails ? t('colorPicker.hideTechnicalDetails') : t('colorPicker.showTechnicalDetails')}
           </button>
         </div>
       </div>
 
       {!isValid && (
         <p className="text-xs text-red-600 dark:text-red-400">
-          Invalid color format (use #RRGGBB)
+          {t('colorPicker.invalidFormat')}
         </p>
       )}
 
@@ -174,7 +176,7 @@ function ColorPicker({
             onClick={handleAutoContrast}
             className="px-3 py-2 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
           >
-            ✨ Auto-Contrast
+            {t('colorPicker.autoContrast')}
           </button>
           {suggestedColor && onApplySuggested && (
             <button
@@ -183,10 +185,10 @@ function ColorPicker({
                 handlePresetClick(suggestedColor)
                 onApplySuggested?.()
               }}
-              className="px-3 py-2 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center space-x-1"
+              className="px-3 py-2 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-1"
             >
               <div className="w-4 h-4 rounded border border-blue-300" style={{ backgroundColor: suggestedColor }} />
-              <span>Use Logo Color</span>
+              <span>{t('colorPicker.useLogoColor')}</span>
             </button>
           )}
         </div>
@@ -196,7 +198,7 @@ function ColorPicker({
       {showPresets && (
         <div className="space-y-3">
           {/* Category Tabs */}
-          <div className="flex items-center space-x-1 overflow-x-auto pb-2 -mx-1 px-1">
+          <div className="flex items-center gap-1 overflow-x-auto pb-2 -mx-1 px-1">
             {Object.keys(businessFriendlyPresets).map((key) => (
               <button
                 key={key}
@@ -243,7 +245,7 @@ function ColorPicker({
               onClick={() => setShowMorePresets(!showMorePresets)}
               className="w-full py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
-              {showMorePresets ? 'Show Less' : `Show More (${currentPresets.colors.length - 9} more)`}
+              {showMorePresets ? t('colorPicker.showLess') : t('colorPicker.showMore', { count: currentPresets.colors.length - 9 })}
             </button>
           )}
         </div>
@@ -252,14 +254,14 @@ function ColorPicker({
       {/* Simplified Error/Warning Messages */}
       {contrast && !contrast.isValid && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-          <div className="flex items-start space-x-2">
+          <div className="flex items-start gap-2">
             <span className="text-red-600 dark:text-red-400 mt-0.5">⚠️</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-                Colors are too similar
+                {t('colorPicker.colorsTooSimilar')}
               </p>
               <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                Customers may have trouble reading text with these colors. Try the Auto-Contrast button above.
+                {t('colorPicker.customersTroubleReading')}
               </p>
             </div>
           </div>
@@ -271,7 +273,7 @@ function ColorPicker({
         <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              Contrast Ratio
+              {t('colorPicker.contrastRatio')}
             </span>
             <span className="text-xs font-mono text-gray-900 dark:text-white">
               {contrast.ratio}:1
@@ -279,7 +281,7 @@ function ColorPicker({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              WCAG Level
+              {t('colorPicker.wcagLevel')}
             </span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded
               ${contrast.meetsAAA 
@@ -293,7 +295,7 @@ function ColorPicker({
             </span>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-            WCAG requires 4.5:1 minimum for readable text (AA). 7:1 is AAA (enhanced).
+            {t('colorPicker.wcagGuidance')}
           </p>
         </div>
       )}

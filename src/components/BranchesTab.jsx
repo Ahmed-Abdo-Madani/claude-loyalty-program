@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import BranchGrid from './BranchGrid'
 import LocationAutocomplete from './LocationAutocomplete'
 import CompactStatsBar from './CompactStatsBar'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
+import BranchAnalyticsModal from './BranchAnalyticsModal'
 
 function BranchesTab({ analytics }) {
+  const { t } = useTranslation('dashboard')
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -13,10 +16,12 @@ function BranchesTab({ analytics }) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
+  const [selectedBranchForAnalytics, setSelectedBranchForAnalytics] = useState(null)
 
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState('All Status')
-  const [cityFilter, setCityFilter] = useState('All Cities')
+  // Filter states - use internal constants, not translated strings
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [cityFilter, setCityFilter] = useState('all')
   const [searchFilter, setSearchFilter] = useState('')
 
   // Load branches on component mount
@@ -84,10 +89,10 @@ function BranchesTab({ analytics }) {
           console.log(`🔒 Branch deleted successfully. ${data.data.deletedOffers} associated offer(s) were also removed.`)
         }
       } else {
-        throw new Error(data.message || 'Failed to delete branch')
+        throw new Error(data.message || t('branches.failedToDelete'))
       }
     } catch (err) {
-      setError(err.message || 'Failed to delete branch')
+      setError(err.message || t('branches.failedToDelete'))
       console.error('Error deleting branch:', err)
       setShowDeleteConfirm(null)
     }
@@ -123,11 +128,16 @@ function BranchesTab({ analytics }) {
     }
   }
 
+  const handleAnalytics = (branch) => {
+    console.log('📊 Opening analytics for branch:', branch.public_id)
+    setSelectedBranchForAnalytics(branch)
+    setAnalyticsModalOpen(true)
+  }
 
-  // Filter branches based on selected filters
+  // Filter branches based on selected filters - use constants for comparison
   const filteredBranches = branches.filter(branch => {
-    const statusMatch = statusFilter === 'All Status' || branch.status === statusFilter.toLowerCase()
-    const cityMatch = cityFilter === 'All Cities' || branch.city === cityFilter
+    const statusMatch = statusFilter === 'all' || branch.status === statusFilter
+    const cityMatch = cityFilter === 'all' || branch.city === cityFilter
     const searchMatch = searchFilter === '' ||
       branch.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
       branch.manager_name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
@@ -140,7 +150,7 @@ function BranchesTab({ analytics }) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading branches...</p>
+        <p className="mt-4 text-gray-600">{t('branches.loading')}</p>
       </div>
     )
   }
@@ -153,17 +163,17 @@ function BranchesTab({ analytics }) {
       {/* Header Section - Mobile-first: Stack vertically */}
       <div className="flex flex-col space-y-4 compact-header">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Branch Management</h2>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your business locations and track performance</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('branches.branchManagement')}</h2>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('branches.manageLocations')}</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm min-h-[44px] w-full sm:w-auto sm:self-start touch-target"
+          className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm min-h-[44px] w-full sm:w-auto sm:self-start touch-target"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          <span>Add Branch</span>
+          <span>{t('branches.addBranch')}</span>
         </button>
       </div>
 
@@ -191,7 +201,7 @@ function BranchesTab({ analytics }) {
             type="text"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="Search branches..."
+            placeholder={t('branches.searchPlaceholder')}
             className="w-full pl-10 pr-4 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
           />
           <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,34 +215,34 @@ function BranchesTab({ analytics }) {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Quick Filter Pills */}
           <button
-            onClick={() => { setStatusFilter('All Status'); setCityFilter('All Cities'); }}
+            onClick={() => { setStatusFilter('all'); setCityFilter('all'); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
-              statusFilter === 'All Status' && cityFilter === 'All Cities'
+              statusFilter === 'all' && cityFilter === 'all'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            All
+            {t('branches.all')}
           </button>
           <button
-            onClick={() => setStatusFilter('Active')}
+            onClick={() => setStatusFilter('active')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
-              statusFilter === 'Active'
+              statusFilter === 'active'
                 ? 'bg-green-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            Active
+            {t('branches.active')}
           </button>
           <button
-            onClick={() => setStatusFilter('Inactive')}
+            onClick={() => setStatusFilter('inactive')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
-              statusFilter === 'Inactive'
+              statusFilter === 'inactive'
                 ? 'bg-red-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
-            Inactive
+            {t('branches.inactive')}
           </button>
 
           {/* City Filter Dropdown */}
@@ -243,7 +253,7 @@ function BranchesTab({ analytics }) {
               onChange={(e) => setCityFilter(e.target.value)}
               className="text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-0 text-gray-900 dark:text-white pr-6"
             >
-              <option value="All Cities">All Cities</option>
+              <option value="all">{t('branches.allCities')}</option>
               {[...new Set(branches?.map(branch => branch.city).filter(Boolean))].map((city) => (
                 <option key={city} value={city}>
                   {city}
@@ -261,11 +271,7 @@ function BranchesTab({ analytics }) {
         onEdit={setShowEditModal}
         onDelete={setShowDeleteConfirm}
         onToggleStatus={toggleBranchStatus}
-        onDuplicate={duplicateBranch}
-        onAnalytics={(branch) => {
-          // Analytics functionality placeholder
-          console.log('View analytics for branch:', branch.public_id || branch.id)
-        }}
+        onAnalytics={handleAnalytics}
         onManageOffers={(branch) => {
           // Manage offers functionality placeholder
           console.log('Manage offers for branch:', branch.public_id || branch.id)
@@ -277,23 +283,22 @@ function BranchesTab({ analytics }) {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Delete Branch</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('branches.deleteBranchTitle')}</h3>
               <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to delete this branch? This action cannot be undone.
-                All associated data will be lost.
+                {t('branches.deleteBranchMessage')}
               </p>
               <div className="flex flex-col-reverse sm:flex-row gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
                   className="w-full sm:flex-1 px-6 py-3 min-h-[44px] border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all touch-target"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => deleteBranch(showDeleteConfirm)}
                   className="w-full sm:flex-1 px-6 py-3 min-h-[44px] bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 active:scale-95 transition-all shadow-lg touch-target"
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
             </div>
@@ -323,7 +328,7 @@ function BranchesTab({ analytics }) {
                   branchId) {
                 // Validate PIN format
                 if (!/^\d{4,6}$/.test(branchData.manager_pin)) {
-                  throw new Error('Manager PIN must be 4-6 digits')
+                  throw new Error(t('branches.pinMustBe4to6Digits'))
                 }
                 
                 console.log('🔐 Updating manager PIN via dedicated endpoint')
@@ -336,7 +341,7 @@ function BranchesTab({ analytics }) {
                 const pinData = await pinResponse.json()
                 
                 if (!pinData.success) {
-                  throw new Error(pinData.message || 'Failed to set manager PIN')
+                  throw new Error(pinData.message || t('branches.failedToSetPin'))
                 }
                 
                 console.log('✅ Manager PIN updated and hashed')
@@ -374,7 +379,7 @@ function BranchesTab({ analytics }) {
                     manager_pin.trim() !== '' && 
                     newBranchId) {
                   if (!/^\d{4,6}$/.test(manager_pin)) {
-                    throw new Error('Manager PIN must be 4-6 digits')
+                    throw new Error(t('branches.pinMustBe4to6Digits'))
                   }
                   
                   try {
@@ -389,13 +394,13 @@ function BranchesTab({ analytics }) {
                     
                     if (!pinData.success) {
                       console.error('⚠️ Branch saved but PIN failed:', pinData.message)
-                      setError('Branch saved successfully, but failed to set manager PIN. Please edit the branch to retry.')
+                      setError(t('branches.savedButPinFailed'))
                     } else {
                       console.log('✅ Manager PIN set for new branch')
                     }
                   } catch (pinError) {
                     console.error('⚠️ Branch saved but PIN failed:', pinError)
-                    setError('Branch saved successfully, but failed to set manager PIN. Please edit the branch to retry.')
+                    setError(t('branches.savedButPinFailed'))
                   }
                 }
               }
@@ -409,11 +414,24 @@ function BranchesTab({ analytics }) {
           }}
         />
       )}
+
+      {/* Branch Analytics Modal */}
+      {analyticsModalOpen && selectedBranchForAnalytics && (
+        <BranchAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => {
+            setAnalyticsModalOpen(false)
+            setSelectedBranchForAnalytics(null)
+          }}
+          branch={selectedBranchForAnalytics}
+        />
+      )}
     </div>
   )
 }
 
 function BranchModal({ branch, onClose, onSave }) {
+  const { t } = useTranslation('dashboard')
   const [formData, setFormData] = useState({
     name: branch?.name || '',
     location: branch?.location || null,           // Location object from LocationAutocomplete
@@ -654,10 +672,10 @@ function BranchModal({ branch, onClose, onSave }) {
         <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              {branch ? '🏢 Edit Branch' : '🏪 Add New Branch'}
+              {branch ? '🏢 ' + t('branches.editBranch') : '🏪 ' + t('branches.addNewBranch')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {branch ? 'Update your branch information' : 'Create a new branch location'}
+              {branch ? t('branches.updateBranchInfo') : t('branches.createNewBranchLocation')}
             </p>
           </div>
           <button
@@ -678,7 +696,7 @@ function BranchModal({ branch, onClose, onSave }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      🏪 Branch Name *
+                      🏪 {t('branches.branchName')} *
                     </label>
                     <input
                       type="text"
@@ -686,19 +704,19 @@ function BranchModal({ branch, onClose, onSave }) {
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder="e.g., Downtown Branch"
+                      placeholder={t('branches.branchNamePlaceholder')}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      👤 Manager
+                      👤 {t('branches.manager')}
                     </label>
                     <input
                       type="text"
                       value={formData.manager_name}
                       onChange={(e) => setFormData({...formData, manager_name: e.target.value})}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder="Manager name"
+                      placeholder={t('branches.managerNamePlaceholder')}
                     />
                   </div>
                 </div>
@@ -706,21 +724,21 @@ function BranchModal({ branch, onClose, onSave }) {
                 {/* Saudi Location Search */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    🗺️ Location (Region, City, or District) *
+                    🗺️ {t('branches.locationLabel')} *
                   </label>
                   <LocationAutocomplete
                     value={formData.location}
                     onChange={handleLocationSelect}
                     language="ar"
-                    placeholder="ابحث عن المنطقة أو المدينة أو الحي..."
-                    placeholderEn="Search for region, city, or district..."
+                    placeholder={t('branches.locationPlaceholderAr')}
+                    placeholderEn={t('branches.locationPlaceholderEn')}
                     className="w-full"
                     required
                   />
                   {formData.location && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <div className="text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Selected Location:</strong>
+                        <strong>{t('branches.selectedLocation')}:</strong>
                         <div className="mt-1 flex flex-wrap gap-2">
                           {formData.region && (
                             <span className="inline-block bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs">
@@ -801,26 +819,26 @@ function BranchModal({ branch, onClose, onSave }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      📞 Phone Number
+                      📞 {t('branches.phoneNumber')}
                     </label>
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder="(555) 123-4567"
+                      placeholder={t('branches.phonePlaceholder')}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      📧 Email
+                      📧 {t('branches.email')}
                     </label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder="branch@business.com"
+                      placeholder={t('branches.emailPlaceholder')}
                     />
                   </div>
                 </div>
@@ -830,10 +848,10 @@ function BranchModal({ branch, onClose, onSave }) {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
-                        🔐 Manager Access
+                        🔐 {t('branches.managerAccess')}
                       </h3>
                       <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                        Enable managers to scan and redeem customer rewards
+                        {t('branches.managerAccessDesc')}
                       </p>
                     </div>
                     <input
@@ -850,7 +868,7 @@ function BranchModal({ branch, onClose, onSave }) {
                       {/* PIN Input */}
                       <div>
                         <label className="block text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                          📱 Manager PIN (4-6 digits)
+                          📱 {t('branches.managerPin')}
                         </label>
                         <div className="flex gap-2">
                           <div className="relative flex-1">
@@ -865,7 +883,7 @@ function BranchModal({ branch, onClose, onSave }) {
                               maxLength={6}
                               pattern="[0-9]{4,6}"
                               className="w-full px-4 py-3 min-h-[44px] border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all touch-target font-mono text-lg tracking-widest"
-                              placeholder="123456"
+                              placeholder={t('branches.pinPlaceholder')}
                             />
                             <button
                               type="button"
@@ -885,7 +903,7 @@ function BranchModal({ branch, onClose, onSave }) {
                             disabled={!formData.manager_pin || !/^\d{4,6}$/.test(formData.manager_pin)}
                             className="px-4 py-3 min-h-[44px] bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 active:scale-95 transition-all shadow-md disabled:opacity-50 whitespace-nowrap"
                           >
-                            {pinValidated ? '✓ Set' : '💾 Set PIN'}
+                            {pinValidated ? '✓ ' + t('branches.set') : '💾 ' + t('branches.setPin')}
                           </button>
                         </div>
                         <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
@@ -932,7 +950,7 @@ function BranchModal({ branch, onClose, onSave }) {
 
                 {/* Main Branch Setting */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       id="isMain"
@@ -958,14 +976,14 @@ function BranchModal({ branch, onClose, onSave }) {
               onClick={onClose}
               className="w-full sm:flex-1 px-6 py-3 min-h-[44px] border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-all touch-target"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               form="branch-form"
               className="w-full sm:flex-1 px-6 py-3 min-h-[44px] bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all shadow-lg touch-target"
             >
-              {branch ? '✨ Update Branch' : '🎉 Add Branch'}
+              {branch ? '✨ ' + t('branches.updateBranch') : '🎉 ' + t('branches.addBranch')}
             </button>
           </div>
         </div>

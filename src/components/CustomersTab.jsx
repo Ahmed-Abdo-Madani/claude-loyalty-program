@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 import CompactStatsBar from './CompactStatsBar'
 import NotificationModal from './NotificationModal'
+import CampaignBuilder from './CampaignBuilder'
+import CampaignHistory from './CampaignHistory'
 
 function CustomersTab({ analytics: globalAnalytics }) {
+  const { t } = useTranslation(['dashboard', 'notification'])
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -22,6 +26,19 @@ function CustomersTab({ analytics: globalAnalytics }) {
   const [offers, setOffers] = useState([])
   const [successMessage, setSuccessMessage] = useState('')
 
+  // Segment state
+  const [segments, setSegments] = useState([])
+  const [selectedSegment, setSelectedSegment] = useState(null)
+  const [selectedSegmentData, setSelectedSegmentData] = useState(null)
+  const [loadingSegments, setLoadingSegments] = useState(false)
+  const [audienceMode, setAudienceMode] = useState('all') // 'all' | 'selected' | 'segment'
+
+  // Campaign state
+  const [activeTab, setActiveTab] = useState('customers') // 'customers' | 'campaigns'
+  const [showCampaignBuilder, setShowCampaignBuilder] = useState(false)
+  const [campaignRefreshTrigger, setCampaignRefreshTrigger] = useState(0)
+  const [campaignToEdit, setCampaignToEdit] = useState(null)
+
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1)
@@ -31,13 +48,13 @@ function CustomersTab({ analytics: globalAnalytics }) {
   useEffect(() => {
     loadCustomers()
     loadOffers()
+    loadSegments()
   }, [])
 
   const loadCustomers = async () => {
     try {
       setLoading(true)
       setError('')
-      console.log('🔒 Loading customers with secure authentication...')
 
       const response = await secureApi.get(endpoints.customers)
       const data = await response.json()
@@ -62,7 +79,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
         }))
 
         setCustomers(customersData)
-        console.log('🔒 Customers loaded successfully:', customersData.length)
       } else {
         throw new Error(data.message || 'Failed to load customers')
       }
@@ -80,7 +96,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
 
   const loadOffers = async () => {
     try {
-      console.log('🔒 Loading offers for notifications...')
       const response = await secureApi.get(endpoints.myOffers)
       const data = await response.json()
 
@@ -95,7 +110,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
         }
         
         setOffers(offersArray)
-        console.log('🔒 Offers loaded successfully:', offersArray.length)
       } else {
         console.warn('⚠️ No offers data received from API')
         setOffers([])
@@ -106,10 +120,35 @@ function CustomersTab({ analytics: globalAnalytics }) {
     }
   }
 
+  const loadSegments = async () => {
+    try {
+      setLoadingSegments(true)
+
+      const response = await secureApi.get(endpoints.segments)
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        // Extract segments array and filter for active segments only
+        const segmentsArray = data.data.segments || []
+        const activeSegments = segmentsArray.filter(s => s.is_active)
+        setSegments(activeSegments)
+      } else {
+        console.warn('⚠️ No segments data received from API')
+        setSegments([])
+      }
+    } catch (err) {
+      console.error('Failed to load segments:', err)
+      // Don't block UI - segments are optional feature
+      setSegments([])
+    } finally {
+      setLoadingSegments(false)
+    }
+  }
+
   // Notification handlers
   const handleSendNotificationClick = () => {
     if (selectedCustomers.size === 0) {
-      setError('Please select at least one customer')
+      setError(t('customers.selectAtLeastOne'))
       return
     }
     setNotificationType('custom')
@@ -138,7 +177,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
     }
 
     if (targetCustomers.length === 0) {
-      setError(`No ${filter || ''} customers found`)
+      setError(t('customers.noCustomersWithFilter', { filter: filter || '' }))
       return
     }
 
@@ -148,12 +187,64 @@ function CustomersTab({ analytics: globalAnalytics }) {
     setShowNotificationModal(true)
   }
 
-  const handleNotificationSuccess = (result) => {
+  const handleSendToSegment = async () => {
+    try {
+      if (!selectedSegment) {
+        setError('Please select a segment')
+        return
+      }
+
+      // Find the segment object
+      const segment = segments.find(s => s.segment_id === selectedSegment)
+      if (!segment || segment.customer_count === 0) {
+        setError('Selected segment has no customers')
+        return
+      }
+
+      setLoading(true)
+      // Fetch segment customers
+      const response = await secureApi.get(`${endpoints.segments}/${selectedSegment}/customers`)
+      const data = await response.json()
+
+      if (data.success && data.data) {
+        const segmentCustomers = data.data.customers || []
+        
+        // Set these customers as selected
+        setSelectedCustomers(new Set(segmentCustomers.map(c => c.customer_id)))
+        
+        // Store segment metadata
+        setSelectedSegmentData({
+          segmentId: selectedSegment,
+          segmentName: segment.name,
+          customerCount: segmentCustomers.length
+        })
+
+        // Open notification modal in segment mode
+        setNotificationType('segment')
+        setShowNotificationModal(true)
+      } else {
+        throw new Error(data.message || 'Failed to fetch segment customers')
+      }
+    } catch (err) {
+      console.error('Error fetching segment customers:', err)
+      setError(err.message || 'Failed to load segment customers')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleNotificationSuccess = (results) => {
     setShowNotificationModal(false)
     setSelectedCustomers(new Set())
     setSelectedCustomer(null)
+    
+    // Clear segment selection and audience mode
+    setSelectedSegment(null)
+    setSelectedSegmentData(null)
+    setAudienceMode('all')
 
-    const message = `✅ Notification sent successfully to ${result.successful_customers} customer(s)!`
+    const count = results.successful_customers || results.successful || 0
+    const message = t('customers.notificationSuccess', { count })
     setSuccessMessage(message)
 
     // Auto-hide success message after 5 seconds
@@ -260,7 +351,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">Loading customers...</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('customers.loading')}</p>
       </div>
     )
   }
@@ -272,8 +363,46 @@ function CustomersTab({ analytics: globalAnalytics }) {
       
       {/* Header Section - Mobile-first */}
       <div className="compact-header">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Customer Management</h2>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Manage your customers and send targeted notifications</p>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('customers.customerManagement')}</h2>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('customers.manageAndNotify')}</p>
+          </div>
+          <button
+            onClick={() => setShowCampaignBuilder(true)}
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+          >
+            <span className="text-xl">📢</span>
+            <span className="hidden sm:inline">{t('dashboard:customers.createCampaignButton')}</span>
+            <span className="sm:hidden">{t('dashboard:customers.campaignShort')}</span>
+          </button>
+        </div>
+        
+        {/* Tab Navigation */}
+        <div className="mt-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setActiveTab('customers')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                activeTab === 'customers'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              👥 {t('dashboard:customers.tabs.customers')}
+            </button>
+            <button
+              onClick={() => setActiveTab('campaigns')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                activeTab === 'campaigns'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              📢 {t('dashboard:customers.tabs.campaigns')}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -296,6 +425,8 @@ function CustomersTab({ analytics: globalAnalytics }) {
         </div>
       )}
 
+      {/* Tab Content */}
+      {activeTab === 'customers' && (
       <div className="compact-spacing">
         {/* Search and Filters */}
         <div className="compact-card mobile-compact">
@@ -304,7 +435,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
             <div className="relative mb-3">
               <input
                 type="text"
-                placeholder="Search customers..."
+                placeholder={t('customers.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary touch-target"
@@ -326,7 +457,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  All
+                  {t('customers.all')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('active')}
@@ -336,7 +467,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  Active
+                  {t('customers.active')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('vip')}
@@ -346,7 +477,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  VIP
+                  {t('customers.vip')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('inactive')}
@@ -356,7 +487,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  Inactive
+                  {t('customers.inactive')}
                 </button>
                 <button
                   onClick={() => setFilterStatus('churning')}
@@ -366,19 +497,75 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  At Risk
+                  {t('customers.atRisk')}
                 </button>
+              </div>
+
+              {/* Target Audience Selector */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('dashboard:customers.targetAudience')}
+                </label>
+                <select
+                  value={audienceMode === 'segment' ? selectedSegment : audienceMode}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    if (value === 'all') {
+                      setAudienceMode('all')
+                      setSelectedSegment(null)
+                      setSelectedCustomers(new Set())
+                    } else if (value === 'selected') {
+                      setAudienceMode('selected')
+                      setSelectedSegment(null)
+                    } else {
+                      // It's a segment ID
+                      setAudienceMode('segment')
+                      setSelectedSegment(value)
+                      setSelectedCustomers(new Set())
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="all">
+                    {t('dashboard:customers.allCustomers')}
+                  </option>
+                  <option 
+                    value="selected" 
+                    disabled={selectedCustomers.size === 0}
+                  >
+                    {t('dashboard:customers.selectedCustomers', { count: selectedCustomers.size })}
+                  </option>
+                  
+                  {/* Segments Section */}
+                  {!loadingSegments && segments.length > 0 && (
+                    <>
+                      <option disabled>{t('dashboard:customers.segmentSelector.segments')}</option>
+                      {segments.map(segment => (
+                        <option key={segment.segment_id} value={segment.segment_id}>
+                          {segment.name} ({t('dashboard:customers.segmentSelector.customersCount', { count: segment.customer_count || 0 })})
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
               </div>
 
               {/* Action Button Row */}
               <div className="flex justify-stretch sm:justify-end">
                 <button
-                  onClick={handleSendNotificationClick}
-                  disabled={selectedCustomers.size === 0}
-                  className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center space-x-2 touch-target"
+                  onClick={audienceMode === 'segment' ? handleSendToSegment : handleSendNotificationClick}
+                  disabled={audienceMode === 'all' || (audienceMode === 'selected' && selectedCustomers.size === 0)}
+                  className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 touch-target"
                 >
                   <span>📧</span>
-                  <span>Send Notification</span>
+                  <span>
+                    {audienceMode === 'segment'
+                      ? t('dashboard:customers.sendToSegment')
+                      : audienceMode === 'selected' && selectedCustomers.size > 0
+                      ? t('dashboard:customers.sendToSelected', { count: selectedCustomers.size })
+                      : t('dashboard:customers.selectCustomersOrSegment')
+                    }
+                  </span>
                 </button>
               </div>
             </div>
@@ -388,7 +575,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
           {selectedCustomers.size > 0 && (
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <span className="text-blue-800 dark:text-blue-300 text-sm">
-                {selectedCustomers.size} customer{selectedCustomers.size !== 1 ? 's' : ''} selected
+                {selectedCustomers.size} {t('customers.selected')}
               </span>
             </div>
           )}
@@ -400,7 +587,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
             {paginatedCustomers.map((customer) => (
               <div key={customer.customer_id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
                 <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-start space-x-2 flex-1 min-w-0">
+                  <div className="flex items-start gap-2 flex-1 min-w-0">
                     <input
                       type="checkbox"
                       checked={selectedCustomers.has(customer.customer_id)}
@@ -464,10 +651,10 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleSendToCustomer(customer)}
-                    className="flex-1 px-3 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center space-x-2 touch-target"
+                    className="flex-1 px-3 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 touch-target"
                   >
                     <span>📧</span>
-                    <span>Notify</span>
+                    <span>{t('notification:notifyButton')}</span>
                   </button>
                   <button className="px-3 py-2 min-h-[44px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-all active:scale-95 flex items-center justify-center touch-target">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,11 +680,11 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       className="rounded border-gray-300 text-primary focus:ring-primary"
                     />
                   </th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Customer</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Status</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Activity</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Offers</th>
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.customerName')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.status')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.lastActivity')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.activeCards')}</th>
+                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -517,7 +704,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       />
                     </td>
                     <td className="py-3 px-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                           {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                         </div>
@@ -533,32 +720,32 @@ function CustomersTab({ analytics: globalAnalytics }) {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(customer.status)}`}>
                           {customer.status}
                         </span>
-                        <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                           <span>{getLifecycleIcon(customer.lifecycle_stage)}</span>
                           <span>{customer.lifecycle_stage.replace('_', ' ')}</span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-2">
-                      <div className="text-sm space-y-1">
-                        <div className="text-gray-900 dark:text-white">{customer.total_visits} visits</div>
-                        <div className="text-gray-500 dark:text-gray-400">{customer.total_stamps_earned} stamps</div>
-                        <div className="text-xs text-gray-400 dark:text-gray-500">
-                          Last: {formatDate(customer.last_activity_date)}
+                        <div className="text-sm space-y-1">
+                          <div className="text-gray-900 dark:text-white">{customer.total_visits} {t('customers.visits')}</div>
+                          <div className="text-gray-500 dark:text-gray-400">{customer.total_stamps_earned} {t('customers.stamps')}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            {t('customers.lastActivity')}: {formatDate(customer.last_activity_date)}
+                          </div>
                         </div>
-                      </div>
                     </td>
                     <td className="py-4 px-2">
                       <div className="text-sm space-y-1">
                         {customer.progress && customer.progress.length > 0 ? (
                           <>
                             {customer.progress.slice(0, 1).map((prog, idx) => (
-                              <div key={idx} className="flex items-center space-x-2">
+                              <div key={idx} className="flex items-center gap-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-gray-900 dark:text-white truncate text-xs">
                                     {prog.offer?.title || 'Unknown Offer'}
                                   </div>
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                     <span>{prog.current_stamps}/{prog.max_stamps}</span>
                                     {prog.is_completed && <span className="text-green-500">✓</span>}
                                   </div>
@@ -577,7 +764,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                       </div>
                     </td>
                     <td className="py-4 px-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSendToCustomer(customer)}
                           title="Send notification"
@@ -608,11 +795,11 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">👥</span>
                 </div>
-                <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No customers found</h3>
+                <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">{t('customers.noCustomersFound')}</h3>
                 <p className="text-gray-500 dark:text-gray-400">
                   {searchTerm || filterStatus !== 'all'
-                    ? 'Try adjusting your search or filter criteria.'
-                    : 'Customers will appear here as they sign up for your loyalty program.'
+                    ? t('customers.tryAdjustingFilters')
+                    : t('customers.customersWillAppear')
                   }
                 </p>
               </div>
@@ -626,10 +813,10 @@ function CustomersTab({ analytics: globalAnalytics }) {
             {/* Page Info and Items Per Page */}
             <div className="flex flex-col sm:flex-row items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
               <span>
-                Showing {startIndex + 1}-{Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length} customers
+                {t('customers.showing')} {startIndex + 1}-{Math.min(endIndex, filteredCustomers.length)} {t('customers.of')} {filteredCustomers.length} {t('customers.customers')}
               </span>
               <div className="flex items-center gap-2">
-                <label htmlFor="itemsPerPage" className="whitespace-nowrap">Items per page:</label>
+                <label htmlFor="itemsPerPage" className="whitespace-nowrap">{t('customers.itemsPerPage')}:</label>
                 <select
                   id="itemsPerPage"
                   value={itemsPerPage}
@@ -651,12 +838,12 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 disabled={currentPage === 1}
                 className="px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                ← Previous
+                ← {t('customers.previous')}
               </button>
 
               {/* Mobile: Simple page indicator */}
               <div className="sm:hidden px-3 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                Page {currentPage} of {totalPages}
+                {t('customers.page')} {currentPage} {t('customers.of')} {totalPages}
               </div>
 
               {/* Desktop: Page numbers */}
@@ -694,7 +881,7 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 disabled={currentPage === totalPages}
                 className="px-3 py-2 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Next →
+                {t('customers.next')} →
               </button>
             </div>
           </div>
@@ -704,48 +891,62 @@ function CustomersTab({ analytics: globalAnalytics }) {
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
           <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-4 flex items-center">
             <span className="mr-2">🚀</span>
-            Quick Actions
+            {t('customers.quickActions')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => handleQuickAction('birthday', 'birthday')}
-              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
             >
               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">🎂</span>
               </div>
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">Birthday Offers</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Send to upcoming birthdays</div>
+                <div className="font-medium text-gray-900 dark:text-white">{t('customers.birthdayOffers')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('customers.birthdayOffersDesc')}</div>
               </div>
             </button>
             <button
               onClick={() => handleQuickAction('reengagement', 'inactive')}
-              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
             >
               <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">📧</span>
               </div>
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">Re-engagement</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Win back inactive customers</div>
+                <div className="font-medium text-gray-900 dark:text-white">{t('customers.reEngagement')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('customers.reEngagementDesc')}</div>
               </div>
             </button>
             <button
               onClick={() => handleQuickAction('offer', 'vip')}
-              className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl hover:shadow-md transition-all duration-200 text-left"
             >
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
                 <span className="text-xl">👑</span>
               </div>
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">VIP Rewards</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Special offers for VIP customers</div>
+                <div className="font-medium text-gray-900 dark:text-white">{t('customers.vipRewards')}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('customers.vipRewardsDesc')}</div>
               </div>
             </button>
           </div>
         </div>
       </div>
+      )}
+
+      {/* Campaigns Tab */}
+      {activeTab === 'campaigns' && (
+        <div className="compact-spacing">
+          <CampaignHistory 
+            onCreateCampaign={(campaign) => {
+              setCampaignToEdit(campaign || null)
+              setShowCampaignBuilder(true)
+            }}
+            refreshTrigger={campaignRefreshTrigger}
+          />
+        </div>
+      )}
 
       {/* Notification Modal */}
       {showNotificationModal && (
@@ -753,11 +954,32 @@ function CustomersTab({ analytics: globalAnalytics }) {
           customers={selectedCustomer ? [selectedCustomer] : customers.filter(c => selectedCustomers.has(c.customer_id))}
           notificationType={notificationType}
           offers={offers}
+          segmentData={selectedSegmentData}
+          segmentId={audienceMode === 'segment' ? selectedSegment : null}
           onClose={() => {
             setShowNotificationModal(false)
             setSelectedCustomer(null)
           }}
           onSuccess={handleNotificationSuccess}
+        />
+      )}
+
+      {/* Campaign Builder Modal */}
+      {showCampaignBuilder && (
+        <CampaignBuilder
+          initialData={campaignToEdit}
+          onClose={() => {
+            setShowCampaignBuilder(false)
+            setCampaignToEdit(null)
+          }}
+          onSuccess={(campaign) => {
+            setShowCampaignBuilder(false)
+            setCampaignToEdit(null)
+            setSuccessMessage(`Campaign "${campaign.name}" ${campaignToEdit ? 'updated' : 'created'} successfully!`)
+            setCampaignRefreshTrigger(prev => prev + 1)
+            setActiveTab('campaigns')
+            setTimeout(() => setSuccessMessage(''), 5000)
+          }}
         />
       )}
     </div>

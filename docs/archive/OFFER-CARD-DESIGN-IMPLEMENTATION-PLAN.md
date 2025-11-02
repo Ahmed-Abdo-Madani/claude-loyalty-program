@@ -1004,8 +1004,8 @@ CREATE TABLE design_templates (
 
 - [GOOGLE-WALLET-INTEGRATION-COMPLETE.md](./GOOGLE-WALLET-INTEGRATION-COMPLETE.md) - Google Wallet implementation details
 - [WALLET-PROGRESS-UPDATE-ANALYSIS.md](./WALLET-PROGRESS-UPDATE-ANALYSIS.md) - Wallet update mechanism
-- [SCALABILITY-ROADMAP.md](./SCALABILITY-ROADMAP.md) - Overall platform scalability plan
-- [README.md](./README.md) - Project overview and setup instructions
+- [Migration Documentation](../migrations/) - Database migration guides
+- [Active Guides](../guides/) - Current development and deployment documentation
 
 ---
 

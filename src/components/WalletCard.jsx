@@ -41,14 +41,14 @@ function WalletCard({ title, value, subtitle, icon, color, trend, onClick, child
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3 md:mb-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           {icon && <span className="text-xl md:text-2xl">{icon}</span>}
           <h3 className={`font-medium text-xs md:text-sm ${color && color !== 'default' ? 'text-white/80' : 'text-gray-600 dark:text-gray-400'}`}>
             {title}
           </h3>
         </div>
         {trend !== undefined && (
-          <div className={`flex items-center space-x-1 text-xs md:text-sm ${getTrendColor(trend)}`}>
+          <div className={`flex items-center gap-1 text-xs md:text-sm ${getTrendColor(trend)}`}>
             <span>{getTrendIcon(trend)}</span>
             <span>{Math.abs(trend)}%</span>
           </div>

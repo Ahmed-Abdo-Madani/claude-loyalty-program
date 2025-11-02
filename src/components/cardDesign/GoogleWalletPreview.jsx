@@ -4,7 +4,11 @@
  * Phase 2 - Frontend Components
  */
 
+import { useTranslation } from 'react-i18next'
+
 function GoogleWalletPreview({ design, offerData }) {
+  const { t } = useTranslation('cardDesign')
+  
   const {
     background_color = '#3B82F6',
     foreground_color = '#FFFFFF',
@@ -15,8 +19,8 @@ function GoogleWalletPreview({ design, offerData }) {
   } = design || {}
 
   const {
-    title = 'Loyalty Card',
-    description = 'Your loyalty rewards',
+    title = t('preview.mockData.loyaltyCard'),
+    description = t('preview.mockData.loyaltyRewards'),
     stamps_required = 10,
     type = 'stamps'
   } = offerData || {}
@@ -76,7 +80,7 @@ function GoogleWalletPreview({ design, offerData }) {
                     className="text-sm font-semibold"
                     style={{ color: foreground_color }}
                   >
-                    ⭐ Stamps Collected
+                    ⭐ {t('preview.labels.stampsCollected')}
                   </span>
                   <span
                     className="text-sm opacity-90"
@@ -95,7 +99,7 @@ function GoogleWalletPreview({ design, offerData }) {
                     className="text-xs font-semibold mb-2 opacity-90"
                     style={{ color: foreground_color }}
                   >
-                    Your Progress
+                    {t('preview.progress.yourProgress')}
                   </p>
 
                   {/* Google Wallet only supports text-based star display */}
@@ -107,13 +111,13 @@ function GoogleWalletPreview({ design, offerData }) {
                     className="text-xs text-center mt-2 opacity-75"
                     style={{ color: foreground_color }}
                   >
-                    {mockProgress} of {stamps_required} stamps collected
+                    {t('preview.progress.stampsCollectedCount', { current: mockProgress, max: stamps_required })}
                     <br />
                     {stamps_required - mockProgress === 0
-                      ? '🎉 Reward Ready!'
+                      ? t('preview.progress.rewardReady')
                       : stamps_required - mockProgress === 1
-                      ? 'Only 1 more stamp to go! 🎯'
-                      : `${stamps_required - mockProgress} more stamps until reward! 🎁`
+                      ? t('preview.progress.oneMoreStamp')
+                      : t('preview.progress.stampsUntilReward', { count: stamps_required - mockProgress })
                     }
                   </p>
                 </div>
@@ -128,13 +132,13 @@ function GoogleWalletPreview({ design, offerData }) {
                       className="text-xs font-semibold opacity-75"
                       style={{ color: foreground_color }}
                     >
-                      🎁 Reward
+                      🎁 {t('preview.labels.reward')}
                     </p>
                     <p
                       className="text-sm"
                       style={{ color: foreground_color }}
                     >
-                      {description || 'Free Item'}
+                      {description || t('preview.mockData.freeItem')}
                     </p>
                   </div>
                 </div>
@@ -148,7 +152,7 @@ function GoogleWalletPreview({ design, offerData }) {
                     className="text-sm font-semibold"
                     style={{ color: foreground_color }}
                   >
-                    ⭐ Points Balance
+                    ⭐ {t('preview.labels.pointsBalance')}
                   </span>
                   <span
                     className="text-2xl font-bold"
@@ -161,7 +165,7 @@ function GoogleWalletPreview({ design, offerData }) {
                   className="text-xs opacity-75"
                   style={{ color: foreground_color }}
                 >
-                  {stamps_required - mockProgress} more to next reward
+                  {t('preview.progress.moreToNextReward', { count: stamps_required - mockProgress })}
                 </p>
               </div>
             )}
@@ -173,7 +177,7 @@ function GoogleWalletPreview({ design, offerData }) {
               className="h-16 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: foreground_color + '10' }}
             >
-              <div className="flex space-x-1">
+              <div className="flex gap-1">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div
                     key={i}
@@ -191,7 +195,7 @@ function GoogleWalletPreview({ design, offerData }) {
               className="text-xs text-center mt-2 opacity-75"
               style={{ color: foreground_color }}
             >
-              Scan to collect stamps
+              {t('preview.labels.scanToCollect')}
             </p>
           </div>
         </div>
@@ -209,25 +213,25 @@ function GoogleWalletPreview({ design, offerData }) {
       </div>
 
       {/* Platform Label */}
-      <div className="flex items-center justify-center mt-3 space-x-2">
+      <div className="flex items-center justify-center mt-3 gap-2">
         <div className="w-3 h-3 rounded-full bg-green-500"></div>
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-          Google Wallet Preview
+          {t('preview.google.title')}
         </span>
       </div>
 
       {/* Platform Limitations Disclaimer */}
       <div className="mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <div className="flex items-start space-x-2">
+        <div className="flex items-start gap-2">
           <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
           <div className="flex-1">
             <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-              Google Wallet Limitations
+              {t('preview.google.limitations')}
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-              This shows exactly what customers will see in Google Wallet. Progress Display style (bar/grid) does NOT affect Google Wallet - it only works for Apple Wallet. Google only supports text-based star display (⭐). Your colors, logo, and hero image work as designed.
+              {t('preview.google.limitationsDesc')}
             </p>
           </div>
         </div>

@@ -13,9 +13,11 @@
  */
 
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { validateHeroImage } from '../../utils/designValidation'
 
 function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading = false }) {
+  const { t } = useTranslation('common')
   const [dragActive, setDragActive] = useState(false)
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState(null)
@@ -143,7 +145,7 @@ function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading
                 onClick={handleRemove}
                 className="px-3 py-1.5 text-sm bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg transition-colors min-h-[36px]"
               >
-                Remove
+                {t('upload.remove')}
               </button>
             </div>
 
@@ -196,7 +198,7 @@ function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading
               disabled={uploading}
               className="mt-3 w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium min-h-[44px]"
             >
-              {uploading ? 'Uploading...' : 'Upload Different Image'}
+              {uploading ? t('upload.uploading') : t('upload.uploadDifferentImage')}
             </button>
           </div>
         ) : (
@@ -205,7 +207,7 @@ function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading
               <div className="space-y-3">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Uploading and processing...
+                  {t('upload.uploadingProcessing')}
                 </p>
               </div>
             ) : (
@@ -216,7 +218,7 @@ function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading
                   </svg>
                 </div>
                 <h4 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Upload Hero Image
+                  {t('upload.uploadHeroImage')}
                 </h4>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-4">
                   Add a banner image to display at the top of your card
@@ -226,7 +228,7 @@ function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading
                   onClick={handleButtonClick}
                   className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
                 >
-                  Choose File
+                  {t('upload.chooseFile')}
                 </button>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
                   PNG or JPG, max 10MB
@@ -239,7 +241,7 @@ function HeroImageUploader({ heroImageUrl, onUpload, onRemove, onSkip, uploading
                     onClick={onSkip}
                     className="mt-4 w-full sm:w-auto px-6 py-2.5 border-2 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
                   >
-                    Skip This Step
+                    {t('upload.skipHeroImage')}
                   </button>
                 )}
               </>

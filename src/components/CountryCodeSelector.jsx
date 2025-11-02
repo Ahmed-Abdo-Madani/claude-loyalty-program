@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 // Common countries with their calling codes, flags, and names
@@ -25,12 +26,13 @@ const CountryCodeSelector = ({
   onChange, 
   className = '', 
   disabled = false, 
-  language = 'en',
   primaryColor = '#3B82F6',
   backgroundColor = '#FFFFFF',
   textColor = '#374151',
   borderColor = '#D1D5DB'
 }) => {
+  const { t, i18n } = useTranslation('common');
+  const language = i18n.language;
   const isRTL = language === 'ar';
 
   return (
@@ -55,7 +57,7 @@ const CountryCodeSelector = ({
         borderColor: borderColor,
         '--tw-ring-color': primaryColor
       }}
-      aria-label={language === 'ar' ? 'رمز الدولة' : 'Country Code'}
+      aria-label={t('countryCode.label')}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {COUNTRIES.map((country) => (
@@ -72,7 +74,6 @@ CountryCodeSelector.propTypes = {
   onChange: PropTypes.func.isRequired,
   className: PropTypes.string,
   disabled: PropTypes.bool,
-  language: PropTypes.string,
   primaryColor: PropTypes.string,
   backgroundColor: PropTypes.string,
   textColor: PropTypes.string,

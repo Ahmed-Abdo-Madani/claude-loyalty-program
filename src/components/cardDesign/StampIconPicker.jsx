@@ -5,9 +5,11 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { secureApi, apiBaseUrl } from '../../config/api'
 
 function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
+  const { t } = useTranslation('cardDesign')
   const [icons, setIcons] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -89,7 +91,7 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
   if (icons.length === 0) {
     return (
       <div className="text-gray-500 text-sm p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-        No stamp icons available
+        {t('stampPicker.noIconsFound')}
       </div>
     )
   }
@@ -102,7 +104,7 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search icons..."
+          placeholder={t('stampPicker.searchPlaceholder')}
           disabled={disabled}
           className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         />
@@ -111,7 +113,7 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
       {/* Category Filter - Horizontal Scrollable Pills */}
       {categories.length > 0 && (
         <div className="overflow-x-auto pb-2 -mx-1 px-1">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setSelectedCategory('all')}
               disabled={disabled}
@@ -122,7 +124,7 @@ function StampIconPicker({ selectedIconId, onChange, disabled = false }) {
                 }
                 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              All
+              {t('stampPicker.allCategories')}
             </button>
             {categories.map((cat) => (
               <button

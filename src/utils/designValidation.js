@@ -267,16 +267,17 @@ export function validateCardDesign(design) {
  * Get validation status icon and color
  * @param {boolean} isValid - Whether validation passed
  * @param {boolean} hasWarnings - Whether there are warnings
+ * @param {function} t - Translation function (optional, for translated labels)
  * @returns {{icon: string, color: string, bgColor: string}}
  */
-export function getValidationStatusUI(isValid, hasWarnings) {
+export function getValidationStatusUI(isValid, hasWarnings, t = null) {
   if (!isValid) {
     return {
       icon: '❌',
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       borderColor: 'border-red-200',
-      label: 'Invalid'
+      label: t ? t('validation.status.hasErrors') : 'Invalid'
     }
   }
 
@@ -286,7 +287,7 @@ export function getValidationStatusUI(isValid, hasWarnings) {
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
       borderColor: 'border-yellow-200',
-      label: 'Warnings'
+      label: t ? t('validation.status.hasWarnings') : 'Warnings'
     }
   }
 
@@ -295,7 +296,7 @@ export function getValidationStatusUI(isValid, hasWarnings) {
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
-    label: 'Valid'
+    label: t ? t('validation.status.perfect') : 'Valid'
   }
 }
 

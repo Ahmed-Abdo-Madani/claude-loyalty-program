@@ -6,8 +6,10 @@
 
 import { hexToRgbString } from '../../utils/colorUtils'
 import { apiBaseUrl } from '../../config/api'
+import { useTranslation } from 'react-i18next'
 
 function AppleWalletPreview({ design, offerData, customerData }) {
+  const { t } = useTranslation('cardDesign')
   const {
     background_color = '#3B82F6',
     foreground_color = '#FFFFFF',
@@ -19,17 +21,17 @@ function AppleWalletPreview({ design, offerData, customerData }) {
   } = design || {}
 
   const {
-    title = 'Loyalty Card',
-    description = 'Your loyalty rewards',
+    title = t('preview.mockData.loyaltyCard'),
+    description = t('preview.mockData.loyaltyRewards'),
     stamps_required = 10,
     type = 'stamps',
-    businessName = 'Business Name'
+    businessName = t('preview.mockData.businessName')
   } = offerData || {}
 
   // Mock customer data for preview if not provided
   const mockCustomerName = customerData 
     ? `${customerData.firstName || ''} ${customerData.lastName || ''}`.trim()
-    : 'John Doe'
+    : t('preview.mockData.customerName')
 
   // Mock progress for preview
   const mockProgress = Math.floor(stamps_required * 0.6) // 60% complete
@@ -38,8 +40,8 @@ function AppleWalletPreview({ design, offerData, customerData }) {
   // Mock tier data for preview - Always show tier (New Member for 0 completions)
   const mockCompletions = 0 // Show 0 to demonstrate New Member tier
   const mockTier = {
-    name: 'New Member',
-    nameAr: 'عضو جديد',
+    name: t('preview.tier.newMember'),
+    nameAr: t('preview.tier.newMember'),
     icon: '👋',
     color: '#6B7280'
   }
@@ -135,7 +137,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                   className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: label_color }}
                 >
-                  Progress
+                  {t('preview.labels.progress')}
                 </span>
                 <span
                   className="text-lg font-bold"
@@ -166,7 +168,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                   className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: label_color }}
                 >
-                  Stamps Collected
+                  {t('preview.labels.stampsCollected')}
                 </span>
                 <span
                   className="text-lg font-bold"
@@ -210,7 +212,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                   className="text-xs font-semibold uppercase tracking-wide"
                   style={{ color: label_color }}
                 >
-                  Completed
+                  {t('preview.labels.completed')}
                 </span>
                 <span
                   className="text-sm font-medium"
@@ -249,7 +251,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                   className="text-xs font-semibold uppercase tracking-wide mb-1"
                   style={{ color: label_color }}
                 >
-                  Points Balance
+                  {t('preview.labels.pointsBalance')}
                 </p>
                 <p
                   className="text-2xl font-bold"
@@ -263,7 +265,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                   className="text-xs font-semibold uppercase tracking-wide mb-1"
                   style={{ color: label_color }}
                 >
-                  Next Reward
+                  {t('preview.labels.nextReward')}
                 </p>
                 <p
                   className="text-2xl font-bold"
@@ -282,7 +284,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                 className="text-xs font-semibold uppercase tracking-wide mb-1"
                 style={{ color: label_color }}
               >
-                Member
+                {t('preview.labels.member')}
               </p>
               <p
                 className="text-base font-medium"
@@ -300,7 +302,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                 className="text-xs font-semibold uppercase tracking-wide mb-1"
                 style={{ color: label_color }}
               >
-                Member Since
+                {t('preview.labels.memberSince')}
               </p>
               <p
                 className="text-sm font-medium"
@@ -314,13 +316,13 @@ function AppleWalletPreview({ design, offerData, customerData }) {
                 className="text-xs font-semibold uppercase tracking-wide mb-1"
                 style={{ color: label_color }}
               >
-                Reward
+                {t('preview.labels.reward')}
               </p>
               <p
                 className="text-sm font-medium line-clamp-1"
                 style={{ color: foreground_color }}
               >
-                Free Item
+                {t('preview.mockData.freeItem')}
               </p>
             </div>
           </div>
@@ -333,7 +335,7 @@ function AppleWalletPreview({ design, offerData, customerData }) {
             className="h-20 rounded-lg flex items-center justify-center"
             style={{ backgroundColor: '#FFFFFF' }}
           >
-            <div className="flex space-x-0.5">
+            <div className="flex gap-0.5">
               {Array.from({ length: 15 }).map((_, i) => (
                 <div
                   key={i}
@@ -355,25 +357,25 @@ function AppleWalletPreview({ design, offerData, customerData }) {
       </div>
 
       {/* Platform Label */}
-      <div className="flex items-center justify-center mt-3 space-x-2">
+      <div className="flex items-center justify-center mt-3 gap-2">
         <div className="w-3 h-3 rounded-full bg-black dark:bg-white"></div>
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-          Apple Wallet Preview
+          {t('preview.apple.title')}
         </span>
       </div>
 
       {/* Platform Capabilities Info */}
       <div className="mt-3 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-        <div className="flex items-start space-x-2">
+        <div className="flex items-start gap-2">
           <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
           <div className="flex-1">
             <p className="text-xs font-medium text-green-900 dark:text-green-100">
-              Full Design Control
+              {t('preview.apple.fullDesignControl')}
             </p>
             <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-              Apple Wallet supports all your design choices including Progress Display style (bar/grid), custom colors, logo, and stamp icons. What you see here is exactly what your customers will see.
+              {t('preview.apple.fullDesignControlDesc')}
             </p>
           </div>
         </div>

@@ -1,9 +1,26 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 
-function NotificationModal({ customers = [], notificationType = 'custom', offers = [], onClose, onSuccess }) {
+function NotificationModal({ 
+  customers = [], 
+  notificationType = 'custom', 
+  offers = [], 
+  segmentData = null,
+  segmentId = null,
+  onClose, 
+  onSuccess 
+}) {
+  const { t } = useTranslation('notification')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  
+  // Progress tracking
+  const [sendingProgress, setSendingProgress] = useState(0)
+  const [estimatedTime, setEstimatedTime] = useState(null)
+  const [sendResults, setSendResults] = useState(null)
+  const [showResults, setShowResults] = useState(false)
+  
   const [formData, setFormData] = useState({
     type: notificationType,
     header: '',
@@ -21,245 +38,409 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
   // Notification type configurations
   const notificationTypes = {
     custom: {
-      label: 'Custom Message',
+      label: t('types.custom.label'),
       icon: '💬',
-      description: 'Send a custom notification to selected customers',
+      description: t('types.custom.description'),
       fields: ['header', 'body']
     },
     offer: {
-      label: 'Promotional Offer',
+      label: t('types.offer.label'),
       icon: '🎁',
-      description: 'Promote a specific offer to customers',
+      description: t('types.offer.description'),
       fields: ['offer', 'header', 'body']
     },
     reminder: {
-      label: 'Progress Reminder',
+      label: t('types.reminder.label'),
       icon: '⏰',
-      description: 'Remind customers about their progress',
+      description: t('types.reminder.description'),
       fields: ['offer']
     },
     birthday: {
-      label: 'Birthday Greeting',
+      label: t('types.birthday.label'),
       icon: '🎂',
-      description: 'Send birthday wishes to customers',
+      description: t('types.birthday.description'),
       fields: []
     },
     milestone: {
-      label: 'Milestone Celebration',
+      label: t('types.milestone.label'),
       icon: '🏆',
-      description: 'Celebrate customer achievements',
+      description: t('types.milestone.description'),
       fields: ['milestoneTitle', 'milestoneMessage']
     },
     reengagement: {
-      label: 'Re-engagement',
+      label: t('types.reengagement.label'),
       icon: '💙',
-      description: 'Win back inactive customers',
+      description: t('types.reengagement.description'),
       fields: ['incentiveHeader', 'incentiveBody']
     }
   }
 
   const currentType = notificationTypes[formData.type] || notificationTypes.custom
 
+  // Estimate delivery time based on customer count
+  const estimateDeliveryTime = (count) => {
+    // Bulk API can send to 100 customers in ~2 seconds (rate limits apply)
+    const secondsPerBatch = 2
+    const batchSize = 100
+    const batches = Math.ceil(count / batchSize)
+    const totalSeconds = batches * secondsPerBatch
+    
+    if (totalSeconds < 5) return t('estimatedTime.instant')
+    if (totalSeconds < 60) return t('estimatedTime.seconds', { seconds: totalSeconds })
+    
+    const minutes = Math.ceil(totalSeconds / 60)
+    return t('estimatedTime.minutes', { count: minutes })
+  }
+
+  // Compute estimated time on modal open
+  const recipientCount = segmentData ? segmentData.customerCount : customers.length
+  const precomputedEstimate = estimateDeliveryTime(recipientCount)
+
   // Auto-populate headers/bodies based on type
   useEffect(() => {
     if (formData.type === 'birthday' && !formData.header) {
       setFormData(prev => ({
         ...prev,
-        header: 'Happy Birthday!',
-        body: 'Celebrate with us! We have a special surprise for you.'
+        header: t('defaults.birthdayHeader'),
+        body: t('defaults.birthdayBody')
       }))
     } else if (formData.type === 'reengagement' && !formData.incentiveHeader) {
       setFormData(prev => ({
         ...prev,
-        incentiveHeader: 'We miss you!',
-        incentiveBody: 'Come back and enjoy exclusive rewards waiting for you.'
+        incentiveHeader: t('defaults.reengagementHeader'),
+        incentiveBody: t('defaults.reengagementBody')
       }))
     }
-  }, [formData.type])
+  }, [formData.type, t])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (customers.length === 0) {
-      setError('No customers selected')
+    if (!segmentId && customers.length === 0) {
+      setError(t('errors.noCustomers'))
       return
     }
 
     // Validation based on type
     if (currentType.fields.includes('header') && !formData.header.trim()) {
-      setError('Message header is required')
+      setError(t('errors.headerRequired'))
       return
     }
 
     if (currentType.fields.includes('body') && !formData.body.trim()) {
-      setError('Message body is required')
+      setError(t('errors.bodyRequired'))
       return
     }
 
     if (currentType.fields.includes('offer') && !formData.offerId) {
-      setError('Please select an offer')
+      setError(t('errors.offerRequired'))
       return
     }
 
     if (currentType.fields.includes('milestoneTitle') && !formData.milestoneTitle.trim()) {
-      setError('Milestone title is required')
+      setError(t('errors.milestoneTitleRequired'))
+      return
+    }
+
+    if (currentType.fields.includes('milestoneMessage') && !formData.body.trim()) {
+      setError(t('errors.milestoneMessageRequired'))
       return
     }
 
     setLoading(true)
     setError('')
+    setSendingProgress(10) // Start with visible progress
+    
+    // Calculate estimated time
+    const totalCustomers = segmentData ? segmentData.customerCount : customers.length
+    const timeEstimate = estimateDeliveryTime(totalCustomers)
+    setEstimatedTime(timeEstimate)
+
+    // Animate progress to 90% while loading
+    const progressInterval = setInterval(() => {
+      setSendingProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval)
+          return 90
+        }
+        return prev + 10
+      })
+    }, 200)
 
     try {
-      let endpoint, payload
+      let response, data
 
-      switch (formData.type) {
-        case 'offer':
-          // Send to each customer individually for offer notifications
-          const offerResults = []
-          for (const customer of customers) {
-            const result = await sendOfferNotification(customer.customer_id, formData.offerId, formData.header, formData.body)
-            offerResults.push(result)
-          }
-          const successCount = offerResults.filter(r => r.success).length
-          onSuccess({ successful_customers: successCount, total_customers: customers.length })
-          return
+      // Gate all segment sends: if segmentId is present, use segment endpoint for ANY type
+      if (segmentId) {
+        // Determine message header and body based on type
+        let messageHeader, messageBody, messageType
 
-        case 'reminder':
-          // Send to each customer individually for reminder notifications
-          const reminderResults = []
-          for (const customer of customers) {
-            const result = await sendReminderNotification(customer.customer_id, formData.offerId)
-            reminderResults.push(result)
-          }
-          const reminderSuccessCount = reminderResults.filter(r => r.success).length
-          onSuccess({ successful_customers: reminderSuccessCount, total_customers: customers.length })
-          return
+        switch (formData.type) {
+          case 'custom':
+          case 'segment':
+            messageHeader = formData.header
+            messageBody = formData.body
+            messageType = 'custom'
+            break
 
-        case 'birthday':
-          // Send to each customer individually
-          const birthdayResults = []
-          for (const customer of customers) {
-            const result = await sendBirthdayNotification(customer.customer_id)
-            birthdayResults.push(result)
-          }
-          const birthdaySuccessCount = birthdayResults.filter(r => r.success).length
-          onSuccess({ successful_customers: birthdaySuccessCount, total_customers: customers.length })
-          return
+          case 'offer':
+            messageHeader = formData.header
+            messageBody = formData.body
+            messageType = 'offer'
+            break
 
-        case 'milestone':
-          // Send to each customer individually
-          const milestoneResults = []
-          for (const customer of customers) {
-            const result = await sendMilestoneNotification(customer.customer_id, formData.milestoneTitle, formData.body)
-            milestoneResults.push(result)
-          }
-          const milestoneSuccessCount = milestoneResults.filter(r => r.success).length
-          onSuccess({ successful_customers: milestoneSuccessCount, total_customers: customers.length })
-          return
+          case 'reminder':
+            messageHeader = t('defaults.reminderHeader')
+            messageBody = t('defaults.reminderBody')
+            messageType = 'reminder'
+            break
 
-        case 'reengagement':
-          // Send to each customer individually
-          const reengagementResults = []
-          for (const customer of customers) {
-            const result = await sendReengagementNotification(customer.customer_id, formData.incentiveHeader, formData.incentiveBody)
-            reengagementResults.push(result)
-          }
-          const reengagementSuccessCount = reengagementResults.filter(r => r.success).length
-          onSuccess({ successful_customers: reengagementSuccessCount, total_customers: customers.length })
-          return
+          case 'birthday':
+            messageHeader = formData.header
+            messageBody = formData.body
+            messageType = 'birthday'
+            break
 
-        case 'custom':
-        default:
-          // Bulk notification for custom messages
-          endpoint = endpoints.walletNotificationBulk
-          payload = {
-            customer_ids: customers.map(c => c.customer_id),
-            message_header: formData.header,
-            message_body: formData.body,
-            message_type: 'custom'
-          }
-          break
+          case 'milestone':
+            messageHeader = formData.milestoneTitle
+            messageBody = formData.body
+            messageType = 'milestone'
+            break
+
+          case 'reengagement':
+            messageHeader = formData.incentiveHeader
+            messageBody = formData.incentiveBody
+            messageType = 'reengagement'
+            break
+
+          default:
+            throw new Error(`Unknown notification type: ${formData.type}`)
+        }
+
+        // Use segment-specific endpoint for all types when segmentId is present
+        response = await secureApi.post(endpoints.segmentSendNotification(segmentId), {
+          message_header: messageHeader,
+          message_body: messageBody,
+          message_type: messageType
+        })
+      } else {
+        // Use bulk endpoint with customer_ids for non-segment sends
+        const basePayload = {
+          customer_ids: customers.map(c => c.customer_id)
+        }
+
+        switch (formData.type) {
+          case 'custom':
+            response = await secureApi.post(endpoints.walletNotificationBulk, {
+              ...basePayload,
+              message_header: formData.header,
+              message_body: formData.body,
+              message_type: 'custom'
+            })
+            break
+
+          case 'offer':
+            response = await secureApi.post(endpoints.walletNotificationBulk, {
+              ...basePayload,
+              message_header: formData.header,
+              message_body: formData.body,
+              message_type: 'offer',
+              offer_id: formData.offerId
+            })
+            break
+
+          case 'reminder':
+            response = await secureApi.post(endpoints.walletNotificationBulk, {
+              ...basePayload,
+              message_header: t('defaults.reminderHeader'),
+              message_body: t('defaults.reminderBody'),
+              message_type: 'reminder',
+              offer_id: formData.offerId
+            })
+            break
+
+          case 'birthday':
+            response = await secureApi.post(endpoints.walletNotificationBulk, {
+              ...basePayload,
+              message_header: formData.header,
+              message_body: formData.body,
+              message_type: 'birthday'
+            })
+            break
+
+          case 'milestone':
+            response = await secureApi.post(endpoints.walletNotificationBulk, {
+              ...basePayload,
+              message_header: formData.milestoneTitle,
+              message_body: formData.body,
+              message_type: 'milestone'
+            })
+            break
+
+          case 'reengagement':
+            response = await secureApi.post(endpoints.walletNotificationBulk, {
+              ...basePayload,
+              message_header: formData.incentiveHeader,
+              message_body: formData.incentiveBody,
+              message_type: 'reengagement'
+            })
+            break
+
+          default:
+            throw new Error(`Unknown notification type: ${formData.type}`)
+        }
       }
 
-      const response = await secureApi.post(endpoint, payload)
-      const data = await response.json()
+      // Check response status
+      if (!response.ok) {
+        // Parse error message
+        let errorMessage
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || response.statusText
+        } catch {
+          errorMessage = response.statusText
+        }
+        throw new Error(errorMessage)
+      }
+
+      // Parse JSON response with error handling
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid JSON response from server')
+      }
+
+      // Clear progress animation and set to 100%
+      clearInterval(progressInterval)
+      setSendingProgress(100)
 
       if (data.success) {
-        onSuccess(data.data)
+        // For segment notifications, extract result from nested structure
+        const resultData = formData.type === 'segment' && data.data.result 
+          ? data.data.result 
+          : data.data
+
+        // Store results and show results view
+        setSendResults({
+          successful: resultData.successful_customers || resultData.successful || 0,
+          failed: resultData.failed_customers || resultData.failed || 0,
+          total: resultData.total_customers || resultData.total || segmentData?.customerCount || customers.length,
+          details: resultData.details || [],
+          errors: resultData.errors || []
+        })
+        setShowResults(true)
+        
+        // Call onSuccess after short delay to show results
+        setTimeout(() => {
+          onSuccess(data.data)
+        }, 3000)
       } else {
-        setError(data.message || 'Failed to send notification')
+        setError(data.message || t('errors.sendFailed', { error: '' }))
       }
 
     } catch (err) {
       console.error('Notification send error:', err)
-      setError('Failed to send notification: ' + err.message)
+      clearInterval(progressInterval)
+      setError(t('errors.sendFailed', { error: err.message }))
+      setSendingProgress(0)
     } finally {
       setLoading(false)
     }
   }
 
-  // Helper functions for individual notification types
-  const sendOfferNotification = async (customerId, offerId, title, description) => {
-    try {
-      const response = await secureApi.post(endpoints.walletNotificationOffer, {
-        customer_id: customerId,
-        offer_id: offerId,
-        offer_title: title,
-        offer_description: description
-      })
-      return await response.json()
-    } catch (err) {
-      return { success: false, error: err.message }
-    }
+  // Results View Component
+  const ResultsView = () => {
+    if (!sendResults) return null
+
+    const successRate = sendResults.total > 0 
+      ? ((sendResults.successful / sendResults.total) * 100).toFixed(1)
+      : 0
+
+    return (
+      <div className="p-6 space-y-4">
+        {/* Success Summary */}
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-green-900 dark:text-green-100">
+              {t('results.success')}
+            </h3>
+            <span className="text-2xl">✅</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mt-3">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                {sendResults.successful}
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400">
+                {t('results.successful')}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-700 dark:text-red-300">
+                {sendResults.failed}
+              </div>
+              <div className="text-xs text-red-600 dark:text-red-400">
+                {t('results.failed')}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+                {successRate}%
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">
+                {t('results.successRate')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Errors (if any) */}
+        {sendResults.errors && sendResults.errors.length > 0 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+              {t('results.errors')}
+            </h4>
+            <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+              {sendResults.errors.slice(0, 5).map((error, idx) => (
+                <li key={idx}>{error}</li>
+              ))}
+              {sendResults.errors.length > 5 && (
+                <li className="text-red-600 dark:text-red-400">
+                  {t('results.moreErrors', { 
+                    count: sendResults.errors.length - 5 
+                  })}
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-all"
+        >
+          {t('results.close')}
+        </button>
+      </div>
+    )
   }
 
-  const sendReminderNotification = async (customerId, offerId) => {
-    try {
-      const response = await secureApi.post(endpoints.walletNotificationReminder, {
-        customer_id: customerId,
-        offer_id: offerId
-      })
-      return await response.json()
-    } catch (err) {
-      return { success: false, error: err.message }
-    }
-  }
-
-  const sendBirthdayNotification = async (customerId) => {
-    try {
-      const response = await secureApi.post(endpoints.walletNotificationBirthday, {
-        customer_id: customerId
-      })
-      return await response.json()
-    } catch (err) {
-      return { success: false, error: err.message }
-    }
-  }
-
-  const sendMilestoneNotification = async (customerId, title, message) => {
-    try {
-      const response = await secureApi.post(endpoints.walletNotificationMilestone, {
-        customer_id: customerId,
-        milestone_title: title,
-        milestone_message: message
-      })
-      return await response.json()
-    } catch (err) {
-      return { success: false, error: err.message }
-    }
-  }
-
-  const sendReengagementNotification = async (customerId, header, body) => {
-    try {
-      const response = await secureApi.post(endpoints.walletNotificationReengagement, {
-        customer_id: customerId,
-        incentive_header: header,
-        incentive_body: body
-      })
-      return await response.json()
-    } catch (err) {
-      return { success: false, error: err.message }
-    }
+  // Show results view if available
+  if (showResults) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {t('results.title')}
+            </h2>
+          </div>
+          <ResultsView />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -267,7 +448,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <span className="text-2xl">{currentType.icon}</span>
             </div>
@@ -276,19 +457,53 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
                 {currentType.label}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Sending to {customers.length} customer{customers.length !== 1 ? 's' : ''}
+                {segmentData 
+                  ? t('sendingToSegment', { 
+                      name: segmentData.segmentName,
+                      count: segmentData.customerCount
+                    })
+                  : t('sendingTo', { count: customers.length })
+                }
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            disabled={loading}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
+
+        {/* Progress Indicator */}
+        {loading && (
+          <div className="px-6 py-4 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                {t('progress.sending')}
+              </span>
+              {sendingProgress > 0 && (
+                <span className="text-sm text-blue-700 dark:text-blue-300">
+                  {sendingProgress}%
+                </span>
+              )}
+            </div>
+            <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+              <div 
+                className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                style={{ width: sendingProgress > 0 ? `${sendingProgress}%` : '100%' }}
+              />
+            </div>
+            {estimatedTime && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                {t('progress.estimatedTime', { time: estimatedTime })}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -305,7 +520,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {/* Type Selector */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Notification Type
+              {t('notificationType')}
             </label>
             <select
               value={formData.type}
@@ -327,7 +542,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('offer') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Offer *
+                {t('selectOffer')}
               </label>
               <select
                 value={formData.offerId}
@@ -335,7 +550,7 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="">Choose an offer...</option>
+                <option value="">{t('chooseOffer')}</option>
                 {offers.map((offer) => (
                   <option key={offer.public_id} value={offer.public_id}>
                     {offer.title}
@@ -349,19 +564,19 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('header') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Message Header *
+                {t('messageHeader')}
               </label>
               <input
                 type="text"
                 value={formData.header}
                 onChange={(e) => setFormData({ ...formData, header: e.target.value.slice(0, HEADER_LIMIT) })}
-                placeholder="e.g., Special Offer Just for You!"
+                placeholder={t('messageHeaderPlaceholder')}
                 maxLength={HEADER_LIMIT}
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
-                {formData.header.length}/{HEADER_LIMIT} characters
+                {t('headerLimit', { current: formData.header.length, max: HEADER_LIMIT })}
               </p>
             </div>
           )}
@@ -370,19 +585,19 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('body') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Message Body *
+                {t('messageBody')}
               </label>
               <textarea
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value.slice(0, BODY_LIMIT) })}
-                placeholder="Enter your message here..."
+                placeholder={t('messageBodyPlaceholder')}
                 rows={4}
                 maxLength={BODY_LIMIT}
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
-                {formData.body.length}/{BODY_LIMIT} characters
+                {t('bodyLimit', { current: formData.body.length, max: BODY_LIMIT })}
               </p>
             </div>
           )}
@@ -391,13 +606,13 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('milestoneTitle') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Milestone Title *
+                {t('milestoneTitle')}
               </label>
               <input
                 type="text"
                 value={formData.milestoneTitle}
                 onChange={(e) => setFormData({ ...formData, milestoneTitle: e.target.value.slice(0, HEADER_LIMIT) })}
-                placeholder="e.g., 10th Visit Milestone!"
+                placeholder={t('milestoneTitlePlaceholder')}
                 maxLength={HEADER_LIMIT}
                 required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -409,12 +624,12 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
           {currentType.fields.includes('milestoneMessage') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Celebration Message
+                {t('celebrationMessage')}
               </label>
               <textarea
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value.slice(0, BODY_LIMIT) })}
-                placeholder="Congratulations on reaching this milestone!"
+                placeholder={t('celebrationPlaceholder')}
                 rows={3}
                 maxLength={BODY_LIMIT}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
@@ -427,25 +642,25 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Greeting Header
+                  {t('greetingHeader')}
                 </label>
                 <input
                   type="text"
                   value={formData.incentiveHeader}
                   onChange={(e) => setFormData({ ...formData, incentiveHeader: e.target.value.slice(0, HEADER_LIMIT) })}
-                  placeholder="We miss you!"
+                  placeholder={t('greetingHeaderPlaceholder')}
                   maxLength={HEADER_LIMIT}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Incentive Message
+                  {t('incentiveMessage')}
                 </label>
                 <textarea
                   value={formData.incentiveBody}
                   onChange={(e) => setFormData({ ...formData, incentiveBody: e.target.value.slice(0, BODY_LIMIT) })}
-                  placeholder="Come back and enjoy exclusive rewards..."
+                  placeholder={t('incentivePlaceholder')}
                   rows={3}
                   maxLength={BODY_LIMIT}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
@@ -459,14 +674,14 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center">
                 <span className="mr-2">📱</span>
-                Wallet Notification Preview
+                {t('walletPreview')}
               </h3>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
                 <div className="font-semibold text-gray-900 dark:text-white mb-1">
-                  {formData.header || formData.milestoneTitle || formData.incentiveHeader || 'Your Notification Header'}
+                  {formData.header || formData.milestoneTitle || formData.incentiveHeader || t('yourNotificationHeader')}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {formData.body || formData.incentiveBody || 'Your notification message will appear here...'}
+                  {formData.body || formData.incentiveBody || t('yourNotificationMessage')}
                 </div>
               </div>
             </div>
@@ -477,39 +692,54 @@ function NotificationModal({ customers = [], notificationType = 'custom', offers
             <div className="flex items-start">
               <span className="text-blue-600 dark:text-blue-400 mr-3 mt-0.5">ℹ️</span>
               <div className="text-sm text-blue-800 dark:text-blue-300">
-                <p className="font-medium mb-1">Important Notes:</p>
+                <p className="font-medium mb-1">{t('importantNotes')}</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Rate limit: 10 notifications per customer per day</li>
-                  <li>Only customers with active wallet passes will receive notifications</li>
-                  <li>Messages will appear in Apple Wallet and Google Wallet</li>
+                  <li>{t('rateLimit')}</li>
+                  <li>{t('activeWalletOnly')}</li>
+                  <li>{t('appearsInWallets')}</li>
                 </ul>
               </div>
             </div>
           </div>
 
+          {/* Pre-send Summary */}
+          <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {t('summary.recipientCount', { count: recipientCount })}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {t('summary.estimatedDelivery', { time: precomputedEstimate })}
+                </p>
+              </div>
+              <div className="text-3xl">⚡</div>
+            </div>
+          </div>
+
           {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4">
+          <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
               className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors duration-200"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
-              disabled={loading || customers.length === 0}
-              className="flex-1 px-6 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+              disabled={loading || (!segmentId && customers.length === 0)}
+              className="flex-1 px-6 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Sending...</span>
+                  <span>{t('sending')}</span>
                 </>
               ) : (
                 <>
                   <span>📤</span>
-                  <span>Send Notification</span>
+                  <span>{t('sendNotification')}</span>
                 </>
               )}
             </button>

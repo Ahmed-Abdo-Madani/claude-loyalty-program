@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { validateImageFile } from '../../utils/designValidation'
 
 function LogoUploader({
@@ -17,6 +18,7 @@ function LogoUploader({
   onApplySuggestedColor,
   uploading = false
 }) {
+  const { t } = useTranslation('common')
   const [dragActive, setDragActive] = useState(false)
   const [preview, setPreview] = useState(null)
   const [error, setError] = useState(null)
@@ -131,14 +133,14 @@ function LogoUploader({
           <div className="p-4 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Logo Preview
+                {t('upload.logoPreview')}
               </h4>
               <button
                 type="button"
                 onClick={handleRemove}
                 className="px-3 py-1.5 text-sm bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg transition-colors"
               >
-                Remove
+                {t('upload.remove')}
               </button>
             </div>
 
@@ -155,20 +157,20 @@ function LogoUploader({
             {suggestedColor && onApplySuggestedColor && (
               <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div
                       className="w-16 h-16 rounded-lg border-2 border-purple-300 dark:border-purple-600 shadow-sm flex-shrink-0"
                       style={{ backgroundColor: suggestedColor }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-purple-900 dark:text-purple-200">
-                        Suggested Color
+                        {t('upload.suggestedColor')}
                       </p>
                       <p className="text-xs text-purple-700 dark:text-purple-300 font-mono">
                         {suggestedColor}
                       </p>
                       <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                        💡 From your logo
+                        {t('upload.fromYourLogo')}
                       </p>
                     </div>
                   </div>
@@ -181,7 +183,7 @@ function LogoUploader({
                       }}
                       className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap"
                     >
-                      Apply Color
+                      {t('upload.applyColor')}
                     </button>
                   </div>
                 </div>
@@ -193,7 +195,7 @@ function LogoUploader({
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {googleLogoUrl && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                    <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <div className="w-4 h-4 rounded-full bg-green-500"></div>
                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                         Google Wallet
@@ -214,7 +216,7 @@ function LogoUploader({
 
                 {appleLogoUrl && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                    <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <div className="w-4 h-4 rounded-full bg-black dark:bg-white"></div>
                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                         Apple Wallet
@@ -242,7 +244,7 @@ function LogoUploader({
               disabled={uploading}
               className="mt-3 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
             >
-              {uploading ? 'Uploading...' : 'Upload Different Image'}
+              {uploading ? t('upload.uploading') : t('upload.uploadDifferentImage')}
             </button>
           </div>
         ) : (
@@ -251,7 +253,7 @@ function LogoUploader({
               <div className="space-y-3">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Uploading and processing...
+                  {t('upload.uploadingProcessing')}
                 </p>
               </div>
             ) : (
@@ -262,20 +264,20 @@ function LogoUploader({
                   </svg>
                 </div>
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Upload Your Logo
+                  {t('upload.uploadYourLogo')}
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                  Drag and drop, or tap to browse
+                  {t('upload.dragAndDrop')}
                 </p>
                 <button
                   type="button"
                   onClick={handleButtonClick}
                   className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
                 >
-                  Choose File
+                  {t('upload.chooseFile')}
                 </button>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
-                  PNG or JPG • Max 5MB
+                  {t('upload.maxFileSize')}
                 </p>
               </>
             )}
@@ -286,11 +288,11 @@ function LogoUploader({
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-          <div className="flex items-start space-x-2">
+          <div className="flex items-start gap-2">
             <span className="text-red-600 dark:text-red-400 mt-0.5">⚠️</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-                Upload Error
+                {t('upload.uploadError')}
               </p>
               <p className="text-xs text-red-700 dark:text-red-400 mt-1">
                 {error}
@@ -302,24 +304,24 @@ function LogoUploader({
 
       {/* Info Box - Simplified */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-        <div className="flex items-start space-x-2">
+        <div className="flex items-start gap-2">
           <span className="text-blue-600 dark:text-blue-400 mt-0.5">💡</span>
           <div className="flex-1">
             <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">
-              Tip: Use square logos for best results
+              {t('upload.tipSquareLogos')}
             </p>
             <button
               type="button"
               onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
               className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             >
-              {showTechnicalDetails ? 'Hide' : 'Show'} technical details
+              {showTechnicalDetails ? t('upload.hideTechnicalDetails') : t('upload.showTechnicalDetails')}
             </button>
             {showTechnicalDetails && (
               <ul className="list-disc list-inside space-y-1 mt-2 text-xs text-blue-700 dark:text-blue-400 opacity-90">
-                <li>Google Wallet: Cropped to circle (660x660px min)</li>
-                <li>Apple Wallet: Rectangular (320x100px @ 2x)</li>
-                <li>Keep important content centered</li>
+                <li>{t('upload.googleWalletCircular')}</li>
+                <li>{t('upload.appleWalletRectangular')}</li>
+                <li>{t('upload.keepContentCentered')}</li>
               </ul>
             )}
           </div>

@@ -411,7 +411,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
         {scanStatus === 'processing' && (
           <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2">
             <div className="bg-purple-600 text-white px-6 py-3 rounded-lg">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
                 <span>Processing scan...</span>
               </div>
@@ -434,7 +434,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
         {/* Error Message */}
         {scanStatus === 'error' && errorMessage && (
           <div className="bg-red-600 text-white p-4 lg:p-3 rounded-lg mb-3 text-base lg:text-sm">
-            <div className="flex items-start space-x-2">
+            <div className="flex items-start gap-">
               <span className="text-xl">⚠️</span>
               <div>
                 <div className="font-semibold">Scanning Error</div>

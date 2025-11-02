@@ -13,6 +13,11 @@ import WalletPass from './WalletPass.js'
 import OfferCardDesign from './OfferCardDesign.js'
 import Device from './Device.js'
 import DeviceRegistration from './DeviceRegistration.js'
+import AutoEngagementConfigModel from './AutoEngagementConfig.js'
+import BusinessSession from './BusinessSession.js'
+import AdminSession from './AdminSession.js'
+
+const AutoEngagementConfig = AutoEngagementConfigModel(sequelize)
 
 // Define SECURE model associations using public_id fields
 Business.hasMany(Offer, {
@@ -256,6 +261,34 @@ DeviceRegistration.belongsTo(WalletPass, {
   as: 'walletPass'
 })
 
+// AutoEngagementConfig relationships
+Business.hasOne(AutoEngagementConfig, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'autoEngagementConfig',
+  onDelete: 'CASCADE'
+})
+
+AutoEngagementConfig.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+// BusinessSession relationships
+Business.hasMany(BusinessSession, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'sessions',
+  onDelete: 'CASCADE'
+})
+
+BusinessSession.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -270,7 +303,10 @@ export {
   WalletPass,
   OfferCardDesign,
   Device,
-  DeviceRegistration
+  DeviceRegistration,
+  AutoEngagementConfig,
+  BusinessSession,
+  AdminSession
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -389,6 +425,9 @@ export default {
   OfferCardDesign,
   Device,
   DeviceRegistration,
+  AutoEngagementConfig,
+  BusinessSession,
+  AdminSession,
   syncDatabase,
   seedDatabase
 }

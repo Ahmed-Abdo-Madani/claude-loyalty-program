@@ -54,6 +54,8 @@ docs/
 
 The archive directory contains historical implementation reports, completion status files, and planning documents from various development phases. These files are preserved for reference but represent completed work.
 
+**📌 Note:** Archive files are **version-controlled** and committed to the repository to preserve development history and provide context for future decisions. This ensures that the reasoning behind implementation choices is documented and accessible to all team members.
+
 ### Archive Categories
 - **Apple Wallet Implementation** - Apple Wallet integration completion reports
 - **Branch Manager Portal** - Branch manager features and fixes

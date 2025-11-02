@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import OfferCard from './OfferCard'
 
 function OfferGrid({
@@ -8,15 +9,15 @@ function OfferGrid({
   onToggleStatus,
   onQRCode,
   onAnalytics,
-  onDuplicate,
   onDesignCard
 }) {
+  const { t } = useTranslation('dashboard')
 
   if (loading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">Loading offers...</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('offers.loading')}</p>
       </div>
     )
   }
@@ -28,13 +29,13 @@ function OfferGrid({
           <span className="text-3xl">🎁</span>
         </div>
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-          No offers found
+          {t('offers.noOffersFound')}
         </h3>
         <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-          You haven't created any loyalty offers yet. Start by creating your first offer to engage customers and build loyalty.
+          {t('offers.noOffersDesc')}
         </p>
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Try adjusting your filters or create a new offer to get started.
+          {t('offers.tryAdjustingFilters')}
         </div>
       </div>
     )
@@ -53,7 +54,6 @@ function OfferGrid({
             onToggleStatus={onToggleStatus}
             onQRCode={onQRCode}
             onAnalytics={onAnalytics}
-            onDuplicate={onDuplicate}
             onDesignCard={onDesignCard}
           />
         ))}
@@ -66,7 +66,7 @@ function OfferGrid({
             {offers.length}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Total Offers
+            {t('offers.totalOffers')}
           </div>
         </div>
         <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
@@ -74,7 +74,7 @@ function OfferGrid({
             {offers.filter(offer => offer.status === 'active').length}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Active
+            {t('offers.active')}
           </div>
         </div>
         <div className="flex-1 text-center">
@@ -82,7 +82,7 @@ function OfferGrid({
             {offers.reduce((sum, offer) => sum + (offer.redeemed || 0), 0)}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
-            Redeemed
+            {t('offers.redeemed')}
           </div>
         </div>
       </div>

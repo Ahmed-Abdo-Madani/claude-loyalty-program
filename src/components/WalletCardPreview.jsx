@@ -152,7 +152,7 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
       {/* Wallet Card Preview */}
       <div className="bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl p-6 shadow-lg max-w-sm mx-auto">
         <div className="flex justify-between items-start mb-4">
-          <div className="flex items-start space-x-3">
+          <div className="flex items-start gap-3">
             {/* Business Logo */}
             {offerData.businessLogo && (
               <img
@@ -188,7 +188,7 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
 
         {/* Stamps Visual */}
         <div className="mb-4">
-          <div className="flex justify-center space-x-1 mb-2">
+          <div className="flex justify-center gap-1 mb-2">
             {walletPreview.stamps.slice(0, 10).map((stamp, index) => (
               <span
                 key={index}
@@ -276,7 +276,7 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
           <button
             onClick={handleAddToAppleWallet}
             disabled={isGenerating}
-            className="w-full bg-black text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="w-full bg-black text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50"
           >
             {isGenerating ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -293,7 +293,7 @@ function WalletCardPreview({ customerData, offerData, progressData, onAddToWalle
           <button
             onClick={handleAddToGoogleWallet}
             disabled={isGenerating}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {isGenerating ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
