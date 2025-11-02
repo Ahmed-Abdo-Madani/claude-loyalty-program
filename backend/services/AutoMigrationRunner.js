@@ -53,11 +53,14 @@ class AutoMigrationRunner {
       logger.info('🔒 Acquiring migration advisory lock...')
       
       const lockHash = this.hashString('schema_migrations')
-      const [lockResult] = await connection.query(
-        `SELECT pg_try_advisory_lock(${lockHash}) as locked`
+      
+      // Comment 1 & 2 fix: Use positional parameters and destructure { rows }
+      const { rows: lockRows } = await connection.query(
+        'SELECT pg_try_advisory_lock($1) as locked',
+        [lockHash]
       )
       
-      lockAcquired = lockResult[0].locked
+      lockAcquired = Boolean(lockRows?.[0]?.locked)
       
       if (!lockAcquired) {
         logger.warn('⚠️  Could not acquire migration lock - another instance is running migrations')
@@ -67,10 +70,13 @@ class AutoMigrationRunner {
         const waitStart = Date.now()
         while (!lockAcquired && (Date.now() - waitStart) < lockTimeout) {
           await this.sleep(1000)
-          const [retryResult] = await connection.query(
-            `SELECT pg_try_advisory_lock(${lockHash}) as locked`
+          
+          // Comment 1 & 2 fix: Use positional parameters and destructure { rows }
+          const { rows: retryRows } = await connection.query(
+            'SELECT pg_try_advisory_lock($1) as locked',
+            [lockHash]
           )
-          lockAcquired = retryResult[0].locked
+          lockAcquired = Boolean(retryRows?.[0]?.locked)
         }
         
         if (!lockAcquired) {
@@ -142,8 +148,9 @@ class AutoMigrationRunner {
           
           const migrationStart = Date.now()
           
+          // Comment 4 fix: Use Sequelize for DML (supports replacements properly)
           // Insert record with status='running' (UPSERT to handle re-runs of failed migrations)
-          await connection.query(
+          await sequelize.query(
             `INSERT INTO schema_migrations (migration_name, status, applied_at)
              VALUES (:name, 'running', NOW())
              ON CONFLICT (migration_name) 
@@ -169,8 +176,9 @@ class AutoMigrationRunner {
           
           const executionTime = Date.now() - migrationStart
           
+          // Comment 4 fix: Use Sequelize for DML (supports replacements properly)
           // Update record with success status
-          await connection.query(
+          await sequelize.query(
             `UPDATE schema_migrations 
              SET status = 'success', 
                  execution_time_ms = :time,
@@ -201,9 +209,10 @@ class AutoMigrationRunner {
           logger.error(`      ❌ Migration failed: ${error.message}`)
           logger.error(`      Stack: ${error.stack}`)
           
+          // Comment 4 fix: Use Sequelize for DML (supports replacements properly)
           // Update record with failed status
           try {
-            await connection.query(
+            await sequelize.query(
               `UPDATE schema_migrations 
                SET status = 'failed', 
                    error_message = :error,
@@ -263,7 +272,8 @@ class AutoMigrationRunner {
       // Always release lock and connection
       if (lockAcquired && lockId !== null && connection) {
         try {
-          await connection.query(`SELECT pg_advisory_unlock(${lockId})`)
+          // Comment 3 fix: Use positional parameter instead of interpolation
+          await connection.query('SELECT pg_advisory_unlock($1)', [lockId])
           logger.info('🔓 Migration lock released')
         } catch (unlockError) {
           logger.error('⚠️  Failed to release migration lock:', unlockError.message)
