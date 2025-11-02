@@ -4,9 +4,197 @@
 
 Migrations are database schema changes that must be explicitly run to update the database structure. Sequelize models define the application's expected database schema, but **Sequelize does not automatically sync schema changes in production**. After pulling code with new model definitions, you must run the corresponding migration to update the database.
 
+## Automatic Migrations (Production)
+
+### Overview
+
+The platform now includes **automatic migration tracking and execution**. Migrations run automatically during production deployments without manual intervention.
+
+### How It Works
+
+**Two-Layer Approach:**
+
+1. **Render preDeploy Command** (Primary)
+   - Runs: `node scripts/deploy-migrations.js`
+   - When: After Docker build, before traffic switches
+   - Benefit: Zero-downtime deployments
+   - Requires: Render Starter plan or higher
+
+2. **Server Startup Check** (Safety Net)
+   - Runs: `AutoMigrationRunner.runPendingMigrations()`
+   - When: During server initialization in `server.js`
+   - Benefit: Validates schema, catches missed migrations
+   - Controlled by: `AUTO_MIGRATE` environment variable
+
+### Migration Tracking Table
+
+**Table**: `schema_migrations`
+
+**Columns**:
+- `migration_name` - Filename without .js extension
+- `applied_at` - When migration was applied
+- `execution_time_ms` - How long it took
+- `status` - success, failed, or running
+- `error_message` - Error details if failed
+- `checksum` - SHA-256 hash for integrity validation
+
+**Query migration status**:
+```sql
+SELECT migration_name, applied_at, execution_time_ms, status 
+FROM schema_migrations 
+ORDER BY applied_at DESC 
+LIMIT 10;
+```
+
+### NPM Scripts
+
+**Check migration status**:
+```bash
+npm run migrate:status
+# Shows: applied migrations, pending migrations, failed migrations
+```
+
+**List pending migrations**:
+```bash
+npm run migrate:pending
+# Shows: migrations that haven't been applied yet
+```
+
+**Run pending migrations manually**:
+```bash
+npm run migrate:auto
+# Runs all pending migrations in order
+```
+
+**Dry-run (test without executing)**:
+```bash
+npm run migrate:auto:dry-run
+# Shows what would run without actually executing
+```
+
+**Validate migration integrity**:
+```bash
+npm run migrate:validate
+# Checks if applied migrations have been modified (checksum validation)
+```
+
+**Interactive CLI**:
+```bash
+npm run migrate:cli
+# Opens interactive menu for migration management
+```
+
+### Deployment Workflow
+
+**Normal Deployment** (Automatic):
+1. Push code to GitHub
+2. Render detects changes and starts build
+3. Docker image is built
+4. **preDeploy runs**: `node scripts/deploy-migrations.js`
+5. Pending migrations execute automatically
+6. If migrations succeed: Traffic switches to new version
+7. If migrations fail: Deployment aborts, old version keeps running
+8. Server starts and validates schema
+
+**Manual Deployment** (Emergency):
+1. Set `AUTO_MIGRATE=false` in Render environment variables
+2. Deploy code
+3. SSH into Render instance or use Render shell
+4. Run: `npm run migrate:auto`
+5. Verify: `npm run migrate:status`
+6. Re-enable: Set `AUTO_MIGRATE=true`
+
+### Safety Features
+
+**Advisory Locks**:
+- Prevents concurrent migration execution
+- Uses Postgres advisory locks: `pg_try_advisory_lock()`
+- Automatically released on completion or error
+- Timeout: 30 seconds (configurable via `MIGRATION_LOCK_TIMEOUT`)
+
+**Idempotency**:
+- Each migration checks for existing columns/tables
+- Safe to run multiple times
+- Skips already-applied migrations
+
+**Checksum Validation**:
+- Detects if migration files were modified after being applied
+- Warns about integrity violations
+- Helps prevent accidental schema drift
+
+**Transaction Safety**:
+- Each migration runs in its own transaction
+- Automatic rollback on error
+- All-or-nothing execution per migration
+
+**Fail-Fast in Production**:
+- Server refuses to start if migrations fail
+- Prevents serving traffic with incomplete schema
+- Clear error messages with remediation steps
+
+### Disabling Auto-Migrations
+
+**When to disable**:
+- Emergency hotfix that doesn't require schema changes
+- Testing deployment pipeline
+- Debugging migration issues
+
+**How to disable**:
+```bash
+# In Render environment variables
+AUTO_MIGRATE=false
+```
+
+**Important**: Remember to re-enable after the emergency!
+
+### Monitoring
+
+**Check migration logs**:
+```bash
+# In Render dashboard, check deployment logs for:
+✅ Auto-migrations completed successfully
+   Applied: 2, Failed: 0, Total: 24
+```
+
+**Check server startup logs**:
+```bash
+# Should see:
+✅ Database schema is up to date (no pending migrations)
+# Or:
+✅ Auto-migrations completed successfully
+```
+
+**Query migration history**:
+```sql
+SELECT 
+  migration_name,
+  applied_at,
+  execution_time_ms,
+  status
+FROM schema_migrations
+ORDER BY applied_at DESC;
+```
+
 ## Running Migrations
 
-### Basic Usage
+### Automatic (Recommended)
+
+Migrations run automatically during production deployments. No manual intervention required.
+
+**Check status**:
+```bash
+npm run migrate:status
+```
+
+**Test locally**:
+```bash
+npm run migrate:auto:dry-run  # See what would run
+npm run migrate:auto          # Run pending migrations
+```
+
+### Manual (Legacy/Emergency)
+
+For emergency situations or local development:
 
 Run a migration from the project root directory:
 
@@ -14,11 +202,12 @@ Run a migration from the project root directory:
 node backend/run-migration.js <migration-file-name>
 ```
 
-### Example
-
+**Example**:
 ```bash
 node backend/run-migration.js 20250131-add-notification-campaign-fields.js
 ```
+
+**Note**: Manual execution is only needed if auto-migrations are disabled or for testing individual migrations.
 
 ### What Happens
 
@@ -211,6 +400,66 @@ If a migration contains breaking changes:
 
 ## Troubleshooting
 
+## Troubleshooting Auto-Migrations
+
+### Error: "Could not acquire migration lock"
+
+**Cause**: Another instance is running migrations or a previous run didn't release the lock
+
+**Solution**:
+```sql
+-- Check for active locks
+SELECT * FROM pg_locks WHERE locktype = 'advisory';
+
+-- Force release (use with caution)
+SELECT pg_advisory_unlock_all();
+```
+
+### Error: "Migration checksum mismatch"
+
+**Cause**: Migration file was modified after being applied
+
+**Solution**:
+1. Review the migration file changes
+2. If changes are intentional, create a new migration instead
+3. Never modify applied migrations
+4. Run `npm run migrate:validate` to see all mismatches
+
+### Error: "schema_migrations table does not exist"
+
+**Cause**: Tracking table migration hasn't been run
+
+**Solution**:
+```bash
+npm run migrate:tracking-table
+# Or:
+node backend/run-migration.js 19990101-create-schema-migrations-table.js
+```
+
+### Deployment Failed: "Migration timeout"
+
+**Cause**: Migration took longer than lock timeout (default 30s)
+
+**Solution**:
+1. Increase timeout: Set `MIGRATION_LOCK_TIMEOUT=60000` in Render env vars
+2. Optimize slow migration (add indexes after data migration, not during)
+3. Check database performance
+
+### Server Won't Start: "Pending migrations detected"
+
+**Cause**: Auto-migrations are disabled but pending migrations exist
+
+**Solution**:
+```bash
+# Enable auto-migrations
+AUTO_MIGRATE=true
+
+# Or run manually
+npm run migrate:auto
+```
+
+## Troubleshooting Manual Migrations
+
 ### Error: "Column already exists"
 
 **Cause:** The migration was already run, or another migration created the column.
@@ -258,13 +507,30 @@ If a migration contains breaking changes:
 
 ### Naming Convention
 
-Format: `YYYYMMDD-description.js`
+**ENFORCED Format:** `YYYYMMDD-description.js`
+
+**Critical:** The auto-migration system **only executes** files following this format. Non-compliant filenames are automatically excluded to ensure deterministic execution order across all environments.
 
 Examples:
 - `20250202-create-or-sync-business-sessions.js` - **Handles schema drift** (creates or alters table)
 - `20250131-add-notification-campaign-fields.js`
 - `20250114-add-wallet-notification-tracking.js`
 - `20250129-add-loyalty-tiers-to-offers.js`
+
+**Why enforced:**
+- Ensures lexicographic sorting = chronological sorting
+- Prevents environment-specific execution order bugs
+- Makes migration history predictable and auditable
+- Non-dated files (e.g., `run-cleanup-migration.js`) are treated as utility scripts and excluded
+
+**Excluded migrations (manual-only):**
+Some migrations are intentionally excluded from automatic execution for safety:
+- `20250121-cleanup-old-apple-wallet-passes.js` - Deletes data; must be run manually with explicit confirmation
+
+To run excluded migrations manually:
+```bash
+node backend/run-migration.js 20250121-cleanup-old-apple-wallet-passes.js
+```
 
 ### Migration Types
 

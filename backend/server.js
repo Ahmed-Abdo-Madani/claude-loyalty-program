@@ -314,9 +314,12 @@ async function initializeDatabase() {
       try {
         logger.info('🔄 Checking for pending database migrations...')
         
+        const lockTimeout = parseInt(process.env.MIGRATION_LOCK_TIMEOUT || '30000', 10)
+        const stopOnError = process.env.MIGRATION_STOP_ON_ERROR !== 'false'
+        
         const migrationResult = await AutoMigrationRunner.runPendingMigrations({
-          stopOnError: true,
-          lockTimeout: 30000
+          stopOnError,
+          lockTimeout
         })
         
         if (migrationResult.failed > 0) {

@@ -44,14 +44,16 @@ class AutoMigrationRunner {
     
     let lockAcquired = false
     let lockId = null
+    let connection = null
     const startTime = Date.now()
     
     try {
-      // Step 1: Acquire advisory lock
+      // Step 1: Acquire dedicated connection for advisory lock
+      connection = await sequelize.connectionManager.getConnection({ type: 'WRITE' })
       logger.info('🔒 Acquiring migration advisory lock...')
       
       const lockHash = this.hashString('schema_migrations')
-      const [lockResult] = await sequelize.query(
+      const [lockResult] = await connection.query(
         `SELECT pg_try_advisory_lock(${lockHash}) as locked`
       )
       
@@ -65,7 +67,7 @@ class AutoMigrationRunner {
         const waitStart = Date.now()
         while (!lockAcquired && (Date.now() - waitStart) < lockTimeout) {
           await this.sleep(1000)
-          const [retryResult] = await sequelize.query(
+          const [retryResult] = await connection.query(
             `SELECT pg_try_advisory_lock(${lockHash}) as locked`
           )
           lockAcquired = retryResult[0].locked
@@ -141,14 +143,13 @@ class AutoMigrationRunner {
           const migrationStart = Date.now()
           
           // Insert record with status='running' (UPSERT to handle re-runs of failed migrations)
-          await sequelize.query(
+          await connection.query(
             `INSERT INTO schema_migrations (migration_name, status, applied_at)
              VALUES (:name, 'running', NOW())
              ON CONFLICT (migration_name) 
              DO UPDATE SET status='running', error_message=NULL, applied_at=NOW()`,
             {
-              replacements: { name: migrationName },
-              type: sequelize.QueryTypes.INSERT
+              replacements: { name: migrationName }
             }
           )
           
@@ -169,7 +170,7 @@ class AutoMigrationRunner {
           const executionTime = Date.now() - migrationStart
           
           // Update record with success status
-          await sequelize.query(
+          await connection.query(
             `UPDATE schema_migrations 
              SET status = 'success', 
                  execution_time_ms = :time,
@@ -181,8 +182,7 @@ class AutoMigrationRunner {
                 name: migrationName, 
                 time: executionTime,
                 checksum 
-              },
-              type: sequelize.QueryTypes.UPDATE
+              }
             }
           )
           
@@ -203,7 +203,7 @@ class AutoMigrationRunner {
           
           // Update record with failed status
           try {
-            await sequelize.query(
+            await connection.query(
               `UPDATE schema_migrations 
                SET status = 'failed', 
                    error_message = :error,
@@ -213,8 +213,7 @@ class AutoMigrationRunner {
                 replacements: { 
                   name: migrationName, 
                   error: error.message 
-                },
-                type: sequelize.QueryTypes.UPDATE
+                }
               }
             )
           } catch (updateError) {
@@ -261,13 +260,21 @@ class AutoMigrationRunner {
       throw error
       
     } finally {
-      // Always release lock
-      if (lockAcquired && lockId !== null) {
+      // Always release lock and connection
+      if (lockAcquired && lockId !== null && connection) {
         try {
-          await sequelize.query(`SELECT pg_advisory_unlock(${lockId})`)
+          await connection.query(`SELECT pg_advisory_unlock(${lockId})`)
           logger.info('🔓 Migration lock released')
         } catch (unlockError) {
           logger.error('⚠️  Failed to release migration lock:', unlockError.message)
+        }
+      }
+      
+      if (connection) {
+        try {
+          await sequelize.connectionManager.releaseConnection(connection)
+        } catch (releaseError) {
+          logger.error('⚠️  Failed to release connection:', releaseError.message)
         }
       }
     }
@@ -279,6 +286,9 @@ class AutoMigrationRunner {
    */
   static async getAppliedMigrations() {
     try {
+      // Ensure tracking table exists before querying
+      await this.ensureTrackingTableExists()
+      
       const [results] = await sequelize.query(
         `SELECT migration_name 
          FROM schema_migrations 
@@ -289,7 +299,7 @@ class AutoMigrationRunner {
       return results.map(row => row.migration_name)
       
     } catch (error) {
-      // Table might not exist yet
+      // Table might not exist yet (fallback safety)
       if (error.message.includes('does not exist')) {
         return []
       }
@@ -316,6 +326,9 @@ class AutoMigrationRunner {
    */
   static async getMigrationStatus() {
     try {
+      // Ensure tracking table exists before querying
+      await this.ensureTrackingTableExists()
+      
       const allFiles = await this.scanMigrationFiles()
       const [appliedResults] = await sequelize.query(
         `SELECT migration_name, applied_at, execution_time_ms, status, error_message
@@ -323,32 +336,38 @@ class AutoMigrationRunner {
          ORDER BY applied_at DESC`
       )
       
-      const appliedMap = new Map(
-        appliedResults.map(row => [row.migration_name, row])
-      )
+      const successfulMap = new Map()
+      const failedMigrations = []
+      
+      appliedResults.forEach(row => {
+        if (row.status === 'success') {
+          successfulMap.set(row.migration_name, row)
+        } else if (row.status === 'failed') {
+          failedMigrations.push(row)
+        }
+      })
       
       const appliedMigrations = []
       const pendingMigrations = []
       
       allFiles.forEach(file => {
         const name = this.getMigrationName(file)
-        if (appliedMap.has(name)) {
-          appliedMigrations.push(appliedMap.get(name))
+        if (successfulMap.has(name)) {
+          appliedMigrations.push(successfulMap.get(name))
         } else {
+          // Include both never-run and failed migrations as pending
           pendingMigrations.push(name)
         }
       })
       
-      const failed = appliedMigrations.filter(m => m.status === 'failed')
-      
       return {
         total: allFiles.length,
-        applied: appliedMigrations.filter(m => m.status === 'success').length,
+        applied: appliedMigrations.length,
         pending: pendingMigrations.length,
-        failed: failed.length,
+        failed: failedMigrations.length,
         appliedMigrations,
         pendingMigrations,
-        failedMigrations: failed
+        failedMigrations
       }
       
     } catch (error) {
@@ -385,6 +404,9 @@ class AutoMigrationRunner {
    */
   static async validateMigrationIntegrity() {
     try {
+      // Ensure tracking table exists before querying
+      await this.ensureTrackingTableExists()
+      
       const [appliedMigrations] = await sequelize.query(
         `SELECT migration_name, checksum 
          FROM schema_migrations 
@@ -459,13 +481,20 @@ class AutoMigrationRunner {
         // Import and run the tracking table migration (use file URL for cross-platform compatibility)
         const trackingMigrationPath = path.join(
           __dirname, 
-          '../migrations/20250203-create-schema-migrations-table.js'
+          '../migrations/19990101-create-schema-migrations-table.js'
         )
         
         const trackingMigration = await import(pathToFileURL(trackingMigrationPath).href)
         await trackingMigration.up(sequelize.getQueryInterface())
         
         logger.info('   ✅ Tracking table created')
+        
+        // Record the tracking table migration itself as applied
+        await sequelize.query(
+          `INSERT INTO schema_migrations (migration_name, applied_at, execution_time_ms, status, checksum) 
+           VALUES ('19990101-create-schema-migrations-table', NOW(), 0, 'success', NULL)`
+        )
+        logger.info('   ✅ Tracking migration recorded')
       }
       
     } catch (error) {
@@ -476,6 +505,19 @@ class AutoMigrationRunner {
   
   /**
    * Scan migrations directory for migration files
+   * 
+   * Enforces deterministic execution order by:
+   * 1. Only including files that follow YYYYMMDD-description.js format
+   * 2. Sorting by date prefix first, then by full filename
+   * 3. Excluding non-dated files (utility scripts, test files)
+   * 4. Excluding dangerous migrations that should only be run manually
+   * 
+   * This prevents:
+   * - Platform-specific sorting bugs (Windows vs Linux)
+   * - Out-of-order execution of legacy non-prefixed files
+   * - Accidental execution of utility/helper scripts
+   * - Accidental data deletion in production
+   * 
    * @private
    * @returns {Array<String>} Sorted array of migration filenames
    */
@@ -483,12 +525,33 @@ class AutoMigrationRunner {
     const migrationsDir = path.join(__dirname, '../migrations')
     const files = fs.readdirSync(migrationsDir)
     
+    // Helper to check if filename follows YYYYMMDD- format
+    const isDated = (filename) => /^\d{8}-/.test(filename)
+    
+    // Migrations that should NEVER run automatically (manual only)
+    const excludedMigrations = [
+      '20250121-cleanup-old-apple-wallet-passes.js' // Data deletion - production safety
+    ]
+    
     return files
       .filter(file => file.endsWith('.js'))
       .filter(file => file !== 'README.md')
       .filter(file => !file.includes('.test.'))
-      .filter(file => file !== '20250203-create-schema-migrations-table.js') // Exclude tracking table migration
-      .sort()
+      .filter(file => !excludedMigrations.includes(file)) // Exclude dangerous migrations
+      .filter(file => isDated(file)) // Exclude non-dated files (utility scripts)
+      .sort((a, b) => {
+        // Extract dates from filenames (YYYYMMDD format)
+        const dateA = a.substring(0, 8)
+        const dateB = b.substring(0, 8)
+        
+        // Compare by date first
+        if (dateA !== dateB) {
+          return dateA.localeCompare(dateB)
+        }
+        
+        // If dates are equal, compare full filenames
+        return a.localeCompare(b)
+      })
   }
   
   /**

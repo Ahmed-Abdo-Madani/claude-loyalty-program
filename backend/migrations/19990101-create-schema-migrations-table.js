@@ -100,6 +100,15 @@ export async function up(queryInterface) {
     })
     console.log('   ✅ Added index: idx_schema_migrations_status')
     
+    // Add CHECK constraint for status values
+    await queryInterface.sequelize.query(
+      `ALTER TABLE schema_migrations 
+       ADD CONSTRAINT check_schema_migrations_status 
+       CHECK (status IN ('success','failed','running'))`,
+      { transaction }
+    )
+    console.log('   ✅ Added CHECK constraint: check_schema_migrations_status')
+    
     // Add table comment
     await queryInterface.sequelize.query(
       `COMMENT ON TABLE schema_migrations IS 'Tracks applied database migrations for automatic migration system'`,
@@ -110,6 +119,7 @@ export async function up(queryInterface) {
     console.log('✅ Schema migrations tracking table created successfully!')
     console.log('   📊 Columns: 7 (id, migration_name, applied_at, execution_time_ms, status, error_message, checksum)')
     console.log('   📇 Indexes: 3 (name, applied_at, status)')
+    console.log('   🔒 Constraints: 1 (check_schema_migrations_status)')
     
   } catch (error) {
     await transaction.rollback()

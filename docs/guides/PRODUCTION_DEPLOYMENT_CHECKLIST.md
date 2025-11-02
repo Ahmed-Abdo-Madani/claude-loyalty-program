@@ -19,6 +19,10 @@
 - [x] All tests passing
 
 ### Database Schema Validation
+- [ ] schema_migrations tracking table exists
+- [ ] No failed migrations in schema_migrations table
+- [ ] All pending migrations identified and reviewed
+- [ ] Migration checksums validated (npm run migrate:validate)
 - [ ] AutoEngagementConfig table migration created and applied
 - [ ] campaign_type CHECK constraint migration applied (20250131)
 - [ ] Only ONE CHECK constraint exists on notification_campaigns.campaign_type
@@ -59,7 +63,70 @@
 
 ## 📦 DEPLOYMENT STEPS
 
-### Step 1: Run Required Migrations ⏳
+### Step 1: Verify Auto-Migration System ⏳
+
+**Check migration status locally**:
+```bash
+# See what migrations will run
+npm run migrate:pending
+
+# Test in dry-run mode
+npm run migrate:auto:dry-run
+
+# Check current status
+npm run migrate:status
+```
+
+**Expected output**:
+- List of pending migrations (if any)
+- No failed migrations in history
+- Tracking table exists
+
+**If tracking table doesn't exist**:
+```bash
+# Bootstrap the tracking system (one-time setup)
+npm run migrate:tracking-table
+
+# Then run all pending migrations
+npm run migrate:auto
+```
+
+**Verify in database**:
+```sql
+-- Check tracking table exists
+SELECT COUNT(*) FROM schema_migrations;
+
+-- Check for failed migrations
+SELECT * FROM schema_migrations WHERE status = 'failed';
+```
+
+### Step 1.5: Configure Render Auto-Migrations ⏳
+
+**Verify render.yaml configuration**:
+- [ ] preDeploy command configured: `node scripts/deploy-migrations.js`
+- [ ] AUTO_MIGRATE environment variable set to `true` (or not set, defaults to true)
+- [ ] MIGRATION_LOCK_TIMEOUT configured if needed (default 30000ms)
+
+**In Render Dashboard**:
+1. Go to service settings
+2. Verify "Pre-Deploy Command" shows: `node scripts/deploy-migrations.js`
+3. Check environment variables include `AUTO_MIGRATE=true`
+
+**Test preDeploy locally**:
+```bash
+# Simulate what Render will run
+cd backend
+node scripts/deploy-migrations.js
+
+# Should see:
+✅ Auto-migrations completed successfully
+   Applied: X, Failed: 0, Total: Y
+```
+
+### Step 2: Run Required Migrations (Legacy - Automated Now) ⏳
+
+**Note**: With auto-migrations enabled, these run automatically during deployment.
+For manual execution or verification:
 
 ```bash
 # Run AutoEngagementConfig table migration
@@ -77,6 +144,8 @@ psql $DATABASE_URL -c "SELECT conname, pg_get_constraintdef(oid) FROM pg_constra
 ```
 
 ### Step 2: Commit and Push Changes ⏳
+
+**Note**: Migrations now run automatically during deployment (preDeploy command) and server startup (safety net). You no longer need to manually run migrations.
 
 ```bash
 # Add all changes

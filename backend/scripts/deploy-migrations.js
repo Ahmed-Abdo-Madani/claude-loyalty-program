@@ -72,9 +72,12 @@ async function main() {
     // Run auto-migrations with longer timeout for preDeploy
     logger.info('🔄 Checking for pending database migrations...')
     
+    const lockTimeout = parseInt(process.env.MIGRATION_LOCK_TIMEOUT || '60000', 10)
+    const stopOnError = process.env.MIGRATION_STOP_ON_ERROR !== 'false'
+    
     const result = await AutoMigrationRunner.runPendingMigrations({
-      stopOnError: true,
-      lockTimeout: 60000, // 60 seconds for preDeploy (longer than startup)
+      stopOnError,
+      lockTimeout,
       dryRun: isDryRun
     })
     
