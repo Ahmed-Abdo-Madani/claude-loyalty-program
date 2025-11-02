@@ -103,9 +103,9 @@ const WalletPass = sequelize.define('WalletPass', {
     comment: 'Authentication token for Apple Web Service Protocol (Apple Wallet only)'
   },
   last_updated_tag: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.BIGINT,
     allowNull: true,
-    comment: 'Update tag for tracking pass changes (Unix timestamp). Apple Wallet only - NULL for Google Wallet passes. Used by Apple Web Service Protocol passesUpdatedSince endpoint.'
+    comment: 'Update tag for tracking pass changes (Unix timestamp as integer). Apple Wallet only - NULL for Google Wallet passes. Used by Apple Web Service Protocol passesUpdatedSince endpoint.'
   },
   manifest_etag: {
     type: DataTypes.STRING(32),
@@ -197,7 +197,7 @@ WalletPass.prototype.updateLastPush = async function() {
   this.last_updated_at = new Date()
   // Also update the last_updated_tag for Apple Web Service Protocol
   if (this.wallet_type === 'apple') {
-    this.last_updated_tag = Math.floor(Date.now() / 1000).toString()
+    this.last_updated_tag = Math.floor(Date.now() / 1000)
   }
   await this.save()
   return this
@@ -228,7 +228,7 @@ WalletPass.prototype.updatePassData = async function(passData, manifestETag) {
   }
 
   this.pass_data_json = passData
-  this.last_updated_tag = Math.floor(Date.now() / 1000).toString()
+  this.last_updated_tag = Math.floor(Date.now() / 1000)
   this.last_updated_at = new Date()
   
   // If manifestETag provided, update it in the same operation (avoids double DB write)

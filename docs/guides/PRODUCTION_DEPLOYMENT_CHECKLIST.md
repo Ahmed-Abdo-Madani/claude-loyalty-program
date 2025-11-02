@@ -6,7 +6,99 @@
 
 ---
 
+## 🚨 CRITICAL: Pre-Deployment Verification (Run Before Every Deploy)
+
+**Last Updated**: 2025-02-03
+**Status**: REQUIRED BEFORE PRODUCTION DEPLOYMENT
+
+### Quick Verification Commands
+
+Run these commands locally before pushing to production:
+
+```bash
+# 1. Check for pending migrations
+npm run migrate:pending
+
+# 2. Test migrations in dry-run mode
+npm run migrate:auto:dry-run
+
+# 3. Validate migration integrity
+npm run migrate:validate
+
+# 4. Check migration status
+npm run migrate:status
+
+# 5. Test actual migration execution (in development DB)
+npm run migrate:auto
+```
+
+### Expected Results
+
+**migrate:pending** should show:
+- List of migrations that will run in production
+- Should NOT include excluded legacy migrations (20000102, 20000103, 20000104, 20000105)
+- Should NOT include utility scripts (standalone-security-migration.js, etc.)
+
+**migrate:auto:dry-run** should show:
+- Ordered list of migrations that would execute
+- No errors or warnings
+- Execution order matches chronological date prefixes
+
+**migrate:validate** should show:
+- All applied migrations pass integrity check
+- No checksum mismatches
+- No missing migration files
+
+**migrate:status** should show:
+- Total migrations count
+- Applied count
+- Pending count
+- Failed count (should be 0)
+
+**migrate:auto** should complete with:
+- All migrations applied successfully
+- No errors in output
+- Database schema matches models
+
+### Common Issues to Check
+
+**Type Mismatches:**
+- [ ] No VARCHAR columns receiving BIGINT/INTEGER values
+- [ ] No TEXT columns receiving numeric values
+- [ ] All EXTRACT(EPOCH...) casts match column types
+- [ ] All JSON/JSONB columns use proper syntax
+
+**Constraint Conflicts:**
+- [ ] No duplicate CHECK constraints on same column
+- [ ] All CHECK constraint values match model ENUMs
+- [ ] Foreign key references use correct column names
+- [ ] UNIQUE constraints don't conflict with existing data
+
+**Migration Export Patterns:**
+- [ ] All migrations export `{ up, down }` or `default { up, down }`
+- [ ] No migrations export standalone functions (unless excluded)
+- [ ] All migrations accept queryInterface parameter (even if unused)
+
+**Idempotency:**
+- [ ] All CREATE statements use `IF NOT EXISTS`
+- [ ] All DROP statements use `IF EXISTS`
+- [ ] All ALTER ADD COLUMN use `IF NOT EXISTS` or check first
+- [ ] All migrations can be run multiple times safely
+
+### If Any Check Fails
+
+**DO NOT DEPLOY** until the issue is fixed and all checks pass.
+
+1. Fix the issue locally
+2. Test the fix thoroughly
+3. Re-run all verification commands
+4. Only deploy when all checks pass
+
+---
+
 ## ✅ PRE-DEPLOYMENT VERIFICATION
+
+**Before running migrations, complete the Pre-Deployment Verification checklist above.**
 
 ### Code Quality Checks
 - [x] All critical fixes applied and tested

@@ -122,9 +122,10 @@ export async function up() {
     // ⚠️ WARNING: This field is Apple Wallet-specific and MUST allow NULL for Google Wallet
     // This migration correctly does NOT add a NOT NULL constraint
     // If production has a NOT NULL constraint, run: backend/migrations/20250125-fix-last-updated-tag-nullable.js
+    // Note: Stores Unix timestamps as BIGINT integers for efficient indexing and comparisons
     await sequelize.query(`
       ALTER TABLE wallet_passes
-      ADD COLUMN IF NOT EXISTS last_updated_tag VARCHAR(50);
+      ADD COLUMN IF NOT EXISTS last_updated_tag BIGINT;
     `)
 
     logger.info('📄 Adding pass_data_json column to wallet_passes...')
@@ -160,7 +161,7 @@ export async function up() {
         ),
         1, 32
       ),
-      last_updated_tag = EXTRACT(EPOCH FROM COALESCE(last_updated_at, updated_at, created_at))::TEXT
+      last_updated_tag = EXTRACT(EPOCH FROM COALESCE(last_updated_at, updated_at, created_at))::BIGINT
       WHERE wallet_type = 'apple'
         AND authentication_token IS NULL;
     `)
