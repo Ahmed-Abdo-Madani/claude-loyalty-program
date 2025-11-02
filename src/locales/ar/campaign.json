@@ -45,7 +45,10 @@
     },
     "linkOfferLabel": "ربط بعرض (اختياري)",
     "linkOfferPlaceholder": "لا يوجد عرض مرتبط",
-    "linkOfferHelp": "اربط عرضاً لتتبع التحويلات من هذه الحملة"
+    "linkOfferHelp": "اربط عرضاً لتتبع التحويلات من هذه الحملة",
+    "offerLinkLabel": "ربط بعرض (اختياري)",
+    "noLinkedOffer": "لا يوجد عرض مرتبط",
+    "offerLinkHelper": "اربط عرضاً لتتبع التحويلات من هذه الحملة"
   },
   
   "step2": {
@@ -165,7 +168,9 @@
     "createFailed": "فشل إنشاء الحملة",
     "loadSegmentsFailed": "فشل تحميل الشرائح",
     "loadOffersFailed": "فشل تحميل العروض",
-    "loadHistoryFailed": "فشل تحميل الحملات"
+    "loadHistoryFailed": "فشل تحميل الحملات",
+    "noActiveOffers": "لا توجد عروض نشطة متاحة. أنشئ عرضاً أولاً.",
+    "noActiveSegments": "لا توجد شرائح نشطة متاحة. أنشئ شريحة أولاً."
   },
   
   "history": {

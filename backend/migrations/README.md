@@ -261,9 +261,25 @@ If a migration contains breaking changes:
 Format: `YYYYMMDD-description.js`
 
 Examples:
+- `20250202-create-or-sync-business-sessions.js` - **Handles schema drift** (creates or alters table)
 - `20250131-add-notification-campaign-fields.js`
 - `20250114-add-wallet-notification-tracking.js`
 - `20250129-add-loyalty-tiers-to-offers.js`
+
+### Migration Types
+
+**Create Migrations:** Create new tables from scratch
+- Safe to run multiple times (checks if table exists first)
+- Example: `20250201-create-business-sessions-table.sql`
+
+**Alter Migrations:** Modify existing tables (add/remove columns)
+- Must check if column already exists
+- Example: `20250131-add-notification-campaign-fields.js`
+
+**Sync Migrations:** Handle schema drift (create OR alter)
+- Checks if table exists; creates if missing, alters if present
+- **Use for tables created outside migration system**
+- Example: `20250202-create-or-sync-business-sessions.js`
 
 ### Required Exports
 

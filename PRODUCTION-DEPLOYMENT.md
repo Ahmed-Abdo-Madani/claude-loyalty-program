@@ -305,5 +305,191 @@ See `DEPLOYMENT.md` for full migration history and database setup instructions.
 
 ---
 
-**Last Updated**: 2025-01-25
+## 🔔 Notification & Campaign System Deployment
+
+### Required Migrations (CRITICAL)
+
+**Status**: Must be applied before production deployment
+**Date Added**: 2025-01-31
+
+#### Migration 1: Campaign Type Fields
+
+**File**: `backend/migrations/20250131-add-notification-campaign-fields.js`
+**Purpose**: Add campaign_type, linked_offer_id, and last_notification_sent_at columns
+
+**What it does**:
+1. Adds `last_notification_sent_at` to `customer_segments` table
+2. Adds `campaign_type` to `notification_campaigns` with CHECK constraint
+3. Adds `linked_offer_id` to `notification_campaigns` with FK to offers
+4. **Drops ALL legacy CHECK constraints** on campaign_type
+5. Normalizes legacy data to 'lifecycle'
+6. Creates ONE authoritative CHECK constraint with 6 values:
+   - lifecycle
+   - promotional
+   - transactional
+   - new_offer_announcement
+   - custom_promotion
+   - seasonal_campaign
+
+**Run command**:
+```bash
+node backend/run-migration.js 20250131-add-notification-campaign-fields.js
+```
+
+**Verification**:
+```sql
+-- Should return exactly ONE constraint
+SELECT conname, pg_get_constraintdef(oid) 
+FROM pg_constraint 
+WHERE conrelid = 'notification_campaigns'::regclass 
+AND contype = 'c' 
+AND pg_get_constraintdef(oid) LIKE '%campaign_type%';
+
+-- Should show all 6 values in the constraint definition
+```
+
+**Expected output**:
+```
+       conname        |                    constraint_def
+----------------------+-------------------------------------------------------
+ check_campaign_type  | CHECK (campaign_type IN ('lifecycle', 'promotional', 
+                      |  'transactional', 'new_offer_announcement', 
+                      |  'custom_promotion', 'seasonal_campaign'))
+```
+
+#### Migration 2: Auto-Engagement Config Table
+
+**File**: `backend/migrations/20250201-create-auto-engagement-configs-table.js`
+**Purpose**: Create table for auto-engagement configuration
+
+**What it does**:
+1. Creates `auto_engagement_configs` table
+2. Adds foreign key to businesses table
+3. Creates indexes for query performance
+4. Sets up CHECK constraints for data validation
+
+**Run command**:
+```bash
+node backend/run-migration.js 20250201-create-auto-engagement-configs-table.js
+```
+
+**Verification**:
+```sql
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_name = 'auto_engagement_configs';
+
+-- Should return one row
+```
+
+### Environment Variables (REQUIRED)
+
+**Already Configured in Render.com** ✅:
+- `JWT_SECRET` - Strong 64-char secret
+- `SESSION_SECRET` - Strong 64-char secret
+- `ENCRYPTION_KEY` - Strong 32-char secret
+- `APNS_PRODUCTION=true`
+- `APNS_TOPIC=pass.me.madna.api`
+- `APPLE_PASS_TYPE_ID=pass.me.madna.api`
+- `APPLE_TEAM_ID=NFQ6M7TFY2`
+- `UPLOADS_DIR=/app/uploads`
+- `UPLOADS_BASE_URL=https://api.madna.me/uploads`
+- `FRONTEND_URL=https://app.madna.me`
+- `BASE_URL=https://api.madna.me`
+- `DATABASE_URL` - PostgreSQL connection string
+- `WALLET_NOTIFICATION_DAILY_LIMIT=10`
+
+**MISSING - Need to Add** ⚠️:
+```bash
+# QR Code Security (CRITICAL)
+QR_JWT_SECRET=<generate-with-openssl-rand-base64-64>
+# Generate with: openssl rand -base64 64
+```
+
+**Optional - Already Configured**:
+- `DISABLE_AUTO_ENGAGEMENT=false` (not set, defaults to false)
+
+### Testing Campaign System
+
+After deployment, verify:
+
+1. **Campaign Creation**:
+```bash
+curl -X POST https://api.madna.me/api/notifications/campaigns/promotional \
+  -H "Content-Type: application/json" \
+  -H "x-session-token: YOUR_TOKEN" \
+  -H "x-business-id: YOUR_BUSINESS_ID" \
+  -d '{
+    "name": "Test Campaign",
+    "campaign_type": "custom_promotion",
+    "target_type": "all_customers",
+    "message_header": "Test",
+    "message_body": "Test message",
+    "send_immediately": false
+  }'
+# Expected: 201 Created
+```
+
+2. **Auto-Engagement Cron**:
+```bash
+# Check server logs for:
+✅ Auto-engagement cron job scheduled (daily at 9:00 AM)
+
+# Should NOT see:
+❌ Error: relation "auto_engagement_configs" does not exist
+```
+
+3. **Segment Notifications**:
+- Open CustomersTab in browser
+- Select a segment from dropdown
+- Click "Send to Segment"
+- Fill notification form and send
+- Verify success message appears
+
+### Troubleshooting
+
+#### Error: "violates check constraint notification_campaigns_campaign_type_check"
+
+**Cause**: Legacy CHECK constraints still exist
+
+**Solution**:
+1. Connect to database
+2. Drop all CHECK constraints on campaign_type:
+```sql
+SELECT conname FROM pg_constraint 
+WHERE conrelid = 'notification_campaigns'::regclass 
+AND contype = 'c' 
+AND pg_get_constraintdef(oid) LIKE '%campaign_type%';
+
+-- For each constraint returned:
+ALTER TABLE notification_campaigns DROP CONSTRAINT <constraint_name>;
+```
+3. Re-run migration: `node backend/run-migration.js 20250131-add-notification-campaign-fields.js`
+
+#### Error: "relation auto_engagement_configs does not exist"
+
+**Cause**: Migration not applied
+
+**Solution**:
+```bash
+node backend/run-migration.js 20250201-create-auto-engagement-configs-table.js
+```
+
+### Rollback Instructions
+
+If you need to rollback the notification system:
+
+```bash
+# Rollback auto-engagement
+node backend/run-migration.js 20250201-create-auto-engagement-configs-table.js --rollback
+
+# Rollback campaign fields
+node backend/run-migration.js 20250131-add-notification-campaign-fields.js --rollback
+```
+
+**Warning**: Rollback will delete all campaign data and auto-engagement configurations.
+
+---
+
+**Last Updated**: 2025-02-01
 **Maintained By**: Madna Platform Team

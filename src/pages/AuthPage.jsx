@@ -56,11 +56,6 @@ function AuthPage() {
           localStorage.setItem('userEmail', data.data.business.email)
           localStorage.setItem('sessionToken', data.data.session_token)
           
-          console.log('🔒 Secure login successful:', {
-            businessId: data.data.business_id,
-            businessName: data.data.business.business_name
-          })
-          
           navigate('/dashboard')
         } else {
           setError(data.message || 'Login failed')

@@ -3,8 +3,6 @@ import i18n from '../i18n/config.js'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-console.log('🔧 API Base URL:', API_BASE_URL)
-
 /**
  * API Asset URL Contract (Standardized)
  * 

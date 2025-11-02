@@ -3,7 +3,7 @@
  * Supports both legacy integer IDs and new secure IDs during migration
  */
 
-import { Business } from '../models/index.js'
+import { Business, BusinessSession } from '../models/index.js'
 import logger from '../config/logger.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
@@ -25,38 +25,26 @@ export const requireBusinessAuth = async (req, res, next) => {
 
     let business = null
 
-    // Try secure ID format first (future-proof)
-    if (SecureIDGenerator.validateSecureID(businessId, 'business')) {
-      business = await Business.findOne({
-        where: { public_id: businessId }
+    // Only support secure ID format
+    if (!SecureIDGenerator.validateSecureID(businessId, 'business')) {
+      logger.warn('Invalid business ID format', {
+        providedId: businessId
       })
       
-      if (business) {
-        logger.debug('Authenticated business via secure ID', {
-          businessId: businessId.substring(0, 8) + '...',
-          businessName: business.business_name
-        })
-      }
-    } else {
-      // Fall back to legacy integer ID
-      const legacyId = parseInt(businessId)
-      if (!isNaN(legacyId) && legacyId > 0) {
-        business = await Business.findByPk(legacyId)
-        
-        if (business) {
-          logger.debug('Authenticated business via legacy ID', {
-            legacyId,
-            businessId: business.public_id || 'not-generated',
-            businessName: business.business_name
-          })
-        }
-      }
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid business ID format',
+        code: 'INVALID_BUSINESS_ID'
+      })
     }
 
+    business = await Business.findOne({
+      where: { public_id: businessId }
+    })
+    
     if (!business) {
       logger.warn('Business not found', {
-        providedId: businessId,
-        idType: SecureIDGenerator.validateSecureID(businessId, 'business') ? 'secure' : 'legacy'
+        businessId: businessId.substring(0, 8) + '...'
       })
       
       return res.status(401).json({
@@ -65,6 +53,11 @@ export const requireBusinessAuth = async (req, res, next) => {
         code: 'BUSINESS_NOT_FOUND'
       })
     }
+
+    logger.debug('Authenticated business via secure ID', {
+      businessId: businessId.substring(0, 8) + '...',
+      businessName: business.business_name
+    })
 
     if (business.status !== 'active') {
       logger.warn('Business account not active', {
@@ -80,13 +73,80 @@ export const requireBusinessAuth = async (req, res, next) => {
       })
     }
 
-    // TODO: Validate session token against business
-    // For now, we trust the token if business exists and is active
+    // Validate session token against business
+    try {
+      const session = await BusinessSession.findOne({
+        where: {
+          session_token: sessionToken,
+          business_id: business.public_id,
+          is_active: true
+        }
+      })
+
+      if (!session) {
+        logger.warn('Session not found or inactive', {
+          businessId: business.public_id,
+          hasSessionToken: !!sessionToken
+        })
+        
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired session',
+          code: 'SESSION_INVALID'
+        })
+      }
+
+      // Check session expiration
+      if (session.expires_at && session.expires_at < new Date()) {
+        logger.warn('Session expired', {
+          businessId: business.public_id,
+          expiredAt: session.expires_at
+        })
+        
+        return res.status(401).json({
+          success: false,
+          message: 'Session has expired',
+          code: 'SESSION_EXPIRED'
+        })
+      }
+
+      // Update session last_used_at timestamp
+      await session.update({ last_used_at: new Date() })
+
+      logger.info('Session validated', {
+        businessId: business.public_id,
+        sessionId: session.id
+      })
+
+      // Attach session to request for downstream use
+      req.session = session
+
+    } catch (sessionError) {
+      logger.error('Session validation error', {
+        error: sessionError.message,
+        stack: sessionError.stack,
+        businessId: business.public_id,
+        errorCode: sessionError.code
+      })
+      
+      const response = {
+        success: false,
+        message: 'Session validation failed',
+        code: 'SESSION_ERROR'
+      }
+      
+      // Add debugging hint in non-production environments
+      if (process.env.NODE_ENV !== 'production') {
+        response.hint = 'Check business_sessions schema – missing columns (ip_address, user_agent) or incorrect data types. Run migration: 20250202-create-or-sync-business-sessions.js'
+        response.error = sessionError.message
+      }
+      
+      return res.status(500).json(response)
+    }
     
-    // Attach business to request with both ID formats available
+    // Attach business to request with secure ID only
     req.business = business
-    req.businessId = business.public_id || business.id  // Prefer secure ID
-    req.legacyBusinessId = business.id  // Always available for internal queries
+    req.businessId = business.public_id
     
     next()
   } catch (error) {
@@ -96,14 +156,23 @@ export const requireBusinessAuth = async (req, res, next) => {
       headers: {
         'x-session-token': !!req.headers['x-session-token'],
         'x-business-id': req.headers['x-business-id']
-      }
+      },
+      errorCode: error.code
     })
     
-    res.status(500).json({
+    const response = {
       success: false,
       message: 'Authentication failed',
       code: 'AUTH_ERROR'
-    })
+    }
+    
+    // Add debugging hint in non-production environments
+    if (process.env.NODE_ENV !== 'production') {
+      response.hint = 'Common causes: business_sessions table missing, schema mismatch, or invalid business_id format'
+      response.error = error.message
+    }
+    
+    res.status(500).json(response)
   }
 }
 

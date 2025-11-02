@@ -49,16 +49,17 @@ export const requireBranchManagerAuth = async (req, res, next) => {
     // Verify JWT token
     let decoded
     try {
-      // Use JWT_SECRET from environment, fallback to development secret
-      const jwtSecret = process.env.JWT_SECRET || 'dev-branch-manager-jwt-secret-change-in-production'
+      const jwtSecret = process.env.JWT_SECRET
 
-      if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-        logger.error('🔴 JWT_SECRET not configured in production - authentication impossible')
+      if (!jwtSecret) {
+        logger.error('❌ CRITICAL: JWT_SECRET not configured for branch manager authentication')
         return res.status(500).json({
           success: false,
-          error: 'Server configuration error'
+          error: 'Server configuration error',
+          hint: 'JWT_SECRET environment variable must be set'
         })
       }
+
       decoded = jwt.verify(token, jwtSecret)
     } catch (err) {
       return res.status(401).json({
@@ -109,12 +110,10 @@ export const requireBranchManagerAuth = async (req, res, next) => {
  * Token expires in 8 hours (typical shift length)
  */
 export const generateManagerToken = (branchId, branchName) => {
-  // Use JWT_SECRET from environment, fallback to development secret
-  // Production validation in server.js ensures this fallback is never used in production
-  const jwtSecret = process.env.JWT_SECRET || 'dev-branch-manager-jwt-secret-change-in-production'
+  const jwtSecret = process.env.JWT_SECRET
 
-  if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable not configured in production')
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET environment variable is required')
   }
 
   const payload = {
@@ -134,11 +133,10 @@ export const generateManagerToken = (branchId, branchName) => {
  */
 export const verifyManagerToken = (token) => {
   try {
-    // Use JWT_SECRET from environment, fallback to development secret
-    const jwtSecret = process.env.JWT_SECRET || 'dev-branch-manager-jwt-secret-change-in-production'
+    const jwtSecret = process.env.JWT_SECRET
 
-    if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-      logger.error('🔴 JWT_SECRET not configured in production - token verification impossible')
+    if (!jwtSecret) {
+      logger.error('❌ JWT_SECRET not configured')
       return null
     }
 

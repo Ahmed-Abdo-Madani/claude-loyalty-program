@@ -25,6 +25,7 @@ import ManifestService from './services/ManifestService.js'
 import StampImageGenerator from './services/StampImageGenerator.js'
 import AutoEngagementService from './services/AutoEngagementService.js'
 import { extractLanguage, getLocalizedMessage } from './middleware/languageMiddleware.js'
+import AutoMigrationRunner from './services/AutoMigrationRunner.js'
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url)
@@ -38,6 +39,11 @@ if (!process.env.FONTCONFIG_PATH) {
 }
 
 dotenv.config()
+
+// Auto-migration configuration (optional)
+// AUTO_MIGRATE=true (default) - Automatically run pending migrations on startup
+// AUTO_MIGRATE=false - Disable auto-migrations (manual migration required)
+// MIGRATION_LOCK_TIMEOUT=30000 - Milliseconds to wait for migration lock
 
 // ============================================
 // Environment Validation (PRODUCTION CRITICAL)
@@ -60,6 +66,18 @@ if (process.env.NODE_ENV === 'production') {
   // Validate JWT_SECRET strength (minimum 32 characters)
   if (process.env.JWT_SECRET.length < 32) {
     console.error('🔴 FATAL: JWT_SECRET must be at least 32 characters long for production')
+    process.exit(1)
+  }
+
+  // Validate QR_JWT_SECRET strength (minimum 64 characters for QR tokens)
+  if (!process.env.QR_JWT_SECRET) {
+    console.error('🔴 FATAL: QR_JWT_SECRET is required for production')
+    process.exit(1)
+  }
+  
+  if (process.env.QR_JWT_SECRET.length < 64) {
+    console.error('🔴 FATAL: QR_JWT_SECRET must be at least 64 characters long for production')
+    console.error('QR tokens require stronger security due to public exposure in QR codes')
     process.exit(1)
   }
 
@@ -272,36 +290,12 @@ app.use('*', (req, res) => {
   })
 })
 
-// Initialize database and ensure wallet_passes table exists
+// Initialize database and test connection
 async function initializeDatabase() {
   try {
     // Test database connection
     await sequelize.authenticate()
     logger.info('✅ Database connection established')
-
-    // Check if wallet_passes table exists
-    const [tables] = await sequelize.query(`
-      SELECT tablename
-      FROM pg_tables
-      WHERE schemaname='public' AND tablename='wallet_passes'
-    `)
-
-    if (tables.length === 0) {
-      logger.warn('⚠️ wallet_passes table not found - creating automatically...')
-
-      try {
-        // Import and run migration
-        const { up } = await import('./migrations/create-wallet-passes-table.js')
-        await up()
-        logger.info('✅ wallet_passes table created successfully')
-      } catch (migrationError) {
-        logger.error('❌ CRITICAL: Failed to create wallet_passes table:', migrationError)
-        throw new Error(`Database initialization failed: ${migrationError.message}`)
-      }
-    } else {
-      logger.info('✅ wallet_passes table exists')
-    }
-
     return true
   } catch (error) {
     logger.error('❌ Database initialization failed:', error)
@@ -314,6 +308,74 @@ async function initializeDatabase() {
   try {
     // Initialize database first
     await initializeDatabase()
+
+    // Auto-run pending migrations (production safety feature)
+    if (process.env.AUTO_MIGRATE !== 'false') {
+      try {
+        logger.info('🔄 Checking for pending database migrations...')
+        
+        const migrationResult = await AutoMigrationRunner.runPendingMigrations({
+          stopOnError: true,
+          lockTimeout: 30000
+        })
+        
+        if (migrationResult.failed > 0) {
+          logger.error('❌ CRITICAL: Migration failures detected', {
+            total: migrationResult.total,
+            applied: migrationResult.applied,
+            failed: migrationResult.failed
+          })
+          
+          if (process.env.NODE_ENV === 'production') {
+            logger.error('🛑 Exiting to prevent serving with incomplete schema')
+            process.exit(1)
+          }
+        } else if (migrationResult.applied > 0) {
+          logger.info('✅ Auto-migrations completed successfully', {
+            applied: migrationResult.applied,
+            total: migrationResult.total,
+            executionTime: migrationResult.totalExecutionTime
+          })
+        } else {
+          logger.info('✅ Database schema is up to date (no pending migrations)')
+        }
+        
+      } catch (error) {
+        logger.error('❌ CRITICAL: Auto-migration system failed', {
+          error: error.message,
+          stack: error.stack
+        })
+        
+        if (process.env.NODE_ENV === 'production') {
+          logger.error('🛑 Exiting to prevent serving with unknown schema state')
+          process.exit(1)
+        } else {
+          logger.warn('⚠️ Continuing in development mode despite migration failure')
+        }
+      }
+    } else {
+      logger.info('⏭️ Auto-migrations disabled (AUTO_MIGRATE=false)')
+      logger.warn('⚠️ Ensure migrations are run manually before deployment!')
+    }
+
+    // Verify critical tables exist (auto-migrations should have created them)
+    const [tables] = await sequelize.query(`
+      SELECT tablename FROM pg_tables 
+      WHERE schemaname='public' 
+      AND tablename IN ('wallet_passes', 'schema_migrations')
+    `)
+
+    if (tables.length < 2) {
+      logger.error('❌ CRITICAL: Required tables missing', {
+        found: tables.map(t => t.tablename),
+        expected: ['wallet_passes', 'schema_migrations']
+      })
+      
+      if (process.env.NODE_ENV === 'production') {
+        logger.error('🛑 Auto-migrations should have created these tables')
+        process.exit(1)
+      }
+    }
 
     // Validate campaign_type schema matches model definition (Comment 5)
     if (process.env.SKIP_SCHEMA_CHECKS !== 'true') {
@@ -416,6 +478,56 @@ async function initializeDatabase() {
       }
     } else {
       logger.info('⏭️ Schema validation checks skipped (SKIP_SCHEMA_CHECKS=true)')
+    }
+
+    // Validate auto_engagement_configs table exists
+    if (process.env.SKIP_SCHEMA_VALIDATION !== 'true') {
+      try {
+        logger.info('🔍 Validating auto_engagement_configs table...')
+        
+        const [tableCheck] = await sequelize.query(`
+          SELECT table_name 
+          FROM information_schema.tables 
+          WHERE table_name = 'auto_engagement_configs'
+        `)
+        
+        if (tableCheck.length === 0) {
+          logger.error('❌ CRITICAL: auto_engagement_configs table does not exist')
+          logger.error('   The auto-engagement cron job will fail!')
+          logger.error('   Run migration: node backend/run-migration.js 20250201-create-auto-engagement-configs-table.js')
+          
+          if (process.env.NODE_ENV === 'production') {
+            logger.error('🚨 Exiting to prevent runtime failures...')
+            process.exit(1)
+          } else {
+            logger.warn('⚠️  Continuing in development mode, but auto-engagement will not work')
+          }
+        } else {
+          logger.info('✅ auto_engagement_configs table validated')
+          
+          // Verify critical columns exist
+          const [columnCheck] = await sequelize.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'auto_engagement_configs' 
+            AND column_name IN ('config_id', 'business_id', 'enabled', 'inactivity_days', 'message_template')
+          `)
+          
+          if (columnCheck.length < 5) {
+            logger.warn('⚠️  Some columns missing in auto_engagement_configs table', {
+              found: columnCheck.length,
+              expected: 5
+            })
+          }
+        }
+      } catch (error) {
+        logger.error('❌ Failed to validate auto_engagement_configs table', {
+          error: error.message
+        })
+        if (process.env.NODE_ENV === 'production') {
+          process.exit(1)
+        }
+      }
     }
 
     // Initialize Apple Wallet certificates

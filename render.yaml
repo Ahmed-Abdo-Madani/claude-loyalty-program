@@ -8,6 +8,11 @@ services:
     region: frankfurt
     # startCommand removed - Docker runtime uses CMD from Dockerfile
 
+    # Pre-deploy command: Run pending migrations before switching traffic
+    # This ensures database schema is updated before new code goes live
+    # Runs on a separate instance with access to DATABASE_URL
+    preDeployCommand: node scripts/deploy-migrations.js
+
     # Persistent disk for upload storage (prevents file loss on redeploy)
     disk:
       name: madna-uploads-disk

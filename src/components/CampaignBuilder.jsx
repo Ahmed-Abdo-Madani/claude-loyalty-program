@@ -17,6 +17,8 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
   const [segments, setSegments] = useState([])
   const [offers, setOffers] = useState([])
   const [validationErrors, setValidationErrors] = useState({})
+  const [offersEmpty, setOffersEmpty] = useState(false)
+  const [segmentsEmpty, setSegmentsEmpty] = useState(false)
   
   const [formData, setFormData] = useState({
     name: '',
@@ -69,13 +71,27 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
     try {
       const response = await secureApi.get(endpoints.segments)
       const data = await response.json()
+      console.log('Segments API response:', data)
+      
       if (data.success && data.data) {
-        const segmentsArray = data.data.segments || []
+        // Handle both array and object shapes
+        let segmentsArray = []
+        
+        if (Array.isArray(data.data)) {
+          segmentsArray = data.data
+        } else if (data.data.segments && Array.isArray(data.data.segments)) {
+          segmentsArray = data.data.segments
+        }
+        
         const activeSegments = segmentsArray.filter(s => s.is_active)
+        console.log('Active segments found:', activeSegments.length, 'out of', segmentsArray.length)
+        
         setSegments(activeSegments)
+        setSegmentsEmpty(activeSegments.length === 0)
       }
     } catch (err) {
-      console.error('Failed to load segments:', err)
+      console.error('Failed to load segments:', err.message, err.response?.data)
+      setError(t('campaign:errors.loadSegmentsFailed'))
     }
   }
 
@@ -83,6 +99,8 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
     try {
       const response = await secureApi.get(endpoints.myOffers)
       const data = await response.json()
+      console.log('Offers API response:', data)
+      
       if (data.success && data.data) {
         // Handle both array and object shapes
         let offersArray = []
@@ -94,10 +112,14 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
         }
         
         const activeOffers = offersArray.filter(o => o.is_active)
+        console.log('Active offers found:', activeOffers.length, 'out of', offersArray.length)
+        
         setOffers(activeOffers)
+        setOffersEmpty(activeOffers.length === 0)
       }
     } catch (err) {
-      console.error('Failed to load offers:', err)
+      console.error('Failed to load offers:', err.message, err.response?.data)
+      setError(t('campaign:errors.loadOffersFailed'))
     }
   }
 
@@ -433,62 +455,96 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => !mode || mode === 'create' ? setFormData({ ...formData, campaign_type: 'new_offer_announcement' }) : null}
-                    disabled={mode === 'edit'}
-                    className={`p-4 border-2 rounded-xl text-left transition-all ${
-                      formData.campaign_type === 'new_offer_announcement'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                    } ${mode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="text-3xl mb-2">🎁</div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      {t('campaign:step1.types.newOffer.title')}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('campaign:step1.types.newOffer.description')}
-                    </p>
-                  </button>
+                  {(() => {
+                    const isEditable = mode !== 'edit'
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => isEditable ? setFormData({ ...formData, campaign_type: 'new_offer_announcement' }) : null}
+                          disabled={!isEditable}
+                          aria-selected={formData.campaign_type === 'new_offer_announcement'}
+                          title={!isEditable ? 'Campaign type cannot be changed in edit mode' : ''}
+                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${
+                            formData.campaign_type === 'new_offer_announcement'
+                              ? 'border-primary bg-primary/5 border-[3px]'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                          } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          {formData.campaign_type === 'new_offer_announcement' && (
+                            <div className="absolute top-2 right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="text-3xl mb-2">🎁</div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                            {t('campaign:step1.types.newOffer.title')}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('campaign:step1.types.newOffer.description')}
+                          </p>
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => !mode || mode === 'create' ? setFormData({ ...formData, campaign_type: 'custom_promotion' }) : null}
-                    disabled={mode === 'edit'}
-                    className={`p-4 border-2 rounded-xl text-left transition-all ${
-                      formData.campaign_type === 'custom_promotion'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                    } ${mode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="text-3xl mb-2">💬</div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      {t('campaign:step1.types.customPromotion.title')}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('campaign:step1.types.customPromotion.description')}
-                    </p>
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => isEditable ? setFormData({ ...formData, campaign_type: 'custom_promotion' }) : null}
+                          disabled={!isEditable}
+                          aria-selected={formData.campaign_type === 'custom_promotion'}
+                          title={!isEditable ? 'Campaign type cannot be changed in edit mode' : ''}
+                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${
+                            formData.campaign_type === 'custom_promotion'
+                              ? 'border-primary bg-primary/5 border-[3px]'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                          } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          {formData.campaign_type === 'custom_promotion' && (
+                            <div className="absolute top-2 right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="text-3xl mb-2">💬</div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                            {t('campaign:step1.types.customPromotion.title')}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('campaign:step1.types.customPromotion.description')}
+                          </p>
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => !mode || mode === 'create' ? setFormData({ ...formData, campaign_type: 'seasonal_campaign' }) : null}
-                    disabled={mode === 'edit'}
-                    className={`p-4 border-2 rounded-xl text-left transition-all ${
-                      formData.campaign_type === 'seasonal_campaign'
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">🎉</div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      {t('campaign:step1.types.seasonal.title')}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('campaign:step1.types.seasonal.description')}
-                    </p>
-                  </button>
+                        <button
+                          type="button"
+                          onClick={() => isEditable ? setFormData({ ...formData, campaign_type: 'seasonal_campaign' }) : null}
+                          disabled={!isEditable}
+                          aria-selected={formData.campaign_type === 'seasonal_campaign'}
+                          title={!isEditable ? 'Campaign type cannot be changed in edit mode' : ''}
+                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${
+                            formData.campaign_type === 'seasonal_campaign'
+                              ? 'border-primary bg-primary/5 border-[3px]'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                          } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          {formData.campaign_type === 'seasonal_campaign' && (
+                            <div className="absolute top-2 right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="text-3xl mb-2">🎉</div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                            {t('campaign:step1.types.seasonal.title')}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('campaign:step1.types.seasonal.description')}
+                          </p>
+                        </button>
+                      </>
+                    )
+                  })()}
                 </div>
                 {validationErrors.campaign_type && (
                   <p className="mt-2 text-sm text-red-600">{validationErrors.campaign_type}</p>
@@ -512,6 +568,11 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                       </option>
                     ))}
                   </select>
+                  {offersEmpty && (
+                    <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                      {t('campaign:errors.noActiveOffers')}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {t('campaign:step1.offerLinkHelper')}
                   </p>
@@ -578,18 +639,25 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                         {t('campaign:step2.targets.segment.description')}
                       </p>
                       {formData.target_type === 'segment' && (
-                        <select
-                          value={formData.target_segment_id || ''}
-                          onChange={(e) => setFormData({ ...formData, target_segment_id: e.target.value })}
-                          className="mt-3 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="">{t('campaign:step2.targets.segment.selectPlaceholder')}</option>
-                          {segments.map((segment) => (
-                            <option key={segment.segment_id} value={segment.segment_id}>
-                              {segment.name} ({segment.customer_count || 0} customers)
-                            </option>
-                          ))}
-                        </select>
+                        <div>
+                          <select
+                            value={formData.target_segment_id || ''}
+                            onChange={(e) => setFormData({ ...formData, target_segment_id: e.target.value })}
+                            className="mt-3 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          >
+                            <option value="">{t('campaign:step2.targets.segment.selectPlaceholder')}</option>
+                            {segments.map((segment) => (
+                              <option key={segment.segment_id} value={segment.segment_id}>
+                                {segment.name} ({segment.customer_count || 0} customers)
+                              </option>
+                            ))}
+                          </select>
+                          {segmentsEmpty && (
+                            <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                              {t('campaign:errors.noActiveSegments')}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </label>

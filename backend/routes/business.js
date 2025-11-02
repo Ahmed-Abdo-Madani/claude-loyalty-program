@@ -6,7 +6,7 @@ import logger from '../config/logger.js'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
-import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer } from '../models/index.js'
+import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession } from '../models/index.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
@@ -2114,6 +2114,18 @@ router.post('/login', async (req, res) => {
 
     // Generate simple session token (in production, use JWT)
     const sessionToken = Date.now().toString() + Math.random().toString(36)
+
+    // Persist session to database for validation
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30) // 30-day session
+
+    await BusinessSession.create({
+      business_id: business.public_id,
+      session_token: sessionToken,
+      expires_at: expiresAt,
+      is_active: true,
+      last_used_at: new Date()
+    })
 
     // Update last activity
     await business.update({ last_activity_at: new Date() })

@@ -4,6 +4,7 @@ import sequelize from '../config/database.js'
 import NotificationService from '../services/NotificationService.js'
 import { NotificationCampaign, NotificationLog, Customer, Business, CustomerSegment, Offer } from '../models/index.js'
 import logger from '../config/logger.js'
+import { requireBusinessAuth } from '../middleware/hybridBusinessAuth.js'
 
 const router = express.Router()
 
@@ -18,40 +19,6 @@ const ALLOWED_CAMPAIGN_SORT_FIELDS = [
   'campaign_type',
   'priority'
 ]
-
-// Middleware to verify business session - reused from business.js pattern
-const requireBusinessAuth = async (req, res, next) => {
-  try {
-    const sessionToken = req.headers['x-session-token']
-    const businessId = req.headers['x-business-id'] // Expects secure ID (biz_*)
-
-    if (!sessionToken || !businessId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      })
-    }
-
-    // Find business by secure public_id instead of integer id
-    const business = await Business.findByPk(businessId) // businessId is now secure string
-
-    if (!business || business.status !== 'active') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid business or account not active'
-      })
-    }
-
-    req.business = business
-    next()
-  } catch (error) {
-    console.error('Auth middleware error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Authentication failed'
-    })
-  }
-}
 
 // ===============================
 // NOTIFICATION CAMPAIGN ROUTES
@@ -115,7 +82,7 @@ router.get('/campaigns', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching campaigns:', error)
+    logger.error('Error fetching campaigns', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch campaigns',
@@ -156,7 +123,7 @@ router.get('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching campaign:', error)
+    logger.error('Error fetching campaign', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch campaign details',
@@ -201,7 +168,7 @@ router.post('/campaigns', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error creating campaign:', error)
+    logger.error('Error creating campaign', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to create campaign',
@@ -285,7 +252,7 @@ router.put('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error updating campaign:', error)
+    logger.error('Error updating campaign', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to update campaign',
@@ -337,7 +304,7 @@ router.delete('/campaigns/:campaignId', requireBusinessAuth, async (req, res) =>
     })
 
   } catch (error) {
-    console.error('Error deleting campaign:', error)
+    logger.error('Error deleting campaign', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to delete campaign',
@@ -411,7 +378,7 @@ router.patch('/campaigns/:campaignId/status', requireBusinessAuth, async (req, r
     })
 
   } catch (error) {
-    console.error('Error updating campaign status:', error)
+    logger.error('Error updating campaign status', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to update campaign status',
@@ -489,7 +456,7 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
     })
 
   } catch (error) {
-    console.error('Error sending campaign:', error)
+    logger.error('Error sending campaign', { error: error.message, stack: error.stack })
     logger.error('Campaign send failed', { campaign_id: req.params.campaignId, error: error.message })
     res.status(500).json({
       success: false,
@@ -782,7 +749,7 @@ router.get('/logs', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching notification logs:', error)
+    logger.error('Error fetching notification logs', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch notification logs',
@@ -867,7 +834,7 @@ router.get('/analytics', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching notification analytics:', error)
+    logger.error('Error fetching notification analytics', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch notification analytics',
@@ -914,7 +881,7 @@ router.post('/send-quick', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending quick notification:', error)
+    logger.error('Error sending quick notification', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send quick notification',
@@ -961,7 +928,7 @@ router.post('/wallet/offer', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending wallet offer notification:', error)
+    logger.error('Error sending wallet offer notification', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send wallet offer notification',
@@ -997,7 +964,7 @@ router.post('/wallet/reminder', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending wallet reminder:', error)
+    logger.error('Error sending wallet reminder', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send wallet reminder',
@@ -1033,7 +1000,7 @@ router.post('/wallet/birthday', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending wallet birthday notification:', error)
+    logger.error('Error sending wallet birthday notification', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send wallet birthday notification',
@@ -1076,7 +1043,7 @@ router.post('/wallet/milestone', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending wallet milestone notification:', error)
+    logger.error('Error sending wallet milestone notification', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send wallet milestone notification',
@@ -1119,7 +1086,7 @@ router.post('/wallet/reengagement', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending wallet re-engagement notification:', error)
+    logger.error('Error sending wallet re-engagement notification', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send wallet re-engagement notification',
@@ -1172,7 +1139,7 @@ router.post('/wallet/bulk', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending bulk wallet notifications:', error)
+    logger.error('Error sending bulk wallet notifications', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send bulk wallet notifications',
@@ -1215,7 +1182,7 @@ router.post('/wallet/custom', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error sending custom wallet notification:', error)
+    logger.error('Error sending custom wallet notification', { error: error.message, stack: error.stack })
     res.status(500).json({
       success: false,
       message: 'Failed to send custom wallet notification',

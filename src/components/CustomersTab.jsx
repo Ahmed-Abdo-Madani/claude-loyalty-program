@@ -55,7 +55,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
     try {
       setLoading(true)
       setError('')
-      console.log('🔒 Loading customers with secure authentication...')
 
       const response = await secureApi.get(endpoints.customers)
       const data = await response.json()
@@ -80,7 +79,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
         }))
 
         setCustomers(customersData)
-        console.log('🔒 Customers loaded successfully:', customersData.length)
       } else {
         throw new Error(data.message || 'Failed to load customers')
       }
@@ -98,7 +96,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
 
   const loadOffers = async () => {
     try {
-      console.log('🔒 Loading offers for notifications...')
       const response = await secureApi.get(endpoints.myOffers)
       const data = await response.json()
 
@@ -113,7 +110,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
         }
         
         setOffers(offersArray)
-        console.log('🔒 Offers loaded successfully:', offersArray.length)
       } else {
         console.warn('⚠️ No offers data received from API')
         setOffers([])
@@ -127,7 +123,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
   const loadSegments = async () => {
     try {
       setLoadingSegments(true)
-      console.log('🔒 Loading segments with secure authentication...')
 
       const response = await secureApi.get(endpoints.segments)
       const data = await response.json()
@@ -137,7 +132,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
         const segmentsArray = data.data.segments || []
         const activeSegments = segmentsArray.filter(s => s.is_active)
         setSegments(activeSegments)
-        console.log('🔒 Segments loaded successfully:', activeSegments.length)
       } else {
         console.warn('⚠️ No segments data received from API')
         setSegments([])
@@ -208,8 +202,6 @@ function CustomersTab({ analytics: globalAnalytics }) {
       }
 
       setLoading(true)
-      console.log('🔒 Fetching segment customers:', selectedSegment)
-
       // Fetch segment customers
       const response = await secureApi.get(`${endpoints.segments}/${selectedSegment}/customers`)
       const data = await response.json()

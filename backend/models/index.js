@@ -14,6 +14,8 @@ import OfferCardDesign from './OfferCardDesign.js'
 import Device from './Device.js'
 import DeviceRegistration from './DeviceRegistration.js'
 import AutoEngagementConfigModel from './AutoEngagementConfig.js'
+import BusinessSession from './BusinessSession.js'
+import AdminSession from './AdminSession.js'
 
 const AutoEngagementConfig = AutoEngagementConfigModel(sequelize)
 
@@ -273,6 +275,20 @@ AutoEngagementConfig.belongsTo(Business, {
   as: 'business'
 })
 
+// BusinessSession relationships
+Business.hasMany(BusinessSession, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'sessions',
+  onDelete: 'CASCADE'
+})
+
+BusinessSession.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -288,7 +304,9 @@ export {
   OfferCardDesign,
   Device,
   DeviceRegistration,
-  AutoEngagementConfig
+  AutoEngagementConfig,
+  BusinessSession,
+  AdminSession
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -408,6 +426,8 @@ export default {
   Device,
   DeviceRegistration,
   AutoEngagementConfig,
+  BusinessSession,
+  AdminSession,
   syncDatabase,
   seedDatabase
 }

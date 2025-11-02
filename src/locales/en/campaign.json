@@ -45,7 +45,10 @@
     },
     "linkOfferLabel": "Link to Offer (Optional)",
     "linkOfferPlaceholder": "No linked offer",
-    "linkOfferHelp": "Link an offer to track conversions from this campaign"
+    "linkOfferHelp": "Link an offer to track conversions from this campaign",
+    "offerLinkLabel": "Link to Offer (Optional)",
+    "noLinkedOffer": "No linked offer",
+    "offerLinkHelper": "Link an offer to track conversions from this campaign"
   },
   
   "step2": {
@@ -165,7 +168,9 @@
     "createFailed": "Failed to create campaign",
     "loadSegmentsFailed": "Failed to load segments",
     "loadOffersFailed": "Failed to load offers",
-    "loadHistoryFailed": "Failed to load campaigns"
+    "loadHistoryFailed": "Failed to load campaigns",
+    "noActiveOffers": "No active offers available. Create an offer first.",
+    "noActiveSegments": "No active segments available. Create a segment first."
   },
   
   "history": {
