@@ -355,11 +355,134 @@ curl https://api.madna.me/health | jq .apns
 
 ---
 
-## �📚 Official Documentation
+## � Understanding Apple Wallet Notifications
 
-- APNs Provider API: https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/establishing_a_certificate-based_connection_to_apns
-- Wallet Push Notifications: https://developer.apple.com/documentation/walletpasses/adding_a_web_service_to_update_passes
-- npm apn package: https://www.npmjs.com/package/apn
+### Silent vs. Visible Notifications
+
+Apple Wallet pass updates are **silent by default** - this is intentional design by Apple to prevent notification spam.
+
+**How it works:**
+1. Backend sends APNs push notification with **empty payload** (`{}`)
+2. Push type is marked as `'background'` (no alert/banner/sound)
+3. Device receives notification and fetches updated pass from webServiceURL
+4. Pass updates in background - user only sees changes when opening Wallet app
+
+**Reference:** See `backend/services/ApnsService.js` lines 182-188 for implementation.
+
+### The `changeMessage` Feature
+
+To show **visible lock-screen notifications** for important events, Apple provides the `changeMessage` property.
+
+**How it works:**
+- Add `changeMessage` to specific fields in pass.json
+- When field value **actually changes**, iOS shows a notification
+- The `%@` placeholder is replaced with the new field value
+- Notification appears on lock screen and in notification center
+- Respects user's notification settings for Wallet app
+
+**Syntax:**
+```json
+{
+  "key": "tier",
+  "label": "Status",
+  "value": "🥈 Silver Member",
+  "changeMessage": "Congratulations! You are now %@"
+}
+```
+
+**Result:** When tier changes from "Bronze" to "Silver", user sees:
+> "Congratulations! You are now 🥈 Silver Member"
+
+### Implementation Examples
+
+**✅ Good use cases (important milestones):**
+
+```javascript
+// Tier upgrades - rare, worth celebrating
+{
+  key: 'tier',
+  value: '🥈 Silver Member',
+  changeMessage: 'Congratulations! You are now %@'
+}
+
+// Reward completions - achievement notification
+{
+  key: 'completions',
+  value: '4x',
+  changeMessage: '🎉 Rewards completed: %@'
+}
+```
+
+**❌ Bad use cases (too frequent):**
+
+```javascript
+// Progress updates - changes every stamp, causes fatigue
+{
+  key: 'progress',
+  value: '5 of 10',
+  changeMessage: 'Progress: %@' // DON'T DO THIS
+}
+```
+
+### Best Practices
+
+1. **Use selectively** - Only for important events (tier changes, completions)
+2. **Avoid notification fatigue** - Don't add to frequently-updated fields
+3. **Keep messages short** - iOS truncates long text (~50 characters max)
+4. **Include emoji** - Makes notifications more engaging (🎉, ✨, 🏆)
+5. **Test with real devices** - Simulator doesn't support APNs
+6. **Respect user settings** - Users can disable Wallet notifications
+
+### Localization Considerations
+
+For Arabic-speaking businesses, consider localized messages:
+
+```javascript
+// English (default)
+changeMessage: 'Congratulations! You are now %@'
+
+// Arabic
+changeMessage: 'مبروك! أنت الآن %@'
+```
+
+**Current implementation:** Uses English (works universally). Consider adding i18n support based on business language preference in future updates.
+
+### Troubleshooting
+
+**Notifications not appearing?**
+- ✅ Verify field value actually changed (same value = no notification)
+- ✅ Check iOS Settings → Wallet → Notifications (must be enabled)
+- ✅ Test with real device (simulator doesn't support APNs)
+- ✅ Confirm APNs service initialized successfully (check server logs)
+
+**Too many notifications?**
+- ❌ Remove `changeMessage` from frequently-updated fields
+- ❌ Use `changeMessage` only for milestones, not progress updates
+
+**Wrong language?**
+- 🌐 Consider implementing i18n based on business settings
+- 🌐 Tier names already support Arabic via `tierData.currentTier.nameAr`
+
+### Technical Details
+
+**Requirements:**
+- MUST include `%@` placeholder (replaced with field value)
+- Only triggers when field value changes (not on every pass update)
+- Cannot include custom data beyond the field value
+- Text appears in iOS notification banner and lock screen
+- Plays notification sound (if user has sounds enabled)
+
+**Impact on existing passes:**
+- Adding `changeMessage` only affects NEW pass updates
+- Existing passes start showing notifications on next update
+- No migration needed - forward-compatible change
+- Users who disabled Wallet notifications won't see alerts
+
+### Reference Links
+
+- [Apple Wallet Pass Design Guidelines](https://developer.apple.com/design/human-interface-guidelines/wallet)
+- [PassKit Field Reference](https://developer.apple.com/documentation/walletpasses/pass)
+- [Adding a Web Service to Update Passes](https://developer.apple.com/documentation/walletpasses/adding_a_web_service_to_update_passes)
 
 ---
 

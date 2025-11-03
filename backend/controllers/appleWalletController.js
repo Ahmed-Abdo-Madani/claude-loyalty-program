@@ -565,12 +565,25 @@ class AppleWalletController {
         throw new Error('QR message encoding failed: contains non-ASCII characters')
       }
 
+      // Determine changeMessage language based on business language preference
+      // Future-ready: will use business.language when field is added to database
+      const businessLanguage = offerData.language || offerData.businessLanguage || 'en'
+      const isArabic = businessLanguage === 'ar' || businessLanguage === 'arabic'
+      
+      // Localized changeMessage strings (keeping %@ placeholder intact)
+      const changeMessages = {
+        completions: isArabic ? '🎉 المكافآت المكتملة: %@' : '🎉 Rewards completed: %@',
+        tier: isArabic ? 'مبروك! أنت الآن %@' : 'Congratulations! You are now %@'
+      }
+
       logger.info('🔐 Generated QR code data (ASCII-safe validated):', {
         customerToken: customerToken.substring(0, 20) + '...',
         offerHash: offerHash,
         fullMessage: qrMessage.substring(0, 30) + '...',
         messageLength: qrMessage.length,
-        encoding: 'base64:hex (ASCII-safe)'
+        encoding: 'base64:hex (ASCII-safe)',
+        language: businessLanguage,
+        usingArabicMessages: isArabic
       })
 
       // Prepare pass data structure
@@ -611,12 +624,14 @@ class AppleWalletController {
             label: 'Progress',
             textAlignment: 'PKTextAlignmentLeft', // Match working clone alignment
             value: `${stampsEarned} of ${stampsRequired}`
+            // NOTE: No changeMessage - updates too frequently, would cause notification fatigue
           },
           {
             key: 'completions',
             label: 'Completed',
             textAlignment: 'PKTextAlignmentLeft',
-            value: `${progressData.rewardsClaimed || 0}x`
+            value: `${progressData.rewardsClaimed || 0}x`,
+            changeMessage: changeMessages.completions // Localized notification on lock screen when value changes
           },
           {
             key: 'tier',
@@ -625,7 +640,8 @@ class AppleWalletController {
             // Always show tier field with fallback to "New Member"
             value: progressData.tierData?.currentTier
               ? `${progressData.tierData.currentTier.icon} ${progressData.tierData.currentTier.name}`
-              : '👋 New Member'
+              : '👋 New Member',
+            changeMessage: changeMessages.tier // Localized notification when tier changes
           }
         ],
 
