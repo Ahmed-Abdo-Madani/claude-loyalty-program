@@ -8,6 +8,7 @@ import WalletCardPreview from '../components/WalletCardPreview'
 import WalletPassGenerator from '../utils/walletPassGenerator'
 import CountryCodeSelector from '../components/CountryCodeSelector'
 import GenderSelector from '../components/GenderSelector'
+import SEO from '../components/SEO'
 
 function CustomerSignup() {
   const { offerId } = useParams()
@@ -668,6 +669,12 @@ function CustomerSignup() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
+      <SEO 
+        title={offer?.title ? `${offer.title} - ${t('seo:pages.customerSignup.title')}` : undefined}
+        titleKey={!offer?.title ? 'pages.customerSignup.title' : undefined}
+        descriptionKey="pages.customerSignup.description"
+      />
+      
       <div 
         className="max-w-md w-full rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700"
         style={{ backgroundColor: getColors().formBg }}

@@ -2,12 +2,15 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 function PrivacyPolicyPage() {
   const { t } = useTranslation('landing')
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <SEO titleKey="pages.privacy.title" descriptionKey="pages.privacy.description" />
+      
       <DarkModeToggle />
 
       {/* Header */}

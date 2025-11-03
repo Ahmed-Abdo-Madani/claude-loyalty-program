@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 function IntegrationsPage() {
   const integrations = [
@@ -44,6 +45,8 @@ function IntegrationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <SEO title="Integrations - Madna Platform" description="Integrate Madna with your existing tools. Apple Wallet, Google Pay, and more." />
+      
       <DarkModeToggle />
 
       {/* Header */}

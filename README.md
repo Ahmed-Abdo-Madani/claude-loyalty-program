@@ -141,10 +141,14 @@ claude-loyalty-program/
    - `JWT_SECRET`: Required for authentication (default provided for development)
    - `DATABASE_URL`: PostgreSQL connection string (if using database)
    - `APPLE_PASS_CERTIFICATE_PATH`: Path to Apple Wallet certificate (for wallet features)
+   - `VITE_PUBLIC_SITE_URL`: Frontend public URL for Open Graph/canonical tags (e.g., `https://app.madna.me` in production)
+   - `PRERENDER_TOKEN` (Backend): Optional Prerender.io token for social media crawler support
 
    For development, the default values in `.env.example` work out of the box.
 
    For production, see `DEPLOYMENT.md` for secure configuration guidelines.
+
+   **SEO & Social Media**: Set `VITE_PUBLIC_SITE_URL` to your production frontend domain to enable proper Open Graph tags for WhatsApp/Facebook previews. Without `PRERENDER_TOKEN`, crawlers will see fallback meta tags from `index.html`.
 
 4. **Run Database Migrations**
 

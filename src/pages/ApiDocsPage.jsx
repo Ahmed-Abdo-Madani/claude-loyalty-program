@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 function ApiDocsPage() {
   const endpoints = [
@@ -32,6 +33,8 @@ function ApiDocsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <SEO title="API Documentation - Madna Platform" description="Developer documentation for Madna Platform API. Build custom integrations with our loyalty program platform." />
+      
       <DarkModeToggle />
 
       {/* Header */}

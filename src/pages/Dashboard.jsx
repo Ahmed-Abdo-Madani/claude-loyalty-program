@@ -16,6 +16,7 @@ import MonthlyChart from '../components/MonthlyChart'
 import LogoUpload from '../components/LogoUpload'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
+import SEO from '../components/SEO'
 
 function Dashboard() {
   const { t } = useTranslation('dashboard')
@@ -149,6 +150,8 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 pb-20 lg:pb-0">
+      <SEO titleKey="pages.dashboard.title" descriptionKey="pages.dashboard.description" noindex={true} />
+      
       {/* Sidebar Navigation - Desktop Only */}
       <DashboardSidebar
         activeTab={activeTab}

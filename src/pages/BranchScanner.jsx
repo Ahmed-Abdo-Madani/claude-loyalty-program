@@ -5,6 +5,7 @@ import { getManagerAuthData, managerLogout, isManagerAuthenticated } from '../ut
 import EnhancedQRScanner from '../components/EnhancedQRScanner'
 import { endpoints } from '../config/api'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import SEO from '../components/SEO'
 
 export default function BranchScanner() {
   const { t } = useTranslation('admin')
@@ -177,6 +178,8 @@ export default function BranchScanner() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <SEO titleKey="pages.branchScanner.title" descriptionKey="pages.branchScanner.description" noindex={true} />
+      
       {/* Header */}
       {!isScanning && !scanResult && (
         <div className="bg-white dark:bg-gray-800 shadow-sm px-4 py-4 flex items-center justify-between sticky top-0 z-10">

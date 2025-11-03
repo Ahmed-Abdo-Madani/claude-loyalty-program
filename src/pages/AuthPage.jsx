@@ -3,6 +3,7 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 import InteractiveLogo from '../components/InteractiveLogo'
+import SEO from '../components/SEO'
 
 function AuthPage() {
   const { t } = useTranslation('auth')
@@ -74,6 +75,11 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <SEO 
+        titleKey={mode === 'signup' ? 'pages.auth.signup.title' : 'pages.auth.signin.title'}
+        descriptionKey={mode === 'signup' ? 'pages.auth.signup.description' : 'pages.auth.signin.description'}
+      />
+      
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         {/* Logo Section */}
         <div className="text-center max-w-md mx-auto mb-8">

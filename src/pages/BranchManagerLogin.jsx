@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { managerLogin } from '../utils/secureAuth'
+import SEO from '../components/SEO'
 
 export default function BranchManagerLogin() {
   const { t } = useTranslation('auth')
@@ -85,6 +86,8 @@ export default function BranchManagerLogin() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+      <SEO titleKey="pages.branchManager.title" descriptionKey="pages.branchManager.description" noindex={true} />
+      
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">

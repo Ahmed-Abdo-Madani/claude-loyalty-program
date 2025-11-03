@@ -1,0 +1,64 @@
+{
+  "siteName": "Madna Platform",
+  "siteDescription": "We help businesses build lasting relationships with customers through simple, effective loyalty programs",
+  "pages": {
+    "home": {
+      "title": "Madna Platform - Customer Loyalty Programs",
+      "description": "Simple, reliable loyalty solutions for businesses. Create custom loyalty programs that keep customers coming back. Seamless integration with Apple Wallet and Google Pay."
+    },
+    "auth": {
+      "signin": {
+        "title": "Sign In",
+        "description": "Sign in to your Madna Platform business account to manage your loyalty programs."
+      },
+      "signup": {
+        "title": "Register Your Business",
+        "description": "Start your loyalty program today. Free registration for businesses of all sizes."
+      }
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Manage your loyalty programs, customers, and offers from your business dashboard."
+    },
+    "features": {
+      "title": "Features",
+      "description": "Discover Madna Platform's powerful features: smart targeting, mobile wallet integration, real-time analytics, and automated campaigns."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "description": "Simple, transparent pricing for loyalty programs. Plans start at $29/month. 14-day free trial available."
+    },
+    "contact": {
+      "title": "Contact Us",
+      "description": "Get in touch with the Madna team. We're here to help you build the perfect loyalty program for your business."
+    },
+    "help": {
+      "title": "Help Center",
+      "description": "Find answers to your questions and learn how to make the most of the Madna loyalty platform."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "Read Madna Platform's privacy policy to understand how we collect, use, and protect your data."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "description": "Terms and conditions for using Madna Platform's customer loyalty program management service."
+    },
+    "customerSignup": {
+      "title": "Join Loyalty Program",
+      "description": "Join the loyalty program and earn rewards with every purchase."
+    },
+    "branchManager": {
+      "title": "Branch Manager Login",
+      "description": "Branch manager login to scan QR codes and manage customer rewards."
+    },
+    "branchScanner": {
+      "title": "Branch QR Scanner",
+      "description": "Scan customer loyalty card QR codes to award stamps and rewards."
+    },
+    "admin": {
+      "title": "Admin Dashboard",
+      "description": "Platform admin dashboard for managing businesses, users, and analytics."
+    }
+  }
+}

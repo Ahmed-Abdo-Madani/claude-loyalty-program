@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
+import SEO from '../components/SEO'
 
 function AdminLoginPage() {
   const { t } = useTranslation('auth')
@@ -63,6 +64,8 @@ function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <SEO titleKey="pages.admin.title" descriptionKey="pages.admin.description" noindex={true} />
+      
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">

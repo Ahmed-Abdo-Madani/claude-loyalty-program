@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 function PricingPage() {
   const { t } = useTranslation('landing')
@@ -23,6 +24,8 @@ function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <SEO titleKey="pages.pricing.title" descriptionKey="pages.pricing.description" />
+      
       <DarkModeToggle />
 
       {/* Header */}

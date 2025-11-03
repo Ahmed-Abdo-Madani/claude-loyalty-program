@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 import DarkModeToggle from '../components/DarkModeToggle'
 import LocationAutocomplete from '../components/LocationAutocomplete'
+import SEO from '../components/SEO'
 
 // District cache for performance optimization
 const districtCache = new Map()
@@ -893,6 +894,8 @@ function BusinessRegistrationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <SEO titleKey="pages.auth.signup.title" descriptionKey="pages.auth.signup.description" />
+      
       <DarkModeToggle />
 
       {/* Header with Gradient */}

@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
+import SEO from '../components/SEO'
 
 function RegistrationSuccessPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <SEO title="Registration Successful - Madna Platform" description="Your business has been successfully registered. Welcome to Madna Platform!" noindex={true} />
+      
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-8">

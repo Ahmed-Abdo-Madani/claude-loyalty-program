@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import DarkModeToggle from '../components/DarkModeToggle'
 import Footer from '../components/Footer'
+import SEO from '../components/SEO'
 
 function HelpCenterPage() {
   const { t } = useTranslation('landing')
@@ -27,6 +28,8 @@ function HelpCenterPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <SEO titleKey="pages.help.title" descriptionKey="pages.help.description" />
+      
       <DarkModeToggle />
 
       {/* Header */}

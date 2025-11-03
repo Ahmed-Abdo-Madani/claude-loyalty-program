@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import cron from 'node-cron'
+import prerender from 'prerender-node'
 import logger from './config/logger.js'
 import sequelize from './config/database.js'
 import walletRoutes from './routes/wallet.js'
@@ -176,6 +177,40 @@ app.use((req, res, next) => {
 
 // Language detection middleware (extract from Accept-Language header or query param)
 app.use(extractLanguage)
+
+// ============================================
+// Prerender.io Middleware for Social Media Crawlers
+// ============================================
+// This ensures WhatsApp, Facebook, Twitter, etc. receive fully rendered HTML
+// with route-specific meta tags instead of generic fallbacks
+if (process.env.PRERENDER_TOKEN) {
+  prerender.set('prerenderToken', process.env.PRERENDER_TOKEN)
+  
+  // Whitelist key pages that need social media previews
+  prerender.set('whitelist', [
+    '/',
+    '/features',
+    '/pricing',
+    '/contact',
+    '/help',
+    '/privacy',
+    '/terms',
+    '/business/register',
+    '/join/.*',          // Customer signup with offer ID
+    '/integrations',
+    '/api-docs'
+  ])
+  
+  // Don't cache responses (always get fresh meta tags)
+  prerender.set('protocol', 'https')
+  
+  app.use(prerender)
+  
+  logger.info('✅ Prerender.io middleware enabled for social media crawlers')
+} else {
+  logger.warn('⚠️  PRERENDER_TOKEN not set - social media previews will use fallback meta tags')
+  logger.warn('   Set PRERENDER_TOKEN environment variable to enable prerendering')
+}
 
 // Rate limiting (ALL ENVIRONMENTS - protects against DoS attacks)
 // Note: /health endpoint is exempt (defined above before this middleware)
