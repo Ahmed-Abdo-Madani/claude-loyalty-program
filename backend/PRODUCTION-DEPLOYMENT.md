@@ -377,6 +377,21 @@ Before deploying to production, verify:
 - [ ] Test API call successfully generates `.pkpass` file
 - [ ] **Emoji stamps render correctly** in Apple Wallet passes
 - [ ] Pass downloads and installs on iPhone
+- [ ] **APNs Configuration (Push Notifications)**:
+  - [ ] `APNS_PRODUCTION=true` set in Render
+  - [ ] `APNS_TOPIC` equals `APPLE_PASS_TYPE_ID` (e.g., `pass.me.madna.api`)
+  - [ ] ApnsService initializes successfully at startup (check logs for "✅ APNs service initialized successfully")
+  - [ ] Test push notifications with real device registration
+
+### APNs Troubleshooting
+
+If APNs fails to initialize:
+- Check server startup logs for specific error messages
+- **Common issues**:
+  - Certificate password mismatch (verify `APPLE_PASS_CERTIFICATE_PASSWORD`)
+  - Wrong environment (must be production, not sandbox, for Wallet passes)
+  - Topic mismatch (`APNS_TOPIC` must exactly match `APPLE_PASS_TYPE_ID`)
+- The `ApnsService` logs detailed initialization status including certificate source and environment
 
 ---
 

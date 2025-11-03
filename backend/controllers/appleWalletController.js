@@ -11,6 +11,9 @@ import appleCertificateValidator from '../utils/appleCertificateValidator.js'
 import applePassSigner from '../utils/applePassSigner.js'
 import SafeImageFetcher from '../utils/SafeImageFetcher.js'
 import logger from '../config/logger.js'
+import ApnsService from '../services/ApnsService.js'
+import DeviceRegistration from '../models/DeviceRegistration.js'
+import WalletPass from '../models/WalletPass.js'
 
 class AppleWalletController {
   constructor() {
@@ -1016,80 +1019,102 @@ class AppleWalletController {
    * Send custom message notification to Apple Wallet pass
    * Used by WalletNotificationService for offers, reminders, birthdays, etc.
    *
-   * IMPORTANT: Apple Wallet notifications require:
-   * 1. Production APNs certificate (.p12 file)
-   * 2. Pass Type ID certificate from Apple Developer account
-   * 3. WWDR (Worldwide Developer Relations) certificate
-   * 4. Production environment (sandbox doesn't support wallet push notifications)
-   *
-   * This method is currently a placeholder and will need to be implemented when
-   * deploying to production with proper Apple certificates.
+   * Note: header and body parameters are for logging only. 
+   * Apple Wallet push notifications use empty payload per APNs spec.
+   * Device fetches updated pass from webServiceURL after receiving notification.
    *
    * @param {string} serialNumber - Apple Wallet pass serial number
-   * @param {string} header - Message header/title
-   * @param {string} body - Message body text
+   * @param {string} header - Message header/title (for logging)
+   * @param {string} body - Message body text (for logging)
    * @returns {Object} Result with success status
    */
   async sendCustomMessage(serialNumber, header, body) {
     try {
+      // Coerce header and body to strings for safe logging
+      const safeHeader = String(header || '')
+      const safeBody = String(body || '')
+      
       logger.info('🍎 Apple Wallet: sendCustomMessage called', {
         serialNumber,
-        header: header.substring(0, 50),
-        body: body.substring(0, 50)
+        header: safeHeader.substring(0, 50),
+        body: safeBody.substring(0, 50)
       })
 
-      // Check if Apple Wallet push notifications are configured
-      const apnsConfigured = process.env.APPLE_APNS_CERT_PATH && process.env.APPLE_APNS_KEY_PATH
-
-      if (!apnsConfigured) {
+      // Check if APNs is configured
+      if (!ApnsService.isReady()) {
         logger.warn('⚠️ Apple Wallet: APNs not configured (requires production certificates)')
         return {
           success: false,
           error: 'APNs not configured',
-          message: 'Apple Wallet push notifications require production APNs certificates',
-          requires: [
-            'APPLE_APNS_CERT_PATH environment variable',
-            'APPLE_APNS_KEY_PATH environment variable',
-            'Production APNs certificate (.p12)',
-            'Pass Type ID certificate',
-            'WWDR certificate'
-          ],
-          documentation: 'https://developer.apple.com/documentation/walletpasses/adding_a_web_service_to_update_passes'
+          message: 'Apple Wallet push notifications require production APNs certificates'
         }
       }
 
-      // In production, this would:
-      // 1. Load APNs certificate and key
-      // 2. Connect to APNs (api.push.apple.com:443)
-      // 3. Send push notification with empty payload to trigger pass update
-      // 4. Device fetches updated pass from webServiceURL
-      // 5. Pass JSON would include the message in backFields or messageData
+      // Find the wallet pass by serial number
+      const walletPass = await WalletPass.findBySerialNumber(serialNumber)
+      if (!walletPass) {
+        logger.error('❌ Apple Wallet: Pass not found for serial number:', serialNumber)
+        return {
+          success: false,
+          error: 'Pass not found',
+          message: `No wallet pass found with serial number: ${serialNumber}`
+        }
+      }
 
-      // Production implementation would use 'apn' npm package:
-      // const apn = require('apn')
-      // const options = {
-      //   cert: fs.readFileSync(process.env.APPLE_APNS_CERT_PATH),
-      //   key: fs.readFileSync(process.env.APPLE_APNS_KEY_PATH),
-      //   production: true
-      // }
-      // const apnProvider = new apn.Provider(options)
-      // const notification = new apn.Notification()
-      // notification.topic = 'pass.com.loyaltyplatform.storecard'
-      // notification.payload = {} // Empty payload for pass update
-      // const result = await apnProvider.send(notification, deviceToken)
+      // Get all registered devices for this pass
+      const registrations = await DeviceRegistration.getDevicesForPass(walletPass.id)
 
-      logger.info('⚠️ Apple Wallet: Push notification not sent (production environment required)')
+      if (!registrations || registrations.length === 0) {
+        logger.info('ℹ️ Apple Wallet: No registered devices for pass:', serialNumber)
+        return {
+          success: true,
+          message: 'No registered devices',
+          sent: 0,
+          failed: 0
+        }
+      }
+
+      // Extract push tokens from device associations
+      const pushTokens = registrations
+        .map(reg => reg.device?.push_token)
+        .filter(token => !!token)
+
+      if (pushTokens.length === 0) {
+        logger.warn('⚠️ Apple Wallet: No valid push tokens found for pass:', serialNumber)
+        return {
+          success: false,
+          error: 'No valid push tokens found',
+          message: `Found ${registrations.length} registered devices but no valid push tokens`,
+          sent: 0,
+          failed: 0
+        }
+      }
+
+      // Deduplicate push tokens to avoid sending duplicate notifications
+      const uniqueTokens = [...new Set(pushTokens)]
+
+      // Send push notifications to all devices
+      logger.info('📤 Sending push notifications to devices:', {
+        serialNumber,
+        deviceCount: uniqueTokens.length,
+        totalRegistrations: pushTokens.length,
+        duplicatesRemoved: pushTokens.length - uniqueTokens.length
+      })
+      const result = await ApnsService.sendPassUpdateNotificationBatch(uniqueTokens)
+
+      // Update last push timestamp
+      await walletPass.updateLastPush()
+
+      logger.info('✅ Apple Wallet: Push notifications sent', {
+        serialNumber,
+        sent: result.totalSent,
+        failed: result.totalFailed
+      })
 
       return {
-        success: false,
-        error: 'Production environment required',
-        message: 'Apple Wallet push notifications only work in production with valid APNs certificates',
-        serialNumber,
-        notification_data: {
-          header,
-          body,
-          timestamp: new Date().toISOString()
-        }
+        success: result.success,
+        sent: result.totalSent,
+        failed: result.totalFailed
       }
 
     } catch (error) {
