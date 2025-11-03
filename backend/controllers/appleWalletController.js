@@ -14,6 +14,12 @@ import logger from '../config/logger.js'
 import ApnsService from '../services/ApnsService.js'
 import DeviceRegistration from '../models/DeviceRegistration.js'
 import WalletPass from '../models/WalletPass.js'
+import Customer from '../models/Customer.js'
+import Offer from '../models/Offer.js'
+import Business from '../models/Business.js'
+import CustomerProgress from '../models/CustomerProgress.js'
+import OfferCardDesign from '../models/OfferCardDesign.js'
+import TierService from '../services/TierService.js'
 
 class AppleWalletController {
   constructor() {
@@ -375,7 +381,7 @@ class AppleWalletController {
   }
 
   // PHASE 3: Helper method to build back fields dynamically based on available data
-  buildBackFields(offerData, customerData) {
+  buildBackFields(offerData, customerData, customMessage = null) {
     const backFields = []
 
     // 1. Business Phone (if available) - with tap-to-call
@@ -451,14 +457,46 @@ class AppleWalletController {
       textAlignment: 'PKTextAlignmentLeft'
     })
 
+    // 7. Custom Message (if provided) - Dynamic field with changeMessage (localized)
+    if (customMessage && customMessage.header && customMessage.body) {
+      // Determine language for localization
+      const businessLanguage = offerData.language || offerData.businessLanguage || 'en'
+      const isArabic = businessLanguage === 'ar' || businessLanguage === 'arabic'
+      
+      // Localized strings (keeping %@ placeholder intact)
+      const localizedStrings = {
+        label: isArabic ? 'أحدث رسالة' : 'Latest Message',
+        changeMessage: isArabic ? 'رسالة جديدة: %@' : 'New message: %@'
+      }
+      
+      const timestamp = new Date().toISOString()
+      const messageValue = `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
+      
+      backFields.push({
+        key: 'latest_message',
+        label: localizedStrings.label,
+        value: messageValue,
+        textAlignment: 'PKTextAlignmentLeft',
+        changeMessage: localizedStrings.changeMessage // Triggers visible lock-screen notification
+      })
+      
+      logger.info('💬 Custom message field added to back fields:', {
+        timestamp,
+        header: customMessage.header.substring(0, 30),
+        body: customMessage.body.substring(0, 30),
+        language: businessLanguage,
+        isArabic
+      })
+    }
+
     // Log which fields are populated
     const populatedFields = backFields.map(f => f.key).join(', ')
-    logger.info(`📋 Back fields populated: ${populatedFields}`)
+    logger.info(`📋 Back fields populated: ${populatedFields}${customMessage ? ' (includes custom message)' : ''}`)
     
     return backFields
   }
 
-  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null, existingPass = null) {
+  createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null, existingPass = null, customMessage = null) {
     try {
       // Use existing serial number if provided (for updates), otherwise generate new one
       const serialNumber = existingSerialNumber || `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
@@ -479,6 +517,7 @@ class AppleWalletController {
         rewardDescription: offerData.rewardDescription
       })
       logger.info('📈 Progress Data:', progressData)
+      logger.info('💬 Custom Message:', customMessage ? { header: customMessage.header, body: customMessage.body } : 'None')
       logger.info('🎨 Design Data:', design ? {
         hasLogo: !!design.logo_url,
         hasHero: !!design.hero_image_url,
@@ -657,7 +696,7 @@ class AppleWalletController {
       },
 
       // PHASE 3: Back fields - Business contact, location, and offer details (TOP-LEVEL per PassKit schema)
-      backFields: this.buildBackFields(offerData, customerData),
+      backFields: this.buildBackFields(offerData, customerData, customMessage),
 
       // Barcode for POS scanning
       // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
@@ -726,7 +765,17 @@ class AppleWalletController {
       // ==================== DEBUG LOGGING ====================
       logger.info('🔍 ========== PASS.JSON DEBUG ==========')
       logger.info('📋 Complete pass.json structure:')
-      logger.info(JSON.stringify(passData, null, 2))
+      
+      // Redact sensitive fields before logging
+      const redactedPassData = { ...passData }
+      if (redactedPassData.authenticationToken) {
+        const token = redactedPassData.authenticationToken
+        redactedPassData.authenticationToken = token.length > 8 
+          ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` 
+          : '[REDACTED]'
+      }
+      
+      logger.info(JSON.stringify(redactedPassData, null, 2))
       logger.info('🔍 ======================================')
       logger.info('📊 Pass data analysis:')
       logger.info('  - organizationName:', passData.organizationName, '(length:', passData.organizationName.length, 'bytes)')
@@ -1035,13 +1084,12 @@ class AppleWalletController {
    * Send custom message notification to Apple Wallet pass
    * Used by WalletNotificationService for offers, reminders, birthdays, etc.
    *
-   * Note: header and body parameters are for logging only. 
-   * Apple Wallet push notifications use empty payload per APNs spec.
-   * Device fetches updated pass from webServiceURL after receiving notification.
+   * This method regenerates the pass with a custom message back field that triggers
+   * visible lock-screen notifications via Apple Wallet's changeMessage feature.
    *
    * @param {string} serialNumber - Apple Wallet pass serial number
-   * @param {string} header - Message header/title (for logging)
-   * @param {string} body - Message body text (for logging)
+   * @param {string} header - Message header/title
+   * @param {string} body - Message body text
    * @returns {Object} Result with success status
    */
   async sendCustomMessage(serialNumber, header, body) {
@@ -1077,60 +1125,168 @@ class AppleWalletController {
         }
       }
 
-      // Get all registered devices for this pass
-      const registrations = await DeviceRegistration.getDevicesForPass(walletPass.id)
+      logger.info('🔍 Fetching pass data for custom message...')
 
-      if (!registrations || registrations.length === 0) {
-        logger.info('ℹ️ Apple Wallet: No registered devices for pass:', serialNumber)
-        return {
-          success: true,
-          message: 'No registered devices',
-          sent: 0,
-          failed: 0
-        }
-      }
-
-      // Extract push tokens from device associations
-      const pushTokens = registrations
-        .map(reg => reg.device?.push_token)
-        .filter(token => !!token)
-
-      if (pushTokens.length === 0) {
-        logger.warn('⚠️ Apple Wallet: No valid push tokens found for pass:', serialNumber)
+      // Fetch customer data
+      const customer = await Customer.findOne({ 
+        where: { customer_id: walletPass.customer_id } 
+      })
+      if (!customer) {
+        logger.error('❌ Customer not found:', walletPass.customer_id)
         return {
           success: false,
-          error: 'No valid push tokens found',
-          message: `Found ${registrations.length} registered devices but no valid push tokens`,
+          error: 'Customer not found'
+        }
+      }
+
+      // Fetch offer data with business join
+      const offer = await Offer.findOne({
+        where: { public_id: walletPass.offer_id },
+        include: [{
+          model: Business,
+          required: false
+        }]
+      })
+      if (!offer) {
+        logger.error('❌ Offer not found:', walletPass.offer_id)
+        return {
+          success: false,
+          error: 'Offer not found'
+        }
+      }
+
+      // Fetch progress data
+      const progress = await CustomerProgress.findOne({
+        where: { id: walletPass.progress_id }
+      })
+      if (!progress) {
+        logger.error('❌ Progress not found:', walletPass.progress_id)
+        return {
+          success: false,
+          error: 'Progress not found'
+        }
+      }
+
+      // Fetch card design
+      let design = null
+      try {
+        design = await CardDesignService.getDesignByOffer(walletPass.offer_id)
+      } catch (error) {
+        logger.warn('⚠️ Failed to load card design:', error.message)
+      }
+
+      // Construct customer data object
+      const customerData = {
+        customerId: customer.customer_id,
+        firstName: customer.first_name || 'Valued',
+        lastName: customer.last_name || '',
+        joinedDate: customer.created_at || new Date()
+      }
+
+      // Construct offer data object
+      const business = offer.Business || {}
+      const offerData = {
+        offerId: offer.public_id,
+        businessId: business.public_id || offer.business_id,
+        businessName: business.business_name || 'Loyalty Program',
+        title: offer.title || 'Loyalty Offer',
+        stampsRequired: offer.stamps_required || 10,
+        rewardDescription: offer.description || 'Reward',
+        branchName: offer.branch || 'All Locations',
+        businessPhone: business.phone || null,
+        businessCity: business.city || null,
+        businessDistrict: business.district || null,
+        businessRegion: business.region || null,
+        businessAddress: business.address || null,
+        location_hierarchy: business.location_hierarchy || null
+      }
+
+      // Calculate customer tier
+      logger.info('🏆 Calculating customer tier...')
+      const tierData = await CustomerService.calculateCustomerTier(
+        walletPass.customer_id,
+        walletPass.offer_id
+      )
+
+      // Construct progress data with tier information
+      const progressData = {
+        stampsEarned: progress.current_stamps || 0,
+        rewardsClaimed: tierData?.rewardsClaimed || 0,
+        tierData: tierData || {
+          currentTier: {
+            name: 'New Member',
+            nameAr: 'عضو جديد',
+            icon: '👋',
+            color: '#6B7280'
+          }
+        }
+      }
+
+      // Prepare custom message object
+      const customMessage = {
+        header: safeHeader,
+        body: safeBody
+      }
+
+      logger.info('🔄 Regenerating pass with custom message...')
+
+      // Regenerate pass with custom message (includes timestamp for uniqueness)
+      const passData = this.createPassJson(
+        customerData,
+        offerData,
+        progressData,
+        design,
+        walletPass.wallet_serial,  // Existing serial number
+        walletPass.authentication_token,  // Existing auth token
+        walletPass,  // Existing pass for lifecycle fields
+        customMessage  // Custom message to add to back fields
+      )
+
+      // Update database with new pass data
+      // Note: Manifest and signature will be recomputed at serve time by the pass endpoint
+      // This ensures consistency and avoids ETag mismatches if images evolve
+      logger.info('💾 Updating pass data in database...')
+      await walletPass.updatePassData(passData)
+
+      // Check notification rate limiting
+      if (!walletPass.canSendNotification()) {
+        const limit = parseInt(process.env.WALLET_NOTIFICATION_DAILY_LIMIT || '10')
+        logger.warn('⚠️ Daily notification limit reached:', {
+          serialNumber,
+          limit,
+          currentCount: walletPass.notification_count
+        })
+        return {
+          success: false,
+          error: 'Daily notification limit exceeded',
+          message: `Maximum ${limit} notifications per day allowed`,
           sent: 0,
           failed: 0
         }
       }
 
-      // Deduplicate push tokens to avoid sending duplicate notifications
-      const uniqueTokens = [...new Set(pushTokens)]
+      // Send push notification via WalletPass model (standardized path)
+      logger.info('📤 Sending push notification via WalletPass model...')
+      const pushResult = await walletPass.sendPushNotification()
 
-      // Send push notifications to all devices
-      logger.info('📤 Sending push notifications to devices:', {
-        serialNumber,
-        deviceCount: uniqueTokens.length,
-        totalRegistrations: pushTokens.length,
-        duplicatesRemoved: pushTokens.length - uniqueTokens.length
+      // Record notification in history
+      await walletPass.recordNotification('custom', {
+        header: safeHeader,
+        body: safeBody
       })
-      const result = await ApnsService.sendPassUpdateNotificationBatch(uniqueTokens)
 
-      // Update last push timestamp
-      await walletPass.updateLastPush()
-
-      logger.info('✅ Apple Wallet: Push notifications sent', {
+      logger.info('✅ Apple Wallet: Custom message sent successfully', {
         serialNumber,
-        sent: result.totalSent,
-        failed: result.totalFailed
+        sent: pushResult.sent || pushResult.totalSent || 0,
+        failed: pushResult.failed || pushResult.totalFailed || 0,
+        messagePreview: `${safeHeader}: ${safeBody}`.substring(0, 50),
+        notificationCount: walletPass.notification_count
       })
 
       return {
-        success: result.success,
-        sent: result.totalSent,
-        failed: result.totalFailed
+        success: pushResult.success,
+        sent: pushResult.sent || pushResult.totalSent || 0,
+        failed: pushResult.failed || pushResult.totalFailed || 0
       }
 
     } catch (error) {
@@ -1288,6 +1444,8 @@ class AppleWalletController {
       logger.info('🔄 Using existing auth token for update:', existingAuthToken?.substring(0, 8) + '...')
 
       // Generate updated pass data with SAME serial number and SAME auth token
+      // Note: No customMessage parameter - progress updates don't include custom messages
+      // Custom messages are only added via sendCustomMessage() method
       const updatedPassData = this.createPassJson(
         customerData,
         offerData,
@@ -1296,6 +1454,7 @@ class AppleWalletController {
         existingSerialNumber,  // Pass existing serial number!
         existingAuthToken,     // Pass existing auth token!
         walletPass             // Pass walletPass for lifecycle fields
+        // NO customMessage parameter here - keeps progress updates silent
       )
 
       // Update pass data in database

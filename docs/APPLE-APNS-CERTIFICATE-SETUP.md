@@ -486,6 +486,108 @@ changeMessage: 'مبروك! أنت الآن %@'
 
 ---
 
+## 💬 Custom Message Notifications
+
+In addition to automatic notifications for tier upgrades and reward completions, the platform supports **custom message notifications** for special events like promotional offers, birthday greetings, or important announcements.
+
+### How It Works
+
+Custom messages are stored in a dynamic back field that triggers visible lock-screen notifications:
+
+1. **Message is added** to pass as a "Latest Message" back field
+2. **Timestamp ensures uniqueness** - even identical messages trigger notifications
+3. **Push notification sent** to registered devices
+4. **Device fetches updated pass** with the new message field
+5. **iOS detects value change** and shows lock-screen notification
+6. **User sees message** in notification banner and in pass back fields
+
+### Back Field Structure
+
+```json
+{
+  "key": "latest_message",
+  "label": "Latest Message",
+  "value": "[2025-11-03T08:53:14Z] Welcome: Thank you for joining!",
+  "changeMessage": "New message: %@",
+  "textAlignment": "PKTextAlignmentLeft"
+}
+```
+
+### Notification Behavior
+
+**Lock-screen notification shows:**
+> "New message: [2025-11-03T08:53:14Z] Welcome: Thank you for joining!"
+
+**User interactions:**
+- **Taps notification** → Wallet app opens to pass
+- **Flips pass** → Sees "Latest Message" in back fields with full content
+- **Ignores notification** → Message persists in pass until next custom message
+
+### Difference from Progress Updates
+
+| Feature | Progress Updates | Custom Messages |
+|---------|-----------------|-----------------|
+| **Trigger** | Tier/completion changes | `sendCustomMessage()` API call |
+| **Field Type** | Secondary fields (tier, completions) | Dynamic back field |
+| **Frequency** | Automatic (on progress change) | Manual (on-demand) |
+| **Notification** | "Congratulations! You are now [tier]" | "New message: [timestamp] header: body" |
+| **Purpose** | Achievement celebration | Custom announcements |
+| **Rate Limiting** | Natural (based on activity) | Tracked (default: 10/day) |
+
+### Usage Guidelines
+
+**✅ Recommended use cases:**
+- Special promotional offers
+- Birthday or anniversary greetings
+- Important policy changes
+- Limited-time events
+- Exclusive member perks
+
+**❌ Avoid:**
+- Frequent marketing spam
+- Routine updates (use tier/completion notifications instead)
+- Non-actionable information
+- Duplicate content
+
+**Rate limiting:** Custom messages are tracked in `wallet_passes.notification_history` with a default limit of 10 messages per customer per day to prevent notification fatigue.
+
+### Implementation Reference
+
+**Backend code:**
+- `appleWalletController.sendCustomMessage()` - Regenerates pass with custom message
+- `appleWalletController.buildBackFields()` - Adds latest_message field conditionally
+- `WalletPass.notification_history` - Tracks message rate limiting
+
+**API endpoint:**
+```javascript
+POST /api/wallet/apple/custom-message
+{
+  "serialNumber": "cust_123-off_456-1234567890",
+  "header": "Welcome",
+  "body": "Thank you for joining our loyalty program!"
+}
+```
+
+### Troubleshooting
+
+**Notification doesn't appear:**
+- ✅ Verify message header/body are different from last message (timestamp ensures this)
+- ✅ Check if rate limit exceeded (10 messages/day default)
+- ✅ Confirm APNs service is ready (check server logs)
+- ✅ Verify device is registered for push notifications
+
+**Notification appears but message not in pass:**
+- ✅ Check back fields in pass.json (should include latest_message)
+- ✅ Verify pass regenerated successfully (check logs)
+- ✅ Confirm pass data saved to database
+
+**Pass doesn't update:**
+- ✅ Verify `last_updated_tag` incremented in database
+- ✅ Check manifest ETag changed
+- ✅ Confirm push notification delivered (check APNs logs)
+
+---
+
 ## ⏰ Certificate Renewal
 
 APNs certificates expire after **1 year** (similar to Pass Type ID certificates).
