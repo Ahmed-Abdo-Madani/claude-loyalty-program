@@ -19,7 +19,6 @@ import Offer from '../models/Offer.js'
 import Business from '../models/Business.js'
 import CustomerProgress from '../models/CustomerProgress.js'
 import OfferCardDesign from '../models/OfferCardDesign.js'
-import TierService from '../services/TierService.js'
 
 class AppleWalletController {
   constructor() {
