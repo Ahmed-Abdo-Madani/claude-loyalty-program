@@ -181,6 +181,88 @@ These features work, but could be enhanced in the future:
 
 ---
 
+## 🔔 Lock-Screen Notifications
+
+### How Notifications Work
+
+Apple Wallet displays lock-screen notifications only when a **visible field** (headerFields, secondaryFields, or auxiliaryFields) with a `changeMessage` property changes. Back fields (phone, address, offer details, etc.) trigger silent updates only.
+
+**Notification behavior**:
+- Screen lights up (no sound, no vibration)
+- Title is Company Name from pass.json
+- The `changeMessage` must include `%@` placeholder, which is replaced by the field's new value
+
+### Dual-Field Strategy for Custom Messages
+
+Following Airship's best practice: "Add a back-of-pass field dedicated to your latest message so users can still see it after dismissing the notification"
+
+**Front field** (`message_alert` in auxiliaryFields):
+- Shows message header (truncated to ~40 characters)
+- Triggers lock-screen notification
+- Provides immediate visibility
+
+**Back field** (`latest_message` in backFields):
+- Shows full message (header + body + timestamp)
+- Preserves message history
+- Allows users to reference the full message later by flipping the pass
+
+This dual-field approach ensures users get immediate notification AND can reference the full message later.
+
+### Which Events Trigger Notifications
+
+**Visible notifications** (via visible fields with changeMessage):
+- Custom messages (offers, birthdays, milestones, re-engagement) - via auxiliaryFields `message_alert`
+- Tier upgrades (when tier field value changes) - via secondaryFields tier field
+- Reward completions (when completions field value changes) - via secondaryFields completions field
+
+**Silent updates** (by design, to avoid notification fatigue):
+- Progress updates (stamp increments) - updates pass data but no lock-screen alert
+
+### Rate Limiting
+
+- Maximum 10 notifications per pass per day (configurable via `WALLET_NOTIFICATION_DAILY_LIMIT`)
+- Enforced in `WalletPass.canSendNotification()` method
+- Applies to custom messages only; progress updates are unlimited
+- Note: Apple has no built-in rate limiting for Wallet notifications (unlike regular push notifications)
+
+### Testing Notifications
+
+**Steps**:
+1. Use the bulk notification endpoint: `POST /api/notifications/bulk`
+2. Check device logs for APNs delivery confirmation
+3. Verify pass updates by checking 'Updated just now' timestamp
+4. Look for lock-screen notification (screen lights up, banner appears)
+5. Flip pass over to verify full message appears in back fields
+
+**If no notification appears, check**:
+- APNs configuration (certificates, device registration)
+- Rate limits (max 10/day per pass)
+- Field placement (message must be in auxiliaryFields, not just backFields)
+- changeMessage format (must include `%@` placeholder)
+
+### Troubleshooting
+
+**APNs sent but no notification**:
+- Check that message field is in auxiliaryFields (not just backFields)
+- Verify pass was regenerated with updated field value
+
+**Notification shows wrong text**:
+- Verify changeMessage includes `%@` placeholder
+- Check that field value matches expected header text
+
+**Notification title is wrong**:
+- Update Company Name in pass.json (organizationName field)
+
+**Pass updates but notification dismissed**:
+- This is expected behavior - user can flip pass to see full message in backFields
+
+### References
+
+- Airship Support: "How can I send push messages to Apple Wallet passes?" (https://support.airship.com/hc/en-us/articles/213493743)
+- Apple PassKit documentation: changeMessage property
+
+---
+
 ## 📅 Important Dates
 
 - **Certificate Created**: October 17, 2025

@@ -1,8 +1,11 @@
 /**
  * Wallet Notification Service
  *
- * High-level service for sending push notifications to wallet passes
- * Supports Google Wallet (addMessage API) and Apple Wallet (APNs)
+ * High-level service for sending push notifications with visible lock-screen alerts
+ * 
+ * Apple Wallet: Messages appear on pass front (auxiliaryFields) and back (backFields) following Airship best practices
+ * Lock-screen notifications: Screen lights up, no sound/vibration, title is Company Name from pass.json
+ * Google Wallet: Messages use addMessage API
  *
  * Features:
  * - Rate limiting (10 notifications per pass per 24 hours, configurable via WALLET_NOTIFICATION_DAILY_LIMIT)
@@ -19,6 +22,12 @@ import logger from '../config/logger.js'
 class WalletNotificationService {
   /**
    * Send a custom notification message to a wallet pass
+   * 
+   * For Apple Wallet, the message header appears in auxiliaryFields (triggers lock-screen notification) 
+   * and the full message appears in backFields (for persistence).
+   * 
+   * Notification behavior: Silent visual alert (screen lights up, no sound), title is business name from pass.
+   * Users can view full message by flipping pass over.
    *
    * @param {string} walletPassId - The wallet pass ID
    * @param {Object} messageData - Message content

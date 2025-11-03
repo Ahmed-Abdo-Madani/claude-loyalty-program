@@ -457,6 +457,7 @@ class AppleWalletController {
     })
 
     // 7. Custom Message (if provided) - Dynamic field with changeMessage (localized)
+    // Full message on back (persistence) - allows users to view message after dismissing notification
     if (customMessage && customMessage.header && customMessage.body) {
       // Determine language for localization
       const businessLanguage = offerData.language || offerData.businessLanguage || 'en'
@@ -690,7 +691,20 @@ class AppleWalletController {
             label: 'Member',
             value: [customerData.firstName, customerData.lastName].filter(Boolean).join(' '),
             textAlignment: 'PKTextAlignmentRight' // Right-aligned
-          }
+          },
+          // Message alert field (visible on front) - triggers lock-screen notification per Airship best practices
+          ...(customMessage ? [{
+            key: 'message_alert',
+            label: isArabic ? 'رسالة' : 'Message',
+            value: (() => {
+              const headerText = String(customMessage.header || '')
+              return headerText.length > 40 
+                ? headerText.substring(0, 37) + '...' 
+                : headerText
+            })(),
+            changeMessage: isArabic ? 'رسالة جديدة: %@' : 'New message: %@',
+            textAlignment: 'PKTextAlignmentLeft'
+          }] : [])
         ]
       },
 
@@ -1443,9 +1457,29 @@ class AppleWalletController {
       logger.info('🔄 Using existing serial number for update:', existingSerialNumber)
       logger.info('🔄 Using existing auth token for update:', existingAuthToken?.substring(0, 8) + '...')
 
+      // Retrieve last custom message from notification history to persist on back field
+      let lastCustomMessage = null
+      const notificationHistory = walletPass.notification_history || []
+      if (notificationHistory.length > 0) {
+        // Find the most recent custom message notification
+        const lastMessage = notificationHistory
+          .filter(n => n.type === 'custom' && n.header && n.body)
+          .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0]
+        
+        if (lastMessage) {
+          lastCustomMessage = {
+            header: lastMessage.header,
+            body: lastMessage.body
+          }
+          logger.info('📬 Retrieved last custom message for back field persistence:', {
+            header: lastMessage.header.substring(0, 30),
+            sentAt: lastMessage.sent_at
+          })
+        }
+      }
+
       // Generate updated pass data with SAME serial number and SAME auth token
-      // Note: No customMessage parameter - progress updates don't include custom messages
-      // Custom messages are only added via sendCustomMessage() method
+      // Pass lastCustomMessage to persist on back field (front field only shows on new messages)
       const updatedPassData = this.createPassJson(
         customerData,
         offerData,
@@ -1453,8 +1487,8 @@ class AppleWalletController {
         design,
         existingSerialNumber,  // Pass existing serial number!
         existingAuthToken,     // Pass existing auth token!
-        walletPass             // Pass walletPass for lifecycle fields
-        // NO customMessage parameter here - keeps progress updates silent
+        walletPass,            // Pass walletPass for lifecycle fields
+        lastCustomMessage      // Pass last custom message to persist on back field (no front notification)
       )
 
       // Update pass data in database
