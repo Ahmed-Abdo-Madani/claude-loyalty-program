@@ -705,19 +705,81 @@ If Docker is not available, you can use native Node.js runtime with bundled font
 
 ### Step 2: Environment Variables
 
-Set in Render:
+**⚠️ CRITICAL: These environment variables MUST be set in Render dashboard for production deployment.**
+
+Set in Render (Static Site → Environment):
 
 ```bash
+# MANDATORY - Build and SEO Configuration
 VITE_API_BASE_URL=https://api.madna.me
 VITE_BASE_URL=https://app.madna.me
+VITE_PUBLIC_SITE_URL=https://app.madna.me
 VITE_NODE_ENV=production
+
+# Application Metadata
 VITE_APP_NAME=Madna Loyalty Platform
 VITE_DOMAIN=madna.me
 VITE_SUPPORT_EMAIL=customer_support@madna.me
 VITE_ADMIN_EMAIL=super_admin@madna.me
 ```
 
-**Important**: `VITE_BASE_URL` is required for QR code generation in wallet passes. Without it, QR codes will default to production URL but it's best to set explicitly.
+**Environment Variable Details**:
+
+| Variable | Purpose | Required | Example |
+|----------|---------|----------|---------|
+| `VITE_API_BASE_URL` | Backend API endpoint | ✅ Yes | `https://api.madna.me` |
+| `VITE_BASE_URL` | Frontend app URL (QR codes) | ✅ Yes | `https://app.madna.me` |
+| `VITE_PUBLIC_SITE_URL` | Public site URL (SEO, Open Graph) | ✅ Yes | `https://app.madna.me` |
+| `VITE_NODE_ENV` | Build environment | ✅ Yes | `production` |
+| `VITE_APP_NAME` | Application display name | No | `Madna Loyalty Platform` |
+| `VITE_DOMAIN` | Root domain | No | `madna.me` |
+| `VITE_SUPPORT_EMAIL` | Customer support email | No | `customer_support@madna.me` |
+| `VITE_ADMIN_EMAIL` | Admin contact email | No | `super_admin@madna.me` |
+
+**Why These Variables Are Critical**:
+
+1. **VITE_PUBLIC_SITE_URL**: 
+   - Used by SEO component for Open Graph tags (Facebook, WhatsApp, Twitter previews)
+   - Used in sitemap generation and canonical URLs
+   - Missing this causes malformed URLs in social media previews
+   - **Without this**: Social media previews will show broken images and incorrect URLs
+
+2. **VITE_BASE_URL**:
+   - Used for QR code generation in wallet passes
+   - Required for customer signup redirect URLs
+   - **Without this**: QR codes may use incorrect domains
+
+3. **VITE_API_BASE_URL**:
+   - Backend API endpoint for all frontend requests
+   - **Without this**: Frontend cannot communicate with backend (app will not work)
+
+**Setting Variables in Render**:
+1. Go to your Static Site in Render Dashboard
+2. Navigate to "Environment" tab
+3. Click "Add Environment Variable"
+4. Add each variable with exact key and value
+5. Click "Save Changes"
+6. Trigger manual deploy or wait for next auto-deploy
+
+**Verification After Deployment**:
+```bash
+# Test SEO meta tags (should show full URLs with domain)
+curl -s https://app.madna.me | grep -E 'og:image|og:url|canonical'
+
+# Expected output:
+# <meta property="og:image" content="https://app.madna.me/og-image.png" />
+# <meta property="og:url" content="https://app.madna.me/" />
+# <link rel="canonical" href="https://app.madna.me/" />
+
+# Test that app can reach API
+curl -s https://app.madna.me | grep -o 'VITE_API_BASE_URL'
+```
+
+**Important Notes**:
+- All `VITE_*` variables are embedded at **build time** (not runtime)
+- Changing these variables requires a **full rebuild** (not just restart)
+- Variables are visible in client-side JavaScript (don't put secrets here)
+- Missing mandatory variables causes build warnings and runtime errors
 
 ### Step 3: Custom Domain
 

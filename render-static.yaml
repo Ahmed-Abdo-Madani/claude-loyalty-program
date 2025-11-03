@@ -12,8 +12,22 @@ services:
       - path: /*
         name: Cache-Control
         value: public, max-age=0, s-maxage=300
+    # Environment Variables (CRITICAL - All VITE_* vars are embedded at build time)
+    # MANDATORY: These variables MUST be set for production deployment
+    # - VITE_API_BASE_URL: Backend API endpoint (enables frontend-backend communication)
+    # - VITE_BASE_URL: Frontend app URL (used for QR codes, redirects)
+    # - VITE_PUBLIC_SITE_URL: Public site URL (used for SEO, Open Graph tags)
+    # - VITE_NODE_ENV: Build environment (production, development, staging)
+    #
+    # Verification: After deploy, test with:
+    #   curl -s https://app.madna.me | grep -E 'og:image|og:url|canonical'
+    # Should show full URLs with domain (not relative paths or template placeholders)
     envVars:
       - key: VITE_API_BASE_URL
         value: https://api.madna.me
+      - key: VITE_BASE_URL
+        value: https://app.madna.me
+      - key: VITE_PUBLIC_SITE_URL
+        value: https://app.madna.me
       - key: VITE_NODE_ENV
         value: production
