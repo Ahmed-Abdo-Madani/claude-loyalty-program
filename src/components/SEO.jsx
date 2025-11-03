@@ -7,7 +7,7 @@ const SEO = ({
   descriptionKey, 
   title, 
   description, 
-  image = '/og-image.png', 
+  image = '/og-image-v2.png', 
   type = 'website',
   noindex = false 
 }) => {
