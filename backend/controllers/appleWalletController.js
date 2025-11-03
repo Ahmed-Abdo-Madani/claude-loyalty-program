@@ -1143,6 +1143,7 @@ class AppleWalletController {
         where: { public_id: walletPass.offer_id },
         include: [{
           model: Business,
+          as: 'business',
           required: false
         }]
       })
@@ -1183,7 +1184,7 @@ class AppleWalletController {
       }
 
       // Construct offer data object
-      const business = offer.Business || {}
+      const business = offer.business || {}
       const offerData = {
         offerId: offer.public_id,
         businessId: business.public_id || offer.business_id,
