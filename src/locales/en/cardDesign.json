@@ -18,7 +18,8 @@
       "colors": "Colors",
       "logo": "Logo",
       "stamps": "Stamp Display",
-      "progress": "Progress Display",
+      "passType": "Apple Wallet Pass Type",
+      "barcode": "Barcode Type",
       "hero": "Hero Image"
     },
     "badges": {
@@ -37,11 +38,19 @@
       "chooseFromLibrary": "Choose from library",
       "logoRequired": "⚠️ Logo stamp requires logo upload above"
     },
-    "progress": {
-      "progressBar": "Progress Bar",
-      "stampGrid": "Stamp Grid",
-      "simpleBar": "Simple bar",
-      "visualStamps": "Visual stamps"
+    "passType": {
+      "helpText": "Choose the Apple Wallet pass style. This affects the layout and image dimensions for iOS wallet passes.",
+      "storeCard": "Store Card (Classic)",
+      "storeCardDesc": "Traditional loyalty card with horizontal strip image (624×168px). Classic wallet appearance with barcode at bottom.",
+      "generic": "Generic Pass (Modern)",
+      "genericDesc": "Modern layout with square thumbnail (180×180px). Optimized for PDF417 barcodes with better visibility and scanning."
+    },
+    "barcode": {
+      "helpText": "Choose the barcode format for wallet passes. QR codes work with most smartphones, while PDF417 is preferred by specialized POS systems.",
+      "qrCode": "QR Code (Recommended)",
+      "qrCodeDesc": "Standard format compatible with all smartphones. Best for general use and customer convenience.",
+      "pdf417": "PDF417 Barcode",
+      "pdf417Desc": "Linear barcode format used by specialized retail and POS systems. Choose if your scanning equipment requires PDF417."
     },
     "actions": {
       "reset": "Reset",

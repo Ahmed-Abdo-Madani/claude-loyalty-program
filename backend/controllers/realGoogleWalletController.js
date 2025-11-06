@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import CardDesignService from '../services/CardDesignService.js'
 import WalletPass from '../models/WalletPass.js'
+import logger from '../config/logger.js'
 
 class RealGoogleWalletController {
   constructor() {
@@ -472,34 +473,61 @@ class RealGoogleWalletController {
           header: '📍 Valid At',
           body: offerData.branchName || 'All Locations'
         }
-      ],
-
-      // Barcode for POS scanning
-      barcode: {
-        type: 'QR_CODE',
-        value: JSON.stringify({
-          customerId: customerData.customerId,
-          offerId: offerData.offerId,
-          businessId: offerData.businessId,
-          timestamp: new Date().toISOString()
-        }),
-        alternateText: `Customer: ${customerData.customerId}`
-      },
-
-      // Links module for actions
-      linksModuleData: {
-        uris: [
-          {
-            uri: `${process.env.BASE_URL}/customer/account/${customerData.customerId}`,
-            description: 'View Account',
-            id: 'account_link'
-          }
-        ]
-      },
-
-      // Enable push notifications for field updates
-      notifyPreference: 'notifyOnUpdate'
+      ]
     }
+
+    // Determine barcode type based on offer preference
+    // Default to QR_CODE if preference is not set for backward compatibility
+    let barcodePreference = offerData.barcode_preference || 'QR_CODE'
+    let barcodeType = barcodePreference === 'PDF417' ? 'PDF_417' : 'QR_CODE'
+    
+    // Calculate barcode value to check size
+    const barcodeValue = JSON.stringify({
+      customerId: customerData.customerId,
+      offerId: offerData.offerId,
+      businessId: offerData.businessId,
+      timestamp: new Date().toISOString()
+    })
+    
+    // PDF417 size guard: PDF417 typically supports ~1850 alphanumeric characters
+    // QR codes support up to ~4296 alphanumeric characters
+    const PDF417_MAX_LENGTH = 1850
+    if (barcodePreference === 'PDF417' && barcodeValue.length > PDF417_MAX_LENGTH) {
+      logger.warn('⚠️ Google Wallet: PDF417 barcode payload exceeds safe limit, falling back to QR_CODE', {
+        messageLength: barcodeValue.length,
+        maxLength: PDF417_MAX_LENGTH,
+        exceededBy: barcodeValue.length - PDF417_MAX_LENGTH
+      })
+      barcodePreference = 'QR_CODE'
+      barcodeType = 'QR_CODE'
+    }
+    
+    logger.info('📊 Google Wallet: Barcode format selection:', { 
+      preference: barcodePreference, 
+      googleType: barcodeType,
+      valueLength: barcodeValue.length
+    })
+
+    // Add barcode for POS scanning
+    loyaltyObject.barcode = {
+      type: barcodeType,
+      value: barcodeValue,
+      alternateText: `Customer: ${customerData.customerId}`
+    }
+
+    // Links module for actions
+    loyaltyObject.linksModuleData = {
+      uris: [
+        {
+          uri: `${process.env.BASE_URL}/customer/account/${customerData.customerId}`,
+          description: 'View Account',
+          id: 'account_link'
+        }
+      ]
+    }
+
+    // Enable push notifications for field updates
+    loyaltyObject.notifyPreference = 'notifyOnUpdate'
 
     // Add validTimeInterval if pass has scheduled expiration
     if (existingPass && existingPass.scheduled_expiration_at) {

@@ -4,6 +4,7 @@
  * Phase 2 - Frontend Components
  */
 
+import { useMemo } from 'react'
 import { hexToRgbString } from '../../utils/colorUtils'
 import { apiBaseUrl } from '../../config/api'
 import { useTranslation } from 'react-i18next'
@@ -17,7 +18,8 @@ function AppleWalletPreview({ design, offerData, customerData }) {
     logo_apple_url,
     stamp_icon = '⭐',
     progress_display_style = 'bar',
-    stamp_display_type = 'icon' // 'icon' or 'logo'
+    stamp_display_type = 'icon', // 'icon' or 'logo'
+    barcode_preference = 'PDF417' // Default to PDF417 to match backend
   } = design || {}
 
   const {
@@ -76,6 +78,35 @@ function AppleWalletPreview({ design, offerData, customerData }) {
       />
     )
   }
+
+  // Memoized barcode patterns to prevent flicker on re-render
+  // Seeded by offer title or ID for consistency
+  const barcodePatterns = useMemo(() => {
+    // Create a simple seed from offer title/ID for consistent pseudo-random values
+    const seed = offerData?.title || offerData?.id || 'default'
+    const seedNum = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    
+    // Seeded pseudo-random function
+    const seededRandom = (index) => {
+      const x = Math.sin(seedNum + index) * 10000
+      return x - Math.floor(x)
+    }
+
+    // Generate PDF417 pattern (5 horizontal bars with varying widths)
+    const pdf417Bars = Array.from({ length: 5 }).map((_, i) => ({
+      width: `${60 + seededRandom(i) * 40}%`,
+      marginLeft: `${seededRandom(i + 10) * 20}%`
+    }))
+
+    // Generate QR code pattern (8x8 grid of on/off blocks)
+    const qrGrid = Array.from({ length: 8 }).map((_, row) =>
+      Array.from({ length: 8 }).map((_, col) => ({
+        isOn: seededRandom(row * 8 + col) > 0.5
+      }))
+    )
+
+    return { pdf417Bars, qrGrid }
+  }, [offerData?.title, offerData?.id])
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -331,22 +362,47 @@ function AppleWalletPreview({ design, offerData, customerData }) {
         {/* Barcode Section */}
         <div className="border-t" style={{ borderColor: foreground_color + '30' }} />
         <div className="p-6 pt-4">
-          <div
-            className="h-20 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: '#FFFFFF' }}
-          >
-            <div className="flex gap-0.5">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1.5 bg-black rounded-sm"
-                  style={{
-                    height: `${30 + Math.random() * 30}px`
-                  }}
-                />
-              ))}
+          {/* Conditional Barcode Rendering */}
+          {barcode_preference === 'PDF417' ? (
+            // PDF417: Full-width rectangular barcode (airline boarding pass style)
+            <div
+              className="h-16 rounded-lg flex items-center justify-center overflow-hidden"
+              style={{ backgroundColor: '#FFFFFF' }}
+            >
+              <div className="flex flex-col gap-0.5 w-full px-4">
+                {/* Render 5 horizontal bars with memoized widths */}
+                {barcodePatterns.pdf417Bars.map((bar, i) => (
+                  <div
+                    key={i}
+                    className="h-2 bg-black rounded-sm"
+                    style={{
+                      width: bar.width,
+                      marginLeft: bar.marginLeft
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            // QR_CODE: Square centered barcode (traditional QR code grid style)
+            <div
+              className="rounded-lg flex items-center justify-center p-4"
+              style={{ backgroundColor: '#FFFFFF' }}
+            >
+              {/* Square aspect ratio container */}
+              <div className="w-24 h-24 grid grid-cols-8 gap-0.5 p-1 bg-white">
+                {/* Render 8x8 grid of blocks with memoized pattern */}
+                {barcodePatterns.qrGrid.flat().map((block, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-sm ${block.isOn ? 'bg-black' : 'bg-gray-100'}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Barcode number - keep as-is */}
           <p
             className="text-xs text-center mt-3 opacity-75 font-mono"
             style={{ color: foreground_color }}

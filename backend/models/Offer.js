@@ -90,6 +90,18 @@ const Offer = sequelize.define('Offer', {
     allowNull: true,
     defaultValue: null,
     comment: 'Customizable tier/medal system configuration for perpetual loyalty passes'
+  },
+  barcode_preference: {
+    type: DataTypes.ENUM('QR_CODE', 'PDF417'),
+    allowNull: false,
+    defaultValue: 'PDF417',
+    comment: 'Barcode format for wallet passes (QR_CODE or PDF417)'
+  },
+  apple_pass_type: {
+    type: DataTypes.ENUM('storeCard', 'generic'),
+    allowNull: false,
+    defaultValue: 'storeCard',
+    comment: 'Apple Wallet pass style: storeCard (strip image, classic loyalty card) or generic (thumbnail image, modern layout with PDF417 benefits)'
   }
 }, {
   tableName: 'offers',

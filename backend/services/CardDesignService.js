@@ -17,7 +17,7 @@ class CardDesignService {
    * Create a new card design for an offer
    * @param {string} offerId - Offer public ID (off_*)
    * @param {object} designData - Design configuration
-   * @returns {Promise<OfferCardDesign>}
+   * @returns {Promise<object>} Plain design object with barcode_preference
    */
   static async createDesign(offerId, designData) {
     try {
@@ -35,15 +35,38 @@ class CardDesignService {
         throw new Error(`Design already exists for offer ${offerId}. Use update instead.`)
       }
 
+      // Handle barcode_preference if present
+      let barcodePreference = null
+      const { barcode_preference, ...pureDesignData } = designData
+      if (barcode_preference) {
+        await offer.update({ barcode_preference })
+        barcodePreference = barcode_preference
+        logger.info(`📱 Set barcode preference for offer ${offerId}: ${barcode_preference}`)
+      }
+
+      // Handle apple_pass_type if present
+      let applePassType = null
+      const { apple_pass_type, ...remainingDesignData } = pureDesignData
+      if (apple_pass_type) {
+        await offer.update({ apple_pass_type })
+        applePassType = apple_pass_type
+        logger.info(`🍎 Set Apple pass type for offer ${offerId}: ${apple_pass_type}`)
+      }
+
       // Create design
       const design = await OfferCardDesign.create({
         offer_id: offerId,
         business_id: offer.business_id,
-        ...designData
+        ...remainingDesignData
       })
 
       logger.info(`✅ Card design created: ID ${design.id} for offer ${offerId}`)
-      return design
+      
+      // Add barcode_preference and apple_pass_type to returned object
+      const result = design.toJSON()
+      result.barcode_preference = barcodePreference || offer.barcode_preference
+      result.apple_pass_type = applePassType || offer.apple_pass_type
+      return result
 
     } catch (error) {
       logger.error(`❌ Failed to create card design for offer ${offerId}:`, error)
@@ -55,7 +78,7 @@ class CardDesignService {
    * Update an existing card design
    * @param {string} offerId - Offer public ID
    * @param {object} updates - Fields to update
-   * @returns {Promise<OfferCardDesign>}
+   * @returns {Promise<object>} Plain design object with barcode_preference
    */
   static async updateDesign(offerId, updates) {
     try {
@@ -66,28 +89,62 @@ class CardDesignService {
         throw new Error(`No design found for offer ${offerId}`)
       }
 
+      // Handle barcode_preference if present
+      let barcodePreference = null
+      const { barcode_preference, ...designUpdates } = updates
+      if (barcode_preference !== undefined) {
+        await Offer.update(
+          { barcode_preference },
+          { where: { public_id: offerId } }
+        )
+        barcodePreference = barcode_preference
+        logger.info(`📱 Updated barcode preference for offer ${offerId}: ${barcode_preference}`)
+      }
+
+      // Handle apple_pass_type if present
+      let applePassType = null
+      const { apple_pass_type, ...finalDesignUpdates } = designUpdates
+      if (apple_pass_type !== undefined) {
+        await Offer.update(
+          { apple_pass_type },
+          { where: { public_id: offerId } }
+        )
+        applePassType = apple_pass_type
+        logger.info(`🍎 Updated Apple pass type for offer ${offerId}: ${apple_pass_type}`)
+      }
+
       // Check if this is a significant change (increment version)
       const significantFields = ['background_color', 'foreground_color', 'logo_url', 'hero_image_url']
       const hasSignificantChange = significantFields.some(field =>
-        updates[field] && updates[field] !== design[field]
+        finalDesignUpdates[field] && finalDesignUpdates[field] !== design[field]
       )
 
       if (hasSignificantChange) {
-        updates.version = (design.version || 1) + 1
-        logger.info(`📈 Incrementing design version to ${updates.version}`)
+        finalDesignUpdates.version = (design.version || 1) + 1
+        logger.info(`📈 Incrementing design version to ${finalDesignUpdates.version}`)
       }
 
       // Mark as custom if user changed values
-      if (!design.is_custom && Object.keys(updates).length > 0) {
-        updates.is_custom = true
+      if (!design.is_custom && Object.keys(finalDesignUpdates).length > 0) {
+        finalDesignUpdates.is_custom = true
         logger.info(`✏️ Marking design as custom`)
       }
 
       // Update design
-      await design.update(updates)
+      await design.update(finalDesignUpdates)
+
+      // Fetch updated offer to get current barcode_preference and apple_pass_type
+      const offer = await Offer.findByPk(offerId, {
+        attributes: ['barcode_preference', 'apple_pass_type']
+      })
 
       logger.info(`✅ Card design updated: ID ${design.id}`)
-      return design
+      
+      // Add barcode_preference and apple_pass_type to returned object
+      const result = design.toJSON()
+      result.barcode_preference = barcodePreference !== null ? barcodePreference : offer.barcode_preference
+      result.apple_pass_type = applePassType !== null ? applePassType : offer.apple_pass_type
+      return result
 
     } catch (error) {
       logger.error(`❌ Failed to update card design for offer ${offerId}:`, error)
@@ -99,7 +156,7 @@ class CardDesignService {
    * Get card design by offer ID
    * @param {string} offerId - Offer public ID
    * @param {boolean} includeRelations - Include offer and business data
-   * @returns {Promise<OfferCardDesign|null>}
+   * @returns {Promise<object|null>} Plain design object with barcode_preference, or null if not found
    */
   static async getDesignByOffer(offerId, includeRelations = false) {
     try {
@@ -112,7 +169,7 @@ class CardDesignService {
           {
             model: Offer,
             as: 'offer',
-            attributes: ['public_id', 'title', 'description', 'type', 'stamps_required']
+            attributes: ['public_id', 'title', 'description', 'type', 'stamps_required', 'barcode_preference', 'apple_pass_type']
           },
           {
             model: Business,
@@ -126,6 +183,32 @@ class CardDesignService {
 
       if (design) {
         logger.info(`✅ Found card design for offer ${offerId}`)
+        
+        // Fetch barcode_preference and apple_pass_type from the Offer model
+        let barcodePreference
+        let applePassType
+        
+        if (includeRelations && design.offer) {
+          // Use eager-loaded preferences
+          barcodePreference = design.offer.barcode_preference || 'QR_CODE'
+          applePassType = design.offer.apple_pass_type || 'storeCard'
+        } else {
+          // Fall back to separate query if not eager-loaded
+          const offer = await Offer.findByPk(offerId, {
+            attributes: ['barcode_preference', 'apple_pass_type']
+          })
+          barcodePreference = offer?.barcode_preference || 'QR_CODE'
+          applePassType = offer?.apple_pass_type || 'storeCard'
+        }
+        
+        logger.info(`📱 Barcode preference for offer ${offerId}: ${barcodePreference}`)
+        logger.info(`🍎 Apple pass type for offer ${offerId}: ${applePassType}`)
+        
+        // Add barcode_preference and apple_pass_type as virtual properties
+        const result = design.toJSON()
+        result.barcode_preference = barcodePreference
+        result.apple_pass_type = applePassType
+        return result
       } else {
         logger.info(`ℹ️ No card design found for offer ${offerId}`)
       }
@@ -142,7 +225,7 @@ class CardDesignService {
    * Get all card designs for a business
    * @param {string} businessId - Business public ID
    * @param {object} options - Query options (limit, offset, filter)
-   * @returns {Promise<{designs: OfferCardDesign[], total: number}>}
+   * @returns {Promise<{designs: object[], total: number}>} Plain design objects
    */
   static async getDesignsByBusiness(businessId, options = {}) {
     try {
@@ -177,8 +260,11 @@ class CardDesignService {
         ]
       })
 
+      // Convert to plain objects for consistent service layer returns
+      const plainDesigns = designs.map(d => d.toJSON())
+
       logger.info(`✅ Found ${designs.length} card designs for business ${businessId} (total: ${total})`)
-      return { designs, total }
+      return { designs: plainDesigns, total }
 
     } catch (error) {
       logger.error(`❌ Failed to get card designs for business ${businessId}:`, error)
@@ -217,7 +303,7 @@ class CardDesignService {
    * @param {string} offerId - Offer public ID
    * @param {string} templateId - Template ID
    * @param {object} templateConfig - Template configuration
-   * @returns {Promise<OfferCardDesign>}
+   * @returns {Promise<object>} Plain design object
    */
   static async applyTemplate(offerId, templateId, templateConfig) {
     try {
@@ -277,13 +363,14 @@ class CardDesignService {
       // Try to get existing design
       const existingDesign = await this.getDesignByOffer(offerId)
       if (existingDesign) {
-        return existingDesign.toJSON()
+        return existingDesign
       }
 
       // Return default design (not saved to DB)
       logger.info(`ℹ️ Returning default design for offer ${offerId} (not saved)`)
 
       const offer = await Offer.findByPk(offerId, {
+        attributes: ['barcode_preference', 'apple_pass_type'],
         include: [{
           model: Business,
           as: 'business',
@@ -315,6 +402,8 @@ class CardDesignService {
         version: 1,
         validation_status: 'pending',
         validation_errors: [],
+        barcode_preference: offer.barcode_preference || 'PDF417',
+        apple_pass_type: offer.apple_pass_type || 'storeCard',
         isDefault: true  // Flag to indicate this is a default design
       }
 
@@ -327,7 +416,7 @@ class CardDesignService {
   /**
    * Mark design as applied (updates last_applied_at timestamp)
    * @param {string} offerId - Offer public ID
-   * @returns {Promise<OfferCardDesign>}
+   * @returns {Promise<object|null>} Plain design object or null
    */
   static async markDesignAsApplied(offerId) {
     try {
@@ -339,7 +428,9 @@ class CardDesignService {
 
       await design.markAsApplied()
       logger.info(`✅ Marked design as applied for offer ${offerId}`)
-      return design
+      
+      // Return plain object for consistency
+      return design.toJSON()
 
     } catch (error) {
       logger.error(`❌ Failed to mark design as applied for offer ${offerId}:`, error)
@@ -434,7 +525,7 @@ class CardDesignService {
    * Duplicate design from one offer to another
    * @param {string} sourceOfferId - Source offer public ID
    * @param {string} targetOfferId - Target offer public ID
-   * @returns {Promise<OfferCardDesign>}
+   * @returns {Promise<object>} Plain design object
    */
   static async duplicateDesign(sourceOfferId, targetOfferId) {
     try {
@@ -451,12 +542,20 @@ class CardDesignService {
       }
 
       // Create new design with same configuration
-      const designData = sourceDesign.toJSON()
+      // Clone the design data (handles both Sequelize instances and plain objects)
+      let designData
+      if (typeof sourceDesign.toJSON === 'function') {
+        designData = sourceDesign.toJSON()
+      } else {
+        designData = { ...sourceDesign }
+      }
+      
       delete designData.id
       delete designData.offer_id
       delete designData.last_applied_at
       delete designData.created_at
       delete designData.updated_at
+      delete designData.barcode_preference  // Remove barcode_preference as it's offer-specific
       designData.offer_id = targetOfferId
       designData.business_id = targetOffer.business_id
       designData.version = 1  // Reset version for new offer

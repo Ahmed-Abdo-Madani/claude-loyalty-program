@@ -19,7 +19,7 @@ import WalletPass from '../models/WalletPass.js'
 import Device from '../models/Device.js'
 import DeviceRegistration from '../models/DeviceRegistration.js'
 import DeviceLog from '../models/DeviceLog.js'
-import appleWalletController from '../controllers/appleWalletController.js'
+import appleWalletController, { resolveApplePassType } from '../controllers/appleWalletController.js'
 import { CustomerProgress, Offer, Business, Customer } from '../models/index.js'
 import CardDesignService from '../services/CardDesignService.js'
 import CustomerService from '../services/CustomerService.js'
@@ -382,8 +382,12 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     // Generate pass data (pass.json) with SAME serial number and SAME auth token
     const passData = appleWalletController.createPassJson(customerData, offerData, progressData, design, existingSerialNumber, existingAuthToken)
 
-    // Generate pass images
-    const images = await appleWalletController.generatePassImages(offerData, design, progressData)
+    // Determine pass type before generating images
+    const applePassType = resolveApplePassType(offerData)
+    logger.info('🍎 Resolved Apple Wallet pass type:', applePassType)
+
+    // Generate pass images with resolved pass type
+    const images = await appleWalletController.generatePassImages(offerData, design, progressData, applePassType)
 
     // Create manifest
     const manifest = appleWalletController.createManifest(passData, images)

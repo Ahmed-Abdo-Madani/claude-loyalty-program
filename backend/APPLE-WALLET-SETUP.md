@@ -25,10 +25,47 @@ The Madna Loyalty Platform uses Apple Wallet to provide digital loyalty cards to
 
 ### Technical Details
 
-- **Pass Type**: Store Card (loyalty/membership card)
+- **Pass Types**: Store Card (storeCard) or Generic (generic) - configurable per offer
+  - **StoreCard**: Traditional loyalty card layout with 624×168px strip image
+  - **Generic**: Modern layout with 180×180px thumbnail and better field separation
 - **Format**: `.pkpass` (PKCS#7 signed ZIP file)
 - **Signature**: PKCS#7 detached signature with SHA-1
 - **Certificate Chain**: Pass Type ID Certificate + Apple WWDR G4 Certificate
+- **Barcode**: Configurable per offer (QR Code or PDF417)
+
+### Pass Type Selection
+
+Businesses can choose between two Apple Wallet pass layouts for each offer:
+
+#### StoreCard Pass (Traditional)
+- **Image**: 624×168px strip image displayed horizontally
+- **Best for**: Classic loyalty cards, simple stamp visualizations
+- **Barcode layout**: Horizontal (PDF417 recommended)
+- **Field layout**: Standard pass fields with strip image at top
+- **Default option**: Yes
+
+#### Generic Pass (Modern)  
+- **Image**: 180×180px square thumbnail displayed on left side
+- **Best for**: Modern designs, compact layouts with better field separation
+- **Barcode layout**: Rectangular with more vertical space for PDF417
+- **Field layout**: Better separation between fields and content
+- **Benefits**: Improved PDF417 readability, more balanced design
+
+**Configuration**: Set `apple_pass_type` field on offers table:
+```sql
+UPDATE offers SET apple_pass_type = 'generic' WHERE id = 'off_xxx';
+-- OR
+UPDATE offers SET apple_pass_type = 'storeCard' WHERE id = 'off_xxx';  -- default
+```
+
+**Image Generation**: The platform automatically generates appropriately sized images:
+- StoreCard: 624×168px strip@2x.png
+- Generic: 180×180px thumbnail@2x.png
+
+**Stamp Layout**: Automatic proportional adjustments for thumbnail size:
+- Padding reduced for compact display (10px vs 20px horizontal)
+- Maximum stamp size adjusted (50px vs 100px)
+- Grid layout optimized for square format
 
 ---
 
