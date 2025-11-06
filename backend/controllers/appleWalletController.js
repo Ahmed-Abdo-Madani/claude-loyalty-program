@@ -19,6 +19,108 @@ import Offer from '../models/Offer.js'
 import Business from '../models/Business.js'
 import CustomerProgress from '../models/CustomerProgress.js'
 import OfferCardDesign from '../models/OfferCardDesign.js'
+import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
+
+/**
+ * Helper function to resolve Apple Wallet pass type from offer data
+ * Centralizes pass type detection logic to avoid duplication
+ * @param {object} offerData - Offer data object
+ * @param {object} design - Optional card design object (takes precedence)
+ * @returns {string} 'generic' or 'storeCard'
+ */
+function resolveApplePassType(offerData, design = null) {
+  // Prefer design.apple_pass_type if available (user's design choice)
+  // Fall back to offer.apple_pass_type, then default to storeCard
+  return design?.apple_pass_type || offerData?.apple_pass_type || offerData?.applePassType || 'storeCard'
+}
+
+/**
+/**
+ * Helper function to format customer names for Apple Wallet passes
+ * Smart truncation: cuts after first space if name > 7 characters
+ * @param {string} fullName - Full customer name
+ * @returns {string} Formatted name (first name only if > 7 chars)
+ */
+function formatCustomerName(fullName) {
+  if (!fullName) return ''
+  const name = String(fullName).trim()
+  if (name.length <= 7) return name
+  
+  const firstSpaceIndex = name.indexOf(' ')
+  if (firstSpaceIndex > 0) {
+    return name.substring(0, firstSpaceIndex)
+  }
+  
+  return name.substring(0, 7) + '...'
+}
+
+/**
+ * Helper function to determine pass language from customer/offer data
+ * Priority: customerData.preferredLanguage → customerData.preferred_language → offerData.language → 'en'
+ * @param {object} customerData - Customer data object
+ * @param {object} offerData - Offer data object
+ * @returns {string} Language code ('en' or 'ar')
+ */
+function getPassLanguage(customerData, offerData) {
+  const language = customerData?.preferredLanguage || 
+                   customerData?.preferred_language || 
+                   offerData?.language || 
+                   'en'
+  
+  // Normalize to base language code
+  const normalized = language.toLowerCase().substring(0, 2)
+  const result = ['en', 'ar'].includes(normalized) ? normalized : 'en'
+  
+  logger.info('🌐 Pass language detected:', {
+    source: customerData?.preferredLanguage ? 'customerData.preferredLanguage' :
+            customerData?.preferred_language ? 'customerData.preferred_language' :
+            offerData?.language ? 'offerData.language' : 'default',
+    language: result
+  })
+  
+  return result
+}
+
+/**
+ * Helper function to get localized strings for Apple Wallet pass fields
+ * Delegates to centralized locale files via getLocalizedMessage
+ * @param {string} language - Language code ('en' or 'ar')
+ * @returns {object} Object with all localized pass strings
+ */
+function getLocalizedPassStrings(language) {
+  return {
+    progress: getLocalizedMessage('appleWallet.fields.progress', language),
+    completed: getLocalizedMessage('appleWallet.fields.completed', language),
+    member: getLocalizedMessage('appleWallet.fields.member', language),
+    customerTier: getLocalizedMessage('appleWallet.fields.customerTier', language),
+    message: getLocalizedMessage('appleWallet.fields.message', language),
+    scanToEarn: getLocalizedMessage('appleWallet.fields.scanToEarn', language),
+    contact: getLocalizedMessage('appleWallet.fields.contact', language),
+    location: getLocalizedMessage('appleWallet.fields.location', language),
+    address: getLocalizedMessage('appleWallet.fields.address', language),
+    offer: getLocalizedMessage('appleWallet.fields.offer', language),
+    reward: getLocalizedMessage('appleWallet.fields.reward', language),
+    memberId: getLocalizedMessage('appleWallet.fields.memberId', language),
+    latestMessage: getLocalizedMessage('appleWallet.fields.latestMessage', language),
+    welcomeMessage: getLocalizedMessage('appleWallet.fields.welcomeMessage', language),
+    rewardsCompleted: getLocalizedMessage('appleWallet.changeMessages.rewardsCompleted', language),
+    congratulations: getLocalizedMessage('appleWallet.changeMessages.congratulations', language),
+    newMessage: getLocalizedMessage('appleWallet.changeMessages.newMessage', language)
+  }
+}
+
+/**
+ * Helper function to truncate long strings with ellipsis
+ * Prevents field overflow on Apple Wallet passes
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length before truncation
+ * @returns {string} Truncated text with ellipsis if needed
+ */
+function truncateText(text, maxLength = 28) {
+  if (!text) return ''
+  const str = String(text)
+  return str.length > maxLength ? str.substring(0, maxLength - 3) + '...' : str
+}
 
 class AppleWalletController {
   constructor() {
@@ -112,7 +214,7 @@ class AppleWalletController {
         try {
           const { default: sequelize } = await import('../config/database.js')
           const [offerRecord] = await sequelize.query(`
-            SELECT business_id, stamps_required, title, description
+            SELECT business_id, stamps_required, title, description, barcode_preference, apple_pass_type
             FROM offers
             WHERE public_id = ?
             LIMIT 1
@@ -131,6 +233,10 @@ class AppleWalletController {
               offerData.stampsRequired = offerRecord.stamps_required
               logger.info('✅ Populated stampsRequired from database:', offerRecord.stamps_required)
             }
+            logger.info('✅ Fetched barcode_preference from database:', offerRecord.barcode_preference)
+            offerData.barcode_preference = offerRecord.barcode_preference
+            logger.info('🍎 Apple pass type for offer from database:', offerRecord.apple_pass_type || 'storeCard (default)')
+            offerData.apple_pass_type = offerRecord.apple_pass_type || 'storeCard'
           } else {
             throw new Error(`Offer ${offerData.offerId} not found in database`)
           }
@@ -140,6 +246,66 @@ class AppleWalletController {
         }
       } else {
         logger.info('✅ offerData has required fields (businessId and stampsRequired)')
+        
+        // Fetch apple_pass_type even when other offer fields are present
+        if (offerData.apple_pass_type === undefined || offerData.apple_pass_type === null) {
+          logger.info('🔍 Fetching apple_pass_type from database...')
+          try {
+            const { default: sequelize } = await import('../config/database.js')
+            const [offerRecord] = await sequelize.query(`
+              SELECT apple_pass_type
+              FROM offers
+              WHERE public_id = ?
+              LIMIT 1
+            `, {
+              replacements: [offerData.offerId],
+              type: sequelize.QueryTypes.SELECT
+            })
+
+            if (offerRecord) {
+              offerData.apple_pass_type = offerRecord.apple_pass_type || 'storeCard'
+              logger.info('🍎 Apple pass type for offer:', offerData.apple_pass_type)
+            } else {
+              logger.warn('⚠️ Offer not found, defaulting apple_pass_type to storeCard')
+              offerData.apple_pass_type = 'storeCard'
+            }
+          } catch (error) {
+            logger.error('❌ Failed to fetch apple_pass_type from database:', error.message)
+            logger.warn('⚠️ Defaulting apple_pass_type to storeCard')
+            offerData.apple_pass_type = 'storeCard'
+          }
+        }
+        
+        // Fetch barcode_preference even when other offer fields are present
+        if (offerData.barcode_preference === undefined || offerData.barcode_preference === null) {
+          logger.info('🔍 Fetching barcode_preference from database...')
+          try {
+            const { default: sequelize } = await import('../config/database.js')
+            const [offerRecord] = await sequelize.query(`
+              SELECT barcode_preference, apple_pass_type
+              FROM offers
+              WHERE public_id = ?
+              LIMIT 1
+            `, {
+              replacements: [offerData.offerId],
+              type: sequelize.QueryTypes.SELECT
+            })
+
+            if (offerRecord) {
+              offerData.barcode_preference = offerRecord.barcode_preference
+              logger.info('✅ Fetched barcode_preference from database:', offerRecord.barcode_preference)
+              offerData.apple_pass_type = offerRecord.apple_pass_type || 'storeCard'
+              logger.info('🍎 Apple pass type for offer:', offerData.apple_pass_type)
+            } else {
+              logger.warn('⚠️ Offer not found, defaulting barcode_preference to QR_CODE')
+              offerData.barcode_preference = 'QR_CODE'
+            }
+          } catch (error) {
+            logger.error('❌ Failed to fetch barcode_preference from database:', error.message)
+            logger.warn('⚠️ Defaulting barcode_preference to QR_CODE')
+            offerData.barcode_preference = 'QR_CODE'
+          }
+        }
       }
 
       // 🆕 COMMENT 2 FIX: Fetch business contact and location data for back fields
@@ -179,6 +345,35 @@ class AppleWalletController {
       } catch (error) {
         logger.error('❌ Failed to fetch business data from database:', error.message)
         // Continue without business data - back fields will be empty
+      }
+
+      // 🌐 Fetch customer's preferred language for localization
+      if (!customerData.preferredLanguage && !customerData.preferred_language) {
+        logger.info('🔍 Fetching customer preferred_language from database...')
+        try {
+          const { default: sequelize } = await import('../config/database.js')
+          const [customerRecord] = await sequelize.query(`
+            SELECT preferred_language
+            FROM customers
+            WHERE customer_id = ?
+            LIMIT 1
+          `, {
+            replacements: [customerData.customerId],
+            type: sequelize.QueryTypes.SELECT
+          })
+
+          if (customerRecord && customerRecord.preferred_language) {
+            customerData.preferredLanguage = customerRecord.preferred_language || customerData.preferred_language || 'en'
+            logger.info('✅ Customer preferred language:', customerData.preferredLanguage)
+          } else {
+            logger.info('ℹ️ No preferred_language found for customer, will use default (en)')
+            customerData.preferredLanguage = customerData.preferred_language || 'en'
+          }
+        } catch (error) {
+          logger.error('❌ Failed to fetch customer language from database:', error.message)
+          logger.info('ℹ️ Will use default language (en)')
+          customerData.preferredLanguage = customerData.preferred_language || 'en'
+        }
       }
 
       // Ensure we have actual customer progress for stamp visualization
@@ -272,7 +467,22 @@ class AppleWalletController {
       )
 
       // Generate pass images with progress data for stamp visualization
-      const images = await this.generatePassImages(offerData, design, actualProgressData)
+      // Use centralized helper to resolve pass type (prefer design over offer data)
+      const images = await this.generatePassImages(
+        offerData, 
+        design, 
+        actualProgressData,
+        resolveApplePassType(offerData, design)
+      )
+
+      // Debug logging for image generation
+      logger.info('🖼️ Generated pass images:', {
+        imageCount: Object.keys(images).length,
+        imageFiles: Object.keys(images),
+        imageSizes: Object.entries(images).map(([name, buffer]) => `${name}: ${buffer.length} bytes`),
+        passType: resolveApplePassType(offerData, design),
+        expectedHeroImage: resolveApplePassType(offerData, design) === 'generic' ? 'thumbnail@2x.png' : 'strip@2x.png'
+      })
 
       // Create manifest with file hashes
       const manifest = this.createManifest(passData, images)
@@ -380,14 +590,31 @@ class AppleWalletController {
   }
 
   // PHASE 3: Helper method to build back fields dynamically based on available data
-  buildBackFields(offerData, customerData, customMessage = null) {
+  buildBackFields(offerData, customerData, customMessage = null, progressData = null) {
+    // 🌐 Detect pass language for localization
+    const passLanguage = getPassLanguage(customerData, offerData)
+    const localizedStrings = getLocalizedPassStrings(passLanguage)
+    
     const backFields = []
 
-    // 1. Business Phone (if available) - with tap-to-call
+    // 1. Customer Tier (visible on back for both pass types)
+    // Generic passes: tier on front (secondaryFields) AND back (backFields) for redundancy
+    // StoreCard passes: tier as label on front (auxiliaryFields label) AND back (backFields)
+    if (progressData?.tierData?.currentTier) {
+      backFields.push({
+        key: 'tier',
+        label: localizedStrings.customerTier,
+        value: `${progressData?.tierData?.currentTier?.icon} ${progressData?.tierData?.currentTier?.name}`,
+        textAlignment: 'PKTextAlignmentLeft',
+        changeMessage: localizedStrings.congratulations
+      })
+    }
+
+    // 2. Business Phone (if available) - with tap-to-call
     if (offerData.businessPhone || offerData.phone) {
       backFields.push({
         key: 'business_phone',
-        label: 'Contact',
+        label: localizedStrings.contact,
         value: offerData.businessPhone || offerData.phone,
         textAlignment: 'PKTextAlignmentLeft',
         dataDetectorTypes: ['PKDataDetectorTypePhoneNumber']
@@ -410,7 +637,7 @@ class AppleWalletController {
     if (locationValue) {
       backFields.push({
         key: 'location',
-        label: 'Location',
+        label: localizedStrings.location,
         value: locationValue,
         textAlignment: 'PKTextAlignmentLeft'
       })
@@ -420,7 +647,7 @@ class AppleWalletController {
     if (offerData.businessAddress || offerData.address) {
       backFields.push({
         key: 'address',
-        label: 'Address',
+        label: localizedStrings.address,
         value: offerData.businessAddress || offerData.address,
         textAlignment: 'PKTextAlignmentLeft',
         dataDetectorTypes: ['PKDataDetectorTypeAddress']
@@ -433,7 +660,7 @@ class AppleWalletController {
       : offerData.title
     backFields.push({
       key: 'offer_details',
-      label: 'Offer',
+      label: localizedStrings.offer,
       value: offerDetails,
       textAlignment: 'PKTextAlignmentLeft'
     })
@@ -442,49 +669,52 @@ class AppleWalletController {
     if (offerData.rewardDescription) {
       backFields.push({
         key: 'reward',
-        label: 'Reward',
+        label: localizedStrings.reward,
         value: offerData.rewardDescription,
         textAlignment: 'PKTextAlignmentLeft'
       })
     }
 
-    // 6. Customer ID (always available)
+    // 6. Customer Name (if provided) - useful when omitted from front due to custom message
+    const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
+    if (fullName) {
+      backFields.push({
+        key: 'customer_name',
+        label: localizedStrings.member,
+        value: fullName,
+        textAlignment: 'PKTextAlignmentLeft'
+      })
+    }
+
+    // 7. Customer ID (always available)
     backFields.push({
       key: 'customer_id',
-      label: 'Member ID',
+      label: localizedStrings.memberId,
       value: customerData.customerId,
       textAlignment: 'PKTextAlignmentLeft'
     })
 
-    // 7. Custom Message (if provided) - Dynamic field with changeMessage (localized)
+    // 8. Custom Message (if provided) - Dynamic field with changeMessage (localized)
     // Full message on back (persistence) - allows users to view message after dismissing notification
     if (customMessage && customMessage.header && customMessage.body) {
-      // Determine language for localization
-      const businessLanguage = offerData.language || offerData.businessLanguage || 'en'
-      const isArabic = businessLanguage === 'ar' || businessLanguage === 'arabic'
-      
-      // Localized strings (keeping %@ placeholder intact)
-      const localizedStrings = {
-        label: isArabic ? 'أحدث رسالة' : 'Latest Message',
-        changeMessage: isArabic ? 'رسالة جديدة: %@' : 'New message: %@'
-      }
-      
       const timestamp = new Date().toISOString()
       const messageValue = `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
       
       backFields.push({
         key: 'latest_message',
-        label: localizedStrings.label,
+        label: localizedStrings.latestMessage,
         value: messageValue,
         textAlignment: 'PKTextAlignmentLeft',
-        changeMessage: localizedStrings.changeMessage // Triggers visible lock-screen notification
+        changeMessage: localizedStrings.newMessage // Triggers visible lock-screen notification
       })
+      
+      const isArabic = passLanguage === 'ar'
       
       logger.info('💬 Custom message field added to back fields:', {
         timestamp,
         header: customMessage.header.substring(0, 30),
         body: customMessage.body.substring(0, 30),
-        language: businessLanguage,
+        language: passLanguage,
         isArabic
       })
     }
@@ -604,16 +834,10 @@ class AppleWalletController {
         throw new Error('QR message encoding failed: contains non-ASCII characters')
       }
 
-      // Determine changeMessage language based on business language preference
-      // Future-ready: will use business.language when field is added to database
-      const businessLanguage = offerData.language || offerData.businessLanguage || 'en'
-      const isArabic = businessLanguage === 'ar' || businessLanguage === 'arabic'
-      
-      // Localized changeMessage strings (keeping %@ placeholder intact)
-      const changeMessages = {
-        completions: isArabic ? '🎉 المكافآت المكتملة: %@' : '🎉 Rewards completed: %@',
-        tier: isArabic ? 'مبروك! أنت الآن %@' : 'Congratulations! You are now %@'
-      }
+      // 🌐 Get customer's preferred language for localization
+      const passLanguage = getPassLanguage(customerData, offerData)
+      const localizedStrings = getLocalizedPassStrings(passLanguage)
+      const ofWord = passLanguage === 'ar' ? 'من' : 'of'
 
       logger.info('🔐 Generated QR code data (ASCII-safe validated):', {
         customerToken: customerToken.substring(0, 20) + '...',
@@ -621,8 +845,22 @@ class AppleWalletController {
         fullMessage: qrMessage.substring(0, 30) + '...',
         messageLength: qrMessage.length,
         encoding: 'base64:hex (ASCII-safe)',
-        language: businessLanguage,
-        usingArabicMessages: isArabic
+        language: passLanguage
+      })
+
+      // Determine barcode preference from offer or design (use let for later reassignment if needed)
+      let barcodePreference = offerData.barcode_preference || design?.barcode_preference || 'PDF417'
+
+      // Determine Apple Wallet pass type from offer preference (centralized helper)
+      // Prefer design.apple_pass_type if set, otherwise use offer.apple_pass_type
+      const applePassType = resolveApplePassType(offerData, design)
+      const isGenericPass = applePassType === 'generic'
+
+      logger.info('🍎 Apple Wallet pass type:', {
+        preference: applePassType,
+        isGeneric: isGenericPass,
+        barcodeFormat: barcodePreference,
+        source: design?.apple_pass_type ? 'design' : 'offer'
       })
 
       // Prepare pass data structure
@@ -642,100 +880,193 @@ class AppleWalletController {
 
       // iOS 15 compatibility fields (from working Loopy Loyalty pass structure)
       sharingProhibited: true, // Prevents pass from being shared
-      suppressStripShine: false, // Allows glossy effect on strip image
+      ...(isGenericPass ? {} : { suppressStripShine: false }), // Only for storeCard
 
-      // Store Card structure - Enhanced with header fields, auxiliary fields
-      // Maintains iOS 15.6 compatibility while adding business and customer information
-      storeCard: {
-        // PHASE 1: Header fields - Business name in top right corner
+      // Pass structure - storeCard or generic based on offer preference
+      // Different field hierarchies for optimal display
+      [isGenericPass ? 'generic' : 'storeCard']: isGenericPass ? {
+        // GENERIC PASS STRUCTURE - Complies with PassKit field count limits
+        // Maximum: 1 primary + 2 secondary + 2 auxiliary = 4 fields total
+        
+        // Header fields - Business name in top right corner
         headerFields: [
           {
             key: 'business',
-            value: businessName, // Business name from validated variable (line 372)
-            textAlignment: 'PKTextAlignmentRight' // Right-aligned in header
+            value: businessName,
+            textAlignment: 'PKTextAlignmentRight'
           }
         ],
 
-        // Secondary fields - show progress on front of pass
+        // Primary fields - Always present (custom message or welcome message)
+        primaryFields: [
+          {
+            key: 'message',
+            label: customMessage && customMessage.header && customMessage.body 
+              ? localizedStrings.latestMessage 
+              : localizedStrings.welcomeMessage,
+            textAlignment: 'PKTextAlignmentCenter',
+            value: customMessage && customMessage.header && customMessage.body
+              ? truncateText(`${customMessage.header}: ${customMessage.body}`, 70)
+              : truncateText(`${localizedStrings.welcomeMessage} ${businessName}`, 70),
+            ...(customMessage && customMessage.header && customMessage.body ? {
+              changeMessage: localizedStrings.newMessage
+            } : {})
+          }
+        ],
+
+        // Secondary fields - Tier (left), Progress (right) - EXACTLY 2 fields
         secondaryFields: [
           {
-            key: 's0', // Match working clone key naming
-            label: 'Progress',
-            textAlignment: 'PKTextAlignmentLeft', // Match working clone alignment
-            value: `${stampsEarned} of ${stampsRequired}`
-            // NOTE: No changeMessage - updates too frequently, would cause notification fatigue
+            key: 'tier',
+            label: localizedStrings.customerTier,
+            textAlignment: 'PKTextAlignmentLeft',
+            value: truncateText(
+              progressData?.tierData?.currentTier
+                ? `${progressData?.tierData?.currentTier?.icon} ${passLanguage === 'ar' ? progressData?.tierData?.currentTier?.nameAr : progressData?.tierData?.currentTier?.name}`
+                : passLanguage === 'ar' ? '👋 عضو جديد' : '👋 New Member',
+              28
+            ),
+            changeMessage: localizedStrings.congratulations
+          },
+          {
+            key: 'progress',
+            label: localizedStrings.progress,
+            textAlignment: 'PKTextAlignmentRight',
+            value: `${stampsEarned} ${ofWord} ${stampsRequired}`
+          }
+        ],
+
+        // Auxiliary fields - Always show completions only (1 field) to stay within 4-field limit
+        // Member name is available in backFields
+        auxiliaryFields: [
+          {
+            key: 'completions',
+            label: localizedStrings.completed,
+            textAlignment: 'PKTextAlignmentRight',
+            value: `${progressData?.rewardsClaimed || 0}x`,
+            changeMessage: localizedStrings.rewardsCompleted
+          }
+        ]
+      } : {
+        // STORECARD PASS STRUCTURE - Reduced field count for barcode compatibility
+        
+        // Header fields - Business name in top right corner
+        headerFields: [
+          {
+            key: 'business',
+            value: businessName,
+            textAlignment: 'PKTextAlignmentRight'
+          }
+        ],
+
+        // Secondary fields - EXACTLY 2 fields for barcode compatibility
+        secondaryFields: [
+          {
+            key: 's0',
+            label: localizedStrings.progress,
+            textAlignment: 'PKTextAlignmentLeft',
+            value: `${stampsEarned} ${ofWord} ${stampsRequired}`
           },
           {
             key: 'completions',
-            label: 'Completed',
+            label: localizedStrings.completed,
             textAlignment: 'PKTextAlignmentLeft',
             value: `${progressData.rewardsClaimed || 0}x`,
-            changeMessage: changeMessages.completions // Localized notification on lock screen when value changes
-          },
-          {
-            key: 'tier',
-            label: '',
-            textAlignment: 'PKTextAlignmentLeft',
-            // Always show tier field with fallback to "New Member"
-            value: progressData.tierData?.currentTier
-              ? `${progressData.tierData.currentTier.icon} ${progressData.tierData.currentTier.name}`
-              : '👋 New Member',
-            changeMessage: changeMessages.tier // Localized notification when tier changes
+            changeMessage: localizedStrings.rewardsCompleted
           }
         ],
 
-        // PHASE 2: Auxiliary fields - Customer name on right side under hero
+        // Auxiliary fields - EXACTLY 1 field (customer name with dynamic tier label)
         auxiliaryFields: [
           {
             key: 'customer',
-            label: 'Member',
-            value: [customerData.firstName, customerData.lastName].filter(Boolean).join(' '),
-            textAlignment: 'PKTextAlignmentRight' // Right-aligned
-          },
-          // Message alert field (visible on front) - triggers lock-screen notification per Airship best practices
-          ...(customMessage ? [{
-            key: 'message_alert',
-            label: isArabic ? 'رسالة' : 'Message',
-            value: (() => {
-              const headerText = String(customMessage.header || '')
-              return headerText.length > 40 
-                ? headerText.substring(0, 37) + '...' 
-                : headerText
+            label: (() => {
+              // Use tier name as label if available, otherwise use "Member"
+              if (progressData?.tierData?.currentTier) {
+                const tier = progressData?.tierData?.currentTier
+                // Use localized tier name based on pass language
+                const tierName = passLanguage === 'ar' ? tier.nameAr : tier.name
+                return tierName || localizedStrings.member
+              }
+              return localizedStrings.member
             })(),
-            changeMessage: isArabic ? 'رسالة جديدة: %@' : 'New message: %@',
-            textAlignment: 'PKTextAlignmentLeft'
-          }] : [])
+            value: (() => {
+              const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
+              const formattedName = formatCustomerName(fullName)
+              return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
+            })(),
+            textAlignment: 'PKTextAlignmentRight' // Right-aligned for storeCard
+          }
         ]
       },
 
       // PHASE 3: Back fields - Business contact, location, and offer details (TOP-LEVEL per PassKit schema)
-      backFields: this.buildBackFields(offerData, customerData, customMessage),
+      backFields: this.buildBackFields(offerData, customerData, customMessage, progressData)
+    }
 
-      // Barcode for POS scanning
-      // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
-      // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
-      // Encoding: UTF-8 (safer for international characters, backward compatible with ASCII QR data)
-      // QR payload is base64:hex format (ASCII-safe), but UTF-8 provides future-proofing
-      barcode: {
-        altText: 'Scan to earn stamps',  // Updated alt text for better UX
-        format: 'PKBarcodeFormatQR',
+    // Log pass structure for debugging
+    logger.info('📋 Pass structure created:', {
+      passType: isGenericPass ? 'generic' : 'storeCard',
+      hasPrimaryFields: isGenericPass,
+      primaryFieldsCount: isGenericPass ? 1 : 0,
+      secondaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length,
+      auxiliaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length,
+      hasCustomMessage: !!customMessage,
+      totalFieldCount: (isGenericPass ? 1 : 0) + 
+                       (passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length || 0) + 
+                       (passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length || 0)
+    })
+
+    // Determine barcode format based on offer preference
+    // Already declared earlier - just reassign if needed for fallback logic
+    // Default was set to 'PDF417' earlier, but keep QR_CODE fallback for safety
+    barcodePreference = barcodePreference || 'QR_CODE'
+    let barcodeFormat = barcodePreference === 'PDF417' ? 'PKBarcodeFormatPDF417' : 'PKBarcodeFormatQR'
+    
+    // PDF417 size guard: PDF417 typically supports ~1850 alphanumeric characters
+    // QR codes support up to ~4296 alphanumeric characters
+    const PDF417_MAX_LENGTH = 1850
+    if (barcodePreference === 'PDF417' && qrMessage.length > PDF417_MAX_LENGTH) {
+      logger.warn('⚠️ PDF417 barcode payload exceeds safe limit, falling back to QR_CODE', {
+        messageLength: qrMessage.length,
+        maxLength: PDF417_MAX_LENGTH,
+        exceededBy: qrMessage.length - PDF417_MAX_LENGTH
+      })
+      barcodePreference = 'QR_CODE'
+      barcodeFormat = 'PKBarcodeFormatQR'
+    }
+    
+    logger.info('📊 Barcode format selection:', { 
+      preference: barcodePreference, 
+      appleFormat: barcodeFormat,
+      messageLength: qrMessage.length
+    })
+
+    // Add barcode configuration to passData
+    // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
+    // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
+    // Encoding: UTF-8 (safer for international characters, backward compatible with ASCII QR data)
+    // QR payload is base64:hex format (ASCII-safe), but UTF-8 provides future-proofing
+    passData.barcode = {
+      altText: localizedStrings.scanToEarn,
+      format: barcodeFormat,
+      message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
+      messageEncoding: 'UTF-8'
+    }
+    
+    passData.barcodes = [
+      {
+        altText: localizedStrings.scanToEarn,
+        format: barcodeFormat,
         message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
         messageEncoding: 'UTF-8'
-      },
-      barcodes: [
-        {
-          altText: 'Scan to earn stamps',  // Updated alt text for better UX
-          format: 'PKBarcodeFormatQR',
-          message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
-          messageEncoding: 'UTF-8'
-        }
-      ]
+      }
+    ]
 
-      // NOTE: relevantDate and maxDistance removed for iOS 15 compatibility
-      // maxDistance requires a locations array or causes validation failures on iOS 15
-      // relevantDate has strict format requirements that can fail on older iOS versions
-      // These can be added later with proper locations array for geolocation features
-    }
+    // NOTE: relevantDate and maxDistance removed for iOS 15 compatibility
+    // maxDistance requires a locations array or causes validation failures on iOS 15
+    // relevantDate has strict format requirements that can fail on older iOS versions
+    // These can be added later with proper locations array for geolocation features
 
     // ============ APPLE WEB SERVICE PROTOCOL ============
     // Add webServiceURL and authenticationToken for dynamic pass updates
@@ -787,6 +1118,19 @@ class AppleWalletController {
           ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` 
           : '[REDACTED]'
       }
+      // Redact barcode messages
+      if (redactedPassData.barcode && redactedPassData.barcode.message) {
+        const msg = redactedPassData.barcode.message
+        redactedPassData.barcode.message = msg.length > 8
+          ? `${msg.substring(0, 4)}...[${msg.length} chars]`
+          : '[REDACTED]'
+      }
+      if (redactedPassData.barcodes && redactedPassData.barcodes[0] && redactedPassData.barcodes[0].message) {
+        const msg = redactedPassData.barcodes[0].message
+        redactedPassData.barcodes[0].message = msg.length > 8
+          ? `${msg.substring(0, 4)}...[${msg.length} chars]`
+          : '[REDACTED]'
+      }
       
       logger.info(JSON.stringify(redactedPassData, null, 2))
       logger.info('🔍 ======================================')
@@ -799,7 +1143,9 @@ class AppleWalletController {
       logger.info('  - labelColor:', passData.labelColor)
       logger.info('  - serialNumber:', passData.serialNumber)
       logger.info('  - customerID:', customerData.customerId)
-      logger.info('  - barcode message:', passData.barcodes[0].message)
+      logger.info('  - barcode format:', passData.barcode.format)
+      logger.info('  - barcode message length:', passData.barcodes[0].message.length, 'chars')
+      logger.info('  - barcode message preview:', passData.barcodes[0].message.substring(0, 6) + '...')
       logger.info('  - barcode encoding:', passData.barcodes[0].messageEncoding)
       logger.info('🔍 ======================================')
 
@@ -810,7 +1156,7 @@ class AppleWalletController {
     }
   }
 
-  async generatePassImages(offerData, design = null, progressData = {}) {
+  async generatePassImages(offerData, design = null, progressData = {}, passType = 'storeCard') {
     // Import StampImageGenerator service for dynamic stamp visualization
     const StampImageGenerator = (await import('../services/StampImageGenerator.js')).default
 
@@ -863,18 +1209,9 @@ class AppleWalletController {
 
     // Generate REQUIRED icon.png images (Apple Wallet won't install without these)
     // icon.png is mandatory for ALL pass types
-    const icon1x = await sharp(baseImageBuffer)
-      .resize(29, 29, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer()
-
+    // Only generating @2x since 1x and 3x are not used in the final pass
     const icon2x = await sharp(baseImageBuffer)
       .resize(58, 58, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer()
-
-    const icon3x = await sharp(baseImageBuffer)
-      .resize(87, 87, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer()
 
@@ -967,17 +1304,80 @@ class AppleWalletController {
       heroImageUrl: design?.hero_image_url,
       backgroundColor: design?.background_color || '#3B82F6',
       foregroundColor: design?.foreground_color || '#FFFFFF',
-      progressDisplayStyle: design?.progress_display_style || 'grid'
+      progressDisplayStyle: design?.progress_display_style || 'grid',
+      passType: passType  // NEW: Pass type for image sizing
     })
     logger.info('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
 
-    // Return ONLY @2x images to match working iOS 15.6 clone structure
-    // Working clone only has: icon@2x.png, logo@2x.png, strip@2x.png (3 files total)
-    return {
+    // Generate 1x variant of hero image for compatibility
+    // Resize from @2x (which is already generated) to 1x dimensions
+    let hero1x
+    if (passType === 'generic') {
+      // Generic: 180x180 for 1x (from 180x180 @2x which is already 1x size)
+      hero1x = await sharp(stampHeroImage)
+        .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png()
+        .toBuffer()
+    } else {
+      // StoreCard: 312x84 for 1x (half of 624x168 @2x)
+      hero1x = await sharp(stampHeroImage)
+        .resize(312, 84, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png()
+        .toBuffer()
+    }
+    logger.info('✅ 1x hero image variant generated:', hero1x.length, 'bytes')
+
+    // Return both 1x and @2x images for maximum compatibility
+    // Include 1x variants to support older devices and non-retina displays
+    const images = {
       'icon@2x.png': icon2x,           // 58x58 - Retina displays
       'logo@2x.png': logo2x,           // 320x100 - Retina displays
-      'strip@2x.png': stampHeroImage   // 624x168 - Dynamic hero image with stamps
+      [passType === 'generic' ? 'thumbnail@2x.png' : 'strip@2x.png']: stampHeroImage,   // @2x hero image
+      [passType === 'generic' ? 'thumbnail.png' : 'strip.png']: hero1x   // 1x hero image for compatibility
     }
+
+    // CRITICAL: Verify presence of required 1x and 2x image pairs
+    // Missing 1x images can cause silent install failures on some iOS versions
+    logger.info('🔍 Verifying required image variants...')
+    
+    const requiredPairs = [
+      { base: 'icon', size2x: [58, 58], size1x: [29, 29] },
+      { base: 'logo', size2x: [320, 100], size1x: [160, 50] },
+      { base: passType === 'generic' ? 'thumbnail' : 'strip', 
+        size2x: passType === 'generic' ? [180, 180] : [624, 168],
+        size1x: passType === 'generic' ? [90, 90] : [312, 84] }
+    ]
+
+    for (const pair of requiredPairs) {
+      const key1x = `${pair.base}.png`
+      const key2x = `${pair.base}@2x.png`
+      
+      if (!images[key2x]) {
+        logger.warn(`⚠️ Missing @2x variant: ${key2x}`)
+      }
+      
+      if (!images[key1x] && images[key2x]) {
+        // Generate missing 1x by resizing 2x with fixed kernel
+        logger.info(`🔧 Generating missing 1x variant: ${key1x} from ${key2x}`)
+        try {
+          images[key1x] = await sharp(images[key2x])
+            .resize(pair.size1x[0], pair.size1x[1], { 
+              fit: 'contain', 
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+              kernel: sharp.kernel.lanczos3  // Fixed kernel for consistent results
+            })
+            .png()
+            .toBuffer()
+          logger.info(`✅ Generated ${key1x}: ${images[key1x].length} bytes`)
+        } catch (error) {
+          logger.error(`❌ Failed to generate ${key1x}:`, error.message)
+        }
+      }
+    }
+
+    logger.info('✅ Image variant verification complete. Images:', Object.keys(images))
+
+    return images
   }
 
   createManifest(passData, images) {
@@ -987,10 +1387,15 @@ class AppleWalletController {
     const passJson = JSON.stringify(passData)
     manifest['pass.json'] = crypto.createHash('sha1').update(passJson, 'utf8').digest('hex')
 
-    // Add image hashes
-    Object.entries(images).forEach(([filename, buffer]) => {
+    // Add image hashes in SORTED order for deterministic manifest
+    // Sort filenames alphabetically to ensure stable ordering across builds
+    const sortedImageEntries = Object.entries(images).sort(([a], [b]) => a.localeCompare(b))
+    
+    sortedImageEntries.forEach(([filename, buffer]) => {
       manifest[filename] = crypto.createHash('sha1').update(buffer).digest('hex')
     })
+
+    logger.info('📋 Manifest created with sorted entries:', Object.keys(manifest))
 
     return manifest
   }
@@ -1033,10 +1438,15 @@ class AppleWalletController {
       // Add signature
       archive.append(signature, { name: 'signature' })
 
-      // Add images
-      Object.entries(images).forEach(([filename, buffer]) => {
+      // Add images in SORTED order (same as manifest creation)
+      // Sort filenames alphabetically to ensure stable zip structure
+      const sortedImageEntries = Object.entries(images).sort(([a], [b]) => a.localeCompare(b))
+      
+      sortedImageEntries.forEach(([filename, buffer]) => {
         archive.append(buffer, { name: filename })
       })
+
+      logger.info('📦 Zip archive created with sorted entries:', ['pass.json', 'manifest.json', 'signature', ...sortedImageEntries.map(([name]) => name)])
 
       archive.finalize()
     })
@@ -1194,7 +1604,8 @@ class AppleWalletController {
         customerId: customer.customer_id,
         firstName: customer.first_name || 'Valued',
         lastName: customer.last_name || '',
-        joinedDate: customer.created_at || new Date()
+        joinedDate: customer.created_at || new Date(),
+        preferredLanguage: customer.preferred_language || 'en'  // 🌐 Include customer's language
       }
 
       // Construct offer data object
@@ -1212,8 +1623,11 @@ class AppleWalletController {
         businessDistrict: business.district || null,
         businessRegion: business.region || null,
         businessAddress: business.address || null,
-        location_hierarchy: business.location_hierarchy || null
+        location_hierarchy: business.location_hierarchy || null,
+        apple_pass_type: offer.apple_pass_type || 'storeCard'
       }
+
+      logger.info('🍎 Apple pass type for offer:', offerData.apple_pass_type)
 
       // Calculate customer tier
       logger.info('🏆 Calculating customer tier...')
@@ -1396,6 +1810,60 @@ class AppleWalletController {
         // Continue without business data - back fields will be empty
       }
 
+      // 🆕 FIX 4: Fetch apple_pass_type from offers table
+      logger.info('🔍 Fetching apple_pass_type for offer...')
+      try {
+        const { default: sequelize } = await import('../config/database.js')
+        const [offerRecord] = await sequelize.query(`
+          SELECT apple_pass_type
+          FROM offers
+          WHERE public_id = ?
+          LIMIT 1
+        `, {
+          replacements: [offerId],
+          type: sequelize.QueryTypes.SELECT
+        })
+
+        if (offerRecord) {
+          offerData.apple_pass_type = offerRecord.apple_pass_type || 'storeCard'
+          logger.info('🍎 Apple pass type for offer:', offerData.apple_pass_type)
+        } else {
+          logger.warn('⚠️ Offer not found, defaulting apple_pass_type to storeCard')
+          offerData.apple_pass_type = 'storeCard'
+        }
+      } catch (error) {
+        logger.error('❌ Failed to fetch apple_pass_type:', error.message)
+        logger.warn('⚠️ Defaulting apple_pass_type to storeCard')
+        offerData.apple_pass_type = 'storeCard'
+      }
+
+      // 🌐 Fetch customer's preferred language for localization
+      logger.info('🔍 Fetching customer preferred_language for push update...')
+      try {
+        const { default: sequelize } = await import('../config/database.js')
+        const [customerRecord] = await sequelize.query(`
+          SELECT preferred_language
+          FROM customers
+          WHERE customer_id = ?
+          LIMIT 1
+        `, {
+          replacements: [customerId],
+          type: sequelize.QueryTypes.SELECT
+        })
+
+        if (customerRecord && customerRecord.preferred_language) {
+          customerData.preferredLanguage = customerRecord.preferred_language
+          logger.info('✅ Customer preferred language:', customerRecord.preferred_language)
+        } else {
+          logger.info('ℹ️ No preferred_language found for customer, using default (en)')
+          customerData.preferredLanguage = 'en'
+        }
+      } catch (error) {
+        logger.error('❌ Failed to fetch customer language:', error.message)
+        logger.info('ℹ️ Using default language (en)')
+        customerData.preferredLanguage = 'en'
+      }
+
       // Construct progress data for stamp visualization
       const stampProgressData = {
         stampsEarned: progressData.current_stamps || 0
@@ -1525,3 +1993,4 @@ class AppleWalletController {
 }
 
 export default new AppleWalletController()
+export { resolveApplePassType }

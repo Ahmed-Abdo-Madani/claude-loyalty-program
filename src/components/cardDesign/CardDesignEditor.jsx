@@ -26,6 +26,7 @@ import TemplateSelector from './TemplateSelector'
 import ValidationPanel from './ValidationPanel'
 import CollapsibleSection from './CollapsibleSection'
 import MobilePreviewSheet from './MobilePreviewSheet'
+import SelectableOptionCard from './SelectableOptionCard'
 
 function CardDesignEditor({ offer, onClose, onSave }) {
   const {
@@ -61,7 +62,8 @@ function CardDesignEditor({ offer, onClose, onSave }) {
       colors: !!(design.background_color && design.foreground_color),
       logo: !!(design.logo_url || design.logo_google_url || design.logo_apple_url),
       stamps: !!(design.stamp_display_type),
-      progress: !!(design.progress_display_style),
+      passType: !!(design.apple_pass_type),
+      barcode: !!(design.barcode_preference),
       hero: true // Hero is optional, always counts as "complete"
     }
   }
@@ -96,6 +98,13 @@ function CardDesignEditor({ offer, onClose, onSave }) {
       loadDesign(offer.public_id)
     }
   }, [offer?.public_id, loadDesign])
+
+  // Set default apple_pass_type if missing after design loads
+  useEffect(() => {
+    if (currentDesign && !currentDesign.apple_pass_type) {
+      updateDesignField('apple_pass_type', 'storeCard')
+    }
+  }, [currentDesign?.apple_pass_type, updateDesignField])
 
   const handleSave = async () => {
     try {
@@ -408,40 +417,87 @@ function CardDesignEditor({ offer, onClose, onSave }) {
                   </div>
                 </CollapsibleSection>
 
-                  {/* 4. Progress Style Section - Collapsible */}
+                  {/* 4. Apple Wallet Pass Type Section - Collapsible */}
                   <CollapsibleSection
-                    sectionId="progress"
-                    title={t('editor.sections.progress')}
-                    optional={true}
-                    completed={completion.progress}
-                    isOpen={isDesktop || openSection === 'progress'}
-                    onToggle={() => handleToggleSection('progress')}
+                    sectionId="passType"
+                    title={t('editor.sections.passType')}
+                    required={true}
+                    completed={completion.passType}
+                    isOpen={isDesktop || openSection === 'passType'}
+                    onToggle={() => handleToggleSection('passType')}
                   >
-                  <div className="space-y-2">
-                    {[
-                      { value: 'bar', label: t('editor.progress.progressBar'), icon: '━', desc: t('editor.progress.simpleBar') },
-                      { value: 'grid', label: t('editor.progress.stampGrid'), icon: '⊞', desc: t('editor.progress.visualStamps') }
-                    ].map((style) => (
-                      <button
-                        key={style.value}
-                        onClick={() => updateDesignField('progress_display_style', style.value)}
-                        className={`w-full px-3 sm:px-4 py-3 sm:py-3.5 rounded-lg text-left transition-all duration-200 flex items-center gap-3 min-h-[56px]
-                          ${currentDesign?.progress_display_style === style.value
-                            ? 'bg-primary text-white shadow-md'
-                            : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600'
-                          }`}
-                      >
-                        <span className="text-2xl">{style.icon}</span>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm sm:text-base">{style.label}</div>
-                          <div className="text-xs opacity-75">{style.desc}</div>
-                        </div>
-                      </button>
-                    ))}
+                    <div className="space-y-3">
+                      {/* Help text */}
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('editor.passType.helpText')}
+                      </p>
+
+                      {/* Pass type options */}
+                      <div className="space-y-2">
+                        <SelectableOptionCard
+                          value="storeCard"
+                          name="apple_pass_type"
+                          checked={currentDesign?.apple_pass_type === 'storeCard'}
+                          onChange={(value) => updateDesignField('apple_pass_type', value)}
+                          icon="🎫"
+                          title={t('editor.passType.storeCard')}
+                          description={t('editor.passType.storeCardDesc')}
+                          isDefault={true}
+                        />
+
+                        <SelectableOptionCard
+                          value="generic"
+                          name="apple_pass_type"
+                          checked={currentDesign?.apple_pass_type === 'generic'}
+                          onChange={(value) => updateDesignField('apple_pass_type', value)}
+                          icon="📱"
+                          title={t('editor.passType.generic')}
+                          description={t('editor.passType.genericDesc')}
+                        />
+                      </div>
+                    </div>
+                </CollapsibleSection>
+
+                {/* 5. Barcode Type Section - Collapsible */}
+                <CollapsibleSection
+                  sectionId="barcode"
+                  title={t('editor.sections.barcode')}
+                  optional={false}
+                  completed={completion.barcode}
+                  isOpen={isDesktop || openSection === 'barcode'}
+                  onToggle={() => handleToggleSection('barcode')}
+                >
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('editor.barcode.helpText')}
+                    </p>
+                    
+                    <div className="space-y-3">
+                      <SelectableOptionCard
+                        value="QR_CODE"
+                        name="barcode_preference"
+                        checked={currentDesign?.barcode_preference === 'QR_CODE'}
+                        onChange={(value) => updateDesignField('barcode_preference', value)}
+                        icon="📱"
+                        title={t('editor.barcode.qrCode')}
+                        description={t('editor.barcode.qrCodeDesc')}
+                      />
+
+                      <SelectableOptionCard
+                        value="PDF417"
+                        name="barcode_preference"
+                        checked={currentDesign?.barcode_preference === 'PDF417'}
+                        onChange={(value) => updateDesignField('barcode_preference', value)}
+                        icon="🏪"
+                        title={t('editor.barcode.pdf417')}
+                        description={t('editor.barcode.pdf417Desc')}
+                        isDefault={true}
+                      />
+                    </div>
                   </div>
                 </CollapsibleSection>
 
-                  {/* 5. Hero Image Section - Collapsible */}
+                  {/* 6. Hero Image Section - Collapsible */}
                   <CollapsibleSection
                     sectionId="hero"
                     title={t('editor.sections.hero')}

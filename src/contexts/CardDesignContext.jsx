@@ -49,15 +49,20 @@ export function CardDesignProvider({ children }) {
       const response = await cardDesignAPI.getDesign(offerId)
 
       if (response.success) {
-        setCurrentDesign(response.data)
-        setOriginalDesign(response.data) // Keep original for dirty checking
+        // Normalize barcode_preference to default to PDF417 if not set
+        const normalizedDesign = {
+          ...response.data,
+          barcode_preference: response.data.barcode_preference || 'PDF417'
+        }
+        setCurrentDesign(normalizedDesign)
+        setOriginalDesign(normalizedDesign) // Keep original for dirty checking
         setIsDefaultDesign(response.isDefault || false)
 
         // Run client-side validation
-        const validationResult = validateCardDesign(response.data)
+        const validationResult = validateCardDesign(normalizedDesign)
         setValidation(validationResult)
 
-        return response.data
+        return normalizedDesign
       } else {
         throw new Error(response.message || 'Failed to load design')
       }
@@ -115,16 +120,25 @@ export function CardDesignProvider({ children }) {
       const response = await cardDesignAPI.saveDesign(currentOfferId, currentDesign)
 
       if (response.success) {
-        setCurrentDesign(response.data)
-        setOriginalDesign(response.data) // Update original after save
+        // Normalize barcode_preference to default to PDF417 if not set
+        const normalizedDesign = {
+          ...response.data,
+          barcode_preference: response.data.barcode_preference || 'PDF417'
+        }
+        setCurrentDesign(normalizedDesign)
+        setOriginalDesign(normalizedDesign) // Update original after save
         setIsDefaultDesign(false)
 
-        // Update validation from server response
+        // Update validation from server response (use normalized design)
         if (response.validation) {
           setValidation(response.validation)
+        } else {
+          // Re-validate with normalized design
+          const validationResult = validateCardDesign(normalizedDesign)
+          setValidation(validationResult)
         }
 
-        return response.data
+        return normalizedDesign
       } else {
         throw new Error(response.message || 'Failed to save design')
       }
@@ -169,13 +183,18 @@ export function CardDesignProvider({ children }) {
       const response = await cardDesignAPI.applyTemplate(currentOfferId, templateId)
 
       if (response.success) {
-        setCurrentDesign(response.data)
+        // Normalize barcode_preference to default to PDF417 if not set
+        const normalizedDesign = {
+          ...response.data,
+          barcode_preference: response.data.barcode_preference || 'PDF417'
+        }
+        setCurrentDesign(normalizedDesign)
         // Don't update originalDesign yet - let user save first
 
-        const validationResult = validateCardDesign(response.data)
+        const validationResult = validateCardDesign(normalizedDesign)
         setValidation(validationResult)
 
-        return response.data
+        return normalizedDesign
       } else {
         throw new Error(response.message || 'Failed to apply template')
       }

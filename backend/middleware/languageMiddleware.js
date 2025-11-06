@@ -74,20 +74,40 @@ export const getLocalizedMessage = (key, locale = 'ar', params = {}) => {
     // Validate locale
     const validLocale = (locale === 'ar' || locale === 'en') ? locale : 'ar'
 
-    // Split key into category and message key
-    const [category, messageKey] = key.split('.')
+    // Split key into parts for nested path traversal
+    const keyParts = key.split('.')
     
-    // Get message from dictionary
-    let message = messages[validLocale]?.[category]?.[messageKey]
-    
+    // Traverse the nested object path
+    let message = messages[validLocale]
+    for (const part of keyParts) {
+      if (message && typeof message === 'object') {
+        message = message[part]
+      } else {
+        message = undefined
+        break
+      }
+    }
+
     // Fallback to English if not found in requested locale
-    if (!message) {
-      message = messages.en?.[category]?.[messageKey]
+    if (!message || typeof message !== 'string') {
+      message = messages.en
+      for (const part of keyParts) {
+        if (message && typeof message === 'object') {
+          message = message[part]
+        } else {
+          message = undefined
+          break
+        }
+      }
     }
     
     // Fallback to key itself if not found at all
-    if (!message) {
-      logger.warn(`Message key not found: ${key}`)
+    if (!message || typeof message !== 'string') {
+      logger.warn(`Message key not found or invalid type: ${key}`, {
+        locale: validLocale,
+        keyParts,
+        messageType: typeof message
+      })
       return key
     }
 

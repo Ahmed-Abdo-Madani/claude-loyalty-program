@@ -318,7 +318,8 @@ function CustomerSignup() {
         gender: formData.gender,
         joinedDate: new Date().toISOString(),
         source: qrSource?.source,
-        branch: qrSource?.branch
+        branch: qrSource?.branch,
+        preferred_language: i18n.language || 'en'  // 🌐 Capture customer's language preference
       }
 
       console.log('📝 Submitting customer signup:', newCustomerData)
@@ -394,7 +395,10 @@ function CustomerSignup() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          customerData,
+          customerData: {
+            ...customerData,
+            preferredLanguage: i18n.language || 'en'  // 🌐 Include language for wallet
+          },
           offerData: {
             ...offer,
             offerId,
@@ -458,7 +462,10 @@ function CustomerSignup() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          customerData,
+          customerData: {
+            ...customerData,
+            preferredLanguage: i18n.language || 'en'  // 🌐 Include language for wallet
+          },
           offerData: {
             ...offer,
             offerId,

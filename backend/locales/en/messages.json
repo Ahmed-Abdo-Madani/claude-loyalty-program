@@ -117,5 +117,28 @@
     "deleteSuccess": "Business and all related data deleted successfully",
     "statusUpdateSuccess": "Business status updated to {{status}} successfully",
     "bulkUpdateSuccess": "Bulk {{action}} operation completed. {{count}} businesses updated."
+  },
+  "appleWallet": {
+    "fields": {
+      "progress": "Progress 🎯",
+      "completed": "Completed ✅",
+      "member": "Member 👤",
+      "customerTier": "Customer Tier 🏆",
+      "message": "Message 💬",
+      "scanToEarn": "Scan to earn stamps",
+      "contact": "Contact 📞",
+      "location": "Location 📍",
+      "address": "Address 🏢",
+      "offer": "Offer 🎁",
+      "reward": "Reward 🎉",
+      "memberId": "Member ID 🆔",
+      "latestMessage": "Latest Message 📬",
+      "welcomeMessage": "Welcome! 👋"
+    },
+    "changeMessages": {
+      "rewardsCompleted": "🎉 Rewards completed: %@",
+      "congratulations": "Congratulations! You are now %@",
+      "newMessage": "New message: %@"
+    }
   }
 }

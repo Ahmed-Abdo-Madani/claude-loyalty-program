@@ -338,7 +338,7 @@ class StampImageGenerator {
   /**
    * Generate hero image with stamp visualization for Apple Wallet
    * @param {object} options - Configuration
-   * @returns {Promise<Buffer>} PNG image buffer (624x168 @ 2x for Apple Wallet strip)
+   * @returns {Promise<Buffer>} PNG image buffer (624x168 @ 2x for Apple Wallet strip or 180x180 @ 2x for thumbnail)
    */
   static async generateStampHeroImage(options) {
     const {
@@ -350,8 +350,14 @@ class StampImageGenerator {
       heroImageUrl = null,
       backgroundColor = '#3B82F6',
       foregroundColor = '#FFFFFF',
-      progressDisplayStyle = 'grid'  // 'grid' or 'bar'
+      progressDisplayStyle = 'grid',  // 'grid' or 'bar'
+      passType = 'storeCard'  // NEW: 'storeCard' or 'generic'
     } = options
+
+    // Determine image dimensions based on pass type
+    const dimensions = passType === 'generic' 
+      ? { width: 180, height: 180, name: 'thumbnail' }  // Generic: square thumbnail
+      : { width: 624, height: 168, name: 'strip' }      // StoreCard: rectangular strip
 
     logger.info('🎨 Generating stamp visualization image:', {
       stampsEarned,
@@ -360,7 +366,9 @@ class StampImageGenerator {
       stampDisplayType,
       hasLogo: !!logoUrl,
       hasHero: !!heroImageUrl,
-      style: progressDisplayStyle
+      style: progressDisplayStyle,
+      passType: passType,
+      dimensions: `${dimensions.width}x${dimensions.height} (${dimensions.name})`
     })
 
     // Debug: Log exact values being used
@@ -369,12 +377,14 @@ class StampImageGenerator {
       stampsRequired: stampsRequired,
       stampIcon: stampIcon,
       stampDisplayType: stampDisplayType,
-      progressDisplayStyle: progressDisplayStyle
+      progressDisplayStyle: progressDisplayStyle,
+      passType: passType,
+      dimensions: dimensions
     })
 
     try {
       // Step 1: Create or load background image
-      const backgroundBuffer = await this.createBackground(heroImageUrl, backgroundColor)
+      const backgroundBuffer = await this.createBackground(heroImageUrl, backgroundColor, dimensions)
 
       // Step 2: Generate stamp overlay
       const stampOverlay = await this.generateStampOverlay({
@@ -385,7 +395,8 @@ class StampImageGenerator {
         logoUrl,
         foregroundColor,
         backgroundColor,
-        progressDisplayStyle
+        progressDisplayStyle,
+        dimensions  // NEW: Pass dimensions object
       })
 
       // Step 3: Composite stamp overlay onto background
@@ -398,7 +409,14 @@ class StampImageGenerator {
         .png()
         .toBuffer()
 
-      logger.info('✅ Stamp hero image generated successfully:', finalImage.length, 'bytes')
+      logger.info('✅ Stamp hero image generated successfully:', {
+        size: finalImage.length,
+        dimensions: `${dimensions.width}x${dimensions.height}`,
+        passType: passType,
+        imageName: passType === 'generic' ? 'thumbnail@2x.png' : 'strip@2x.png',
+        hasHeroBackground: !!heroImageUrl,
+        stampDisplayType: stampDisplayType
+      })
       return finalImage
 
     } catch (error) {
@@ -417,14 +435,14 @@ class StampImageGenerator {
       
       logger.warn('⚠️ Using fallback solid color image instead')
       // Fallback: return solid color background
-      return await this.createFallbackImage(backgroundColor)
+      return await this.createFallbackImage(backgroundColor, dimensions)
     }
   }
 
   /**
    * Create background image (from hero image URL or solid color)
    */
-  static async createBackground(heroImageUrl, backgroundColor) {
+  static async createBackground(heroImageUrl, backgroundColor, dimensions) {
     if (heroImageUrl) {
       try {
         logger.info('📥 Loading hero image from:', heroImageUrl)
@@ -437,12 +455,17 @@ class StampImageGenerator {
         })
 
         if (imageBuffer) {
-          // Resize to Apple Wallet strip size (624x168 @ 2x)
+          // Resize to dynamic dimensions based on pass type
           const resized = await sharp(imageBuffer)
-            .resize(624, 168, { fit: 'cover' })
+            .resize(dimensions.width, dimensions.height, { fit: 'cover' })
             .png()
             .toBuffer()
-          logger.info('✅ Hero image loaded and resized')
+          logger.info('✅ Hero image loaded and resized:', {
+            originalSize: imageBuffer.length,
+            resizedSize: resized.length,
+            targetDimensions: `${dimensions.width}x${dimensions.height}`,
+            passType: dimensions.name
+          })
           return resized
         } else {
           throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
@@ -457,8 +480,8 @@ class StampImageGenerator {
     const rgb = this.hexToRgb(backgroundColor)
     return await sharp({
       create: {
-        width: 624,
-        height: 168,
+        width: dimensions.width,
+        height: dimensions.height,
         channels: 4,
         background: { r: rgb.r, g: rgb.g, b: rgb.b, alpha: 1 }
       }
@@ -479,18 +502,19 @@ class StampImageGenerator {
       logoUrl,
       foregroundColor,
       backgroundColor,
-      progressDisplayStyle
+      progressDisplayStyle,
+      dimensions
     } = options
 
     // Determine grid layout
-    const layout = this.determineLayout(stampsRequired, progressDisplayStyle)
+    const layout = this.determineLayout(stampsRequired, progressDisplayStyle, dimensions)
     logger.info('📐 Using layout:', layout)
 
     // Create transparent canvas for overlay
     const canvas = await sharp({
       create: {
-        width: 624,
-        height: 168,
+        width: dimensions.width,
+        height: dimensions.height,
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 }  // Transparent
       }
@@ -512,7 +536,7 @@ class StampImageGenerator {
 
     // Convert SVG to PNG
     return await sharp(Buffer.from(svg))
-      .resize(624, 168)
+      .resize(dimensions.width, dimensions.height)
       .png()
       .toBuffer()
   }
@@ -547,22 +571,28 @@ class StampImageGenerator {
    *
    * @param {number} stampsRequired - Total number of stamps to display
    * @param {string} style - Layout style ('grid' or 'bar')
+   * @param {object} dimensions - Image dimensions {width, height, name}
    * @returns {object} Layout configuration with rows, cols, stampSize, spacing, startX, startY
    */
-  static determineLayout(stampsRequired, style) {
-    // Hero image dimensions
-    const IMAGE_WIDTH = 624
-    const IMAGE_HEIGHT = 168
-    const HORIZONTAL_PADDING = 20  // 10px left + 10px right
-    const VERTICAL_PADDING = 15    // 7.5px top + 7.5px bottom
-    const MAX_STAMP_SIZE = 100     // Maximum stamp size cap
+  static determineLayout(stampsRequired, style, dimensions) {
+    // Guard against zero or negative stampsRequired
+    const count = Math.max(1, stampsRequired || 1)
+    
+    // Hero image dimensions (dynamic based on pass type)
+    const IMAGE_WIDTH = dimensions.width
+    const IMAGE_HEIGHT = dimensions.height
+    
+    // Proportional padding for thumbnails (smaller images = less padding)
+    const HORIZONTAL_PADDING = dimensions.name === 'thumbnail' ? 10 : 20
+    const VERTICAL_PADDING = dimensions.name === 'thumbnail' ? 8 : 15
+    const MAX_STAMP_SIZE = dimensions.name === 'thumbnail' ? 50 : 100
 
     const availableWidth = IMAGE_WIDTH - HORIZONTAL_PADDING
     const availableHeight = IMAGE_HEIGHT - VERTICAL_PADDING
 
     if (style === 'bar') {
       // Simple horizontal bar (single row)
-      const cols = Math.min(stampsRequired, 10)
+      const cols = Math.min(count, 10)
       const rows = 1
 
       // Dynamic sizing for bar layout
@@ -580,14 +610,16 @@ class StampImageGenerator {
         stampSize,
         spacing,
         startX,
-        startY
+        startY,
+        imageWidth: IMAGE_WIDTH,
+        imageHeight: IMAGE_HEIGHT
       }
     }
 
     // === GRID LAYOUT - FULLY DYNAMIC ===
 
     // STEP 1: Determine optimal grid dimensions (prefer wider grids)
-    const { rows, cols } = this.calculateOptimalGrid(stampsRequired)
+    const { rows, cols } = this.calculateOptimalGrid(count)
 
     // STEP 2: Dynamic stamp sizing based on available space
     // Adjust fill ratio based on stamp count for optimal space utilization
@@ -595,23 +627,23 @@ class StampImageGenerator {
     // medium counts can maximize space for visual impact,
     // larger counts need conservative sizing to ensure legibility
     let STAMP_FILL_RATIO
-    if (stampsRequired <= 4) {
+    if (count <= 4) {
       STAMP_FILL_RATIO = 0.70  // 70% for very small counts (1-4 stamps) - prevents oversized stamps
-    } else if (stampsRequired <= 8) {
+    } else if (count <= 8) {
       STAMP_FILL_RATIO = 0.98  // 98% for small grids (5-8 stamps) - good balance
-    } else if (stampsRequired <= 15) {
+    } else if (count <= 15) {
       STAMP_FILL_RATIO = 0.90  // 90% for medium grids (9-15 stamps) - maximize space usage
-    } else if (stampsRequired <= 25) {
+    } else if (count <= 25) {
       STAMP_FILL_RATIO = 0.80  // 80% for medium-large grids (16-25 stamps) - maintain readability
-    } else if (stampsRequired <= 35) {
+    } else if (count <= 35) {
       STAMP_FILL_RATIO = 0.70  // 70% for large grids (26-35 stamps) - prioritize fitting and spacing
     } else {
       STAMP_FILL_RATIO = 0.65  // 65% for very large grids (36+ stamps) - ensure all stamps fit
     }
 
     // For 40+ stamps, log warning about reduced stamp size
-    if (stampsRequired >= 40) {
-      logger.warn(`⚠️ Large stamp count (${stampsRequired}): Stamps will be smaller but remain readable`)
+    if (count >= 40) {
+      logger.warn(`⚠️ Large stamp count (${count}): Stamps will be smaller but remain readable`)
     }
 
     const maxStampWidth = (availableWidth * STAMP_FILL_RATIO) / cols
@@ -697,7 +729,9 @@ class StampImageGenerator {
       stampSize: currentStampSize,
       spacing: currentSpacing,
       startX,
-      startY
+      startY,
+      imageWidth: IMAGE_WIDTH,
+      imageHeight: IMAGE_HEIGHT
     }
   }
 
@@ -723,48 +757,51 @@ class StampImageGenerator {
    * @returns {object} Grid configuration with rows and cols
    */
   static calculateOptimalGrid(stampsRequired) {
+    // Guard against zero or negative stamps
+    const count = Math.max(1, stampsRequired || 1)
+    
     // Edge case: 1-4 stamps - single row to prevent awkward layout
-    if (stampsRequired <= 4) {
-      return { rows: 1, cols: stampsRequired }
+    if (count <= 4) {
+      return { rows: 1, cols: Math.max(1, count) }
     }
 
     // 5-12 stamps: 2 rows (good balance)
-    if (stampsRequired <= 12) {
-      return { rows: 2, cols: Math.ceil(stampsRequired / 2) }
+    if (count <= 12) {
+      return { rows: 2, cols: Math.max(1, Math.ceil(count / 2)) }
     }
 
     // 13-20 stamps: 3-4 rows (optimize based on exact count)
-    if (stampsRequired <= 15) {
-      return { rows: 3, cols: Math.ceil(stampsRequired / 3) }
+    if (count <= 15) {
+      return { rows: 3, cols: Math.max(1, Math.ceil(count / 3)) }
     }
-    if (stampsRequired <= 20) {
-      return { rows: 4, cols: Math.ceil(stampsRequired / 4) }
+    if (count <= 20) {
+      return { rows: 4, cols: Math.max(1, Math.ceil(count / 4)) }
     }
 
     // 21-30 stamps: 4-5 rows (ensure stamps remain visible)
-    if (stampsRequired <= 25) {
-      return { rows: 4, cols: Math.ceil(stampsRequired / 4) }
+    if (count <= 25) {
+      return { rows: 4, cols: Math.max(1, Math.ceil(count / 4)) }
     }
-    if (stampsRequired <= 30) {
-      return { rows: 5, cols: Math.ceil(stampsRequired / 5) }
+    if (count <= 30) {
+      return { rows: 5, cols: Math.max(1, Math.ceil(count / 5)) }
     }
 
     // 31-40 stamps: 5-6 rows (prioritize fitting over size)
-    if (stampsRequired <= 35) {
-      return { rows: 5, cols: Math.ceil(stampsRequired / 5) }
+    if (count <= 35) {
+      return { rows: 5, cols: Math.max(1, Math.ceil(count / 5)) }
     }
-    if (stampsRequired <= 40) {
-      return { rows: 6, cols: Math.ceil(stampsRequired / 6) }
+    if (count <= 40) {
+      return { rows: 6, cols: Math.max(1, Math.ceil(count / 6)) }
     }
 
     // 41+ stamps: 6-7 rows with warning (stamps may be small)
-    if (stampsRequired <= 49) {
-      return { rows: 7, cols: Math.ceil(stampsRequired / 7) }
+    if (count <= 49) {
+      return { rows: 7, cols: Math.max(1, Math.ceil(count / 7)) }
     }
 
     // 50+ stamps: 7+ rows (graceful degradation)
-    const rows = Math.min(Math.ceil(Math.sqrt(stampsRequired / 3.71)), 10)  // Cap at 10 rows
-    const cols = Math.ceil(stampsRequired / rows)
+    const rows = Math.min(Math.ceil(Math.sqrt(count / 3.71)), 10)  // Cap at 10 rows
+    const cols = Math.max(1, Math.ceil(count / rows))
     return { rows, cols }
   }
 
@@ -891,27 +928,31 @@ class StampImageGenerator {
       layout.startY = Math.max(layout.startY, 20)
     }
 
-    // Verify stamps won't render outside 624x168 bounds
+    // Verify stamps won't render outside image bounds
     const maxX = layout.startX + (layout.cols * layout.stampSize) + ((layout.cols - 1) * layout.spacing)
     const maxY = layout.startY + (layout.rows * layout.stampSize) + ((layout.rows - 1) * layout.spacing)
 
-    if (maxX > 624 || maxY > 168) {
+    // Create adjusted layout variable (may be modified in fallback path)
+    let adjusted = layout
+
+    if (maxX > layout.imageWidth || maxY > layout.imageHeight) {
       logger.error('❌ Layout exceeds image bounds:', {
         maxX,
         maxY,
-        imageWidth: 624,
-        imageHeight: 168,
-        exceedsWidth: maxX > 624,
-        exceedsHeight: maxY > 168
+        imageWidth: layout.imageWidth,
+        imageHeight: layout.imageHeight,
+        exceedsWidth: maxX > layout.imageWidth,
+        exceedsHeight: maxY > layout.imageHeight
       })
-      // Fallback: Use single row with minimum safe size
-      layout.rows = 1
-      layout.cols = Math.min(stampsRequired, 10)
-      layout.stampSize = Math.floor(Math.min(584 / layout.cols, 138) * 0.5)
-      layout.spacing = Math.floor(layout.stampSize * 0.10)
-      const totalWidth = (layout.cols * layout.stampSize) + ((layout.cols - 1) * layout.spacing)
-      layout.startX = Math.floor((624 - totalWidth) / 2)
-      layout.startY = Math.floor((168 - layout.stampSize) / 2)
+      // Fallback: Create adjusted copy with single row and minimum safe size
+      adjusted = { ...layout }
+      adjusted.rows = 1
+      adjusted.cols = Math.min(stampsRequired, 10)
+      adjusted.stampSize = Math.floor(Math.min((layout.imageWidth - 40) / adjusted.cols, (layout.imageHeight - 30)) * 0.5)
+      adjusted.spacing = Math.floor(adjusted.stampSize * 0.10)
+      const totalWidth = (adjusted.cols * adjusted.stampSize) + ((adjusted.cols - 1) * adjusted.spacing)
+      adjusted.startX = Math.floor((layout.imageWidth - totalWidth) / 2)
+      adjusted.startY = Math.floor((layout.imageHeight - adjusted.stampSize) / 2)
       logger.warn('⚠️ Applied fallback layout: single row, minimum safe size')
     }
 
@@ -923,7 +964,7 @@ class StampImageGenerator {
       logger.info('🖼️ Using business logo for stamps')
 
       // Load logo and convert to base64
-      const logoBase64 = await this.loadLogoAsBase64(logoUrl, layout.stampSize)
+      const logoBase64 = await this.loadLogoAsBase64(logoUrl, adjusted.stampSize)
 
       if (!logoBase64) {
         logger.warn('⚠️ Failed to load logo, falling back to SVG icons')
@@ -931,16 +972,16 @@ class StampImageGenerator {
         this.loadStampIcons(stampIcon)
       } else {
         // Generate stamps using logo images
-        const logoSize = Math.floor(layout.stampSize * 0.9)
+        const logoSize = Math.floor(adjusted.stampSize * 0.9)
 
-        for (let row = 0; row < layout.rows && stampIndex < stampsRequired; row++) {
-          for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
+        for (let row = 0; row < adjusted.rows && stampIndex < stampsRequired; row++) {
+          for (let col = 0; col < adjusted.cols && stampIndex < stampsRequired; col++) {
             const filled = stampIndex < stampsEarned
             const logoOpacity = filled ? 1.0 : 0.5  // Earned: 100%, Unearned: 50%
 
             // Position logo in grid (centered in its cell)
-            const logoX = layout.startX + col * (layout.stampSize + layout.spacing) + (layout.stampSize - logoSize) / 2
-            const logoY = layout.startY + row * (layout.stampSize + layout.spacing) + (layout.stampSize - logoSize) / 2
+            const logoX = adjusted.startX + col * (adjusted.stampSize + adjusted.spacing) + (adjusted.stampSize - logoSize) / 2
+            const logoY = adjusted.startY + row * (adjusted.stampSize + adjusted.spacing) + (adjusted.stampSize - logoSize) / 2
 
             stamps.push(`
               <!-- Logo Stamp ${stampIndex + 1} (${filled ? 'Earned' : 'Unearned'}) -->
@@ -962,7 +1003,7 @@ class StampImageGenerator {
 
         // SVG with logo stamps (no styles needed for logos)
         const svg = `
-          <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+          <svg width="${layout.imageWidth}" height="${layout.imageHeight}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             ${stamps.join('\n')}
           </svg>
         `
@@ -988,8 +1029,8 @@ class StampImageGenerator {
 
     // Generate EXACT number of stamps as stampsRequired
     // Each stamp uses custom SVG icon (filled or stroke version)
-    for (let row = 0; row < layout.rows && stampIndex < stampsRequired; row++) {
-      for (let col = 0; col < layout.cols && stampIndex < stampsRequired; col++) {
+    for (let row = 0; row < adjusted.rows && stampIndex < stampsRequired; row++) {
+      for (let col = 0; col < adjusted.cols && stampIndex < stampsRequired; col++) {
         const filled = stampIndex < stampsEarned
 
         // Comment 4: Choose which SVG icon to use with null-guard
@@ -1017,14 +1058,14 @@ class StampImageGenerator {
         const svgSource = iconSVG
         const viewBox = this.extractViewBox(svgSource)
 
-        const iconSize = layout.stampSize * 0.9  // Use 90% of available space
+        const iconSize = adjusted.stampSize * 0.9  // Use 90% of available space
         // Scale based on the larger dimension to ensure icon fits in the square stamp area
         const viewBoxMax = Math.max(viewBox.width, viewBox.height)
         const scaleFactor = iconSize / viewBoxMax
 
         // Position stamp in grid (centered in its cell)
-        const iconX = layout.startX + col * (layout.stampSize + layout.spacing) + (layout.stampSize - iconSize) / 2
-        const iconY = layout.startY + row * (layout.stampSize + layout.spacing) + (layout.stampSize - iconSize) / 2
+        const iconX = adjusted.startX + col * (adjusted.stampSize + adjusted.spacing) + (adjusted.stampSize - iconSize) / 2
+        const iconY = adjusted.startY + row * (adjusted.stampSize + adjusted.spacing) + (adjusted.stampSize - iconSize) / 2
 
         stamps.push(`
           <!-- Stamp ${stampIndex + 1} (${filled ? 'Earned' : 'Unearned'}) -->
@@ -1043,7 +1084,7 @@ class StampImageGenerator {
     // Styles are placed at root level, graphical content is in <g> elements
     // xmlns:xlink is required because the stamp icons use xlink:href for embedded images
     const svg = `
-      <svg width="624" height="168" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <svg width="${layout.imageWidth}" height="${layout.imageHeight}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
         ${filledStylesRenamed}
         ${strokeStylesRenamed}
         ${stamps.join('\n')}
@@ -1056,12 +1097,12 @@ class StampImageGenerator {
   /**
    * Create fallback image in case of errors
    */
-  static async createFallbackImage(backgroundColor) {
+  static async createFallbackImage(backgroundColor, dimensions) {
     const rgb = this.hexToRgb(backgroundColor)
     return await sharp({
       create: {
-        width: 624,
-        height: 168,
+        width: dimensions.width,
+        height: dimensions.height,
         channels: 4,
         background: { r: rgb.r, g: rgb.g, b: rgb.b, alpha: 1 }
       }

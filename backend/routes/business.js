@@ -1014,7 +1014,8 @@ router.post('/customers/signup', async (req, res) => {
         date_of_birth: customerData.birthday || null,
         gender: customerData.gender || 'male',
         source: customerData.source || 'in_store',
-        branch: customerData.branch || null
+        branch: customerData.branch || null,
+        preferred_language: customerData.preferred_language || req.locale || 'en'  // 🌐 Save customer's language preference
       }
     )
 
@@ -1256,6 +1257,18 @@ router.post('/my/offers', requireBusinessAuth, async (req, res) => {
       }
     }
     
+    // Validate barcode_preference if provided
+    if (req.body.barcode_preference !== undefined && req.body.barcode_preference !== null) {
+      const validBarcodeTypes = ['QR_CODE', 'PDF417']
+      if (!validBarcodeTypes.includes(req.body.barcode_preference)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid barcode_preference value',
+          error: `barcode_preference must be one of: ${validBarcodeTypes.join(', ')}`
+        })
+      }
+    }
+    
     // Process date fields - convert empty strings to null
     const processedBody = {
       ...req.body,
@@ -1320,6 +1333,18 @@ router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
           success: false,
           message: 'Invalid loyalty_tiers configuration',
           error: validationError.message
+        })
+      }
+    }
+
+    // Validate barcode_preference if provided
+    if (req.body.barcode_preference !== undefined && req.body.barcode_preference !== null) {
+      const validBarcodeTypes = ['QR_CODE', 'PDF417']
+      if (!validBarcodeTypes.includes(req.body.barcode_preference)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid barcode_preference value',
+          error: `barcode_preference must be one of: ${validBarcodeTypes.join(', ')}`
         })
       }
     }
