@@ -601,10 +601,12 @@ class AppleWalletController {
     // Generic passes: tier on front (secondaryFields) AND back (backFields) for redundancy
     // StoreCard passes: tier as label on front (auxiliaryFields label) AND back (backFields)
     if (progressData?.tierData?.currentTier) {
+      const currentTier = progressData.tierData.currentTier
+      const tierName = passLanguage === 'ar' ? currentTier.nameAr : currentTier.name
       backFields.push({
         key: 'tier',
         label: localizedStrings.customerTier,
-        value: `${progressData?.tierData?.currentTier?.icon} ${progressData?.tierData?.currentTier?.name}`,
+        value: `${currentTier.icon} ${tierName}`,
         textAlignment: 'PKTextAlignmentLeft',
         changeMessage: localizedStrings.congratulations
       })
@@ -675,18 +677,7 @@ class AppleWalletController {
       })
     }
 
-    // 6. Customer Name (if provided) - useful when omitted from front due to custom message
-    const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
-    if (fullName) {
-      backFields.push({
-        key: 'customer_name',
-        label: localizedStrings.member,
-        value: fullName,
-        textAlignment: 'PKTextAlignmentLeft'
-      })
-    }
-
-    // 7. Customer ID (always available)
+    // 6. Customer ID (always available)
     backFields.push({
       key: 'customer_id',
       label: localizedStrings.memberId,
@@ -694,7 +685,7 @@ class AppleWalletController {
       textAlignment: 'PKTextAlignmentLeft'
     })
 
-    // 8. Custom Message (if provided) - Dynamic field with changeMessage (localized)
+    // 7. Custom Message (if provided) - Dynamic field with changeMessage (localized)
     // Full message on back (persistence) - allows users to view message after dismissing notification
     if (customMessage && customMessage.header && customMessage.body) {
       const timestamp = new Date().toISOString()
@@ -897,28 +888,21 @@ class AppleWalletController {
           }
         ],
 
-        // Primary fields - Always present (custom message or welcome message)
+        // Primary fields - Offer title (no label) - EXACTLY 1 field
         primaryFields: [
           {
-            key: 'message',
-            label: customMessage && customMessage.header && customMessage.body 
-              ? localizedStrings.latestMessage 
-              : localizedStrings.welcomeMessage,
+            key: 'offer_title',
+            label: '', // No label for clean look
             textAlignment: 'PKTextAlignmentCenter',
-            value: customMessage && customMessage.header && customMessage.body
-              ? truncateText(`${customMessage.header}: ${customMessage.body}`, 70)
-              : truncateText(`${localizedStrings.welcomeMessage} ${businessName}`, 70),
-            ...(customMessage && customMessage.header && customMessage.body ? {
-              changeMessage: localizedStrings.newMessage
-            } : {})
+            value: truncateText(offerData.title, 50)
           }
         ],
 
-        // Secondary fields - Tier (left), Progress (right) - EXACTLY 2 fields
+        // Secondary fields - Customer Tier (left, no label), Progress (right, with label) - EXACTLY 2 fields
         secondaryFields: [
           {
             key: 'tier',
-            label: localizedStrings.customerTier,
+            label: '', // No label for cleaner look
             textAlignment: 'PKTextAlignmentLeft',
             value: truncateText(
               progressData?.tierData?.currentTier
@@ -936,9 +920,18 @@ class AppleWalletController {
           }
         ],
 
-        // Auxiliary fields - Always show completions only (1 field) to stay within 4-field limit
-        // Member name is available in backFields
+        // Auxiliary fields - Member Name (left, no label), Completed (right, with label) - EXACTLY 2 fields
         auxiliaryFields: [
+          {
+            key: 'customer',
+            label: '', // No label for cleaner look
+            textAlignment: 'PKTextAlignmentLeft',
+            value: (() => {
+              const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
+              const formattedName = formatCustomerName(fullName)
+              return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
+            })()
+          },
           {
             key: 'completions',
             label: localizedStrings.completed,
@@ -971,7 +964,7 @@ class AppleWalletController {
             key: 'completions',
             label: localizedStrings.completed,
             textAlignment: 'PKTextAlignmentLeft',
-            value: `${progressData.rewardsClaimed || 0}x`,
+            value: `${progressData?.rewardsClaimed || 0}x`,
             changeMessage: localizedStrings.rewardsCompleted
           }
         ],
@@ -1007,7 +1000,7 @@ class AppleWalletController {
     // Log pass structure for debugging
     logger.info('📋 Pass structure created:', {
       passType: isGenericPass ? 'generic' : 'storeCard',
-      hasPrimaryFields: isGenericPass,
+      hasPrimaryFields: isGenericPass, // Generic passes show offer title
       primaryFieldsCount: isGenericPass ? 1 : 0,
       secondaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length,
       auxiliaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length,
