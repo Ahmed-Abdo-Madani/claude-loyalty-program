@@ -677,7 +677,16 @@ class AppleWalletController {
       })
     }
 
-    // 6. Customer ID (always available)
+    // 6. Completions (total rewards claimed)
+    backFields.push({
+      key: 'completions',
+      label: localizedStrings.completed,
+      value: `${progressData?.rewardsClaimed || 0}x`,
+      textAlignment: 'PKTextAlignmentLeft',
+      changeMessage: localizedStrings.rewardsCompleted
+    })
+
+    // 7. Customer ID (always available)
     backFields.push({
       key: 'customer_id',
       label: localizedStrings.memberId,
@@ -685,8 +694,9 @@ class AppleWalletController {
       textAlignment: 'PKTextAlignmentLeft'
     })
 
-    // 7. Custom Message (if provided) - Dynamic field with changeMessage (localized)
+    // 8. Custom Message (if provided) - Dynamic field WITHOUT changeMessage (to avoid duplicate notifications)
     // Full message on back (persistence) - allows users to view message after dismissing notification
+    // changeMessage is handled by primary field to avoid double notifications
     if (customMessage && customMessage.header && customMessage.body) {
       const timestamp = new Date().toISOString()
       const messageValue = `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
@@ -695,8 +705,8 @@ class AppleWalletController {
         key: 'latest_message',
         label: localizedStrings.latestMessage,
         value: messageValue,
-        textAlignment: 'PKTextAlignmentLeft',
-        changeMessage: localizedStrings.newMessage // Triggers visible lock-screen notification
+        textAlignment: 'PKTextAlignmentLeft'
+        // NO changeMessage - handled by primary field to prevent duplicate notifications
       })
       
       const isArabic = passLanguage === 'ar'
@@ -888,30 +898,21 @@ class AppleWalletController {
           }
         ],
 
-        // Primary fields - Offer title (no label) - EXACTLY 1 field
+        // Primary fields - Offer title as label, custom message as value - EXACTLY 1 field
         primaryFields: [
           {
-            key: 'offer_title',
-            label: '', // No label for clean look
-            textAlignment: 'PKTextAlignmentCenter',
-            value: truncateText(offerData.title, 50)
+            key: 'primary',
+            label: truncateText(offerData.title, 50),
+            textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
+            value: (customMessage && customMessage.header && customMessage.body) 
+              ? truncateText(`${customMessage.header}: ${customMessage.body}`, 80) 
+              : '',
+            ...((customMessage && customMessage.header && customMessage.body) && { changeMessage: localizedStrings.newMessage })
           }
         ],
 
-        // Secondary fields - Customer Tier (left, no label), Progress (right, with label) - EXACTLY 2 fields
+        // Secondary fields - Progress only - EXACTLY 1 field
         secondaryFields: [
-          {
-            key: 'tier',
-            label: '', // No label for cleaner look
-            textAlignment: 'PKTextAlignmentLeft',
-            value: truncateText(
-              progressData?.tierData?.currentTier
-                ? `${progressData?.tierData?.currentTier?.icon} ${passLanguage === 'ar' ? progressData?.tierData?.currentTier?.nameAr : progressData?.tierData?.currentTier?.name}`
-                : passLanguage === 'ar' ? '👋 عضو جديد' : '👋 New Member',
-              28
-            ),
-            changeMessage: localizedStrings.congratulations
-          },
           {
             key: 'progress',
             label: localizedStrings.progress,
@@ -920,24 +921,29 @@ class AppleWalletController {
           }
         ],
 
-        // Auxiliary fields - Member Name (left, no label), Completed (right, with label) - EXACTLY 2 fields
+        // Auxiliary fields - Tier (with label showing tier name), Member Name (right, no label) - EXACTLY 2 fields
         auxiliaryFields: [
+          {
+            key: 'tier',
+            label: truncateText(
+              progressData?.tierData?.currentTier
+                ? `${progressData?.tierData?.currentTier?.icon} ${passLanguage === 'ar' ? progressData?.tierData?.currentTier?.nameAr : progressData?.tierData?.currentTier?.name}`
+                : passLanguage === 'ar' ? '👋 عضو جديد' : '👋 New Member',
+              28
+            ),
+            textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
+            value: '',
+            changeMessage: localizedStrings.congratulations
+          },
           {
             key: 'customer',
             label: '', // No label for cleaner look
-            textAlignment: 'PKTextAlignmentLeft',
+            textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
             value: (() => {
               const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
               const formattedName = formatCustomerName(fullName)
               return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
             })()
-          },
-          {
-            key: 'completions',
-            label: localizedStrings.completed,
-            textAlignment: 'PKTextAlignmentRight',
-            value: `${progressData?.rewardsClaimed || 0}x`,
-            changeMessage: localizedStrings.rewardsCompleted
           }
         ]
       } : {
@@ -1000,14 +1006,19 @@ class AppleWalletController {
     // Log pass structure for debugging
     logger.info('📋 Pass structure created:', {
       passType: isGenericPass ? 'generic' : 'storeCard',
-      hasPrimaryFields: isGenericPass, // Generic passes show offer title
+      hasPrimaryFields: isGenericPass,
       primaryFieldsCount: isGenericPass ? 1 : 0,
       secondaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length,
       auxiliaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length,
       hasCustomMessage: !!customMessage,
       totalFieldCount: (isGenericPass ? 1 : 0) + 
                        (passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length || 0) + 
-                       (passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length || 0)
+                       (passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length || 0),
+      // Generic: 1 primary + 1 secondary + 2 auxiliary = 4 fields ✅
+      // StoreCard: 2 secondary + 1 auxiliary = 3 fields ✅
+      structure: isGenericPass 
+        ? '1 primary (offer title w/ message) + 1 secondary (progress) + 2 auxiliary (tier + member)'
+        : '2 secondary (tier + progress) + 1 auxiliary (member)'
     })
 
     // Determine barcode format based on offer preference
@@ -1298,7 +1309,8 @@ class AppleWalletController {
       backgroundColor: design?.background_color || '#3B82F6',
       foregroundColor: design?.foreground_color || '#FFFFFF',
       progressDisplayStyle: design?.progress_display_style || 'grid',
-      passType: passType  // NEW: Pass type for image sizing
+      passType: passType,  // NEW: Pass type for image sizing
+      segmentedThreshold: design?.progress_display_threshold || 6  // NEW: Configurable threshold for segmented visualization
     })
     logger.info('✅ Dynamic stamp hero image generated:', stampHeroImage.length, 'bytes')
 
@@ -1306,9 +1318,9 @@ class AppleWalletController {
     // Resize from @2x (which is already generated) to 1x dimensions
     let hero1x
     if (passType === 'generic') {
-      // Generic: 180x180 for 1x (from 180x180 @2x which is already 1x size)
+      // Generic: 90x90 for 1x (half of 180x180 @2x)
       hero1x = await sharp(stampHeroImage)
-        .resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .resize(90, 90, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .png()
         .toBuffer()
     } else {

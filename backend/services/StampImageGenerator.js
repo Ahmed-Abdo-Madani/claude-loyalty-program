@@ -351,7 +351,8 @@ class StampImageGenerator {
       backgroundColor = '#3B82F6',
       foregroundColor = '#FFFFFF',
       progressDisplayStyle = 'grid',  // 'grid' or 'bar'
-      passType = 'storeCard'  // NEW: 'storeCard' or 'generic'
+      passType = 'storeCard',  // NEW: 'storeCard' or 'generic'
+      segmentedThreshold = 6  // NEW: Configurable threshold for segmented visualization
     } = options
 
     // Determine image dimensions based on pass type
@@ -359,6 +360,8 @@ class StampImageGenerator {
       ? { width: 180, height: 180, name: 'thumbnail' }  // Generic: square thumbnail
       : { width: 624, height: 168, name: 'strip' }      // StoreCard: rectangular strip
 
+    const visualizationMode = (dimensions.name === 'thumbnail' && stampsRequired > segmentedThreshold) ? 'segmented' : 'grid'
+    
     logger.info('🎨 Generating stamp visualization image:', {
       stampsEarned,
       stampsRequired,
@@ -368,7 +371,8 @@ class StampImageGenerator {
       hasHero: !!heroImageUrl,
       style: progressDisplayStyle,
       passType: passType,
-      dimensions: `${dimensions.width}x${dimensions.height} (${dimensions.name})`
+      dimensions: `${dimensions.width}x${dimensions.height} (${dimensions.name})`,
+      visualizationMode: visualizationMode
     })
 
     // Debug: Log exact values being used
@@ -396,7 +400,8 @@ class StampImageGenerator {
         foregroundColor,
         backgroundColor,
         progressDisplayStyle,
-        dimensions  // NEW: Pass dimensions object
+        dimensions,  // NEW: Pass dimensions object
+        segmentedThreshold  // NEW: Pass configurable threshold
       })
 
       // Step 3: Composite stamp overlay onto background
@@ -503,8 +508,27 @@ class StampImageGenerator {
       foregroundColor,
       backgroundColor,
       progressDisplayStyle,
-      dimensions
+      dimensions,
+      segmentedThreshold = 6
     } = options
+
+    // Use segmented progress bar for thumbnails with many stamps
+    if (dimensions.name === 'thumbnail' && stampsRequired > segmentedThreshold) {
+      logger.info('🎯 Triggering segmented progress bar mode:', {
+        reason: 'thumbnail with >6 stamps',
+        stampsRequired,
+        dimensions: `${dimensions.width}×${dimensions.height}`
+      })
+      
+      const svg = await this.generateSegmentedProgressBar(options)
+      return await sharp(Buffer.from(svg))
+        .resize(dimensions.width, dimensions.height, {
+          fit: 'contain',
+          kernel: sharp.kernel.lanczos3
+        })
+        .png()
+        .toBuffer()
+    }
 
     // Determine grid layout
     const layout = this.determineLayout(stampsRequired, progressDisplayStyle, dimensions)
@@ -539,6 +563,122 @@ class StampImageGenerator {
       .resize(dimensions.width, dimensions.height)
       .png()
       .toBuffer()
+  }
+
+  /**
+   * Generate segmented progress bar visualization for thumbnails
+   * Shows single large stamp icon divided into horizontal sections
+   */
+  static async generateSegmentedProgressBar(options) {
+    const { stampsEarned, stampsRequired, stampIcon, stampDisplayType, logoUrl, backgroundColor, foregroundColor, dimensions } = options
+    
+    logger.info('🎨 Generating segmented progress bar:', {
+      stampsEarned,
+      stampsRequired,
+      dimensions: `${dimensions.width}×${dimensions.height}`,
+      mode: 'segmented'
+    })
+    
+    const sectionHeight = dimensions.height / stampsRequired
+    const sections = []
+    
+    // Use foregroundColor for filled sections, low opacity for unfilled
+    const fgRgb = this.hexToRgb(foregroundColor)
+    
+    // Generate horizontal sections with improved contrast
+    for (let i = 0; i < stampsRequired; i++) {
+      const y = i * sectionHeight
+      const opacity = i < stampsEarned ? 0.5 : 0.12  // Filled: 0.5, Unfilled: 0.12
+      
+      sections.push(`
+        <rect 
+          x="0" 
+          y="${y}" 
+          width="${dimensions.width}" 
+          height="${sectionHeight}" 
+          fill="rgb(${fgRgb.r}, ${fgRgb.g}, ${fgRgb.b})" 
+          opacity="${opacity}" 
+        />
+      `)
+    }
+    
+    // Add thin divider lines between sections (optional, for clarity)
+    const dividers = []
+    for (let i = 1; i < stampsRequired; i++) {
+      const y = i * sectionHeight
+      dividers.push(`
+        <line 
+          x1="0" 
+          y1="${y}" 
+          x2="${dimensions.width}" 
+          y2="${y}" 
+          stroke="${foregroundColor}" 
+          stroke-width="1" 
+          opacity="0.2" 
+        />
+      `)
+    }
+    
+    // Load and center stamp icon
+    const iconSize = Math.floor(dimensions.width * 0.9) // 90% of thumbnail
+    const iconX = (dimensions.width - iconSize) / 2
+    const iconY = (dimensions.height - iconSize) / 2
+    
+    let stampContent = ''
+    
+    if (stampDisplayType === 'logo' && logoUrl) {
+      const logoBase64 = await this.loadLogoAsBase64(logoUrl, iconSize)
+      if (logoBase64) {
+        stampContent = `
+          <image
+            x="${iconX}"
+            y="${iconY}"
+            width="${iconSize}"
+            height="${iconSize}"
+            xlink:href="${logoBase64}"
+            opacity="1.0"
+          />
+        `
+      }
+    }
+    
+    if (!stampContent) {
+      // Use SVG icon
+      this.loadStampIcons(stampIcon)
+      if (this.filledStampSVG) {
+        const iconContent = this.extractSVGContent(this.filledStampSVG)
+        const viewBox = this.extractViewBox(this.filledStampSVG)
+        const viewBoxMax = Math.max(viewBox.width, viewBox.height)
+        const scaleFactor = iconSize / viewBoxMax
+        
+        const styles = this.extractSVGStyles(this.filledStampSVG)
+        const stylesRenamed = this.renameClasses(styles, 'stamp-')
+        const contentRenamed = this.renameClasses(iconContent, 'stamp-')
+        
+        stampContent = `
+          ${stylesRenamed}
+          <g transform="translate(${iconX}, ${iconY}) scale(${scaleFactor})" opacity="1.0">
+            ${contentRenamed}
+          </g>
+        `
+      }
+    }
+    
+    const svg = `
+      <svg width="${dimensions.width}" height="${dimensions.height}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        ${sections.join('\n')}
+        ${dividers.join('\n')}
+        ${stampContent}
+      </svg>
+    `
+    
+    logger.info('✅ Segmented progress bar generated:', {
+      sections: stampsRequired,
+      filled: stampsEarned,
+      iconSize: `${iconSize}px`
+    })
+    
+    return svg
   }
 
   /**
