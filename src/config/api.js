@@ -134,6 +134,47 @@ export const endpoints = {
   branchManagerConfirmPrize: `${API_BASE_URL}/api/branch-manager/confirm-prize`,
   branchManagerStats: `${API_BASE_URL}/api/branch-manager/stats/today`,
 
+  // POS - Product Categories APIs
+  posCategories: `${API_BASE_URL}/api/pos/categories`,
+  posCategoryUpdate: (categoryId) => `${API_BASE_URL}/api/pos/categories/${categoryId}`,
+  posCategoryDelete: (categoryId) => `${API_BASE_URL}/api/pos/categories/${categoryId}`,
+
+  // POS - Products APIs
+  posProducts: `${API_BASE_URL}/api/pos/products`,
+  posProductDetail: (productId) => `${API_BASE_URL}/api/pos/products/${productId}`,
+  posProductUpdate: (productId) => `${API_BASE_URL}/api/pos/products/${productId}`,
+  posProductDelete: (productId) => `${API_BASE_URL}/api/pos/products/${productId}`,
+  posProductStatus: (productId) => `${API_BASE_URL}/api/pos/products/${productId}/status`,
+
+  // POS - Sales APIs (Branch Manager Access)
+  posSales: `${API_BASE_URL}/api/pos/sales`,
+  posSaleDetail: (saleId) => `${API_BASE_URL}/api/pos/sales/${saleId}`,
+  posSaleRefund: (saleId) => `${API_BASE_URL}/api/pos/sales/${saleId}/refund`,
+  posSaleCancel: (saleId) => `${API_BASE_URL}/api/pos/sales/${saleId}/cancel`,
+
+  // POS - Manager Access (Branch Manager POS)
+  posManagerProducts: `${API_BASE_URL}/api/pos/manager/products`,
+  posManagerCategories: `${API_BASE_URL}/api/pos/manager/categories`,
+
+  // POS - Loyalty Integration (Branch Manager Access)
+  posLoyaltyValidate: `${API_BASE_URL}/api/pos/loyalty/validate`,
+
+  // POS - Receipts APIs (Branch Manager Access)
+  posReceipt: (saleId) => `${API_BASE_URL}/api/receipts/${saleId}`,
+  posReceiptPreview: (saleId) => `${API_BASE_URL}/api/receipts/${saleId}/preview`,
+  posReceiptPrint: (saleId) => `${API_BASE_URL}/api/receipts/${saleId}/print`,
+  posReceiptEmail: (saleId) => `${API_BASE_URL}/api/receipts/${saleId}/email`,
+  posReceiptRegenerate: (saleId) => `${API_BASE_URL}/api/receipts/${saleId}/regenerate`,
+
+  // POS - Analytics APIs (Business Dashboard Access)
+  posAnalyticsSummary: `${API_BASE_URL}/api/pos/analytics/summary`,
+  posAnalyticsTopProducts: `${API_BASE_URL}/api/pos/analytics/top-products`,
+  posAnalyticsTrends: `${API_BASE_URL}/api/pos/analytics/sales-trends`,
+  posAnalyticsPaymentBreakdown: `${API_BASE_URL}/api/pos/analytics/payment-breakdown`,
+  posAnalyticsCategoryPerformance: `${API_BASE_URL}/api/pos/analytics/category-performance`,
+  posAnalyticsHourlyDistribution: `${API_BASE_URL}/api/pos/analytics/hourly-distribution`,
+  posAnalyticsExport: `${API_BASE_URL}/api/pos/analytics/export`,
+
   // Analytics Helper Functions
   getOfferAnalytics: (offerId) => `${API_BASE_URL}/api/business/my/offers/${offerId}/analytics`,
   getBranchAnalytics: (branchId) => `${API_BASE_URL}/api/business/my/branches/${branchId}/analytics`

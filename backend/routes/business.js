@@ -2078,6 +2078,116 @@ router.get('/my/branches/:branchId/analytics', requireBusinessAuth, async (req, 
       manager
     }
     
+    // Add POS analytics if requested
+    if (req.query.includePOS === 'true') {
+      try {
+        const Sale = (await import('../models/Sale.js')).default
+        const SaleItem = (await import('../models/SaleItem.js')).default
+        const Product = (await import('../models/Product.js')).default
+        
+        // Build POS where clause
+        const posWhereClause = { 
+          branch_id: branchId,
+          business_id: businessId,
+          status: 'completed'
+        }
+        if (startDate) {
+          posWhereClause.sale_date = { [Op.gte]: startDate }
+        }
+        
+        // Get sales data
+        const sales = await Sale.findAll({
+          where: posWhereClause,
+          include: [
+            {
+              model: SaleItem,
+              as: 'items',
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['public_id', 'name', 'name_ar', 'price']
+                }
+              ]
+            }
+          ]
+        })
+        
+        // Calculate POS metrics
+        const totalSales = sales.length
+        const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0)
+        const avgTransaction = totalSales > 0 ? (totalRevenue / totalSales).toFixed(2) : 0
+        
+        // Payment methods breakdown
+        const paymentMethods = {
+          cash: 0,
+          card: 0,
+          gift_offer: 0,
+          mixed: 0
+        }
+        sales.forEach(sale => {
+          const method = sale.payment_method || 'cash'
+          if (paymentMethods.hasOwnProperty(method)) {
+            paymentMethods[method] += parseFloat(sale.total_amount || 0)
+          }
+        })
+        
+        // Top products
+        const productStats = {}
+        sales.forEach(sale => {
+          sale.items?.forEach(item => {
+            const productId = item.product_id
+            const productName = item.product?.name || 'Unknown'
+            const productNameAr = item.product?.name_ar
+            
+            if (!productStats[productId]) {
+              productStats[productId] = {
+                name: productName,
+                name_ar: productNameAr,
+                quantity: 0,
+                revenue: 0
+              }
+            }
+            productStats[productId].quantity += item.quantity || 0
+            productStats[productId].revenue += parseFloat(item.total || 0)
+          })
+        })
+        
+        const topProducts = Object.values(productStats)
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 5)
+          .map(p => ({
+            name: p.name,
+            name_ar: p.name_ar,
+            quantity: p.quantity,
+            revenue: parseFloat(p.revenue).toFixed(2)
+          }))
+        
+        analytics.pos = {
+          totalSales,
+          totalRevenue: parseFloat(totalRevenue).toFixed(2),
+          avgTransaction: parseFloat(avgTransaction),
+          paymentMethods: {
+            cash: parseFloat(paymentMethods.cash).toFixed(2),
+            card: parseFloat(paymentMethods.card).toFixed(2),
+            gift_offer: parseFloat(paymentMethods.gift_offer).toFixed(2),
+            mixed: parseFloat(paymentMethods.mixed).toFixed(2)
+          },
+          topProducts
+        }
+      } catch (posError) {
+        console.error('❌ POS analytics error:', posError)
+        // Continue without POS data on error
+        analytics.pos = {
+          totalSales: 0,
+          totalRevenue: 0,
+          avgTransaction: 0,
+          paymentMethods: { cash: 0, card: 0, gift_offer: 0, mixed: 0 },
+          topProducts: []
+        }
+      }
+    }
+    
     res.json({
       success: true,
       data: analytics

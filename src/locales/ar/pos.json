@@ -1,0 +1,176 @@
+{
+  "title": "نقطة البيع",
+  "description": "نظام نقاط البيع لمدير الفرع لمعالجة المبيعات",
+  
+  "header": {
+    "pos": "نظام نقاط البيع",
+    "branch": "الفرع",
+    "logout": "تسجيل الخروج"
+  },
+  
+  "products": {
+    "title": "المنتجات",
+    "search": "البحث عن المنتجات...",
+    "searchPlaceholder": "البحث بالاسم أو رمز المنتج...",
+    "allCategories": "جميع الفئات",
+    "noProducts": "لم يتم العثور على منتجات",
+    "noProductsDesc": "حاول تعديل البحث أو الفلاتر",
+    "loading": "جاري تحميل المنتجات...",
+    "outOfStock": "نفذ من المخزون"
+  },
+  
+  "cart": {
+    "title": "الطلب الحالي",
+    "empty": "السلة فارغة",
+    "emptyDesc": "أضف منتجات للبدء",
+    "items": "عناصر",
+    "item": "عنصر",
+    "clearAll": "مسح الكل",
+    "clearConfirm": "هل أنت متأكد من مسح السلة؟",
+    "subtotal": "المجموع الفرعي",
+    "tax": "الضريبة (15%)",
+    "total": "الإجمالي",
+    "loyaltyDiscount": "خصم الولاء",
+    "checkout": "الدفع",
+    "quantity": "الكمية",
+    "remove": "إزالة",
+    "increase": "زيادة الكمية",
+    "decrease": "تقليل الكمية"
+  },
+  
+  "checkout": {
+    "title": "الدفع",
+    "orderSummary": "ملخص الطلب",
+    "paymentMethod": "طريقة الدفع",
+    "selectPayment": "اختر طريقة الدفع",
+    "completeSale": "إتمام البيع",
+    "processing": "جاري المعالجة...",
+    "cancel": "إلغاء",
+    
+    "payment": {
+      "cash": "نقدي",
+      "card": "بطاقة",
+      "giftOffer": "عرض هدية",
+      "cashReceived": "المبلغ المستلم (ريال)",
+      "cashReceivedPlaceholder": "0.00",
+      "change": "الباقي للعميل",
+      "insufficientCash": "المبلغ المستلم غير كافٍ",
+      "giftOfferNote": "استرداد عروض الهدايا سيكون متاحاً في التحديث القادم. حالياً، يتم تسجيل الدفع كعرض هدية."
+    },
+    
+    "loyalty": {
+      "title": "ولاء العميل",
+      "scanCard": "مسح بطاقة الولاء",
+      "scanning": "جاري المسح...",
+      "clear": "مسح",
+      "progress": "{{current}} / {{max}} طوابع",
+      "rewardAvailable": "مكافأة متاحة!",
+      "applyReward": "تطبيق المكافأة كدفع",
+      "discount": "خصم الولاء",
+      "redeemingReward": "استرداد المكافأة لـ {{customer}}",
+      "customerInfo": "معلومات العميل",
+      "stampsEarned": "الطوابع المكتسبة",
+      "rewardsEarned": "المكافآت المكتسبة",
+      "tier": "المستوى",
+      "noReward": "لا توجد مكافأة متاحة بعد",
+      "keepCollecting": "استمر في جمع الطوابع لكسب مكافأة!",
+      "validation": {
+        "invalidQR": "رمز QR للولاء غير صالح",
+        "customerNotFound": "لم يتم العثور على العميل",
+        "offerNotFound": "لم يتم العثور على العرض",
+        "businessMismatch": "بطاقة الولاء هذه لنشاط تجاري مختلف",
+        "noRewardAvailable": "لم يكسب العميل مكافأة بعد"
+      },
+      "success": {
+        "rewardRedeemed": "تم استرداد المكافأة بنجاح!",
+        "stampsReset": "تم إعادة تعيين الطوابع إلى 0. بدأت دورة جديدة."
+      }
+    },
+    
+    "validation": {
+      "selectPaymentMethod": "الرجاء اختيار طريقة الدفع",
+      "enterCashAmount": "الرجاء إدخال المبلغ المستلم",
+      "insufficientAmount": "المبلغ المستلم يجب أن يكون أكبر من أو يساوي الإجمالي"
+    },
+    
+    "success": {
+      "title": "تم إتمام البيع!",
+      "message": "تمت العملية بنجاح",
+      "saleNumber": "رقم البيع",
+      "previewReceipt": "معاينة الفاتورة",
+      "printReceipt": "طباعة الفاتورة",
+      "emailReceipt": "إرسال الفاتورة بالبريد",
+      "bothReceipt": "طباعة وإرسال",
+      "skip": "تخطي",
+      "printSuccess": "تم إرسال الفاتورة للطابعة",
+      "emailSuccess": "تم إرسال الفاتورة بالبريد بنجاح",
+      "bothSuccess": "تم طباعة وإرسال الفاتورة بنجاح",
+      "enterEmail": "أدخل عنوان البريد الإلكتروني للفاتورة:",
+      "receiptActionFailed": "فشل إجراء الفاتورة. الرجاء المحاولة مرة أخرى.",
+      "newSale": "بيع جديد",
+      "close": "إغلاق"
+    },
+    
+    "error": {
+      "title": "فشل البيع",
+      "message": "فشل إتمام البيع. الرجاء المحاولة مرة أخرى.",
+      "networkError": "خطأ في الشبكة. الرجاء التحقق من الاتصال.",
+      "serverError": "خطأ في الخادم. الرجاء المحاولة لاحقاً.",
+      "invalidCart": "بيانات السلة غير صالحة. الرجاء التحديث والمحاولة مرة أخرى.",
+      "receiptActionFailed": "فشل إجراء الفاتورة. الرجاء المحاولة مرة أخرى."
+    }
+  },
+  
+  "receipt": {
+    "preview": "معاينة الفاتورة",
+    "loading": "جاري تحميل الفاتورة...",
+    "downloadPDF": "تحميل PDF",
+    "print": "طباعة",
+    "email": "بريد إلكتروني",
+    "close": "إغلاق",
+    "businessInfo": "معلومات الشركة",
+    "receiptNumber": "رقم الفاتورة",
+    "date": "التاريخ",
+    "branch": "الفرع",
+    "items": "العناصر",
+    "item": "العنصر",
+    "quantity": "الكمية",
+    "price": "السعر",
+    "total": "الإجمالي",
+    "subtotal": "المجموع الفرعي",
+    "tax": "الضريبة (15%)",
+    "discount": "الخصم",
+    "grandTotal": "الإجمالي الكلي",
+    "paymentMethod": "طريقة الدفع",
+    "cashReceived": "المبلغ المستلم",
+    "change": "الباقي",
+    "loyaltyQR": "امسح للانضمام إلى برنامج الولاء",
+    "thankYou": "شكراً لتعاملكم معنا!",
+    "error": "فشل تحميل الفاتورة"
+  },
+  
+  "categories": {
+    "all": "الكل",
+    "loading": "جاري تحميل الفئات..."
+  },
+  
+  "messages": {
+    "productAdded": "تمت إضافة المنتج إلى السلة",
+    "productRemoved": "تمت إزالة المنتج من السلة",
+    "cartCleared": "تم مسح السلة",
+    "saleCompleted": "تم إتمام البيع بنجاح",
+    "saleFailed": "فشل إتمام البيع",
+    "loadingFailed": "فشل تحميل المنتجات",
+    "unauthorized": "غير مصرح. الرجاء تسجيل الدخول مرة أخرى."
+  },
+  
+  "common": {
+    "sar": "ريال",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "retry": "إعادة المحاولة",
+    "close": "إغلاق",
+    "save": "حفظ",
+    "cancel": "إلغاء"
+  }
+}

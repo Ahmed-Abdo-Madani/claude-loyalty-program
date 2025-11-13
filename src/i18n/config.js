@@ -23,6 +23,8 @@ import campaignAr from '../locales/ar/campaign.json';
 import campaignEn from '../locales/en/campaign.json';
 import seoAr from '../locales/ar/seo.json';
 import seoEn from '../locales/en/seo.json';
+import posAr from '../locales/ar/pos.json';
+import posEn from '../locales/en/pos.json';
 
 // Configure i18next
 i18n
@@ -42,6 +44,7 @@ i18n
         notification: notificationAr,
         campaign: campaignAr,
         seo: seoAr,
+        pos: posAr,
       },
       en: {
         common: commonEn,
@@ -54,6 +57,7 @@ i18n
         notification: notificationEn,
         campaign: campaignEn,
         seo: seoEn,
+        pos: posEn,
       },
     },
 
@@ -67,7 +71,7 @@ i18n
     defaultNS: 'common',
 
     // Namespaces to load by default
-    ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign', 'notification', 'campaign', 'seo'],
+    ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign', 'notification', 'campaign', 'seo', 'pos'],
 
     // Language detection options
     detection: {

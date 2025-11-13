@@ -16,6 +16,12 @@ import DeviceRegistration from './DeviceRegistration.js'
 import AutoEngagementConfigModel from './AutoEngagementConfig.js'
 import BusinessSession from './BusinessSession.js'
 import AdminSession from './AdminSession.js'
+import ProductCategory from './ProductCategory.js'
+import Product from './Product.js'
+import Sale from './Sale.js'
+import SaleItem from './SaleItem.js'
+import Receipt from './Receipt.js'
+import Counter from './Counter.js'
 
 const AutoEngagementConfig = AutoEngagementConfigModel(sequelize)
 
@@ -289,6 +295,148 @@ BusinessSession.belongsTo(Business, {
   as: 'business'
 })
 
+// POS System Associations
+
+// Business → ProductCategory (one-to-many)
+Business.hasMany(ProductCategory, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'productCategories',
+  onDelete: 'CASCADE'
+})
+
+ProductCategory.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+// Business → Product (one-to-many)
+Business.hasMany(Product, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'products',
+  onDelete: 'CASCADE'
+})
+
+Product.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+// Branch → Product (one-to-many, optional)
+Branch.hasMany(Product, {
+  foreignKey: 'branch_id',
+  sourceKey: 'public_id',
+  as: 'products',
+  onDelete: 'SET NULL'
+})
+
+Product.belongsTo(Branch, {
+  foreignKey: 'branch_id',
+  targetKey: 'public_id',
+  as: 'branch'
+})
+
+// ProductCategory → Product (one-to-many)
+ProductCategory.hasMany(Product, {
+  foreignKey: 'category_id',
+  sourceKey: 'public_id',
+  as: 'products',
+  onDelete: 'SET NULL'
+})
+
+Product.belongsTo(ProductCategory, {
+  foreignKey: 'category_id',
+  targetKey: 'public_id',
+  as: 'category'
+})
+
+// Business → Sale (one-to-many)
+Business.hasMany(Sale, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'sales',
+  onDelete: 'CASCADE'
+})
+
+Sale.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+// Branch → Sale (one-to-many)
+Branch.hasMany(Sale, {
+  foreignKey: 'branch_id',
+  sourceKey: 'public_id',
+  as: 'sales',
+  onDelete: 'CASCADE'
+})
+
+Sale.belongsTo(Branch, {
+  foreignKey: 'branch_id',
+  targetKey: 'public_id',
+  as: 'branch'
+})
+
+// Customer → Sale (one-to-many, optional)
+Customer.hasMany(Sale, {
+  foreignKey: 'customer_id',
+  sourceKey: 'customer_id',
+  as: 'sales',
+  onDelete: 'SET NULL'
+})
+
+Sale.belongsTo(Customer, {
+  foreignKey: 'customer_id',
+  targetKey: 'customer_id',
+  as: 'customer'
+})
+
+// Sale → SaleItem (one-to-many)
+Sale.hasMany(SaleItem, {
+  foreignKey: 'sale_id',
+  sourceKey: 'public_id',
+  as: 'items',
+  onDelete: 'CASCADE'
+})
+
+SaleItem.belongsTo(Sale, {
+  foreignKey: 'sale_id',
+  targetKey: 'public_id',
+  as: 'sale'
+})
+
+// Product → SaleItem (one-to-many)
+Product.hasMany(SaleItem, {
+  foreignKey: 'product_id',
+  sourceKey: 'public_id',
+  as: 'saleItems',
+  onDelete: 'RESTRICT'
+})
+
+SaleItem.belongsTo(Product, {
+  foreignKey: 'product_id',
+  targetKey: 'public_id',
+  as: 'product'
+})
+
+// Sale → Receipt (one-to-one)
+Sale.hasOne(Receipt, {
+  foreignKey: 'sale_id',
+  sourceKey: 'public_id',
+  as: 'receipt',
+  onDelete: 'CASCADE'
+})
+
+Receipt.belongsTo(Sale, {
+  foreignKey: 'sale_id',
+  targetKey: 'public_id',
+  as: 'sale'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -306,7 +454,13 @@ export {
   DeviceRegistration,
   AutoEngagementConfig,
   BusinessSession,
-  AdminSession
+  AdminSession,
+  ProductCategory,
+  Product,
+  Sale,
+  SaleItem,
+  Receipt,
+  Counter
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -428,6 +582,11 @@ export default {
   AutoEngagementConfig,
   BusinessSession,
   AdminSession,
+  ProductCategory,
+  Product,
+  Sale,
+  SaleItem,
+  Receipt,
   syncDatabase,
   seedDatabase
 }

@@ -435,26 +435,35 @@ class NotificationService {
    */
   async sendEmail(customer, message, options = {}) {
     try {
-      // This would integrate with your email service (SendGrid, AWS SES, etc.)
       logger.info(`📧 Sending email to ${customer.email}`, { subject: message.subject })
 
-      // Simulate email sending for now
-      // In real implementation:
-      // const emailService = new EmailService()
+      // Extract attachment if provided
+      const { attachments = [] } = options
+
+      // In real implementation, integrate with email service:
+      // const emailService = new EmailService() // SendGrid, AWS SES, etc.
       // const result = await emailService.send({
       //   to: customer.email,
       //   subject: message.subject,
       //   html: message.html,
-      //   text: message.text
+      //   text: message.text,
+      //   attachments: attachments // [{ filename, content, contentType }]
       // })
 
       // Simulate successful send
       const externalId = `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+      // Log attachment info if present
+      if (attachments.length > 0) {
+        logger.info(`📎 Email includes ${attachments.length} attachment(s)`, {
+          filenames: attachments.map(a => a.filename)
+        })
+      }
+
       return {
         success: true,
         externalId,
-        provider: 'sendgrid' // or whatever provider you use
+        provider: 'sendgrid'
       }
 
     } catch (error) {

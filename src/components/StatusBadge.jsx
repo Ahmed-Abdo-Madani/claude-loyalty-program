@@ -14,6 +14,12 @@ function StatusBadge({ status, size = 'md' }) {
           text: 'text-gray-700 dark:text-gray-300',
           icon: '⏸️'
         }
+      case 'out_of_stock':
+        return {
+          bg: 'bg-red-100 dark:bg-red-900/20',
+          text: 'text-red-700 dark:text-red-400',
+          icon: '📦'
+        }
       case 'scheduled':
         return {
           bg: 'bg-blue-100 dark:bg-blue-900/20',

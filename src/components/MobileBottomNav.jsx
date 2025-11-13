@@ -4,7 +4,8 @@ import {
   HomeIcon, 
   GiftIcon, 
   QrCodeIcon, 
-  MapPinIcon, 
+  MapPinIcon,
+  ShoppingBagIcon,
   UsersIcon, 
   CreditCardIcon,
   ChartBarIcon 
@@ -14,6 +15,7 @@ import {
   GiftIcon as GiftIconSolid,
   QrCodeIcon as QrCodeIconSolid,
   MapPinIcon as MapPinIconSolid,
+  ShoppingBagIcon as ShoppingBagIconSolid,
   UsersIcon as UsersIconSolid,
   CreditCardIcon as CreditCardIconSolid,
   ChartBarIcon as ChartBarIconSolid
@@ -28,7 +30,7 @@ function MobileBottomNav() {
   const { t } = useTranslation('dashboard')
   const location = useLocation()
   
-  // Navigation items - Streamlined to 5 primary tabs (Analytics moved to Overview)
+  // Navigation items - Streamlined to 6 primary tabs
   const navigationItems = [
     {
       name: t('mobileNav.overview'),
@@ -57,6 +59,13 @@ function MobileBottomNav() {
       icon: MapPinIcon,
       iconSolid: MapPinIconSolid,
       tabName: 'branches'
+    },
+    {
+      name: t('mobileNav.products'),
+      path: '/dashboard?tab=products',
+      icon: ShoppingBagIcon,
+      iconSolid: ShoppingBagIconSolid,
+      tabName: 'products'
     },
     {
       name: t('mobileNav.customers'),

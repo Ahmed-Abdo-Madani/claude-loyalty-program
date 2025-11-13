@@ -8,6 +8,7 @@ import AuthPage from './pages/AuthPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import BranchManagerLogin from './pages/BranchManagerLogin'
 import BranchScanner from './pages/BranchScanner'
+import BranchPOS from './pages/BranchPOS'
 import ManagerProtectedRoute from './components/ManagerProtectedRoute'
 
 // Lazy load heavy components (Dashboard, Admin, etc.)
@@ -57,6 +58,14 @@ function App() {
               element={
                 <ManagerProtectedRoute>
                   <BranchScanner />
+                </ManagerProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/branch-pos" 
+              element={
+                <ManagerProtectedRoute>
+                  <BranchPOS />
                 </ManagerProtectedRoute>
               } 
             />

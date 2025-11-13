@@ -81,9 +81,39 @@ class SecureIDGenerator {
   }
 
   /**
+   * Generate a secure product ID
+   * @returns {string} Product ID in format: prod_[20chars]
+   */
+  static generateProductID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `prod_${randomString}`
+  }
+
+  /**
+   * Generate a secure category ID
+   * @returns {string} Category ID in format: cat_[20chars]
+   */
+  static generateCategoryID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `cat_${randomString}`
+  }
+
+  /**
+   * Generate a secure sale ID
+   * @returns {string} Sale ID in format: sale_[20chars]
+   */
+  static generateSaleID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `sale_${randomString}`
+  }
+
+  /**
    * Validate if an ID follows secure format
    * @param {string} id - The ID to validate
-   * @param {string} type - The expected type (business, offer, customer, branch)
+   * @param {string} type - The expected type (business, offer, customer, branch, product, category, sale)
    * @returns {boolean} Whether the ID is valid
    */
   static validateSecureID(id, type) {
@@ -96,7 +126,10 @@ class SecureIDGenerator {
       branch: /^branch_[a-f0-9]{20}$/,
       campaign: /^camp_[a-f0-9]{20}$/,
       segment: /^seg_[a-f0-9]{20}$/,
-      auto_engagement_config: /^aec_[a-f0-9]{20}$/
+      auto_engagement_config: /^aec_[a-f0-9]{20}$/,
+      product: /^prod_[a-f0-9]{20}$/,
+      category: /^cat_[a-f0-9]{20}$/,
+      sale: /^sale_[a-f0-9]{20}$/
     };
 
     return patterns[type]?.test(id) || false
@@ -117,6 +150,9 @@ class SecureIDGenerator {
     if (id.startsWith('camp_')) return 'campaign'
     if (id.startsWith('seg_')) return 'segment'
     if (id.startsWith('aec_')) return 'auto_engagement_config'
+    if (id.startsWith('prod_')) return 'product'
+    if (id.startsWith('cat_')) return 'category'
+    if (id.startsWith('sale_')) return 'sale'
 
     return null
   }
@@ -135,12 +171,15 @@ class SecureIDGenerator {
       branch: this.generateBranchID,
       campaign: this.generateCampaignID,
       segment: this.generateSegmentID,
-      auto_engagement_config: this.generateAutoEngagementConfigID
+      auto_engagement_config: this.generateAutoEngagementConfigID,
+      product: this.generateProductID,
+      category: this.generateCategoryID,
+      sale: this.generateSaleID
     };
 
     const generator = generators[type]
     if (!generator) {
-      throw new Error(`Invalid type: ${type}. Must be one of: business, offer, customer, branch, campaign, segment`)
+      throw new Error(`Invalid type: ${type}. Must be one of: business, offer, customer, branch, campaign, segment, product, category, sale`)
     }
 
     const ids = new Set()
@@ -163,6 +202,9 @@ export const {
   generateCampaignID,
   generateSegmentID,
   generateAutoEngagementConfigID,
+  generateProductID,
+  generateCategoryID,
+  generateSaleID,
   validateSecureID,
   getIDType,
   generateBatch

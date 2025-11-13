@@ -28,7 +28,7 @@ const BranchAnalyticsModal = ({ isOpen, onClose, branch }) => {
     setError(null)
     try {
       const response = await secureApi.get(
-        `${endpoints.getBranchAnalytics(branch.public_id)}?period=${selectedPeriod}`
+        `${endpoints.getBranchAnalytics(branch.public_id)}?period=${selectedPeriod}&includePOS=true`
       )
       const data = await response.json()
       
@@ -423,6 +423,99 @@ const BranchAnalyticsModal = ({ isOpen, onClose, branch }) => {
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* POS Analytics */}
+              {analytics.pos && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('branches.analytics.posAnalytics')}
+                  </h3>
+                  
+                  {/* POS Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <MetricCard
+                      icon={
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      }
+                      label={t('branches.analytics.posSales')}
+                      value={analytics.pos.totalSales || 0}
+                      color="blue"
+                    />
+                    <MetricCard
+                      icon={
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      }
+                      label={t('branches.analytics.posRevenue')}
+                      value={formatCurrency(analytics.pos.totalRevenue || 0)}
+                      color="green"
+                    />
+                    <MetricCard
+                      icon={
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      }
+                      label={t('branches.analytics.avgTransaction')}
+                      value={formatCurrency(analytics.pos.avgTransaction || 0)}
+                      color="purple"
+                    />
+                  </div>
+
+                  {/* Payment Methods Breakdown */}
+                  {analytics.pos.paymentMethods && Object.keys(analytics.pos.paymentMethods).length > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-6">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                        {t('branches.analytics.paymentMethods')}
+                      </h4>
+                      <div className="space-y-3">
+                        {Object.entries(analytics.pos.paymentMethods).map(([method, amount]) => {
+                          const total = Object.values(analytics.pos.paymentMethods).reduce((sum, val) => sum + val, 0)
+                          const percentage = total > 0 ? ((amount / total) * 100).toFixed(1) : 0
+                          return (
+                            <div key={method}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-700 dark:text-gray-300 capitalize">{method}</span>
+                                <span className="text-gray-900 dark:text-white font-medium">
+                                  {formatCurrency(amount)} ({percentage}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div
+                                  className="bg-primary h-2 rounded-full transition-all"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Products */}
+                  {analytics.pos.topProducts && analytics.pos.topProducts.length > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                        {t('branches.analytics.topProducts')}
+                      </h4>
+                      <div className="space-y-2">
+                        {analytics.pos.topProducts.slice(0, 5).map((product, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700 dark:text-gray-300">{product.name}</span>
+                            <span className="text-gray-900 dark:text-white font-medium">
+                              {product.quantity} × {formatCurrency(product.revenue)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

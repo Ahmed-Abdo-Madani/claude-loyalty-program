@@ -320,6 +320,11 @@
     "milestone": "🎊 Milestone! {{count}} rewards earned!",
     "scanNextCustomer": "Scan Next Customer",
     "stampAdded": "Stamp Added!",
-    "progress": "{{current}} of {{max}}"
+    "progress": "{{current}} of {{max}}",
+    "deprecation": {
+      "title": "New POS System Available",
+      "message": "We've integrated loyalty scanning into our new POS system! You can now process sales and redeem loyalty rewards in one place. This scanner will remain available during the transition.",
+      "tryPOS": "Try POS System"
+    }
   }
 }

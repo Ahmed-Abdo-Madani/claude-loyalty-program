@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 
-function MonthlyChart({ analytics }) {
+function MonthlyChart({ analytics, dataSeries }) {
   const { t } = useTranslation('dashboard')
   
-  // Generate sample monthly data based on existing analytics
+  // Generate sample monthly data based on existing analytics (fallback)
   const generateMonthlyData = () => {
     const months = [
       t('monthlyChart.months.jan'),
@@ -22,8 +22,9 @@ function MonthlyChart({ analytics }) {
     }))
   }
 
-  const monthlyData = generateMonthlyData()
-  const maxValue = Math.max(...monthlyData.map(d => d.value))
+  // Use provided dataSeries if available, otherwise generate sample data
+  const monthlyData = dataSeries && dataSeries.length > 0 ? dataSeries : generateMonthlyData()
+  const maxValue = Math.max(...monthlyData.map(d => d.value), 1) // Ensure at least 1 to avoid division by zero
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-lg">

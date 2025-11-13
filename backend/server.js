@@ -20,6 +20,8 @@ import cardDesignRoutes from './routes/cardDesign.js'
 import stampIconsRoutes from './routes/stampIcons.js'
 import branchManagerRoutes from './routes/branchManager.js'
 import autoEngagementRoutes from './routes/autoEngagement.js'
+import posRoutes from './routes/pos.js'
+import receiptsRoutes from './routes/receipts.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
@@ -301,6 +303,8 @@ app.use('/api/card-design', cardDesignRoutes)
 app.use('/api/stamp-icons', stampIconsRoutes)
 app.use('/api/branch-manager', branchManagerRoutes)
 app.use('/api/auto-engagement', autoEngagementRoutes)
+app.use('/api/pos', posRoutes)
+app.use('/api/receipts', receiptsRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

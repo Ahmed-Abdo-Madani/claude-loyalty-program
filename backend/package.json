@@ -49,7 +49,9 @@
     "sequelize": "^6.37.7",
     "sequelize-cli": "^6.6.3",
     "sharp": "^0.32.6",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "pdfkit": "^0.15.0",
+    "escpos": "^3.0.0-alpha.6"
   },
   "devDependencies": {
     "nodemon": "^2.0.20"

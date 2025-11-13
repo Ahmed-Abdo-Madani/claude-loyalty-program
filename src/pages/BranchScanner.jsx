@@ -192,6 +192,14 @@ export default function BranchScanner() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/branch-pos')}
+              className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 flex items-center gap-2"
+              aria-label="Open POS system"
+            >
+              <span>🛒</span>
+              <span className="hidden sm:inline">POS</span>
+            </button>
             <LanguageSwitcher variant="button" showLabels={false} className="" />
             <button
               onClick={handleLogout}
@@ -203,6 +211,28 @@ export default function BranchScanner() {
           </div>
         </div>
       )}
+
+      {/* Deprecation Notice Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-l-4 border-blue-500 p-4 mx-4 mt-4 rounded-lg">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">ℹ️</span>
+          <div className="flex-1">
+            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+              {t('branchScanner.deprecation.title')}
+            </h3>
+            <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+              {t('branchScanner.deprecation.message')}
+            </p>
+            <button
+              onClick={() => navigate('/branch-pos')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
+            >
+              <span>🛒</span>
+              <span>{t('branchScanner.deprecation.tryPOS')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">

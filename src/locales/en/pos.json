@@ -1,0 +1,176 @@
+{
+  "title": "Point of Sale",
+  "description": "Branch manager POS system for processing sales",
+  
+  "header": {
+    "pos": "POS System",
+    "branch": "Branch",
+    "logout": "Logout"
+  },
+  
+  "products": {
+    "title": "Products",
+    "search": "Search products...",
+    "searchPlaceholder": "Search by name or SKU...",
+    "allCategories": "All Categories",
+    "noProducts": "No products found",
+    "noProductsDesc": "Try adjusting your search or filters",
+    "loading": "Loading products...",
+    "outOfStock": "Out of Stock"
+  },
+  
+  "cart": {
+    "title": "Current Order",
+    "empty": "Cart is empty",
+    "emptyDesc": "Add products to start",
+    "items": "items",
+    "item": "item",
+    "clearAll": "Clear All",
+    "clearConfirm": "Are you sure you want to clear the cart?",
+    "subtotal": "Subtotal",
+    "tax": "Tax (15%)",
+    "total": "Total",
+    "loyaltyDiscount": "Loyalty Discount",
+    "checkout": "Checkout",
+    "quantity": "Quantity",
+    "remove": "Remove",
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity"
+  },
+  
+  "checkout": {
+    "title": "Checkout",
+    "orderSummary": "Order Summary",
+    "paymentMethod": "Payment Method",
+    "selectPayment": "Select payment method",
+    "completeSale": "Complete Sale",
+    "processing": "Processing...",
+    "cancel": "Cancel",
+    
+    "payment": {
+      "cash": "Cash",
+      "card": "Card",
+      "giftOffer": "Gift Offer",
+      "cashReceived": "Cash Received (SAR)",
+      "cashReceivedPlaceholder": "0.00",
+      "change": "Change to Return",
+      "insufficientCash": "Insufficient cash received",
+      "giftOfferNote": "Gift offer redemption will be available in the next update. For now, this records the payment as a gift offer."
+    },
+    
+    "loyalty": {
+      "title": "Customer Loyalty",
+      "scanCard": "Scan Loyalty Card",
+      "scanning": "Scanning...",
+      "clear": "Clear",
+      "progress": "{{current}} / {{max}} stamps",
+      "rewardAvailable": "Reward Available!",
+      "applyReward": "Apply reward as payment",
+      "discount": "Loyalty Discount",
+      "redeemingReward": "Redeeming reward for {{customer}}",
+      "customerInfo": "Customer Information",
+      "stampsEarned": "Stamps Earned",
+      "rewardsEarned": "Rewards Earned",
+      "tier": "Tier",
+      "noReward": "No reward available yet",
+      "keepCollecting": "Keep collecting stamps to earn a reward!",
+      "validation": {
+        "invalidQR": "Invalid loyalty QR code",
+        "customerNotFound": "Customer not found",
+        "offerNotFound": "Offer not found",
+        "businessMismatch": "This loyalty card is for a different business",
+        "noRewardAvailable": "Customer has not earned a reward yet"
+      },
+      "success": {
+        "rewardRedeemed": "Reward redeemed successfully!",
+        "stampsReset": "Stamps reset to 0. New cycle started."
+      }
+    },
+    
+    "validation": {
+      "selectPaymentMethod": "Please select a payment method",
+      "enterCashAmount": "Please enter cash received amount",
+      "insufficientAmount": "Cash received must be greater than or equal to total"
+    },
+    
+    "success": {
+      "title": "Sale Completed!",
+      "message": "Transaction completed successfully",
+      "saleNumber": "Sale Number",
+      "previewReceipt": "Preview Receipt",
+      "printReceipt": "Print Receipt",
+      "emailReceipt": "Email Receipt",
+      "bothReceipt": "Print & Email",
+      "skip": "Skip",
+      "printSuccess": "Receipt sent to printer",
+      "emailSuccess": "Receipt emailed successfully",
+      "bothSuccess": "Receipt printed and emailed successfully",
+      "enterEmail": "Enter email address for receipt:",
+      "receiptActionFailed": "Receipt action failed. Please try again.",
+      "newSale": "New Sale",
+      "close": "Close"
+    },
+    
+    "error": {
+      "title": "Sale Failed",
+      "message": "Failed to complete sale. Please try again.",
+      "networkError": "Network error. Please check your connection.",
+      "serverError": "Server error. Please try again later.",
+      "invalidCart": "Invalid cart data. Please refresh and try again.",
+      "receiptActionFailed": "Receipt action failed. Please try again."
+    }
+  },
+  
+  "receipt": {
+    "preview": "Receipt Preview",
+    "loading": "Loading receipt...",
+    "downloadPDF": "Download PDF",
+    "print": "Print",
+    "email": "Email",
+    "close": "Close",
+    "businessInfo": "Business Information",
+    "receiptNumber": "Receipt #",
+    "date": "Date",
+    "branch": "Branch",
+    "items": "Items",
+    "item": "Item",
+    "quantity": "Qty",
+    "price": "Price",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "tax": "Tax (15%)",
+    "discount": "Discount",
+    "grandTotal": "Grand Total",
+    "paymentMethod": "Payment Method",
+    "cashReceived": "Cash Received",
+    "change": "Change",
+    "loyaltyQR": "Scan to join our loyalty program",
+    "thankYou": "Thank you for your business!",
+    "error": "Failed to load receipt"
+  },
+  
+  "categories": {
+    "all": "All",
+    "loading": "Loading categories..."
+  },
+  
+  "messages": {
+    "productAdded": "Product added to cart",
+    "productRemoved": "Product removed from cart",
+    "cartCleared": "Cart cleared",
+    "saleCompleted": "Sale completed successfully",
+    "saleFailed": "Failed to complete sale",
+    "loadingFailed": "Failed to load products",
+    "unauthorized": "Unauthorized. Please login again."
+  },
+  
+  "common": {
+    "sar": "SAR",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}

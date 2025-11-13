@@ -89,6 +89,7 @@ export const requireBranchManagerAuth = async (req, res, next) => {
     req.branch = branch
     req.branchId = branchId
     req.isManager = true
+    req.managerName = decoded.branchName
 
     logger.info('Branch manager authenticated', {
       branchId,

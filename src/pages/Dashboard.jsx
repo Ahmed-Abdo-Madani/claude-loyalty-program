@@ -3,7 +3,9 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import OffersTab from '../components/OffersTab'
 import BranchesTab from '../components/BranchesTab'
+import ProductsTab from '../components/ProductsTab'
 import WalletAnalytics from '../components/WalletAnalytics'
+import POSAnalytics from '../components/POSAnalytics'
 import ScannerTab from '../components/ScannerTab'
 import CustomersTab from '../components/CustomersTab'
 import DashboardSidebar from '../components/DashboardSidebar'
@@ -180,6 +182,7 @@ function Dashboard() {
                   { id: 'offers', label: t('tabs.myOffers'), icon: '🎯' },
                   { id: 'scanner', label: t('tabs.qrScanner'), icon: '📱' },
                   { id: 'branches', label: t('tabs.branches'), icon: '🏪' },
+                  { id: 'products', label: t('tabs.products'), icon: '🛍️' },
                   { id: 'customers', label: t('tabs.customers'), icon: '👥' },
                   { id: 'wallet', label: t('tabs.mobileWallets'), icon: '📱' },
                   { id: 'analytics', label: t('tabs.analytics'), icon: '📈' }
@@ -273,6 +276,10 @@ function Dashboard() {
                 <BranchesTab analytics={analytics} />
               )}
 
+              {activeTab === 'products' && (
+                <ProductsTab analytics={analytics} />
+              )}
+
               {activeTab === 'customers' && (
                 <CustomersTab analytics={analytics} />
               )}
@@ -282,10 +289,7 @@ function Dashboard() {
               )}
 
               {activeTab === 'analytics' && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <div className="text-lg mb-2">{t('overview.advancedAnalytics')}</div>
-                  <div>{t('tabs.comingSoon')}</div>
-                </div>
+                <POSAnalytics />
               )}
             </div>
           </div>
