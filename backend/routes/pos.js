@@ -305,7 +305,7 @@ router.get('/products', requireBusinessAuth, async (req, res) => {
         {
           model: Branch,
           as: 'branch',
-          attributes: ['public_id', 'name', 'name_ar'],
+          attributes: ['public_id', 'name'],
           required: false
         }
       ],
@@ -354,7 +354,7 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
         {
           model: Branch,
           as: 'branch',
-          attributes: ['public_id', 'name', 'name_ar'],
+          attributes: ['public_id', 'name'],
           required: false
         }
       ]
@@ -871,24 +871,23 @@ router.get('/manager/products', requireBranchManagerAuth, async (req, res) => {
       ],
       order: [['name', 'ASC']],
       attributes: [
-        'public_id', 
-        'sku', 
-        'name', 
-        'name_ar', 
-        'description', 
-        'description_ar',
-        'price', 
-        'cost', 
-        'tax_rate', 
-        'tax_included',
-        'category_id',
-        'image_url', 
-        'status', 
-        'stock_quantity',
-        'low_stock_threshold',
-        'branch_id',
-        'created_at',
-        'updated_at'
+  'public_id', 
+  'sku', 
+  'name', 
+  'name_ar', 
+  'description',
+  'price', 
+  'cost', 
+  'tax_rate', 
+  'tax_included',
+  'category_id',
+  'image_url', 
+  'status', 
+  'stock_quantity',
+  'low_stock_threshold',
+  'branch_id',
+  'created_at',
+  'updated_at'
       ]
     })
     
