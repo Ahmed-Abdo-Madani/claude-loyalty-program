@@ -16,7 +16,16 @@
     "noProducts": "لم يتم العثور على منتجات",
     "noProductsDesc": "حاول تعديل البحث أو الفلاتر",
     "loading": "جاري تحميل المنتجات...",
-    "outOfStock": "نفذ من المخزون"
+    "outOfStock": "نفذ من المخزون",
+    "quickAdd": "إضافة",
+    "added": "تمت الإضافة",
+    "clearSearch": "مسح البحث",
+    "viewMode": {
+      "list": "عرض القائمة",
+      "grid": "عرض الشبكة",
+      "switchToList": "التبديل إلى عرض القائمة",
+      "switchToGrid": "التبديل إلى عرض الشبكة"
+    }
   },
   
   "cart": {

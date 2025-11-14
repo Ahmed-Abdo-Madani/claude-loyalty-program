@@ -14,7 +14,7 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
     category_id: '',
     branch_id: '',
     tax_rate: '15.00',
-    tax_included: false,
+    tax_included: true,
     status: 'active',
     image_url: '',
     display_order: 0
@@ -52,7 +52,7 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
         category_id: '',
         branch_id: '',
         tax_rate: '15.00',
-        tax_included: false,
+        tax_included: true,
         status: 'active',
         image_url: '',
         display_order: 0
@@ -151,10 +151,10 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
   const taxDisplay = calculateTaxDisplay()
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full my-8">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col my-8">
+        {/* Header - Sticky */}
+        <div className="sticky top-0 bg-white dark:bg-gray-800 flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 rounded-t-lg z-10">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               {product ? t('products.modal.titleEdit') : t('products.modal.titleCreate')}
@@ -171,8 +171,9 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
+        {/* Form - Scrollable Content */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="overflow-y-auto p-6 flex-1">
           <div className="space-y-6">
             {/* Basic Information */}
             <div>
@@ -441,9 +442,10 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
               </div>
             </div>
           </div>
+          </div>
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          {/* Footer - Sticky */}
+          <div className="sticky bottom-0 bg-white dark:bg-gray-800 flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 rounded-b-lg z-10">
             <button
               type="button"
               onClick={onClose}

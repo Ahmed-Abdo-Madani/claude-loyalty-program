@@ -883,8 +883,6 @@ router.get('/manager/products', requireBranchManagerAuth, async (req, res) => {
   'category_id',
   'image_url', 
   'status', 
-  'stock_quantity',
-  'low_stock_threshold',
   'branch_id',
   'created_at',
   'updated_at'
@@ -1320,9 +1318,11 @@ router.post('/sales', requireBranchManagerAuth, async (req, res) => {
     }
     
     // Generate complete receipt content using ReceiptService
+    // CRITICAL: Pass transaction to ensure receipt generation can see the uncommitted sale
     const receiptContent = await ReceiptService.generateReceiptContent(sale.public_id, {
       includeLogo: true,
-      includeLoyaltyQR: true
+      includeLoyaltyQR: true,
+      transaction // Pass transaction for query isolation
     })
 
     // Create receipt record with enriched content

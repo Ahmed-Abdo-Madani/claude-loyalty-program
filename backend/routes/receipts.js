@@ -177,14 +177,14 @@ router.post('/:saleId/print', requireBranchManagerAuth, async (req, res) => {
     }
 
     // Mark as printed
-    await ReceiptService.markReceiptAsPrinted(receipt.public_id)
+    await ReceiptService.markReceiptAsPrinted(receipt.receipt_number)
 
     // Reload receipt to get updated fields
     await receipt.reload()
 
     logger.info('Receipt marked as printed', { 
       saleId, 
-      receiptId: receipt.public_id,
+      receiptNumber: receipt.receipt_number,
       format 
     })
 
@@ -192,7 +192,8 @@ router.post('/:saleId/print', requireBranchManagerAuth, async (req, res) => {
       success: true,
       message: 'Receipt marked as printed',
       receipt: {
-        public_id: receipt.public_id,
+        id: receipt.id,
+        receipt_number: receipt.receipt_number,
         printed_at: receipt.printed_at,
         print_count: receipt.print_count
       }
@@ -333,13 +334,14 @@ router.post('/:saleId/regenerate', requireBranchManagerAuth, async (req, res) =>
     receipt.content_json = newContent
     await receipt.save()
 
-    logger.info('Receipt content regenerated', { saleId, receiptId: receipt.public_id })
+    logger.info('Receipt content regenerated', { saleId, receiptNumber: receipt.receipt_number })
 
     return res.json({
       success: true,
       message: 'Receipt content regenerated',
       receipt: {
-        public_id: receipt.public_id,
+        id: receipt.id,
+        receipt_number: receipt.receipt_number,
         content: newContent
       }
     })

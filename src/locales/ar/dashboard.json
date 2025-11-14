@@ -40,9 +40,9 @@
     "signOut": "تسجيل الخروج"
   },
   "mobileNav": {
-    "overview": "نظرة عامة",
+    "overview": "عام",
     "offers": "العروض",
-    "scanner": "الماسح",
+    "analytics": "التحليلات",
     "branches": "الفروع",
     "products": "المنتجات",
     "customers": "العملاء"
@@ -50,11 +50,32 @@
   "quickActions": {
     "title": "إجراءات سريعة",
     "newOffer": "عرض جديد",
-    "newOfferDesc": "إنشاء عرض ولاء جديد",
+    "manageProducts": "المنتجات",
     "scanQR": "مسح QR",
-    "scanQRDesc": "مسح رموز QR للعملاء",
+    "reports": "التحليلات",
+    "manageBranches": "الفروع",
+    "settings": "الإعدادات"
+  },
+  "todaysSnapshot": {
+    "title": "لقطة اليوم",
+    "totalSales": "إجمالي المبيعات",
+    "ordersCount": "الطلبات",
+    "averageOrderValue": "متوسط الطلب",
+    "activeCustomers": "العملاء",
+    "refresh": "تحديث",
+    "error": "فشل تحميل مقاييس اليوم",
+    "asOf": "اعتباراً من"
+  },
+  "operationalGlimpse": {
+    "title": "روابط سريعة",
+    "branches": "الفروع",
+    "products": "المنتجات",
+    "categories": "الفئات",
+    "customers": "العملاء",
+    "staff": "الموظفون",
+    "settings": "الإعدادات",
     "reports": "التقارير",
-    "reportsDesc": "عرض التحليلات والتقارير"
+    "walletPasses": "بطاقات المحفظة"
   },
   "activityFeed": {
     "title": "النشاط الأخير",
@@ -540,6 +561,31 @@
       "errorDuplicating": "فشل في نسخ المنتج",
       "errorCategorySaving": "فشل في حفظ الفئة",
       "errorCategoryDeleting": "فشل في حذف الفئة"
+    },
+    "table": {
+      "columns": {
+        "image": "الصورة",
+        "name": "اسم المنتج",
+        "sku": "رمز التخزين",
+        "price": "السعر",
+        "category": "الفئة",
+        "branch": "الفرع",
+        "tax": "معدل الضريبة",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "sortBy": "ترتيب حسب {{column}}",
+      "sortAscending": "ترتيب تصاعدي",
+      "sortDescending": "ترتيب تنازلي",
+      "expandDetails": "توسيع التفاصيل",
+      "collapseDetails": "طي التفاصيل",
+      "moreActions": "المزيد من الإجراءات",
+      "viewDetails": "عرض التفاصيل"
+    },
+    "viewMode": {
+      "list": "عرض القائمة",
+      "grid": "عرض الشبكة",
+      "table": "عرض الجدول"
     }
   },
   "pos": {
@@ -548,7 +594,20 @@
       "subtitle": "تتبع أداء المبيعات وتحسين عمليات نقاط البيع",
       "loading": "جاري تحميل التحليلات...",
       "error": "فشل تحميل التحليلات",
-      "noData": "لا توجد بيانات مبيعات متاحة للفترة المحددة",
+      "noData": {
+        "title": "لا توجد بيانات مبيعات بعد",
+        "message": "لا توجد مبيعات مسجلة للفترة المحددة. ابدأ بإجراء المبيعات لرؤية التحليلات هنا."
+      },
+      "empty": {
+        "rangeLabel": "عرض البيانات من:",
+        "suggestionsTitle": "اقتراحات:",
+        "suggestions": {
+          "changeDateRange": "جرب تحديد نطاق زمني مختلف باستخدام الفلاتر أعلاه",
+          "createSales": "تأكد من إنشاء المبيعات من خلال نظام نقاط البيع",
+          "checkStatus": "تحقق من أن المبيعات محددة بحالة 'مكتملة'"
+        },
+        "tryLast90Days": "جرب آخر 90 يوماً"
+      },
       "retry": "إعادة المحاولة",
       "period": {
         "7d": "آخر 7 أيام",
@@ -557,12 +616,20 @@
         "custom": "نطاق مخصص"
       },
       "filters": {
+        "filtersHeader": "الفلاتر والنطاق الزمني",
+        "timePeriod": "الفترة الزمنية",
         "allBranches": "جميع الفروع",
         "selectBranch": "اختر الفرع",
         "dateRange": "نطاق التاريخ",
         "from": "من",
         "to": "إلى",
-        "apply": "تطبيق"
+        "apply": "تطبيق",
+        "branchFilter": "فلتر الفروع",
+        "noBranches": "لا توجد فروع متاحة",
+        "branchComparison": "مقارنة الفروع",
+        "topPerforming": "الأفضل أداءً",
+        "clickToFilter": "انقر للتصفية حسب هذا الفرع",
+        "contributionToTotal": "من إجمالي الإيرادات"
       },
       "summary": {
         "totalSales": "إجمالي المبيعات",
@@ -604,6 +671,7 @@
       "salesCount": "المبيعات",
       "peakHours": "ساعات الذروة",
       "peakHoursIndicator": "نشاط المبيعات في الذروة",
+      "branchComparisonSubtitle": "قارن الأداء عبر جميع الفروع",
       "insights": "رؤى وتوصيات",
       "tip1": "ساعات الذروة للمبيعات بين 12 ظهراً - 2 ظهراً. خطط للموظفين وفقاً لذلك.",
       "tip2": "المدفوعات النقدية تمثل غالبية المعاملات. تأكد من توفر الفكة الكافية.",
@@ -826,6 +894,7 @@
   },
   "common": {
     "loading": "جاري التحميل...",
+    "sar": "ريال",
     "error": "خطأ",
     "success": "نجاح",
     "save": "حفظ",

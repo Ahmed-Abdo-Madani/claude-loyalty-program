@@ -18,10 +18,12 @@ import BusinessSession from './BusinessSession.js'
 import AdminSession from './AdminSession.js'
 import ProductCategory from './ProductCategory.js'
 import Product from './Product.js'
+// CRITICAL: Import Counter BEFORE Sale to ensure it's registered in sequelize.models
+// before Sale's beforeCreate hook tries to access it
+import Counter from './Counter.js'
 import Sale from './Sale.js'
 import SaleItem from './SaleItem.js'
 import Receipt from './Receipt.js'
-import Counter from './Counter.js'
 
 const AutoEngagementConfig = AutoEngagementConfigModel(sequelize)
 

@@ -27,9 +27,9 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
       >
         <div className="w-5 h-5 sm:w-6 sm:h-6 aspect-square grid place-items-center rounded-md">
           <img 
-            src={baseLang === 'ar' ? arabicIcon : englishIcon}
+            src={baseLang === 'ar' ? englishIcon : arabicIcon}
             alt="Language"
-            className={`block w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] object-contain dark:invert ${baseLang === 'ar' ? 'scale-110' : ''}`}
+            className={`block w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] object-contain dark:invert ${baseLang === 'ar' ? '' : 'scale-110'}`}
           />
         </div>
       </button>
@@ -48,9 +48,9 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
         >
           <div className="w-5 h-5 sm:w-6 sm:h-6 aspect-square grid place-items-center rounded-md">
             <img 
-              src={baseLang === 'ar' ? arabicIcon : englishIcon}
+              src={baseLang === 'ar' ? englishIcon : arabicIcon}
               alt="Language"
-              className={`block w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] object-contain dark:invert ${baseLang === 'ar' ? 'scale-110' : ''}`}
+              className={`block w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] object-contain dark:invert ${baseLang === 'ar' ? '' : 'scale-110'}`}
             />
           </div>
           {showLabels && (

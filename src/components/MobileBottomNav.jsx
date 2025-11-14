@@ -47,11 +47,11 @@ function MobileBottomNav() {
       tabName: 'offers'
     },
     {
-      name: t('mobileNav.scanner'),
-      path: '/dashboard?tab=scanner',
-      icon: QrCodeIcon,
-      iconSolid: QrCodeIconSolid,
-      tabName: 'scanner'
+      name: t('mobileNav.analytics'),
+      path: '/dashboard?tab=analytics',
+      icon: ChartBarIcon,
+      iconSolid: ChartBarIconSolid,
+      tabName: 'analytics'
     },
     {
       name: t('mobileNav.branches'),

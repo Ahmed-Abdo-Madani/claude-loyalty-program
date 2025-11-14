@@ -16,7 +16,16 @@
     "noProducts": "No products found",
     "noProductsDesc": "Try adjusting your search or filters",
     "loading": "Loading products...",
-    "outOfStock": "Out of Stock"
+    "outOfStock": "Out of Stock",
+    "quickAdd": "Add",
+    "added": "Added",
+    "clearSearch": "Clear search",
+    "viewMode": {
+      "list": "List View",
+      "grid": "Grid View",
+      "switchToList": "Switch to list view",
+      "switchToGrid": "Switch to grid view"
+    }
   },
   
   "cart": {

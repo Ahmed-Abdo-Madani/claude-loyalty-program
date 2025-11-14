@@ -27,15 +27,20 @@ class ReceiptService {
    * Generate complete receipt content with business logo, items, and loyalty QR
    * @param {string} saleId - Sale public_id
    * @param {object} options - Generation options
+   * @param {object} options.transaction - Sequelize transaction (required when called within a transaction)
    * @returns {Promise<object>} - Complete receipt content
    */
   static async generateReceiptContent(saleId, options = {}) {
     try {
       logger.info('Generating receipt content', { saleId })
 
+      // Extract transaction from options
+      const { transaction } = options
+
       // Fetch sale with all associations
       const sale = await Sale.findOne({
         where: { public_id: saleId },
+        transaction, // Pass transaction to query
         include: [
           {
             model: SaleItem,
@@ -45,7 +50,7 @@ class ReceiptService {
           {
             model: Business,
             as: 'business',
-            attributes: ['public_id', 'name', 'name_ar', 'logo_url', 'address', 'city', 'district', 'phone']
+            attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'address', 'city', 'district', 'phone']
           },
           {
             model: Branch,
@@ -55,12 +60,12 @@ class ReceiptService {
           {
             model: Customer,
             as: 'customer',
-            attributes: ['public_id', 'name', 'phone']
+            attributes: ['customer_id', 'phone']
           },
           {
             model: Receipt,
             as: 'receipt',
-            attributes: ['public_id', 'format', 'printed_at', 'emailed_at', 'print_count']
+            attributes: ['id', 'receipt_number', 'format', 'printed_at', 'emailed_at', 'print_count']
           }
         ]
       })
@@ -82,8 +87,8 @@ class ReceiptService {
       // Build receipt content
       const receiptContent = {
         business: {
-          name: sale.business.name,
-          name_ar: sale.business.name_ar,
+          name: sale.business.business_name,
+          name_ar: sale.business.business_name_ar,
           logo_url: sale.business.logo_url,
           address: sale.business.address,
           city: sale.business.city,
@@ -156,7 +161,7 @@ class ReceiptService {
       const offer = await Offer.findOne({
         where: {
           business_id: businessId,
-          is_active: true
+          status: 'active'
         },
         order: [['created_at', 'DESC']]
       })
@@ -247,7 +252,7 @@ class ReceiptService {
 
       // Business Name
       doc.fontSize(18).font('Helvetica-Bold')
-         .text(receipt.business.name, 20, yPos, { align: 'center' })
+         .text(receipt.business.business_name, 20, yPos, { align: 'center' })
       yPos += 25
 
       // Business Address
@@ -408,7 +413,7 @@ class ReceiptService {
       
       // Business name (double height, bold)
       commands += ESC + '!' + '\x38' // Bold + Double height + Double width
-      commands += receipt.business.name + LF
+      commands += receipt.business.business_name + LF
       commands += ESC + '!' + '\x00' // Reset
       commands += LF
       
@@ -553,7 +558,7 @@ class ReceiptService {
 
       // Prepare email message
       const message = {
-        subject: `Receipt #${receipt.sale.sale_number} - ${receipt.business.name}`,
+        subject: `Receipt #${receipt.sale.sale_number} - ${receipt.business.business_name}`,
         html: emailHTML,
         text: `Your receipt #${receipt.sale.sale_number} is attached.`
       }
@@ -627,7 +632,7 @@ class ReceiptService {
         <div class="container">
           <div class="header">
             ${receipt.business.logo_url ? `<img src="${receipt.business.logo_url}" alt="Logo" class="logo">` : ''}
-            <div class="business-name">${receipt.business.name}</div>
+            <div class="business-name">${receipt.business.business_name}</div>
             <div class="business-info">
               ${receipt.business.address}, ${receipt.business.city}<br>
               ${receipt.business.phone}
@@ -750,27 +755,27 @@ class ReceiptService {
 
   /**
    * Mark receipt as printed
-   * @param {string} receiptId - Receipt public_id
+   * @param {string} receiptNumber - Receipt receipt_number
    * @returns {Promise<object>} - Updated receipt
    */
-  static async markReceiptAsPrinted(receiptId) {
+  static async markReceiptAsPrinted(receiptNumber) {
     try {
       const receipt = await Receipt.findOne({
-        where: { public_id: receiptId }
+        where: { receipt_number: receiptNumber }
       })
 
       if (!receipt) {
-        throw new Error(`Receipt not found: ${receiptId}`)
+        throw new Error(`Receipt not found: ${receiptNumber}`)
       }
 
       await receipt.markAsPrinted()
-      logger.info('Receipt marked as printed', { receiptId })
+      logger.info('Receipt marked as printed', { receiptNumber })
 
       return receipt
 
     } catch (error) {
       logger.error('Failed to mark receipt as printed', { 
-        receiptId, 
+        receiptNumber, 
         error: error.message 
       })
       throw error

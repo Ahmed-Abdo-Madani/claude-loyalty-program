@@ -228,37 +228,6 @@ export default function CheckoutModal({
           onComplete(completedSale, { action: 'print' })
           break
           
-        case 'email':
-          // Prompt for email
-          const email = prompt(t('checkout.success.enterEmail'))
-          if (email) {
-            await managerApiRequest(endpoints.posReceiptEmail(completedSale.public_id), {
-              method: 'POST',
-              body: JSON.stringify({ email })
-            })
-            alert(t('checkout.success.emailSuccess'))
-          }
-          onComplete(completedSale, { action: 'email' })
-          break
-          
-        case 'both':
-          // Prompt for email first
-          const emailForBoth = prompt(t('checkout.success.enterEmail'))
-          if (emailForBoth) {
-            // Print first
-            await managerApiRequest(endpoints.posReceiptPrint(completedSale.public_id), {
-              method: 'POST'
-            })
-            // Then email
-            await managerApiRequest(endpoints.posReceiptEmail(completedSale.public_id), {
-              method: 'POST',
-              body: JSON.stringify({ email: emailForBoth })
-            })
-            alert(t('checkout.success.bothSuccess'))
-          }
-          onComplete(completedSale, { action: 'both' })
-          break
-          
         case 'skip':
           // Just complete without receipt action
           onComplete(completedSale, { action: 'skip' })
@@ -293,17 +262,17 @@ export default function CheckoutModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" dir={i18n.dir()}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" dir={i18n.dir()}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 flex justify-between items-center p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
             {t('checkout.title')}
           </h2>
           <button 
             onClick={onClose} 
             disabled={processing}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl transition-colors disabled:opacity-50"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl sm:text-2xl transition-colors disabled:opacity-50"
             aria-label={t('common.close')}
           >
             ✕
@@ -311,41 +280,41 @@ export default function CheckoutModal({
         </div>
         
         {/* Content */}
-        <div className="p-6">
-          {/* Order Summary */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+        <div className="p-3 sm:p-4">
+          {/* Order Summary - Compact */}
+          <div className="mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               {t('checkout.orderSummary')}
             </h3>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <div className="space-y-2">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+              <div className="space-y-1">
                 {cart.map(item => (
-                  <div key={item.product.public_id} className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
-                    <span>
+                  <div key={item.product.public_id} className="flex justify-between text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                    <span className="truncate mr-2">
                       {i18n.language === 'ar' && item.product.name_ar 
                         ? item.product.name_ar 
                         : item.product.name} × {item.quantity}
                     </span>
-                    <span>{item.total.toFixed(2)} {t('common.sar')}</span>
+                    <span className="whitespace-nowrap">{item.total.toFixed(2)} {t('common.sar')}</span>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-gray-200 dark:border-gray-600 mt-3 pt-3 space-y-1">
-                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+              <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2 space-y-1">
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   <span>{t('cart.subtotal')}</span>
                   <span>{totals.subtotal.toFixed(2)} {t('common.sar')}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   <span>{t('cart.tax')}</span>
                   <span>{totals.tax.toFixed(2)} {t('common.sar')}</span>
                 </div>
                 {applyLoyaltyDiscount && loyaltyProgress?.is_completed && (
-                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                  <div className="flex justify-between text-xs sm:text-sm text-green-600 dark:text-green-400">
                     <span>{t('checkout.loyalty.discount')}</span>
                     <span>-{totals.total.toFixed(2)} {t('common.sar')}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xl font-bold text-gray-900 dark:text-white pt-2 border-t border-gray-200 dark:border-gray-600">
+                <div className="flex justify-between text-base sm:text-lg font-bold text-gray-900 dark:text-white pt-1 border-t border-gray-200 dark:border-gray-600">
                   <span>{t('cart.total')}</span>
                   <span>
                     {applyLoyaltyDiscount && loyaltyProgress?.is_completed 
@@ -357,16 +326,16 @@ export default function CheckoutModal({
             </div>
           </div>
           
-          {/* Loyalty Scanner Section */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {/* Loyalty Scanner Section - Compact */}
+          <div className="mb-3 sm:mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                 {t('checkout.loyalty.title')}
               </h3>
               {scannedCustomer && (
                 <button
                   onClick={handleClearLoyalty}
-                  className="text-sm text-red-600 hover:text-red-700"
+                  className="text-xs sm:text-sm text-red-600 hover:text-red-700"
                 >
                   {t('checkout.loyalty.clear')}
                 </button>
@@ -377,22 +346,22 @@ export default function CheckoutModal({
               <button
                 onClick={() => setShowScanner(true)}
                 disabled={processing}
-                className="w-full h-16 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full h-12 sm:h-14 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <span className="text-3xl">📱</span>
-                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                <span className="text-xl sm:text-2xl">📱</span>
+                <span className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300">
                   {t('checkout.loyalty.scanCard')}
                 </span>
               </button>
             ) : (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">👤</span>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-xl sm:text-2xl">👤</span>
                   <div className="flex-1">
-                    <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
                       {scannedCustomer.name || 'Customer'}
                     </p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
                       {t('checkout.loyalty.progress', { 
                         current: loyaltyProgress.current_stamps, 
                         max: loyaltyProgress.max_stamps 
@@ -400,10 +369,10 @@ export default function CheckoutModal({
                     </p>
                     {loyaltyProgress.is_completed && (
                       <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded">
-                        <p className="text-sm font-semibold text-green-900 dark:text-green-100">
+                        <p className="text-xs sm:text-sm font-semibold text-green-900 dark:text-green-100">
                           ✅ {t('checkout.loyalty.rewardAvailable')}
                         </p>
-                        <label className="flex items-center gap-2 mt-2">
+                        <label className="flex items-center gap-2 mt-1">
                           <input
                             type="checkbox"
                             checked={applyLoyaltyDiscount}
@@ -420,9 +389,9 @@ export default function CheckoutModal({
                                 }
                               }
                             }}
-                            className="w-5 h-5"
+                            className="w-4 h-4"
                           />
-                          <span className="text-sm text-green-800 dark:text-green-200">
+                          <span className="text-xs sm:text-sm text-green-800 dark:text-green-200">
                             {t('checkout.loyalty.applyReward')}
                           </span>
                         </label>
@@ -434,32 +403,32 @@ export default function CheckoutModal({
             )}
             
             {loyaltyError && (
-              <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-900 dark:text-red-100">
+              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-xs sm:text-sm text-red-900 dark:text-red-100">
                   ⚠️ {loyaltyError}
                 </p>
               </div>
             )}
           </div>
           
-          {/* Payment Method Selection */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+          {/* Payment Method Selection - Compact */}
+          <div className="mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
               {t('checkout.paymentMethod')}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {/* Cash Button */}
               <button
                 onClick={() => handlePaymentMethodSelect('cash')}
                 disabled={processing}
-                className={`h-24 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${
                   paymentMethod === 'cash'
                     ? 'border-primary bg-primary/10'
                     : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
                 }`}
               >
-                <div className="text-3xl mb-1">💵</div>
-                <div className="font-semibold text-gray-900 dark:text-white">
+                <div className="text-2xl sm:text-3xl mb-0.5">💵</div>
+                <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                   {t('checkout.payment.cash')}
                 </div>
               </button>
@@ -468,14 +437,14 @@ export default function CheckoutModal({
               <button
                 onClick={() => handlePaymentMethodSelect('card')}
                 disabled={processing}
-                className={`h-24 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${
                   paymentMethod === 'card'
                     ? 'border-primary bg-primary/10'
                     : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
                 }`}
               >
-                <div className="text-3xl mb-1">💳</div>
-                <div className="font-semibold text-gray-900 dark:text-white">
+                <div className="text-2xl sm:text-3xl mb-0.5">💳</div>
+                <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                   {t('checkout.payment.card')}
                 </div>
               </button>
@@ -484,24 +453,24 @@ export default function CheckoutModal({
               <button
                 onClick={() => handlePaymentMethodSelect('gift_offer')}
                 disabled={processing}
-                className={`h-24 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${
                   paymentMethod === 'gift_offer'
                     ? 'border-primary bg-primary/10'
                     : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
                 }`}
               >
-                <div className="text-3xl mb-1">🎁</div>
-                <div className="font-semibold text-gray-900 dark:text-white">
+                <div className="text-2xl sm:text-3xl mb-0.5">🎁</div>
+                <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                   {t('checkout.payment.giftOffer')}
                 </div>
               </button>
             </div>
           </div>
           
-          {/* Cash Payment Details */}
+          {/* Cash Payment Details - Compact */}
           {paymentMethod === 'cash' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
+            <div className="mb-3 sm:mb-4">
+              <label className="block text-xs sm:text-sm font-medium mb-1.5 text-gray-900 dark:text-white">
                 {t('checkout.payment.cashReceived')}
               </label>
               <input
@@ -511,17 +480,17 @@ export default function CheckoutModal({
                 value={cashReceived}
                 onChange={handleCashReceivedChange}
                 disabled={processing}
-                className="w-full px-4 py-3 text-lg border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 sm:py-2.5 text-base sm:text-lg border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary disabled:opacity-50"
                 placeholder={t('checkout.payment.cashReceivedPlaceholder')}
                 autoFocus
               />
               {cashReceived && parseFloat(cashReceived) >= totals.total && (
-                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-green-900 dark:text-green-100">
+                    <span className="text-xs sm:text-sm font-semibold text-green-900 dark:text-green-100">
                       {t('checkout.payment.change')}:
                     </span>
-                    <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                    <span className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">
                       {changeAmount.toFixed(2)} {t('common.sar')}
                     </span>
                   </div>
@@ -530,89 +499,77 @@ export default function CheckoutModal({
             </div>
           )}
           
-          {/* Gift Offer Note (Future Feature) */}
+          {/* Gift Offer Note - Compact */}
           {paymentMethod === 'gift_offer' && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="mb-3 sm:mb-4 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               {applyLoyaltyDiscount && scannedCustomer ? (
-                <p className="text-sm text-green-900 dark:text-green-100">
+                <p className="text-xs sm:text-sm text-green-900 dark:text-green-100">
                   ✅ {t('checkout.loyalty.redeemingReward', { customer: scannedCustomer.name })}
                 </p>
               ) : (
-                <p className="text-sm text-blue-900 dark:text-blue-100">
+                <p className="text-xs sm:text-sm text-blue-900 dark:text-blue-100">
                   ℹ️ {t('checkout.payment.giftOfferNote')}
                 </p>
               )}
             </div>
           )}
           
-          {/* Receipt Options (shown after successful sale) */}
+          {/* Receipt Options - Compact */}
           {showReceiptOptions && completedSale && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <div className="flex items-center mb-3">
-                <span className="text-2xl mr-2">✅</span>
-                <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
+            <div className="mb-3 sm:mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center mb-2">
+                <span className="text-xl sm:text-2xl mr-2">✅</span>
+                <h3 className="text-base sm:text-lg font-semibold text-green-900 dark:text-green-100">
                   {t('checkout.success.title')}
                 </h3>
               </div>
-              <p className="text-sm text-green-800 dark:text-green-200 mb-4">
+              <p className="text-xs sm:text-sm text-green-800 dark:text-green-200 mb-2">
                 {t('checkout.success.message')}
               </p>
-              <p className="text-sm font-semibold mb-3 text-green-900 dark:text-green-100">
+              <p className="text-xs sm:text-sm font-semibold mb-2 text-green-900 dark:text-green-100">
                 {t('checkout.success.saleNumber')}: {completedSale.sale_number}
               </p>
               
               {/* Receipt Action Buttons */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => handleReceiptAction('preview')}
-                  className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                  className="px-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-semibold"
                 >
-                  📄 {t('checkout.success.previewReceipt')}
+                  📄 <span className="hidden sm:inline">{t('checkout.success.previewReceipt')}</span><span className="sm:hidden">Preview</span>
                 </button>
                 <button
                   onClick={() => handleReceiptAction('print')}
-                  className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold"
+                  className="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs sm:text-sm font-semibold"
                 >
-                  🖨️ {t('checkout.success.printReceipt')}
-                </button>
-                <button
-                  onClick={() => handleReceiptAction('email')}
-                  className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-semibold"
-                >
-                  📧 {t('checkout.success.emailReceipt')}
-                </button>
-                <button
-                  onClick={() => handleReceiptAction('both')}
-                  className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-semibold"
-                >
-                  🖨️📧 {t('checkout.success.bothReceipt')}
+                  🖨️ <span className="hidden sm:inline">{t('checkout.success.printReceipt')}</span><span className="sm:hidden">Print</span>
                 </button>
                 <button
                   onClick={() => handleReceiptAction('skip')}
-                  className="px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-semibold col-span-2"
+                  className="px-2 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-xs sm:text-sm font-semibold"
                 >
-                  ⏭️ {t('checkout.success.skip')}
+                  ⏭️ <span className="hidden sm:inline">{t('checkout.success.skip')}</span><span className="sm:hidden">Skip</span>
                 </button>
               </div>
             </div>
           )}
           
-          {/* Error Message */}
+          {/* Error Message - Compact */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-900 dark:text-red-100">
+            <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-xs sm:text-sm text-red-900 dark:text-red-100">
                 ⚠️ {error}
               </p>
             </div>
           )}
         </div>
         
-        {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Footer - Compact & Sticky */}
+        <div className="sticky bottom-0 bg-white dark:bg-gray-800 flex gap-2 p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onClose}
             disabled={processing}
-            className="flex-1 h-14 px-6 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold transition-colors disabled:opacity-50"
+            className="flex-1 h-11 sm:h-12 px-3 sm:px-4 text-sm sm:text-base text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold transition-colors disabled:opacity-50"
           >
             {t('checkout.cancel')}
           </button>
@@ -620,18 +577,22 @@ export default function CheckoutModal({
             <button
               onClick={handleCompleteSale}
               disabled={!paymentMethod || processing || (paymentMethod === 'cash' && (!cashReceived || parseFloat(cashReceived) < totals.total))}
-              className="flex-1 h-14 px-6 text-white bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-11 sm:h-12 px-3 sm:px-4 text-sm sm:text-base text-white bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {processing ? (
                 <span className="flex items-center justify-center">
-                  <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-1.5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  {t('checkout.processing')}
+                  <span className="hidden sm:inline">{t('checkout.processing')}</span>
+                  <span className="sm:hidden">...</span>
                 </span>
               ) : (
-                `${t('checkout.completeSale')} (${totals.total.toFixed(2)} ${t('common.sar')})`
+                <>
+                  <span className="hidden sm:inline">{t('checkout.completeSale')} ({totals.total.toFixed(2)} {t('common.sar')})</span>
+                  <span className="sm:hidden">{totals.total.toFixed(2)} {t('common.sar')}</span>
+                </>
               )}
             </button>
           )}

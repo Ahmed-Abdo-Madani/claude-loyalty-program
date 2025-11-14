@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 import { getManagerAuthData, managerLogout, isManagerAuthenticated, managerApiRequest } from '../utils/secureAuth'
 import { endpoints } from '../config/api'
 import POSCart from '../components/pos/POSCart'
@@ -20,6 +21,7 @@ export default function BranchPOS() {
   const [cart, setCart] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -27,6 +29,11 @@ export default function BranchPOS() {
   const [selectedSaleForReceipt, setSelectedSaleForReceipt] = useState(null)
   const [branchInfo, setBranchInfo] = useState(null)
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0)
+  const [isScrolled, setIsScrolled] = useState(false)
+  
+  // Refs
+  const searchDebounceRef = useRef(null)
+  const productsContainerRef = useRef(null)
 
   // Authentication Check and Data Loading
   useEffect(() => {
@@ -85,6 +92,42 @@ export default function BranchPOS() {
     initializePOS()
   }, [navigate, t])
 
+  // Search Debouncing (300ms delay)
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+    
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  // Scroll Detection for Shadow Effect
+  useEffect(() => {
+    const container = productsContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      setIsScrolled(container.scrollTop > 10)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Clear Search Handler
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('')
+    setDebouncedSearchQuery('')
+  }, [])
+
   // Cart Management Functions
   const addToCart = (product) => {
     setCart(prevCart => {
@@ -96,6 +139,9 @@ export default function BranchPOS() {
           if (item.product.public_id === product.public_id) {
             const newQuantity = item.quantity + 1
             
+            // Coerce price to number to avoid string concatenation
+            const unitPrice = parseFloat(product.price)
+            
             // Normalize tax rate: convert percentage to decimal
             const ratePct = parseFloat(product.tax_rate ?? 15) // Default 15% Saudi VAT
             const rate = ratePct / 100
@@ -104,13 +150,13 @@ export default function BranchPOS() {
             
             if (product.tax_included) {
               // Tax is included in price: derive base price and tax
-              const priceWithTax = product.price * newQuantity
+              const priceWithTax = unitPrice * newQuantity
               subtotal = priceWithTax / (1 + rate)
               tax = priceWithTax - subtotal
               total = priceWithTax
             } else {
               // Tax is added on top of price
-              subtotal = product.price * newQuantity
+              subtotal = unitPrice * newQuantity
               tax = subtotal * rate
               total = subtotal + tax
             }
@@ -127,6 +173,9 @@ export default function BranchPOS() {
         })
       } else {
         // Add new item
+        // Coerce price to number to avoid string concatenation
+        const unitPrice = parseFloat(product.price)
+        
         // Normalize tax rate: convert percentage to decimal
         const ratePct = parseFloat(product.tax_rate ?? 15)
         const rate = ratePct / 100
@@ -135,13 +184,13 @@ export default function BranchPOS() {
         
         if (product.tax_included) {
           // Tax is included in price: derive base price and tax
-          const priceWithTax = product.price
+          const priceWithTax = unitPrice
           subtotal = priceWithTax / (1 + rate)
           tax = priceWithTax - subtotal
           total = priceWithTax
         } else {
           // Tax is added on top of price
-          subtotal = product.price
+          subtotal = unitPrice
           tax = subtotal * rate
           total = subtotal + tax
         }
@@ -169,6 +218,9 @@ export default function BranchPOS() {
 
     setCart(prevCart => prevCart.map(item => {
       if (item.product.public_id === productId) {
+        // Coerce price to number to avoid string concatenation
+        const unitPrice = parseFloat(item.product.price)
+        
         // Normalize tax rate: convert percentage to decimal
         const ratePct = parseFloat(item.product.tax_rate ?? 15)
         const rate = ratePct / 100
@@ -177,13 +229,13 @@ export default function BranchPOS() {
         
         if (item.product.tax_included) {
           // Tax is included in price: derive base price and tax
-          const priceWithTax = item.product.price * newQuantity
+          const priceWithTax = unitPrice * newQuantity
           subtotal = priceWithTax / (1 + rate)
           tax = priceWithTax - subtotal
           total = priceWithTax
         } else {
           // Tax is added on top of price
-          subtotal = item.product.price * newQuantity
+          subtotal = unitPrice * newQuantity
           tax = subtotal * rate
           total = subtotal + tax
         }
@@ -214,16 +266,16 @@ export default function BranchPOS() {
     return { subtotal, tax, total, itemCount }
   }
 
-  // Product Filtering
+  // Product Filtering (using debounced search)
   const filteredProducts = products.filter(product => {
     // Filter by category
     if (selectedCategory && product.category_id !== selectedCategory) {
       return false
     }
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+    // Filter by debounced search query
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase()
       const matchesName = product.name?.toLowerCase().includes(query)
       const matchesNameAr = product.name_ar?.toLowerCase().includes(query)
       const matchesSku = product.sku?.toLowerCase().includes(query)
@@ -310,49 +362,72 @@ export default function BranchPOS() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         
         {/* Left Side: Product Grid (60% on desktop) */}
-        <div className="flex-1 lg:w-3/5 overflow-y-auto p-4">
-          {/* Category Filter Tabs */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-4 py-3 rounded-lg whitespace-nowrap transition-colors ${
-                selectedCategory === null
-                  ? 'bg-primary text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              {t('categories.all')}
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat.public_id}
-                onClick={() => setSelectedCategory(cat.public_id)}
-                className={`px-4 py-3 rounded-lg whitespace-nowrap transition-colors ${
-                  selectedCategory === cat.public_id
-                    ? 'bg-primary text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                {i18n.language === 'ar' && cat.name_ar ? cat.name_ar : cat.name}
-              </button>
-            ))}
+        <div 
+          ref={productsContainerRef}
+          className="flex-1 lg:w-3/5 overflow-y-auto"
+        >
+          {/* Sticky Filter Bar with Scroll Shadow */}
+          <div className={`sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 transition-shadow ${
+            isScrolled ? 'shadow-md' : ''
+          }`}>
+            <div className="p-4 pb-0">
+              {/* Category Filter Tabs - Scrollable */}
+              <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-4 py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${
+                    selectedCategory === null
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {t('categories.all')}
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat.public_id}
+                    onClick={() => setSelectedCategory(cat.public_id)}
+                    className={`px-4 py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${
+                      selectedCategory === cat.public_id
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {i18n.language === 'ar' && cat.name_ar ? cat.name_ar : cat.name}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Search Bar with Clear Button */}
+              <div className="relative mb-3">
+                <input 
+                  type="search" 
+                  placeholder={t('products.searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    aria-label={t('products.clearSearch')}
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           
-          {/* Search Bar */}
-          <input 
-            type="search" 
-            placeholder={t('products.searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full mb-4 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary"
-          />
-          
-          {/* Product Grid Component */}
-          <ProductGrid 
-            products={filteredProducts}
-            onAddToCart={addToCart}
-            loading={loading}
-          />
+          {/* Product Grid Component - Scrollable Content */}
+          <div className="p-4 pt-2">
+            <ProductGrid 
+              products={filteredProducts}
+              onAddToCart={addToCart}
+              loading={loading}
+            />
+          </div>
         </div>
         
         {/* Right Side: Cart (40% on desktop, bottom sheet on mobile) */}

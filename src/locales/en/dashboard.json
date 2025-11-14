@@ -42,7 +42,7 @@
   "mobileNav": {
     "overview": "Overview",
     "offers": "Offers",
-    "scanner": "Scanner",
+    "analytics": "Analytics",
     "branches": "Branches",
     "products": "Products",
     "customers": "Customers"
@@ -50,11 +50,32 @@
   "quickActions": {
     "title": "Quick Actions",
     "newOffer": "New Offer",
-    "newOfferDesc": "Create a new loyalty offer",
+    "manageProducts": "Products",
     "scanQR": "Scan QR",
-    "scanQRDesc": "Scan customer QR codes",
+    "reports": "Analytics",
+    "manageBranches": "Branches",
+    "settings": "Settings"
+  },
+  "todaysSnapshot": {
+    "title": "Today's Snapshot",
+    "totalSales": "Total Sales",
+    "ordersCount": "Orders",
+    "averageOrderValue": "Avg Order",
+    "activeCustomers": "Customers",
+    "refresh": "Refresh",
+    "error": "Failed to load today's metrics",
+    "asOf": "As of"
+  },
+  "operationalGlimpse": {
+    "title": "Quick Links",
+    "branches": "Branches",
+    "products": "Products",
+    "categories": "Categories",
+    "customers": "Customers",
+    "staff": "Staff",
+    "settings": "Settings",
     "reports": "Reports",
-    "reportsDesc": "View analytics and reports"
+    "walletPasses": "Wallet Passes"
   },
   "activityFeed": {
     "title": "Recent Activity",
@@ -540,6 +561,31 @@
       "errorDuplicating": "Failed to duplicate product",
       "errorCategorySaving": "Failed to save category",
       "errorCategoryDeleting": "Failed to delete category"
+    },
+    "table": {
+      "columns": {
+        "image": "Image",
+        "name": "Product Name",
+        "sku": "SKU",
+        "price": "Price",
+        "category": "Category",
+        "branch": "Branch",
+        "tax": "Tax Rate",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "sortBy": "Sort by {{column}}",
+      "sortAscending": "Sort ascending",
+      "sortDescending": "Sort descending",
+      "expandDetails": "Expand details",
+      "collapseDetails": "Collapse details",
+      "moreActions": "More actions",
+      "viewDetails": "View details"
+    },
+    "viewMode": {
+      "list": "List view",
+      "grid": "Grid view",
+      "table": "Table view"
     }
   },
   "pos": {
@@ -548,7 +594,20 @@
       "subtitle": "Track sales performance and optimize your point of sale operations",
       "loading": "Loading analytics...",
       "error": "Failed to load analytics",
-      "noData": "No sales data available for the selected period",
+      "noData": {
+        "title": "No Sales Data Yet",
+        "message": "There are no sales recorded for the selected period. Start making sales to see analytics here."
+      },
+      "empty": {
+        "rangeLabel": "Showing data from:",
+        "suggestionsTitle": "Suggestions:",
+        "suggestions": {
+          "changeDateRange": "Try selecting a different date range using the filters above",
+          "createSales": "Ensure sales have been created through the POS system",
+          "checkStatus": "Check that sales are marked as 'completed' status"
+        },
+        "tryLast90Days": "Try Last 90 Days"
+      },
       "retry": "Retry",
       "period": {
         "7d": "Last 7 Days",
@@ -557,12 +616,20 @@
         "custom": "Custom Range"
       },
       "filters": {
+        "filtersHeader": "Filters & Date Range",
+        "timePeriod": "Time Period",
         "allBranches": "All Branches",
         "selectBranch": "Select Branch",
         "dateRange": "Date Range",
         "from": "From",
         "to": "To",
-        "apply": "Apply"
+        "apply": "Apply",
+        "branchFilter": "Branch Filter",
+        "noBranches": "No branches available",
+        "branchComparison": "Branch Comparison",
+        "topPerforming": "Top Performing",
+        "clickToFilter": "Click to filter by this branch",
+        "contributionToTotal": "of total revenue"
       },
       "summary": {
         "totalSales": "Total Sales",
@@ -604,6 +671,7 @@
       "salesCount": "Sales",
       "peakHours": "Peak Hours",
       "peakHoursIndicator": "Peak sales activity",
+      "branchComparisonSubtitle": "Compare performance across all branches",
       "insights": "Insights & Recommendations",
       "tip1": "Your peak sales hours are between 12 PM - 2 PM. Consider staffing accordingly.",
       "tip2": "Cash payments account for the majority of transactions. Ensure adequate change availability.",
@@ -826,6 +894,7 @@
   },
   "common": {
     "loading": "Loading...",
+    "sar": "SAR",
     "error": "Error",
     "success": "Success",
     "save": "Save",

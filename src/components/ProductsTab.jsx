@@ -6,7 +6,7 @@ import CompactStatsBar from './CompactStatsBar'
 import StatusBadge from './StatusBadge'
 
 export default function ProductsTab() {
-  const { t } = useTranslation('dashboard')
+  const { t, i18n } = useTranslation('dashboard')
   
   // State Management
   const [products, setProducts] = useState([])
@@ -26,6 +26,24 @@ export default function ProductsTab() {
     search: ''
   })
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [sortColumn, setSortColumn] = useState('name')
+  const [sortDirection, setSortDirection] = useState('asc')
+  const [expandedProductId, setExpandedProductId] = useState(null)
+  const [viewMode, setViewMode] = useState('auto') // auto, mobile, tablet, desktop
+
+  // Detect view mode based on viewport
+  useEffect(() => {
+    const updateViewMode = () => {
+      const width = window.innerWidth
+      if (width < 768) setViewMode('mobile')
+      else if (width < 1024) setViewMode('tablet')
+      else setViewMode('desktop')
+    }
+    
+    updateViewMode()
+    window.addEventListener('resize', updateViewMode)
+    return () => window.removeEventListener('resize', updateViewMode)
+  }, [])
 
   // Debounce search input
   useEffect(() => {
@@ -281,6 +299,53 @@ export default function ProductsTab() {
     return true
   })
 
+  // Sorting Logic
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    let aValue, bValue
+    
+    switch (sortColumn) {
+      case 'name':
+        aValue = a.name?.toLowerCase() || ''
+        bValue = b.name?.toLowerCase() || ''
+        break
+      case 'price':
+        aValue = parseFloat(a.price) || 0
+        bValue = parseFloat(b.price) || 0
+        break
+      case 'sku':
+        aValue = a.sku?.toLowerCase() || ''
+        bValue = b.sku?.toLowerCase() || ''
+        break
+      case 'category':
+        const catA = categories.find(c => c.public_id === a.category_id)
+        const catB = categories.find(c => c.public_id === b.category_id)
+        aValue = catA?.name?.toLowerCase() || 'zzz'
+        bValue = catB?.name?.toLowerCase() || 'zzz'
+        break
+      case 'status':
+        aValue = a.status || ''
+        bValue = b.status || ''
+        break
+      default:
+        aValue = a[sortColumn] || ''
+        bValue = b[sortColumn] || ''
+    }
+    
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+    return 0
+  })
+
+  // Sort Handler
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
   // Stats Calculation
   const stats = [
     {
@@ -428,8 +493,8 @@ export default function ProductsTab() {
         )}
       </div>
 
-      {/* Products Grid */}
-      {filteredProducts.length === 0 ? (
+      {/* Products List/Table View */}
+      {sortedProducts.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <div className="text-6xl mb-4">🛍️</div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -450,14 +515,20 @@ export default function ProductsTab() {
             </button>
           )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map(product => (
-            <ProductCard
+      ) : viewMode === 'mobile' ? (
+        // Mobile List View
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow divide-y divide-gray-200 dark:divide-gray-700">
+          {sortedProducts.map(product => (
+            <ProductListView
               key={product.public_id}
               product={product}
               categories={categories}
               branches={branches}
+              viewMode="mobile"
+              isExpanded={expandedProductId === product.public_id}
+              onToggleExpand={() => setExpandedProductId(
+                expandedProductId === product.public_id ? null : product.public_id
+              )}
               onEdit={() => {
                 setSelectedProduct(product)
                 setShowProductModal(true)
@@ -469,8 +540,120 @@ export default function ProductsTab() {
                 setShowDeleteModal(true)
               }}
               t={t}
+              i18n={i18n}
             />
           ))}
+        </div>
+      ) : (
+        // Tablet/Desktop Table View
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+                <tr>
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('products.table.columns.image')}
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t('products.table.columns.name')}
+                      {sortColumn === 'name' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  {viewMode === 'desktop' && (
+                    <th 
+                      scope="col" 
+                      className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                      onClick={() => handleSort('sku')}
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('products.table.columns.sku')}
+                        {sortColumn === 'sku' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                  )}
+                  <th 
+                    scope="col" 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t('products.table.columns.price')}
+                      {sortColumn === 'price' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t('products.table.columns.category')}
+                      {sortColumn === 'category' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('products.table.columns.branch')}
+                  </th>
+                  {viewMode === 'desktop' && (
+                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('products.table.columns.tax')}
+                    </th>
+                  )}
+                  <th 
+                    scope="col" 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-1">
+                      {t('products.table.columns.status')}
+                      {sortColumn === 'status' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('products.table.columns.actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {sortedProducts.map(product => (
+                  <ProductListView
+                    key={product.public_id}
+                    product={product}
+                    categories={categories}
+                    branches={branches}
+                    viewMode={viewMode}
+                    onEdit={() => {
+                      setSelectedProduct(product)
+                      setShowProductModal(true)
+                    }}
+                    onDuplicate={() => handleDuplicateProduct(product)}
+                    onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
+                    onDelete={() => {
+                      setSelectedProduct(product)
+                      setShowDeleteModal(true)
+                    }}
+                    t={t}
+                    i18n={i18n}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -518,71 +701,197 @@ export default function ProductsTab() {
   )
 }
 
-// Product Card Component
-function ProductCard({ product, categories, branches, onEdit, onDuplicate, onToggleStatus, onDelete, t }) {
+// Product List View Component (Responsive Hybrid)
+function ProductListView({ product, categories, branches, viewMode, isExpanded, onToggleExpand, onEdit, onDuplicate, onToggleStatus, onDelete, t, i18n }) {
   const category = categories.find(c => c.public_id === product.category_id)
   const branch = branches.find(b => b.public_id === product.branch_id)
+  const [showActionsMenu, setShowActionsMenu] = useState(false)
   
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow p-4">
-      {/* Product Image or Icon */}
-      <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
-        {product.image_url ? (
-          <img 
-            src={product.image_url} 
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-6xl">🛍️</span>
+  // Mobile View - Compact List with Expandable Details
+  if (viewMode === 'mobile') {
+    return (
+      <div className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+        {/* Compact Row */}
+        <div 
+          className="flex items-center gap-3 p-3 cursor-pointer min-h-[80px]"
+          onClick={onToggleExpand}
+          role="button"
+          aria-expanded={isExpanded}
+          aria-label={t('products.table.expandDetails')}
+        >
+          {/* Product Image Thumbnail */}
+          <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+            {product.image_url ? (
+              <img 
+                src={product.image_url} 
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-2xl">🛍️</span>
+            )}
+          </div>
+          
+          {/* Product Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-gray-900 dark:text-white truncate">
+              {product.name}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm font-semibold text-primary">
+                {parseFloat(product.price).toFixed(2)} {t('common.sar')}
+              </span>
+              <StatusBadge 
+                status={product.status} 
+                statusLabels={{
+                  active: t('products.filters.active'),
+                  inactive: t('products.filters.inactive'),
+                  out_of_stock: t('products.filters.outOfStock')
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Expand Icon */}
+          <button 
+            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+            aria-label={isExpanded ? t('products.table.collapseDetails') : t('products.table.expandDetails')}
+          >
+            <span className="text-gray-500 dark:text-gray-400">
+              {isExpanded ? '▼' : '▶'}
+            </span>
+          </button>
+        </div>
+        
+        {/* Expanded Details & Actions */}
+        {isExpanded && (
+          <div className="px-3 pb-3 space-y-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
+            {/* Additional Info */}
+            <div className="grid grid-cols-2 gap-2 pt-3 text-sm">
+              {product.sku && (
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">{t('products.card.sku')}:</span>
+                  <span className="ml-1 text-gray-900 dark:text-white">{product.sku}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">{t('products.card.tax')}:</span>
+                <span className="ml-1 text-gray-900 dark:text-white">{product.tax_rate}%</span>
+              </div>
+              {category && (
+                <div className="col-span-2">
+                  <span className="text-gray-500 dark:text-gray-400">{t('products.table.columns.category')}:</span>
+                  <span className="ml-1 text-gray-900 dark:text-white">{i18n.language === 'ar' && category.name_ar ? category.name_ar : category.name}</span>
+                </div>
+              )}
+              <div className="col-span-2">
+                <span className="text-gray-500 dark:text-gray-400">{t('products.table.columns.branch')}:</span>
+                <span className="ml-1 text-gray-900 dark:text-white">
+                  {branch ? (i18n.language === 'ar' && branch.name_ar ? branch.name_ar : branch.name) : t('products.card.allBranches')}
+                </span>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                className="min-h-[44px] px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                ✏️ {t('products.card.edit')}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+                className="min-h-[44px] px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                📋 {t('products.card.duplicate')}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleStatus(); }}
+                className={`min-h-[44px] px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  product.status === 'active'
+                    ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                    : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                }`}
+              >
+                {product.status === 'active' ? '⏸️ ' + t('products.card.deactivate') : '▶️ ' + t('products.card.activate')}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="min-h-[44px] px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+              >
+                🗑️ {t('products.card.delete')}
+              </button>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Product Info */}
-      <div className="space-y-2">
-        <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
-            {product.name}
-          </h3>
-          {product.name_ar && (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {product.name_ar}
-            </p>
-          )}
-        </div>
-
-        {/* Price */}
-        <div className="text-lg font-bold text-primary">
-          {parseFloat(product.price).toFixed(2)} {t('products.card.price')}
-        </div>
-
-        {/* Category & Branch */}
-        <div className="flex flex-wrap gap-2">
-          {category && (
-            <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
-              📁 {category.name}
-            </span>
-          )}
-          {branch ? (
-            <span className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded">
-              🏪 {branch.name}
-            </span>
+    )
+  }
+  
+  // Tablet/Desktop View - Table Row
+  return (
+    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" role="row">
+      {/* Image */}
+      <td className="px-3 py-4 whitespace-nowrap" role="cell">
+        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+          {product.image_url ? (
+            <img 
+              src={product.image_url} 
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
-              🌐 {t('products.card.allBranches')}
-            </span>
+            <span className="text-2xl">🛍️</span>
           )}
         </div>
-
-        {/* SKU & Tax */}
-        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-          {product.sku && (
-            <div>{t('products.card.sku')}: {product.sku}</div>
-          )}
-          <div>{t('products.card.tax')}: {product.tax_rate}%</div>
+      </td>
+      
+      {/* Name */}
+      <td className="px-3 py-4" role="cell">
+        <div className="text-sm font-medium text-gray-900 dark:text-white">
+          {product.name}
         </div>
-
-        {/* Status Badge */}
+        {product.name_ar && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {product.name_ar}
+          </div>
+        )}
+      </td>
+      
+      {/* SKU (Desktop only) */}
+      {viewMode === 'desktop' && (
+        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
+          {product.sku || '-'}
+        </td>
+      )}
+      
+      {/* Price */}
+      <td className="px-3 py-4 whitespace-nowrap" role="cell">
+        <div className="text-sm font-semibold text-primary">
+          {parseFloat(product.price).toFixed(2)} {t('common.sar')}
+        </div>
+      </td>
+      
+      {/* Category */}
+      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
+        {category ? (i18n.language === 'ar' && category.name_ar ? category.name_ar : category.name) : '-'}
+      </td>
+      
+      {/* Branch */}
+      <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
+        {branch ? (i18n.language === 'ar' && branch.name_ar ? branch.name_ar : branch.name) : t('products.card.allBranches')}
+      </td>
+      
+      {/* Tax (Desktop only) */}
+      {viewMode === 'desktop' && (
+        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
+          {product.tax_rate}%
+        </td>
+      )}
+      
+      {/* Status */}
+      <td className="px-3 py-4 whitespace-nowrap" role="cell">
         <StatusBadge 
           status={product.status} 
           statusLabels={{
@@ -591,40 +900,96 @@ function ProductCard({ product, categories, branches, onEdit, onDuplicate, onTog
             out_of_stock: t('products.filters.outOfStock')
           }}
         />
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={onEdit}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            ✏️ {t('products.card.edit')}
-          </button>
-          <button
-            onClick={onDuplicate}
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            📋 {t('products.card.duplicate')}
-          </button>
-          <button
-            onClick={onToggleStatus}
-            className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
-              product.status === 'active'
-                ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50'
-                : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
-            }`}
-          >
-            {product.status === 'active' ? '⏸️ ' + t('products.card.deactivate') : '▶️ ' + t('products.card.activate')}
-          </button>
-          <button
-            onClick={onDelete}
-            className="px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-          >
-            🗑️ {t('products.card.delete')}
-          </button>
-        </div>
-      </div>
-    </div>
+      </td>
+      
+      {/* Actions */}
+      <td className="px-3 py-4 whitespace-nowrap text-right text-sm" role="cell">
+        {viewMode === 'desktop' ? (
+          // Desktop - Show all buttons
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title={t('products.card.edit')}
+            >
+              ✏️ {t('products.card.edit')}
+            </button>
+            <button
+              onClick={onToggleStatus}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                product.status === 'active'
+                  ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200'
+                  : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200'
+              }`}
+              title={product.status === 'active' ? t('products.card.deactivate') : t('products.card.activate')}
+            >
+              {product.status === 'active' ? '⏸️' : '▶️'}
+            </button>
+            <button
+              onClick={onDuplicate}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title={t('products.card.duplicate')}
+            >
+              📋
+            </button>
+            <button
+              onClick={onDelete}
+              className="px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+              title={t('products.card.delete')}
+            >
+              🗑️
+            </button>
+          </div>
+        ) : (
+          // Tablet - Quick actions + More menu
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title={t('products.card.edit')}
+            >
+              ✏️
+            </button>
+            <button
+              onClick={onToggleStatus}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                product.status === 'active'
+                  ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200'
+                  : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200'
+              }`}
+              title={product.status === 'active' ? t('products.card.deactivate') : t('products.card.activate')}
+            >
+              {product.status === 'active' ? '⏸️' : '▶️'}
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                title={t('products.table.moreActions')}
+              >
+                ⋮
+              </button>
+              {showActionsMenu && (
+                <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                  <button
+                    onClick={() => { onDuplicate(); setShowActionsMenu(false); }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                  >
+                    📋 {t('products.card.duplicate')}
+                  </button>
+                  <button
+                    onClick={() => { onDelete(); setShowActionsMenu(false); }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg"
+                  >
+                    🗑️ {t('products.card.delete')}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </td>
+    </tr>
   )
 }
 

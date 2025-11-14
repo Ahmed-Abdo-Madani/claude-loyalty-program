@@ -49,10 +49,10 @@ export function CardDesignProvider({ children }) {
       const response = await cardDesignAPI.getDesign(offerId)
 
       if (response.success) {
-        // Normalize barcode_preference to default to PDF417 if not set
+        // Normalize barcode_preference to default to QR_CODE if not set
         const normalizedDesign = {
           ...response.data,
-          barcode_preference: response.data.barcode_preference || 'PDF417'
+          barcode_preference: response.data.barcode_preference || 'QR_CODE'
         }
         setCurrentDesign(normalizedDesign)
         setOriginalDesign(normalizedDesign) // Keep original for dirty checking
@@ -120,10 +120,10 @@ export function CardDesignProvider({ children }) {
       const response = await cardDesignAPI.saveDesign(currentOfferId, currentDesign)
 
       if (response.success) {
-        // Normalize barcode_preference to default to PDF417 if not set
+        // Normalize barcode_preference to default to QR_CODE if not set
         const normalizedDesign = {
           ...response.data,
-          barcode_preference: response.data.barcode_preference || 'PDF417'
+          barcode_preference: response.data.barcode_preference || 'QR_CODE'
         }
         setCurrentDesign(normalizedDesign)
         setOriginalDesign(normalizedDesign) // Update original after save
@@ -183,10 +183,10 @@ export function CardDesignProvider({ children }) {
       const response = await cardDesignAPI.applyTemplate(currentOfferId, templateId)
 
       if (response.success) {
-        // Normalize barcode_preference to default to PDF417 if not set
+        // Normalize barcode_preference to default to QR_CODE if not set
         const normalizedDesign = {
           ...response.data,
-          barcode_preference: response.data.barcode_preference || 'PDF417'
+          barcode_preference: response.data.barcode_preference || 'QR_CODE'
         }
         setCurrentDesign(normalizedDesign)
         // Don't update originalDesign yet - let user save first

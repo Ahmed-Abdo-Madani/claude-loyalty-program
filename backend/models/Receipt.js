@@ -74,7 +74,10 @@ const Receipt = sequelize.define('Receipt', {
     }
   ],
   hooks: {
-    beforeCreate: async (receipt, options) => {
+    // CRITICAL: Use beforeValidate instead of beforeCreate
+    // Sequelize runs validation BEFORE beforeCreate, so we must set receipt_number
+    // before validation to avoid "cannot be null" errors
+    beforeValidate: async (receipt, options) => {
       // Auto-generate receipt_number using database-backed counter with lock
       const currentYear = new Date().getFullYear()
       
@@ -84,8 +87,15 @@ const Receipt = sequelize.define('Receipt', {
         throw new Error('Transaction is required for receipt creation to ensure atomic counter increment')
       }
       
+      // Access Counter model via Sequelize registry to avoid initialization issues
+      const CounterModel = sequelize.models.Counter
+      
+      if (!CounterModel) {
+        throw new Error('Counter model not initialized in Sequelize registry. Check models/index.js initialization order.')
+      }
+      
       // Get next counter value with database lock
-      const nextNumber = await Counter.getNextValue('receipt_number', currentYear, {
+      const nextNumber = await CounterModel.getNextValue('receipt_number', currentYear, {
         businessId: null, // Global counter
         branchId: null,
         transaction

@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
-import Counter from './Counter.js'
+import logger from '../config/logger.js'
 
 const Sale = sequelize.define('Sale', {
   public_id: {
@@ -134,26 +134,99 @@ const Sale = sequelize.define('Sale', {
     }
   ],
   hooks: {
-    beforeCreate: async (sale, options) => {
-      // Auto-generate sale_number using database-backed counter with lock
-      const currentYear = new Date().getFullYear()
-      
-      // Get transaction from options (required for atomic counter increment)
-      const transaction = options.transaction
-      if (!transaction) {
-        throw new Error('Transaction is required for sale creation to ensure atomic counter increment')
+    // CRITICAL: Use beforeValidate instead of beforeCreate
+    // Sequelize runs validation BEFORE beforeCreate, so we must set sale_number
+    // before validation to avoid "cannot be null" errors
+    beforeValidate: async (sale, options) => {
+      try {
+        // CRITICAL: Auto-generate sale_number using database-backed counter with lock
+        // 
+        // TRANSACTION REQUIREMENT:
+        // All Sale.create() calls MUST include a transaction option to ensure:
+        // 1. Atomic counter increment (prevents duplicate sale numbers)
+        // 2. Proper rollback on sale creation failure
+        // 3. Database lock on counter table during increment
+        //
+        // Usage Pattern:
+        //   const transaction = await sequelize.transaction()
+        //   try {
+        //     const sale = await Sale.create({ ... }, { transaction })
+        //     await transaction.commit()
+        //   } catch (error) {
+        //     await transaction.rollback()
+        //     throw error
+        //   }
+        //
+        // This applies to:
+        // - POS sale creation endpoints
+        // - Seed scripts (if created in the future)
+        // - Test helpers that create sales
+        // - Any administrative tools that generate sales
+        
+        const currentYear = new Date().getFullYear()
+        
+        // Get transaction from options (required for atomic counter increment)
+        const transaction = options.transaction
+        if (!transaction) {
+          const error = new Error('Transaction is required for sale creation to ensure atomic counter increment')
+          logger.error('Sale creation failed - missing transaction:', {
+            businessId: sale.business_id,
+            branchId: sale.branch_id,
+            error: error.message
+          })
+          throw error
+        }
+        
+        // Access Counter model via Sequelize registry to avoid initialization issues
+        const CounterModel = sequelize.models.Counter
+        
+        if (!CounterModel) {
+          throw new Error('Counter model not initialized in Sequelize registry. Check models/index.js initialization order.')
+        }
+        
+        if (typeof CounterModel.getNextValue !== 'function') {
+          throw new Error('Counter.getNextValue method is not defined')
+        }
+        
+        logger.debug('Generating sale_number:', {
+          businessId: sale.business_id,
+          branchId: sale.branch_id,
+          year: currentYear,
+          transactionActive: !!transaction
+        })
+        
+        // Get next counter value with database lock
+        const nextNumber = await CounterModel.getNextValue('sale_number', currentYear, {
+          businessId: sale.business_id,
+          branchId: null, // Global counter per business
+          transaction
+        })
+        
+        // Format with leading zeros (5 digits)
+        const formattedNumber = String(nextNumber).padStart(5, '0')
+        sale.sale_number = `SALE-${currentYear}-${formattedNumber}`
+        
+        logger.info('Sale number generated successfully:', {
+          businessId: sale.business_id,
+          year: currentYear,
+          sequenceNumber: nextNumber,
+          saleNumber: sale.sale_number
+        })
+        
+      } catch (hookError) {
+        // Log detailed error context for debugging
+        logger.error('Failed to generate sale_number:', {
+          businessId: sale.business_id,
+          branchId: sale.branch_id,
+          year: new Date().getFullYear(),
+          transactionState: options.transaction ? 'active' : 'missing',
+          errorMessage: hookError.message,
+          errorStack: hookError.stack
+        })
+        
+        // Rethrow with clear, actionable error message
+        throw new Error(`Sale number generation failed: ${hookError.message}`)
       }
-      
-      // Get next counter value with database lock
-      const nextNumber = await Counter.getNextValue('sale_number', currentYear, {
-        businessId: sale.business_id,
-        branchId: null, // Global counter per business
-        transaction
-      })
-      
-      // Format with leading zeros (5 digits)
-      const formattedNumber = String(nextNumber).padStart(5, '0')
-      sale.sale_number = `SALE-${currentYear}-${formattedNumber}`
     }
   }
 })

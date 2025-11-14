@@ -11,11 +11,9 @@ import CustomersTab from '../components/CustomersTab'
 import DashboardSidebar from '../components/DashboardSidebar'
 import DashboardHeader from '../components/DashboardHeader'
 import MobileBottomNav from '../components/MobileBottomNav'
-import StatsCardGrid from '../components/StatsCardGrid'
 import QuickActions from '../components/QuickActions'
-import ActivityFeed from '../components/ActivityFeed'
-import MonthlyChart from '../components/MonthlyChart'
-import LogoUpload from '../components/LogoUpload'
+import TodaysSnapshot from '../components/TodaysSnapshot'
+import OperationalGlimpse from '../components/OperationalGlimpse'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
@@ -215,52 +213,24 @@ function Dashboard() {
             <div className="p-3 sm:p-5">
               {activeTab === 'overview' && (
                 <div className="space-y-6">
-                  {/* Stats Overview - Only on Overview Tab */}
-                  <StatsCardGrid analytics={analytics} />
+                  {/* Quick Actions - Expanded to 6 Actions */}
+                  <QuickActions
+                    onNewOffer={handleNewOffer}
+                    onScanQR={handleScanQR}
+                    onViewReports={handleViewReports}
+                    onManageProducts={() => handleTabChange('products')}
+                    onManageBranches={() => handleTabChange('branches')}
+                    onSettings={() => navigate('/settings')}
+                  />
                   
-                  {/* Top Row - Main Dashboard Items */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {/* Quick Actions - Left Column */}
-                    <div className="md:col-span-1">
-                      <QuickActions
-                        onNewOffer={handleNewOffer}
-                        onScanQR={handleScanQR}
-                        onViewReports={handleViewReports}
-                      />
-                    </div>
-
-                    {/* Recent Activity - Middle Column */}
-                    <div className="md:col-span-1">
-                      <ActivityFeed recentActivity={recentActivity} />
-                    </div>
-
-                    {/* Monthly Performance - Right Column */}
-                    <div className="md:col-span-2 xl:col-span-1">
-                      <MonthlyChart analytics={analytics} />
-                    </div>
-                  </div>
-
-                  {/* Bottom Row - Business Settings */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                    {/* Business Logo Upload */}
-                    <div className="md:col-span-1">
-                      <LogoUpload
-                        onLogoUpdate={(logoData) => {
-                          // Refresh dashboard header when logo is updated
-                          window.location.reload()
-                        }}
-                      />
-                    </div>
-
-                    {/* Future settings components can go here */}
-                    <div className="md:col-span-1">
-                      {/* Placeholder for additional business settings */}
-                    </div>
-
-                    <div className="md:col-span-2 xl:col-span-1">
-                      {/* Placeholder for additional business settings */}
-                    </div>
-                  </div>
+                  {/* Today's Snapshot - Real-time POS Metrics */}
+                  <TodaysSnapshot />
+                  
+                  {/* Operational Glimpse - Quick Navigation Links */}
+                  <OperationalGlimpse 
+                    onNavigate={handleTabChange} 
+                    onOpenSettings={() => navigate('/settings')}
+                  />
                 </div>
               )}
 
