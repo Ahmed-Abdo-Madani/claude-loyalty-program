@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { endpoints } from '../../config/api'
-import { managerApiRequest } from '../../utils/secureAuth'
+import { managerApiRequest, getManagerAuthData } from '../../utils/secureAuth'
 import EnhancedQRScanner from '../EnhancedQRScanner'
 
 export default function CheckoutModal({
@@ -84,33 +84,61 @@ export default function CheckoutModal({
     setLoyaltyError(null)
     
     try {
-      // Call loyalty validation endpoint
-      const response = await managerApiRequest(endpoints.posLoyaltyValidate, {
+      const managerData = getManagerAuthData()
+      
+      // 🔄 REUSE BRANCH SCANNER LOGIC: Call scan endpoint to add stamp and update passes
+      // Construct URL based on whether offerHash is present (new format) or null (legacy format)
+      const scanUrl = offerHash 
+        ? `${endpoints.branchManagerScan}/${customerToken}/${offerHash}`
+        : `${endpoints.branchManagerScan}/${customerToken}`
+      
+      console.log(`🔗 POS calling scan API with format: ${offerHash ? 'new (token:hash)' : 'legacy (token-only)'}`)
+      
+      const response = await fetch(scanUrl, {
         method: 'POST',
-        body: JSON.stringify({ customerToken, offerHash })
+        headers: {
+          'x-branch-id': managerData.branchId,
+          'x-manager-token': managerData.managerToken,
+          'Content-Type': 'application/json'
+        }
       })
       
       const json = await response.json()
       
       if (json.success) {
-        setScannedCustomer(json.customer)
-        setLoyaltyProgress(json.progress)
-        setLoyaltyOffer(json.offer)
+        // Map scan response to loyalty state
+        setScannedCustomer({
+          customer_id: json.customerId,
+          first_name: json.progress?.customerName || 'Customer'
+        })
         
-        // Auto-select gift_offer payment if reward is available
-        if (json.canRedeemReward) {
+        setLoyaltyProgress({
+          current_stamps: json.progress?.currentStamps || 0,
+          max_stamps: json.progress?.maxStamps || 10,
+          is_completed: json.rewardEarned || false
+        })
+        
+        setLoyaltyOffer({
+          public_id: json.offerId,
+          title: json.progress?.offerTitle || 'Loyalty Offer'
+        })
+        
+        // Auto-select gift_offer payment if reward was just earned
+        if (json.rewardEarned) {
           setPaymentMethod('gift_offer')
           setApplyLoyaltyDiscount(true)
           if (onLoyaltyDiscountChange) {
             onLoyaltyDiscountChange(totals.total)
           }
         }
+        
+        console.log('✅ POS scan successful, stamps updated and pass synced')
       } else {
-        setLoyaltyError(json.error || 'Failed to validate loyalty')
+        setLoyaltyError(json.error || 'Failed to process loyalty scan')
       }
     } catch (err) {
-      console.error('Loyalty validation failed:', err)
-      setLoyaltyError('Failed to validate customer loyalty')
+      console.error('Loyalty scan failed:', err)
+      setLoyaltyError('Failed to process customer loyalty')
     } finally {
       setLoyaltyLoading(false)
     }
