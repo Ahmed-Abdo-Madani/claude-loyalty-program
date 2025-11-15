@@ -266,3 +266,72 @@ export async function managerApiRequest(url, options = {}) {
   return response
 }
 
+/**
+ * Update branch manager PIN immediately
+ * @param {string} branchId - Branch public ID
+ * @param {string} pin - 4-6 digit PIN
+ * @returns {Promise<{success: boolean, code: string, message?: string}>}
+ */
+export async function updateBranchManagerPin(branchId, pin) {
+  // Validate PIN format client-side
+  if (!pin || !/^\d{4,6}$/.test(pin)) {
+    return {
+      success: false,
+      code: 'PIN_FORMAT_INVALID'
+    }
+  }
+
+  if (!branchId) {
+    return {
+      success: false,
+      code: 'BRANCH_ID_REQUIRED'
+    }
+  }
+
+  try {
+    const response = await secureApiRequest(`${endpoints.myBranches}/${branchId}/manager-pin`, {
+      method: 'PUT',
+      body: JSON.stringify({ manager_pin: pin })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      // Handle specific error status codes
+      switch (response.status) {
+        case 400:
+          return { success: false, code: 'PIN_FORMAT_INVALID', message: data.error }
+        case 401:
+          return { success: false, code: 'SESSION_EXPIRED' }
+        case 404:
+          return { success: false, code: 'BRANCH_NOT_FOUND' }
+        case 500:
+          return { success: false, code: 'SERVER_ERROR' }
+        default:
+          return { success: false, code: 'PIN_SAVE_FAILED', message: data.error }
+      }
+    }
+
+    return {
+      success: true,
+      code: 'PIN_SAVED_SUCCESS'
+    }
+  } catch (error) {
+    console.error('Error updating branch manager PIN:', error)
+    
+    // Handle network errors
+    if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
+      return {
+        success: false,
+        code: 'NETWORK_ERROR'
+      }
+    }
+
+    return {
+      success: false,
+      code: 'PIN_SAVE_FAILED',
+      message: error.message
+    }
+  }
+}
+

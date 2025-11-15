@@ -30,6 +30,9 @@ export default function CheckoutModal({
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false)
   const [loyaltyLoading, setLoyaltyLoading] = useState(false)
   const [loyaltyError, setLoyaltyError] = useState(null)
+  const [prizeConfirmationStatus, setPrizeConfirmationStatus] = useState(null) // 'pending', 'confirmed', 'failed'
+  const [totalCompletions, setTotalCompletions] = useState(null)
+  const [tierInfo, setTierInfo] = useState(null)
 
   // Reset state when modal opens
   useEffect(() => {
@@ -47,6 +50,9 @@ export default function CheckoutModal({
       setLoyaltyOffer(null)
       setApplyLoyaltyDiscount(false)
       setLoyaltyError(null)
+      setPrizeConfirmationStatus(null)
+      setTotalCompletions(null)
+      setTierInfo(null)
       if (onLoyaltyDiscountChange) {
         onLoyaltyDiscountChange(0)
       }
@@ -105,6 +111,14 @@ export default function CheckoutModal({
       
       const json = await response.json()
       
+      console.log('🛒 POS scan response:', {
+        success: json.success,
+        rewardEarned: json.rewardEarned,
+        customerId: json.customerId,
+        offerId: json.offerId,
+        progress: json.progress
+      })
+      
       if (json.success) {
         // Map scan response to loyalty state
         setScannedCustomer({
@@ -112,27 +126,117 @@ export default function CheckoutModal({
           first_name: json.progress?.customerName || 'Customer'
         })
         
-        setLoyaltyProgress({
-          current_stamps: json.progress?.currentStamps || 0,
-          max_stamps: json.progress?.maxStamps || 10,
-          is_completed: json.rewardEarned || false
-        })
-        
         setLoyaltyOffer({
           public_id: json.offerId,
           title: json.progress?.offerTitle || 'Loyalty Offer'
         })
         
-        // Auto-select gift_offer payment if reward was just earned
+        // Handle reward earned - auto-confirm prize
         if (json.rewardEarned) {
-          setPaymentMethod('gift_offer')
-          setApplyLoyaltyDiscount(true)
-          if (onLoyaltyDiscountChange) {
-            onLoyaltyDiscountChange(totals.total)
+          console.log('🔄 POS auto-confirming prize for customer:', json.customerId, 'offer:', json.offerId)
+          setPrizeConfirmationStatus('pending')
+          
+          // Auto-confirm prize (mirroring BranchScanner logic)
+          try {
+            const confirmResponse = await fetch(
+              `${endpoints.branchManagerConfirmPrize}/${json.customerId}/${json.offerId}`,
+              {
+                method: 'POST',
+                headers: {
+                  'x-branch-id': managerData.branchId,
+                  'x-manager-token': managerData.managerToken,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ notes: '' })
+              }
+            )
+
+            // Check response status before parsing JSON
+            if (!confirmResponse.ok) {
+              throw new Error(`Prize confirmation failed: ${confirmResponse.status}`)
+            }
+
+            const confirmData = await confirmResponse.json()
+
+            if (confirmData.success) {
+              console.log('✅ POS prize confirmed, stamps reset, wallet updated', confirmData.progress)
+              
+              // Update with FRESH progress data (reset stamps)
+              setLoyaltyProgress({
+                current_stamps: confirmData.progress?.currentStamps || 0,
+                max_stamps: confirmData.progress?.maxStamps || 10,
+                is_completed: confirmData.progress?.isCompleted || false
+              })
+              
+              setPrizeConfirmationStatus('confirmed')
+              setTotalCompletions(confirmData.totalCompletions)
+              setTierInfo({
+                tier: confirmData.tier,
+                tierUpgrade: confirmData.tierUpgrade
+              })
+              
+              // Auto-select gift_offer payment
+              setPaymentMethod('gift_offer')
+              setApplyLoyaltyDiscount(true)
+              if (onLoyaltyDiscountChange) {
+                onLoyaltyDiscountChange(totals.total)
+              }
+              
+              console.log('🛒 Setting loyalty progress to:', {
+                current_stamps: confirmData.progress?.currentStamps,
+                max_stamps: confirmData.progress?.maxStamps,
+                is_completed: confirmData.progress?.isCompleted
+              })
+            } else {
+              console.error('⚠️ POS prize confirmation failed but stamp was added:', confirmData.error)
+              
+              // Prize confirmation failed, use scan data
+              setLoyaltyProgress({
+                current_stamps: json.progress?.currentStamps || 0,
+                max_stamps: json.progress?.maxStamps || 10,
+                is_completed: json.rewardEarned || false
+              })
+              
+              setPrizeConfirmationStatus('failed')
+              setLoyaltyError('Prize confirmed but wallet update may be delayed')
+              
+              // Still auto-select gift_offer payment
+              setPaymentMethod('gift_offer')
+              setApplyLoyaltyDiscount(true)
+              if (onLoyaltyDiscountChange) {
+                onLoyaltyDiscountChange(totals.total)
+              }
+            }
+          } catch (confirmError) {
+            console.error('⚠️ POS prize confirmation failed but stamp was added:', confirmError)
+            
+            // Handle auto-confirm errors without blocking flow
+            setLoyaltyProgress({
+              current_stamps: json.progress?.currentStamps || 0,
+              max_stamps: json.progress?.maxStamps || 10,
+              is_completed: json.rewardEarned || false
+            })
+            
+            setPrizeConfirmationStatus('failed')
+            setLoyaltyError('Prize confirmed but wallet update may be delayed')
+            
+            // Still auto-select gift_offer payment
+            setPaymentMethod('gift_offer')
+            setApplyLoyaltyDiscount(true)
+            if (onLoyaltyDiscountChange) {
+              onLoyaltyDiscountChange(totals.total)
+            }
           }
+        } else {
+          // Regular stamp added (no reward earned)
+          setLoyaltyProgress({
+            current_stamps: json.progress?.currentStamps || 0,
+            max_stamps: json.progress?.maxStamps || 10,
+            is_completed: json.rewardEarned || false
+          })
+          
+          console.log('✅ POS scan successful, stamps updated and pass synced')
         }
-        
-        console.log('✅ POS scan successful, stamps updated and pass synced')
       } else {
         setLoyaltyError(json.error || 'Failed to process loyalty scan')
       }
@@ -155,6 +259,9 @@ export default function CheckoutModal({
     setLoyaltyOffer(null)
     setApplyLoyaltyDiscount(false)
     setLoyaltyError(null)
+    setPrizeConfirmationStatus(null)
+    setTotalCompletions(null)
+    setTierInfo(null)
     if (paymentMethod === 'gift_offer') {
       setPaymentMethod(null)
     }
@@ -194,7 +301,7 @@ export default function CheckoutModal({
           change: changeAmount
         } : null,
         customerId: scannedCustomer?.customer_id || null,
-        loyaltyRedemption: applyLoyaltyDiscount && scannedCustomer && loyaltyProgress?.is_completed ? {
+        loyaltyRedemption: applyLoyaltyDiscount && scannedCustomer && (loyaltyProgress?.is_completed || prizeConfirmationStatus === 'confirmed') ? {
           customerId: scannedCustomer.customer_id,
           offerId: loyaltyOffer.public_id,
           rewardValue: totals.total
@@ -338,7 +445,7 @@ export default function CheckoutModal({
                   <span>{t('cart.tax')}</span>
                   <span>{totals.tax.toFixed(2)} {t('common.sar')}</span>
                 </div>
-                {applyLoyaltyDiscount && loyaltyProgress?.is_completed && (
+                {applyLoyaltyDiscount && (loyaltyProgress?.is_completed || prizeConfirmationStatus === 'confirmed') && (
                   <div className="flex justify-between text-xs sm:text-sm text-green-600 dark:text-green-400">
                     <span>{t('checkout.loyalty.discount')}</span>
                     <span>-{totals.total.toFixed(2)} {t('common.sar')}</span>
@@ -347,7 +454,7 @@ export default function CheckoutModal({
                 <div className="flex justify-between text-base sm:text-lg font-bold text-gray-900 dark:text-white pt-1 border-t border-gray-200 dark:border-gray-600">
                   <span>{t('cart.total')}</span>
                   <span>
-                    {applyLoyaltyDiscount && loyaltyProgress?.is_completed 
+                    {applyLoyaltyDiscount && (loyaltyProgress?.is_completed || prizeConfirmationStatus === 'confirmed')
                       ? '0.00' 
                       : totals.total.toFixed(2)} {t('common.sar')}
                   </span>
@@ -389,18 +496,111 @@ export default function CheckoutModal({
                   <span className="text-xl sm:text-2xl">👤</span>
                   <div className="flex-1">
                     <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
-                      {scannedCustomer.name || 'Customer'}
+                      {scannedCustomer.name || scannedCustomer.first_name || 'Customer'}
                     </p>
-                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
-                      {t('checkout.loyalty.progress', { 
-                        current: loyaltyProgress.current_stamps, 
-                        max: loyaltyProgress.max_stamps 
-                      })}
-                    </p>
-                    {loyaltyProgress.is_completed && (
+                    
+                    {/* Prize Confirmed - Show New Cycle */}
+                    {prizeConfirmationStatus === 'confirmed' && (
+                      <div className="mt-2 space-y-2">
+                        <div className="p-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-300 dark:border-green-700 rounded">
+                          <p className="text-xs sm:text-sm font-bold text-green-900 dark:text-green-100">
+                            🎉 {t('checkout.loyalty.rewardConfirmed') || 'Reward Earned & Confirmed!'}
+                          </p>
+                          <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                            {t('checkout.loyalty.newCycle') || 'New cycle started'}: {loyaltyProgress.current_stamps}/{loyaltyProgress.max_stamps} {t('checkout.loyalty.stamps') || 'stamps'}
+                          </p>
+                          {totalCompletions && (
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                              🌟 {t('checkout.loyalty.totalRewards') || 'Total rewards earned'}: {totalCompletions}
+                            </p>
+                          )}
+                          {tierInfo?.tierUpgrade && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                              🏆 {t('checkout.loyalty.tierUpgrade') || 'Upgraded to'} {tierInfo.tier}!
+                            </p>
+                          )}
+                        </div>
+                        <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded">
+                          <input
+                            type="checkbox"
+                            checked={applyLoyaltyDiscount}
+                            onChange={(e) => {
+                              setApplyLoyaltyDiscount(e.target.checked)
+                              if (e.target.checked) {
+                                setPaymentMethod('gift_offer')
+                                if (onLoyaltyDiscountChange) {
+                                  onLoyaltyDiscountChange(totals.total)
+                                }
+                              } else {
+                                if (onLoyaltyDiscountChange) {
+                                  onLoyaltyDiscountChange(0)
+                                }
+                              }
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-xs sm:text-sm font-semibold text-green-800 dark:text-green-200">
+                            {t('checkout.loyalty.applyReward') || 'Apply reward to this order'}
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                    
+                    {/* Prize Pending/Failed - Show Warning */}
+                    {(prizeConfirmationStatus === 'pending' || prizeConfirmationStatus === 'failed') && loyaltyProgress && loyaltyProgress.is_completed && (
+                      <div className="mt-2 space-y-2">
+                        <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
+                          <p className="text-xs sm:text-sm font-semibold text-yellow-900 dark:text-yellow-100">
+                            ⚠️ {t('checkout.loyalty.rewardPending') || 'Reward earned - confirmation pending'}
+                          </p>
+                          <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                            {loyaltyProgress.current_stamps}/{loyaltyProgress.max_stamps} {t('checkout.loyalty.stamps') || 'stamps'} - {t('checkout.loyalty.readyToRedeem') || 'Ready to redeem'}
+                          </p>
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                            {t('checkout.loyalty.walletUpdateDelay') || 'Wallet will update shortly'}
+                          </p>
+                        </div>
+                        <label className="flex items-center gap-2 p-2 bg-white dark:bg-gray-700 rounded">
+                          <input
+                            type="checkbox"
+                            checked={applyLoyaltyDiscount}
+                            onChange={(e) => {
+                              setApplyLoyaltyDiscount(e.target.checked)
+                              if (e.target.checked) {
+                                setPaymentMethod('gift_offer')
+                                if (onLoyaltyDiscountChange) {
+                                  onLoyaltyDiscountChange(totals.total)
+                                }
+                              } else {
+                                if (onLoyaltyDiscountChange) {
+                                  onLoyaltyDiscountChange(0)
+                                }
+                              }
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-xs sm:text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                            {t('checkout.loyalty.applyReward') || 'Apply reward to this order'}
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                    
+                    {/* Regular Progress - No Reward Yet */}
+                    {!loyaltyProgress.is_completed && prizeConfirmationStatus !== 'confirmed' && (
+                      <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
+                        {t('checkout.loyalty.progress', { 
+                          current: loyaltyProgress.current_stamps, 
+                          max: loyaltyProgress.max_stamps 
+                        })}
+                      </p>
+                    )}
+                    
+                    {/* Old Completed State (shouldn't happen with auto-confirm, but fallback) */}
+                    {loyaltyProgress.is_completed && !prizeConfirmationStatus && (
                       <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded">
                         <p className="text-xs sm:text-sm font-semibold text-green-900 dark:text-green-100">
-                          ✅ {t('checkout.loyalty.rewardAvailable')}
+                          ✅ {t('checkout.loyalty.rewardAvailable') || 'Reward Available'}
                         </p>
                         <label className="flex items-center gap-2 mt-1">
                           <input
@@ -422,7 +622,7 @@ export default function CheckoutModal({
                             className="w-4 h-4"
                           />
                           <span className="text-xs sm:text-sm text-green-800 dark:text-green-200">
-                            {t('checkout.loyalty.applyReward')}
+                            {t('checkout.loyalty.applyReward') || 'Apply reward to this order'}
                           </span>
                         </label>
                       </div>

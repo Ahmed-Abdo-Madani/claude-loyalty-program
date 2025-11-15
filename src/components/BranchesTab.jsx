@@ -4,6 +4,7 @@ import BranchGrid from './BranchGrid'
 import LocationAutocomplete from './LocationAutocomplete'
 import CompactStatsBar from './CompactStatsBar'
 import { endpoints, secureApi } from '../config/api'
+import { updateBranchManagerPin } from '../utils/secureAuth'
 import { validateSecureBranchId } from '../utils/secureAuth'
 import BranchAnalyticsModal from './BranchAnalyticsModal'
 
@@ -321,27 +322,29 @@ function BranchesTab({ analytics }) {
               const branchId = showEditModal?.public_id || showEditModal?.id
               
               // Phase 1: Handle PIN update via dedicated endpoint (if needed)
-              // Only update PIN if manager access is enabled, PIN is provided, and format is valid
+              // Skip if PIN was already saved via "Save PIN" button (existing branches)
+              // Still run for new branches being created with PIN
               if (branchData.manager_pin_enabled === true && 
                   branchData.manager_pin && 
                   branchData.manager_pin.trim() !== '' && 
-                  branchId) {
-                // Validate PIN format
-                if (!/^\d{4,6}$/.test(branchData.manager_pin)) {
-                  throw new Error(t('branches.pinMustBe4to6Digits'))
-                }
-                
+                  branchId &&
+                  !branchData._pinAlreadySaved) {  // Skip if auto-saved
                 console.log('🔐 Updating manager PIN via dedicated endpoint')
                 
-                const pinResponse = await secureApi.put(
-                  `${endpoints.myBranches}/${branchId}/manager-pin`,
-                  { manager_pin: branchData.manager_pin }
-                )
+                const result = await updateBranchManagerPin(branchId, branchData.manager_pin)
                 
-                const pinData = await pinResponse.json()
-                
-                if (!pinData.success) {
-                  throw new Error(pinData.message || t('branches.failedToSetPin'))
+                if (!result.success) {
+                  // Translate error code to localized message
+                  const errorCodeMap = {
+                    'PIN_FORMAT_INVALID': t('branches.pinFormatInvalid'),
+                    'BRANCH_ID_REQUIRED': t('branches.branchIdRequired'),
+                    'SESSION_EXPIRED': t('branches.sessionExpired'),
+                    'BRANCH_NOT_FOUND': t('branches.branchNotFound'),
+                    'SERVER_ERROR': t('branches.serverError'),
+                    'NETWORK_ERROR': t('branches.networkError'),
+                    'PIN_SAVE_FAILED': t('branches.pinSaveFailed')
+                  }
+                  throw new Error(errorCodeMap[result.code] || result.message || t('branches.failedToSetPin'))
                 }
                 
                 console.log('✅ Manager PIN updated and hashed')
@@ -378,22 +381,13 @@ function BranchesTab({ analytics }) {
                     manager_pin && 
                     manager_pin.trim() !== '' && 
                     newBranchId) {
-                  if (!/^\d{4,6}$/.test(manager_pin)) {
-                    throw new Error(t('branches.pinMustBe4to6Digits'))
-                  }
-                  
                   try {
                     console.log('🔐 Setting manager PIN for new branch')
                     
-                    const pinResponse = await secureApi.put(
-                      `${endpoints.myBranches}/${newBranchId}/manager-pin`,
-                      { manager_pin: manager_pin }
-                    )
+                    const result = await updateBranchManagerPin(newBranchId, manager_pin)
                     
-                    const pinData = await pinResponse.json()
-                    
-                    if (!pinData.success) {
-                      console.error('⚠️ Branch saved but PIN failed:', pinData.message)
+                    if (!result.success) {
+                      console.error('⚠️ Branch saved but PIN failed:', result.code)
                       setError(t('branches.savedButPinFailed'))
                     } else {
                       console.log('✅ Manager PIN set for new branch')
@@ -451,6 +445,9 @@ function BranchModal({ branch, onClose, onSave }) {
   // Manager PIN state
   const [showPin, setShowPin] = useState(false)
   const [pinValidated, setPinValidated] = useState(false)
+  const [pinSaving, setPinSaving] = useState(false)
+  const [pinSaveError, setPinSaveError] = useState(null)
+  const [pinSavedSuccessfully, setPinSavedSuccessfully] = useState(false)
 
   // District management state
   const [loadingDistricts, setLoadingDistricts] = useState(false)
@@ -662,7 +659,12 @@ function BranchModal({ branch, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSave(formData)
+    // Mark if PIN was already saved via "Save PIN" button
+    const dataToSave = {
+      ...formData,
+      _pinAlreadySaved: pinSavedSuccessfully && branch?.public_id  // Only for existing branches
+    }
+    onSave(dataToSave)
   }
 
   return (
@@ -878,7 +880,9 @@ function BranchModal({ branch, onClose, onSave }) {
                               onChange={(e) => {
                                 const value = e.target.value.replace(/\D/g, '').substring(0, 6)
                                 setFormData({...formData, manager_pin: value})
-                                setPinValidated(false) // Clear validation when PIN changes
+                                setPinValidated(false)
+                                setPinSavedSuccessfully(false)
+                                setPinSaveError(null)
                               }}
                               maxLength={6}
                               pattern="[0-9]{4,6}"
@@ -895,23 +899,68 @@ function BranchModal({ branch, onClose, onSave }) {
                           </div>
                           <button
                             type="button"
-                            onClick={() => {
-                              if (formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)) {
+                            onClick={async () => {
+                              // New branch: Can't save PIN until branch exists
+                              if (!branch?.public_id) {
                                 setPinValidated(true)
+                                return
+                              }
+
+                              // Existing branch: Save PIN immediately
+                              if (formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)) {
+                                setPinSaving(true)
+                                setPinSaveError(null)
+                                
+                                const result = await updateBranchManagerPin(branch.public_id, formData.manager_pin)
+                                
+                                setPinSaving(false)
+                                
+                                if (result.success) {
+                                  setPinValidated(true)
+                                  setPinSavedSuccessfully(true)
+                                  setPinSaveError(null)
+                                } else {
+                                  setPinValidated(false)
+                                  setPinSavedSuccessfully(false)
+                                  // Translate error code to localized message
+                                  const errorCodeMap = {
+                                    'PIN_FORMAT_INVALID': t('branches.pinFormatInvalid'),
+                                    'BRANCH_ID_REQUIRED': t('branches.branchIdRequired'),
+                                    'SESSION_EXPIRED': t('branches.sessionExpired'),
+                                    'BRANCH_NOT_FOUND': t('branches.branchNotFound'),
+                                    'SERVER_ERROR': t('branches.serverError'),
+                                    'NETWORK_ERROR': t('branches.networkError'),
+                                    'PIN_SAVE_FAILED': t('branches.pinSaveFailed')
+                                  }
+                                  setPinSaveError(errorCodeMap[result.code] || result.message || t('branches.pinSaveFailed'))
+                                }
                               }
                             }}
-                            disabled={!formData.manager_pin || !/^\d{4,6}$/.test(formData.manager_pin)}
-                            className="px-4 py-3 min-h-[44px] bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 active:scale-95 transition-all shadow-md disabled:opacity-50 whitespace-nowrap"
+                            disabled={!formData.manager_pin || !/^\d{4,6}$/.test(formData.manager_pin) || pinSaving}
+                            className={`px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md disabled:opacity-50 whitespace-nowrap ${
+                              pinSavedSuccessfully 
+                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                : pinSaveError
+                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-95'
+                            }`}
                           >
-                            {pinValidated ? '✓ ' + t('branches.set') : '💾 ' + t('branches.setPin')}
+                            {pinSaving ? '⏳ ' + t('branches.savingPin') : 
+                             pinSavedSuccessfully ? '✓ ' + t('branches.pinSaved') : 
+                             pinSaveError ? '❌ ' + t('branches.retryPin') :
+                             '💾 ' + t('branches.savePin')}
                           </button>
                         </div>
                         <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
-                          {pinValidated
-                            ? `✓ ${formData.manager_pin.length}-digit PIN validated and ready to save`
+                          {pinSavedSuccessfully
+                            ? `✓ ${t('branches.pinSavedAndEncrypted')}`
+                            : pinSaveError
+                            ? `❌ ${pinSaveError}`
+                            : !branch?.public_id
+                            ? `ℹ️ ${t('branches.pinWillBeSavedAfterCreation')}`
                             : formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)
-                            ? `✓ ${formData.manager_pin.length}-digit PIN ready to validate`
-                            : 'Enter 4-6 numeric digits'}
+                            ? `✓ ${t('branches.enterPinAndClickSave')}`
+                            : t('branches.pinValidation')}
                         </p>
                       </div>
 
