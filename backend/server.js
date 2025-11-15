@@ -650,18 +650,22 @@ async function initializeDatabase() {
 
     // Normalize manifest on startup (auto-migration)
     try {
-      console.log('📄 [Startup] Normalizing icons manifest...')
-      console.log('📄 [Startup] Calling ManifestService.readManifest()...')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📄 [Startup] Normalizing icons manifest...')
+        console.log('📄 [Startup] Calling ManifestService.readManifest()...')
+      }
       
       const manifest = await ManifestService.readManifest()
       
-      console.log('📄 [Startup] Manifest received:', {
-        version: manifest.version,
-        iconsCount: (manifest.icons || []).length,
-        categoriesCount: (manifest.categories || []).length,
-        hasLastUpdated: !!manifest.lastUpdated,
-        lastUpdated: manifest.lastUpdated
-      })
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📄 [Startup] Manifest received:', {
+          version: manifest.version,
+          iconsCount: (manifest.icons || []).length,
+          categoriesCount: (manifest.categories || []).length,
+          hasLastUpdated: !!manifest.lastUpdated,
+          lastUpdated: manifest.lastUpdated
+        })
+      }
       
       if (manifest.lastUpdated) {
         const updatedDate = new Date(manifest.lastUpdated).toLocaleString()

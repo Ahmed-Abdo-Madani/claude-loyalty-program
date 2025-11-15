@@ -199,12 +199,48 @@ router.get('/verify', requireBranchManagerAuth, async (req, res) => {
 
 /**
  * Route 3: Scan Customer QR
- * POST /api/branch-manager/scan/:customerToken/:offerHash
+ * POST /api/branch-manager/scan/:customerToken/:offerHash?
  * Reuses existing scan logic but with manager auth
+ * Supports legacy token-only format (offerHash optional)
  */
-router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (req, res) => {
+router.post('/scan/:customerToken/:offerHash?', requireBranchManagerAuth, async (req, res) => {
   try {
-    const { customerToken, offerHash } = req.params
+    let customerToken, offerHash
+    const businessId = req.branch.business_id
+
+    // 🆕 DETECT QR CODE FORMAT (matching business.js logic)
+    const firstParam = req.params.customerToken
+    const secondParam = req.params.offerHash
+
+    // Check if this is the new enhanced format (customerToken:offerHash in first param)
+    if (!secondParam && firstParam.includes(':')) {
+      // NEW FORMAT: Single parameter with embedded colon
+      console.log('🔍 Branch Manager: Detected ENHANCED QR code format (customerToken:offerHash)')
+      const parts = firstParam.split(':')
+      customerToken = parts[0]
+      offerHash = parts[1]
+    } else if (secondParam) {
+      // OLD FORMAT: Two separate parameters
+      console.log('🔍 Branch Manager: Detected LEGACY QR code format (separate params)')
+      customerToken = firstParam
+      offerHash = secondParam
+    } else if (!secondParam && !firstParam.includes(':')) {
+      // LEGACY TOKEN-ONLY FORMAT: Base64 token without offer hash
+      console.log('🔍 Branch Manager: Detected LEGACY token-only QR format (pre-enhanced passes)')
+      customerToken = firstParam
+      offerHash = null
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid QR code format. Expected either "customerToken:offerHash" or separate parameters'
+      })
+    }
+
+    console.log('🔍 Branch Manager scan attempt:', { 
+      customerToken: customerToken.substring(0, 20) + '...', 
+      offerHash, 
+      businessId 
+    })
 
     // Comment 1: Decode customer token and validate properly
     const tokenData = CustomerService.decodeCustomerToken(customerToken)
@@ -227,16 +263,32 @@ router.post('/scan/:customerToken/:offerHash', requireBranchManagerAuth, async (
     // Comment 1: Extract customerId for subsequent uses
     const customerId = tokenData.customerId
 
-    // Comment 4: Use helper method instead of manual query and loop
-    logger.debug('Finding offer by hash for business:', req.branch.business_id)
-    const targetOffer = await CustomerService.findOfferByHash(offerHash, req.branch.business_id)
+    // 🆕 HANDLE LEGACY TOKEN-ONLY FORMAT (auto-select offer if null)
+    let targetOffer
+    if (offerHash === null) {
+      console.log('🔍 Branch Manager: Legacy token-only format - auto-selecting offer')
+      targetOffer = await CustomerService.findOfferForBusiness(businessId)
+      
+      if (!targetOffer) {
+        return res.status(400).json({
+          success: false,
+          error: 'Could not determine offer for this QR code. Please scan a newer QR code.'
+        })
+      }
+      
+      console.log(`✅ Branch Manager: Auto-selected offer ${targetOffer.public_id}`)
+    } else {
+      // Comment 4: Use helper method instead of manual query and loop
+      logger.debug('Finding offer by hash for business:', req.branch.business_id)
+      targetOffer = await CustomerService.findOfferByHash(offerHash, req.branch.business_id)
 
-    if (!targetOffer) {
-      logger.warn('No matching offer found for hash')
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid QR code or offer not available'
-      })
+      if (!targetOffer) {
+        logger.warn('No matching offer found for hash')
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid QR code or offer not available'
+        })
+      }
     }
 
     // Extract offer ID from the matched offer

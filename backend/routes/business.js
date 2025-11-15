@@ -2687,6 +2687,11 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
       console.log('🔍 Detected LEGACY QR code format (separate params)')
       customerToken = firstParam
       offerHash = secondParam
+    } else if (!secondParam && !firstParam.includes(':')) {
+      // LEGACY TOKEN-ONLY FORMAT: Base64 token without offer hash
+      console.log('🔍 Detected LEGACY token-only QR format (pre-enhanced passes)')
+      customerToken = firstParam
+      offerHash = null
     } else {
       return res.status(400).json({
         success: false,
@@ -2724,22 +2729,44 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
       // This preserves the original ID in the token for logging purposes
     }
 
-    // Find the offer by reverse-engineering the hash
+    // Find the offer by reverse-engineering the hash (or auto-detect for legacy QRs)
     const businessOffers = await OfferService.findByBusinessId(businessId)
     let targetOffer = null
 
-    for (const offer of businessOffers) {
-      if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
-        targetOffer = offer
-        break
+    if (offerHash === null) {
+      // Legacy token-only format: Auto-detect offer
+      console.log('🔍 Legacy QR detected - attempting auto-offer selection')
+      const activeOffers = businessOffers.filter(offer => offer.status === 'active')
+      
+      if (activeOffers.length === 1) {
+        targetOffer = activeOffers[0]
+        console.log(`✅ Auto-selected single active offer for legacy QR: ${targetOffer.public_id}`)
+      } else if (activeOffers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Legacy QR code detected. No active offers found. Please regenerate pass or contact support.'
+        })
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Legacy QR code detected. Multiple active offers found. Please regenerate pass to specify which offer to use.'
+        })
       }
-    }
+    } else {
+      // Normal hash-based lookup
+      for (const offer of businessOffers) {
+        if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
+          targetOffer = offer
+          break
+        }
+      }
 
-    if (!targetOffer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Offer not found or hash invalid'
-      })
+      if (!targetOffer) {
+        return res.status(404).json({
+          success: false,
+          message: 'Offer not found or hash invalid'
+        })
+      }
     }
 
     console.log('✅ Scanner: Valid scan detected', { 

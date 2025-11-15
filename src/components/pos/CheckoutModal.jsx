@@ -76,7 +76,9 @@ export default function CheckoutModal({
     calculateChange(value)
   }
 
-  const handleScanSuccess = async (customerToken, offerHash) => {
+  const handleScanSuccess = async (customerToken, offerHash, rawData, format) => {
+    console.log('🛒 POS loyalty scan:', { format, customerToken: customerToken.substring(0, 20) + '...', offerHash })
+    
     setShowScanner(false)
     setLoyaltyLoading(true)
     setLoyaltyError(null)

@@ -54,10 +54,12 @@ export const requireBusinessAuth = async (req, res, next) => {
       })
     }
 
-    logger.debug('Authenticated business via secure ID', {
-      businessId: businessId.substring(0, 8) + '...',
-      businessName: business.business_name
-    })
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug('Authenticated business via secure ID', {
+        businessId: businessId.substring(0, 8) + '...',
+        businessName: business.business_name
+      })
+    }
 
     if (business.status !== 'active') {
       logger.warn('Business account not active', {
@@ -113,7 +115,7 @@ export const requireBusinessAuth = async (req, res, next) => {
       // Update session last_used_at timestamp
       await session.update({ last_used_at: new Date() })
 
-      logger.info('Session validated', {
+      logger.debug('Session validated', {
         businessId: business.public_id,
         sessionId: session.id
       })

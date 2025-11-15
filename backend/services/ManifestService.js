@@ -21,12 +21,6 @@ class ManifestService {
     this.cacheTimestamp = null
     this.cacheTTL = 5000 // Cache for 5 seconds
     
-    console.log('🔧 [ManifestService] Constructor called')
-    console.log('🔧 [ManifestService] ICONS_PATH env:', process.env.ICONS_PATH)
-    console.log('🔧 [ManifestService] Base path:', basePath)
-    console.log('🔧 [ManifestService] Manifest path:', this.manifestPath)
-    console.log('🔧 [ManifestService] Lock file:', this.lockFile)
-    
     logger.info('ManifestService initialized', { 
       manifestPath: this.manifestPath,
       lockFile: this.lockFile 
@@ -58,26 +52,13 @@ class ManifestService {
 
       // Read and parse manifest
       const content = fs.readFileSync(this.manifestPath, 'utf8')
-      console.log('📄 [ManifestService] Reading manifest from:', this.manifestPath)
-      console.log('📄 [ManifestService] Content length:', content.length)
-      console.log('📄 [ManifestService] Raw content:', content.substring(0, 200) + '...')
-      
-      logger.info('Reading manifest', { 
-        manifestPath: this.manifestPath, 
-        contentLength: content.length 
-      })
       
       const manifest = JSON.parse(content)
-      console.log('📄 [ManifestService] Parsed manifest:', JSON.stringify(manifest, null, 2))
-      console.log('📄 [ManifestService] Has version:', manifest.version)
-      console.log('📄 [ManifestService] Has categories:', manifest.categories, 'isArray:', Array.isArray(manifest.categories))
-      console.log('📄 [ManifestService] Has icons:', manifest.icons, 'isArray:', Array.isArray(manifest.icons))
       
       let needsMigration = false
       
       // Auto-migrate: Default version to 1 if missing
       if (!manifest.version && manifest.version !== 0) {
-        console.log('⚠️ [ManifestService] Manifest missing version, defaulting to 1')
         logger.warn('Manifest missing version, defaulting to 1')
         manifest.version = 1
         needsMigration = true
@@ -85,7 +66,6 @@ class ManifestService {
       
       // Auto-migrate: Default categories to empty array if missing
       if (!Array.isArray(manifest.categories)) {
-        console.log('⚠️ [ManifestService] Manifest missing categories array, initializing to empty')
         logger.warn('Manifest missing categories array, initializing to empty')
         manifest.categories = []
         needsMigration = true
@@ -93,7 +73,6 @@ class ManifestService {
       
       // Auto-migrate: Generate categories from existing icons if categories is empty
       if (manifest.categories.length === 0 && Array.isArray(manifest.icons) && manifest.icons.length > 0) {
-        console.log('⚠️ [ManifestService] Categories empty, generating from icons...')
         const uniqueCategories = new Set()
         manifest.icons.forEach(icon => {
           if (icon.category) {
@@ -113,13 +92,11 @@ class ManifestService {
           })
         })
         
-        console.log(`✅ [ManifestService] Generated ${manifest.categories.length} categories from icons:`, manifest.categories.map(c => c.id))
         needsMigration = true
       }
       
       // Auto-migrate: Default icons to empty array if missing
       if (!Array.isArray(manifest.icons)) {
-        console.log('⚠️ [ManifestService] Manifest missing icons array, initializing to empty')
         logger.warn('Manifest missing icons array, initializing to empty')
         manifest.icons = []
         needsMigration = true
@@ -167,23 +144,17 @@ class ManifestService {
           logger.info(`🔄 Auto-migrated ${manifest.icons.length} icon entries with missing fields`)
         }
       }
-      
-      console.log('📄 [ManifestService] Migration needed:', needsMigration)
-      console.log('📄 [ManifestService] Skip write:', _skipWrite)
 
       // Validate normalized manifest structure
       const validation = this.validateManifest(manifest)
-      console.log('📄 [ManifestService] Validation result:', validation)
       
       if (validation.errors) {
-        console.error('❌ [ManifestService] Invalid manifest structure after normalization:', validation.errors)
         logger.error('Invalid manifest structure after normalization:', validation.errors)
         throw new Error(`Invalid manifest: ${validation.errors.join(', ')}`)
       }
 
       // Persist normalized manifest if migration occurred
       if (needsMigration && !_skipWrite) {
-        console.log('🔄 [ManifestService] Persisting auto-migration...')
         logger.info('Auto-migrating legacy manifest', { 
           version: manifest.version,
           categoriesCount: manifest.categories.length,
@@ -192,22 +163,9 @@ class ManifestService {
         
         // Add migration timestamp
         manifest.lastUpdated = new Date().toISOString()
-        console.log('🔄 [ManifestService] Added lastUpdated:', manifest.lastUpdated)
         
         this._writeManifestSync(manifest)
-        console.log('✅ [ManifestService] Auto-migration persisted successfully')
-      } else if (needsMigration && _skipWrite) {
-        console.log('⏭️ [ManifestService] Migration needed but skipping write (_skipWrite=true)')
-      } else {
-        console.log('✅ [ManifestService] No migration needed, returning existing manifest')
       }
-      
-      console.log('📄 [ManifestService] Final manifest:', {
-        version: manifest.version,
-        categoriesCount: manifest.categories?.length || 0,
-        iconsCount: manifest.icons?.length || 0,
-        hasLastUpdated: !!manifest.lastUpdated
-      })
 
       // Update cache
       this.manifestCache = manifest
@@ -232,23 +190,16 @@ class ManifestService {
    */
   _writeManifestSync(manifestData) {
     try {
-      console.log('💾 [ManifestService] Starting synchronous write...')
-      console.log('💾 [ManifestService] Target path:', this.manifestPath)
-      console.log('💾 [ManifestService] Data to write:', JSON.stringify(manifestData, null, 2).substring(0, 300) + '...')
-      
       // Write directly (no lock needed for migration)
       const tempPath = `${this.manifestPath}.tmp`
-      console.log('💾 [ManifestService] Writing to temp file:', tempPath)
       fs.writeFileSync(tempPath, JSON.stringify(manifestData, null, 2), 'utf8')
       
-      console.log('💾 [ManifestService] Renaming temp file to manifest...')
       fs.renameSync(tempPath, this.manifestPath)
       
       // Clear cache
       this.manifestCache = null
       this.cacheTimestamp = null
       
-      console.log('✅ [ManifestService] Synchronous write complete')
       logger.debug('Manifest written synchronously', { path: this.manifestPath })
     } catch (error) {
       console.error('❌ [ManifestService] Error writing manifest synchronously:', error)

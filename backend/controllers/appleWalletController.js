@@ -1114,15 +1114,17 @@ class AppleWalletController {
       logger.info('🔍 ========== PASS.JSON DEBUG ==========')
       logger.info('📋 Complete pass.json structure:')
       
-      // Redact sensitive fields before logging
-      const redactedPassData = { ...passData }
+      // 🔒 CRITICAL: Deep copy to avoid mutating original passData
+      // Shallow copy { ...passData } was causing barcode corruption in production!
+      const redactedPassData = JSON.parse(JSON.stringify(passData))
+      
       if (redactedPassData.authenticationToken) {
         const token = redactedPassData.authenticationToken
         redactedPassData.authenticationToken = token.length > 8 
           ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` 
           : '[REDACTED]'
       }
-      // Redact barcode messages
+      // Redact barcode messages (now safe to modify deep copy)
       if (redactedPassData.barcode && redactedPassData.barcode.message) {
         const msg = redactedPassData.barcode.message
         redactedPassData.barcode.message = msg.length > 8

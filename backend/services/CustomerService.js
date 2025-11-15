@@ -275,6 +275,12 @@ class CustomerService {
   }
 
   static verifyOfferHash(offerId, businessId, providedHash) {
+    // Handle null/undefined hash (legacy token-only QR codes)
+    // Return false immediately for backward compatibility
+    if (providedHash === null || providedHash === undefined) {
+      return false
+    }
+    
     const expectedHash = this.generateOfferHash(offerId, businessId)
     return expectedHash === providedHash
   }
@@ -321,6 +327,42 @@ class CustomerService {
       return null
     } catch (error) {
       logger.error('Error finding offer by hash:', error)
+      return null
+    }
+  }
+
+  /**
+   * Find single active offer for a business (for legacy QR auto-detection)
+   * Used when offerHash is missing from legacy token-only QR codes
+   * Returns offer if exactly ONE active offer exists, null otherwise
+   * 
+   * @param {string} businessId - The business ID to search within
+   * @returns {Promise<Object|null>} The single active offer or null
+   */
+  static async findOfferForBusiness(businessId) {
+    try {
+      logger.debug('Auto-detecting single active offer for business:', businessId)
+      
+      // Fetch all active offers for the business
+      const activeOffers = await Offer.findAll({
+        where: {
+          business_id: businessId,
+          status: 'active'
+        }
+      })
+
+      if (activeOffers.length === 1) {
+        logger.info(`Auto-detected single active offer for business: ${activeOffers[0].public_id}`)
+        return activeOffers[0]
+      } else if (activeOffers.length === 0) {
+        logger.warn('No active offers found for business - cannot auto-detect')
+        return null
+      } else {
+        logger.warn(`Multiple active offers (${activeOffers.length}) found for business - cannot auto-detect`)
+        return null
+      }
+    } catch (error) {
+      logger.error('Error finding offer for business:', error)
       return null
     }
   }

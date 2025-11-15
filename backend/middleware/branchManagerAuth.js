@@ -91,7 +91,7 @@ export const requireBranchManagerAuth = async (req, res, next) => {
     req.isManager = true
     req.managerName = decoded.branchName
 
-    logger.info('Branch manager authenticated', {
+    logger.debug('Branch manager authenticated', {
       branchId,
       branchName: branch.name
     })

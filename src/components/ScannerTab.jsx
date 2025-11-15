@@ -62,8 +62,8 @@ function ScannerTab({ analytics: globalAnalytics }) {
   }
 
   // Handle successful QR scan
-  const handleScanSuccess = async (customerToken, offerHash, fullQRData) => {
-    console.log('🎉 QR Scan successful:', { customerToken, offerHash, fullQRData })
+  const handleScanSuccess = async (customerToken, offerHash, fullQRData, format) => {
+    console.log('🎉 Barcode scan successful:', { format, customerToken, offerHash, fullQRData })
 
     try {
       setLoading(true)

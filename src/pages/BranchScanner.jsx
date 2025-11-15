@@ -60,14 +60,24 @@ export default function BranchScanner() {
     setError('')
   }
 
-  const handleScanSuccess = async (customerToken, offerHash) => {
+  const handleScanSuccess = async (customerToken, offerHash, rawData, format) => {
+    console.log('📱 Scanned barcode:', { format, customerToken: customerToken.substring(0, 20) + '...', offerHash })
+    
     setIsScanning(false)
     setLoading(true)
     setError('')
 
     try {
       const authData = getManagerAuthData()
-      const response = await fetch(`${endpoints.branchManagerScan}/${customerToken}/${offerHash}`, {
+      
+      // Construct URL based on whether offerHash is present (new format) or null (legacy format)
+      const scanUrl = offerHash 
+        ? `${endpoints.branchManagerScan}/${customerToken}/${offerHash}`
+        : `${endpoints.branchManagerScan}/${customerToken}`
+      
+      console.log(`🔗 Calling scan API with format: ${offerHash ? 'new (token:hash)' : 'legacy (token-only)'}`)
+      
+      const response = await fetch(scanUrl, {
         method: 'POST',
         headers: {
           'x-branch-id': authData.branchId,

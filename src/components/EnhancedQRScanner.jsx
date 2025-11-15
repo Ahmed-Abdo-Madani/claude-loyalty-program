@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import PropTypes from 'prop-types'
-import QrScanner from 'qr-scanner'
+import { BarcodeDetector } from 'barcode-detector'
 import CryptoJS from 'crypto-js'
 import ApiService from '../utils/api.js'
 
 function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isActive }) {
   const videoRef = useRef(null)
-  const qrScannerRef = useRef(null)
+  const barcodeDetectorRef = useRef(null)
+  const animationFrameRef = useRef(null)
+  const isRunningRef = useRef(false) // Track if scanner is actively running
   const [scanStatus, setScanStatus] = useState('initializing') // initializing, ready, scanning, detected, processing, success, error
   const [errorMessage, setErrorMessage] = useState('')
   const [hasFlashlight, setHasFlashlight] = useState(false)
@@ -67,18 +69,54 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
     }
   }, [])
 
-  // QR Code detection handler
-  const handleQRDetection = useCallback(async (result) => {
+  // Helper to get detection source for cross-browser compatibility
+  const getDetectionSource = useCallback(async (videoElement) => {
+    // Try direct video element first (works in Chrome/Edge native)
+    if ('BarcodeDetector' in window) {
+      return videoElement
+    }
+    
+    // For polyfill browsers (Safari, Firefox), use ImageBitmap or canvas
+    try {
+      // Try ImageBitmap first (better performance)
+      if ('createImageBitmap' in window) {
+        return await createImageBitmap(videoElement)
+      }
+    } catch (error) {
+      console.log('ImageBitmap not available, falling back to canvas:', error)
+    }
+    
+    // Fallback to canvas for maximum compatibility
+    const canvas = document.createElement('canvas')
+    canvas.width = videoElement.videoWidth
+    canvas.height = videoElement.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+    return canvas
+  }, [])
+
+  // Barcode detection handler
+  const handleBarcodeDetection = useCallback(async (barcode) => {
     const now = Date.now()
 
     // Prevent duplicate scans (debounce for 2 seconds)
-    if (now - lastScanTime < 2000 && detectedQR === result.data) {
+    if (now - lastScanTime < 2000 && detectedQR === barcode.rawValue) {
       return
     }
 
-    console.log('🔍 QR Code detected:', result.data)
+    console.log('🔍 Barcode detected:', { format: barcode.format, data: barcode.rawValue })
 
-    setDetectedQR(result.data)
+    // 🆕 SANITIZE INPUT: Remove whitespace and invisible characters
+    const cleanedData = barcode.rawValue.trim()
+    console.log('🧹 Sanitized barcode data:', {
+      originalLength: barcode.rawValue.length,
+      cleanedLength: cleanedData.length,
+      first20: cleanedData.substring(0, 20),
+      last20: cleanedData.substring(cleanedData.length - 20),
+      hasWhitespace: barcode.rawValue !== cleanedData
+    })
+
+    setDetectedQR(cleanedData)
     setLastScanTime(now)
     setScanStatus('detected')
 
@@ -92,24 +130,35 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
       let customerToken = null
       let offerHash = null
 
-      // Handle different QR code formats
-      if (result.data.startsWith('http')) {
+      // 🆕 COMPREHENSIVE DEBUG: Show what we're processing
+      console.log('🔎 Processing barcode:', {
+        originalLength: barcode.rawValue.length,
+        cleanedLength: cleanedData.length,
+        preview: `${cleanedData.substring(0, 20)}...${cleanedData.substring(cleanedData.length - 20)}`,
+        hasColon: cleanedData.includes(':'),
+        startsWithHttp: cleanedData.startsWith('http'),
+        startsWithBrace: cleanedData.startsWith('{')
+      })
+
+      // Handle different QR code formats (REORDERED for better matching)
+      if (cleanedData.startsWith('http')) {
         // Format 1: URL format - https://domain.com/scan/{customerToken}/{offerHash}
-        console.log('🔗 Processing URL QR format')
-        const url = new URL(result.data)
+        console.log('🔗 Testing URL format...')
+        const url = new URL(cleanedData)
         const pathParts = url.pathname.split('/')
 
         if (pathParts.length >= 4 && pathParts[1] === 'scan') {
           customerToken = pathParts[2]
           offerHash = pathParts[3]
+          console.log('✅ URL format matched:', { customerToken: customerToken.substring(0, 20) + '...', offerHash })
         } else {
           throw new Error('Invalid URL QR format. Expected /scan/{token}/{hash}')
         }
 
-      } else if (result.data.startsWith('{')) {
+      } else if (cleanedData.startsWith('{')) {
         // Format 2: Wallet JSON format - {"customerId":"cust_abc123","offerId":"off_xyz456","timestamp":"..."}
-        console.log('📱 Processing Wallet JSON format')
-        const walletData = JSON.parse(result.data)
+        console.log('📱 Testing Wallet JSON format...')
+        const walletData = JSON.parse(cleanedData)
 
         if (walletData.customerId && walletData.offerId) {
           // Use customer ID directly (should be in cust_* format)
@@ -133,7 +182,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
           const hashData = `${secureOfferId}:${businessId}:loyalty-platform`
           offerHash = CryptoJS.MD5(hashData).toString().substring(0, 8) // Match backend 8-char limit
 
-          console.log('🔄 Converted wallet data:', {
+          console.log('✅ Wallet JSON format matched:', {
             originalCustomerId: walletData.customerId,
             extractedCustomerId: actualCustomerId,
             businessId,
@@ -147,44 +196,82 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
           throw new Error('Invalid Wallet QR format. Missing customerId or offerId.')
         }
 
-      } else if (/^[A-Za-z0-9+/=]+:[a-f0-9]{8}$/.test(result.data)) {
-        // Format 3: Enhanced Apple Wallet format - "base64EncodedToken:offerHash"
-        // Example: Y3VzdF8xOWEwNjc1YjlmMThkMzE1ODJjOmJpel84OTI3YjVjZDQxN2ZkNDc3YTkyNzE4MTJkNDoxNzYxMDQ0OTcxMDg4:d1399b5d
-        console.log('🍎 Processing Enhanced Apple Wallet QR format (Phase 1)')
+      } else if (/^(?!.*:)[A-Za-z0-9+/=]{80,150}$/.test(cleanedData)) {
+        // 🆕 FORMAT 3 (MOVED UP): Legacy Apple Wallet format (token-only, no offer hash)
+        // Example: Y3VzdF8xOWEwNjc1YjlmMThkMzE1ODJjOmJpel84OTI3YjVjZDQxN2ZkNDc3YTkyNzE4MTJkNDoxNzYxMDQ0OTcxMDg4 (101 chars)
+        // CRITICAL: Test this BEFORE enhanced format to avoid false negatives
+        console.log('🍎 Testing Legacy Apple Wallet format (token-only)...')
+        console.log('🔍 Legacy format check:', {
+          length: cleanedData.length,
+          hasColon: cleanedData.includes(':'),
+          preview: cleanedData.substring(0, 30) + '...'
+        })
+        
+        // Use full base64 token, no offer hash available
+        customerToken = cleanedData
+        offerHash = null
+        
+        console.log('✅ Legacy QR format matched:', {
+          customerToken: customerToken.substring(0, 20) + '...',
+          offerHash: 'auto-detect',
+          fullLength: cleanedData.length,
+          note: 'Will auto-select offer on backend'
+        })
 
-        const [encodedToken, providedOfferHash] = result.data.split(':')
+      } else if (/^[A-Za-z0-9+/=]+:[a-f0-9]{8}$/.test(cleanedData)) {
+        // Format 4: Enhanced Apple Wallet format - "base64EncodedToken:offerHash"
+        // Example: Y3VzdF8xOWEwNjc1YjlmMThkMzE1ODJjOmJpel84OTI3YjVjZDQxN2ZkNDc3YTkyNzE4MTJkNDoxNzYxMDQ0OTcxMDg4:d1399b5d
+        console.log('🍎 Testing Enhanced Apple Wallet format...')
+
+        const [encodedToken, providedOfferHash] = cleanedData.split(':')
 
         // The encodedToken is already in the format we need (customerToken)
         // Backend will decode it using CustomerService.decodeCustomerToken()
         customerToken = encodedToken
         offerHash = providedOfferHash
 
-        console.log('✅ Enhanced QR format parsed:', {
+        console.log('✅ Enhanced QR format matched:', {
           customerToken: customerToken.substring(0, 20) + '...',
           offerHash: offerHash,
-          fullLength: result.data.length
+          fullLength: cleanedData.length
         })
 
-      } else if (/^\d+$/.test(result.data)) {
-        // Format 4: Apple Wallet simple customer ID format - "4"
-        console.log('🍎 Processing Apple Wallet customer ID format')
-        customerToken = result.data
+      } else if (/^\d+$/.test(cleanedData)) {
+        // Format 5: Apple Wallet simple customer ID format - "4"
+        console.log('🍎 Testing Apple Wallet customer ID format...')
+        customerToken = cleanedData
         // Note: Apple Wallet QRs don't contain offer info, may need to prompt user
         console.warn('⚠️ Apple Wallet QR detected - offer ID unknown, may need user selection')
 
       } else {
-        throw new Error(`Unsupported QR format: ${result.data.substring(0, 50)}...`)
+        // 🆕 COMPREHENSIVE ERROR: Show all format tests that failed
+        const debugInfo = {
+          cleanedLength: cleanedData.length,
+          hasColon: cleanedData.includes(':'),
+          startsWithHttp: cleanedData.startsWith('http'),
+          startsWithBrace: cleanedData.startsWith('{'),
+          isDigitsOnly: /^\d+$/.test(cleanedData),
+          matchesLegacyPattern: /^(?!.*:)[A-Za-z0-9+/=]{80,150}$/.test(cleanedData),
+          matchesEnhancedPattern: /^[A-Za-z0-9+/=]+:[a-f0-9]{8}$/.test(cleanedData),
+          preview: cleanedData.substring(0, 50)
+        }
+        console.error('❌ No format matched. Tested formats:', debugInfo)
+        throw new Error(`Unsupported QR format. Tested: URL (no http), JSON (no {), Legacy (length=${cleanedData.length}, hasColon=${cleanedData.includes(':')}), Enhanced (no colon pattern), SimpleID (not digits). Preview: ${cleanedData.substring(0, 50)}...`)
       }
 
       if (customerToken) {
-        console.log('✅ Valid QR format detected:', { customerToken, offerHash, format: result.data.startsWith('http') ? 'URL' : result.data.startsWith('{') ? 'Google Wallet' : 'Apple Wallet' })
+        console.log('✅ Valid barcode format detected:', { 
+          customerToken, 
+          offerHash: offerHash || 'auto-detect', 
+          format: barcode.format 
+        })
 
         setScanStatus('success')
         playSuccessSound()
 
-        // Call success handler
+        // Call success handler with format parameter
         if (onScanSuccess) {
-          await onScanSuccess(customerToken, offerHash, result.data)
+          await onScanSuccess(customerToken, offerHash, barcode.rawValue, barcode.format)
         }
       } else {
         throw new Error('Could not extract customer information from QR code.')
@@ -201,7 +288,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
     }
   }, [detectedQR, lastScanTime, onScanSuccess, onScanError, playBeep, vibrate, playSuccessSound])
 
-  // Initialize QR Scanner
+  // Initialize Barcode Scanner
   useEffect(() => {
     if (!isActive || !videoRef.current) return
 
@@ -227,44 +314,94 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
           getUserMedia: !!navigator.mediaDevices?.getUserMedia
         })
 
-        // Create QR Scanner instance with fallback options
+        // Check BarcodeDetector support
+        const hasNativeSupport = 'BarcodeDetector' in window
+        console.log('📊 BarcodeDetector support:', hasNativeSupport ? 'Native' : 'Polyfill')
+
+        // Create BarcodeDetector instance (supports both QR and PDF417)
+        barcodeDetectorRef.current = new BarcodeDetector({ 
+          formats: ['qr_code', 'pdf417'] 
+        })
+        console.log('✅ BarcodeDetector initialized with formats: qr_code, pdf417')
+
+        // Setup camera stream
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        })
+        
+        videoRef.current.srcObject = stream
+        
+        // Wait for video to be ready before starting detection
+        await new Promise((resolve) => {
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play()
+            resolve()
+          }
+        })
+
+        // Check for flashlight support (defensive - don't break init if unavailable)
         try {
-          qrScannerRef.current = new QrScanner(
-            videoRef.current,
-            handleQRDetection,
-            {
-              highlightScanRegion: true,
-              highlightCodeOutline: true,
-              preferredCamera: 'environment', // Use back camera on mobile
-              maxScansPerSecond: 2, // Limit scan frequency
-              returnDetailedScanResult: true,
-            }
-          )
-        } catch (constructorError) {
-          console.warn('⚠️ QrScanner constructor failed, trying with basic options:', constructorError)
-          // Fallback with minimal options
-          qrScannerRef.current = new QrScanner(
-            videoRef.current,
-            handleQRDetection,
-            {
-              returnDetailedScanResult: true,
-            }
-          )
+          const videoTrack = stream.getVideoTracks()[0]
+          if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
+            const capabilities = videoTrack.getCapabilities()
+            setHasFlashlight(capabilities.torch === true)
+          } else {
+            setHasFlashlight(false)
+          }
+        } catch (error) {
+          console.log('Flashlight capability check not supported:', error)
+          setHasFlashlight(false)
         }
 
-        // Start scanning
-        await qrScannerRef.current.start()
         setScanStatus('ready')
+        isRunningRef.current = true
 
-        // Check for flashlight support after scanner starts
-        const hasFlash = await qrScannerRef.current.hasFlash()
-        setHasFlashlight(hasFlash)
+        // Start detection loop
+        const detectBarcodes = async () => {
+          if (!isRunningRef.current || !videoRef.current || !barcodeDetectorRef.current) return
 
-        console.log('📸 QR Scanner initialized and started')
+          try {
+            // Check if video is ready
+            if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+              // Get cross-browser compatible detection source
+              const detectionSource = await getDetectionSource(videoRef.current)
+              const barcodes = await barcodeDetectorRef.current.detect(detectionSource)
+              
+              // Filter for QR and PDF417 formats only
+              const validBarcodes = barcodes.filter(b => 
+                b.format === 'qr_code' || b.format === 'pdf417'
+              )
+
+              if (validBarcodes.length > 0) {
+                // Process first valid barcode
+                await handleBarcodeDetection(validBarcodes[0])
+              }
+            }
+          } catch (error) {
+            console.error('Detection error:', error)
+          }
+
+          // Schedule next frame (limit to ~2 scans per second)
+          if (isRunningRef.current) {
+            setTimeout(() => {
+              animationFrameRef.current = requestAnimationFrame(detectBarcodes)
+            }, 500)
+          }
+        }
+
+        // Start detection loop
+        detectBarcodes()
+
+        console.log('📸 Barcode Scanner initialized and started')
 
       } catch (error) {
         console.error('❌ Scanner initialization failed:', error)
-        setScanStatus('error')
+        
+        // Only set state if still mounted/active
+        if (isRunningRef.current) {
+          setScanStatus('error')
+          setErrorMessage(error.message)
+        }
 
         let errorMsg = 'Failed to start camera: ' + error.message
 
@@ -280,7 +417,9 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
           errorMsg = 'Camera access blocked by browser security. Please enable camera permissions.'
         }
 
-        setErrorMessage(errorMsg)
+        if (isRunningRef.current) {
+          setErrorMessage(errorMsg)
+        }
 
         if (onScanError) {
           onScanError(errorMsg)
@@ -292,25 +431,38 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
 
     // Cleanup function
     return () => {
-      if (qrScannerRef.current) {
-        qrScannerRef.current.stop()
-        qrScannerRef.current.destroy()
-        qrScannerRef.current = null
+      // Stop the detection loop
+      isRunningRef.current = false
+      
+      // Cancel pending animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+
+      // Stop video tracks
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks()
+        tracks.forEach(track => track.stop())
+        videoRef.current.srcObject = null
+      }
+
+      // Clear detector reference
+      if (barcodeDetectorRef.current) {
+        barcodeDetectorRef.current = null
       }
     }
-  }, [isActive, handleQRDetection, onScanError])
+  }, [isActive, handleBarcodeDetection, getDetectionSource, onScanError])
 
   // Flashlight toggle
   const toggleFlashlight = useCallback(async () => {
-    if (qrScannerRef.current && hasFlashlight) {
+    if (hasFlashlight && videoRef.current && videoRef.current.srcObject) {
       try {
-        if (flashlightOn) {
-          await qrScannerRef.current.turnFlashlightOff()
-          setFlashlightOn(false)
-        } else {
-          await qrScannerRef.current.turnFlashlightOn()
-          setFlashlightOn(true)
-        }
+        const videoTrack = videoRef.current.srcObject.getVideoTracks()[0]
+        await videoTrack.applyConstraints({
+          advanced: [{ torch: !flashlightOn }]
+        })
+        setFlashlightOn(!flashlightOn)
       } catch (error) {
         console.error('Flashlight toggle failed:', error)
       }
@@ -470,7 +622,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
 }
 
 EnhancedQRScanner.propTypes = {
-  onScanSuccess: PropTypes.func.isRequired,
+  onScanSuccess: PropTypes.func.isRequired, // (customerToken, offerHash, rawData, format) - format is 'qr_code' or 'pdf_417'
   onScanError: PropTypes.func, // Expects a string message
   onClose: PropTypes.func,
   isActive: PropTypes.bool.isRequired

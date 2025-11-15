@@ -32,7 +32,7 @@ class ReceiptService {
    */
   static async generateReceiptContent(saleId, options = {}) {
     try {
-      logger.info('Generating receipt content', { saleId })
+      logger.debug('Generating receipt content', { saleId })
 
       // Extract transaction from options
       const { transaction } = options
@@ -133,7 +133,7 @@ class ReceiptService {
         } : null
       }
 
-      logger.info('Receipt content generated successfully', { 
+      logger.debug('Receipt content generated successfully', { 
         saleId, 
         itemCount: receiptContent.items.length,
         hasLoyaltyQR: !!loyaltyData
@@ -167,7 +167,7 @@ class ReceiptService {
       })
 
       if (!offer) {
-        logger.info('No active offers found for loyalty QR', { businessId })
+        logger.debug('No active offers found for loyalty QR', { businessId })
         return null
       }
 
@@ -211,7 +211,7 @@ class ReceiptService {
    */
   static async generatePDFReceipt(saleId, format = 'a4') {
     try {
-      logger.info('Generating PDF receipt', { saleId, format })
+      logger.debug('Generating PDF receipt', { saleId, format })
 
       // Get receipt content
       const receipt = await this.generateReceiptContent(saleId)

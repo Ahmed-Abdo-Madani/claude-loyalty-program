@@ -960,17 +960,17 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
   try {
     const { branchId, branch } = req
     const businessId = branch.business_id
-    const { customerToken, offerHash } = req.body
+    let { customerToken, offerHash } = req.body
     
-    // Validate required fields
-    if (!customerToken || !offerHash) {
+    // Validate required fields (offerHash may be null for legacy QRs)
+    if (!customerToken) {
       return res.status(400).json({
         success: false,
-        error: 'Customer token and offer hash are required'
+        error: 'Customer token is required'
       })
     }
     
-    logger.info('POS loyalty validation attempt:', { branchId, businessId })
+    logger.debug('POS loyalty validation attempt:', { branchId, businessId })
     
     // 1. Decode customer token
     const tokenData = CustomerService.decodeCustomerToken(customerToken)
@@ -996,14 +996,29 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
       })
     }
     
-    // 3. Find offer by hash
-    const offer = await CustomerService.findOfferByHash(offerHash, businessId)
-    if (!offer) {
-      logger.warn('Offer not found by hash in POS loyalty validation:', { offerHash })
-      return res.status(404).json({
-        success: false,
-        error: 'Offer not found'
-      })
+    // 3. Find offer by hash (or auto-detect for legacy QRs)
+    let offer
+    if (offerHash === null || offerHash === undefined) {
+      // Legacy token-only format: Auto-detect offer
+      logger.info('POS loyalty validation - Legacy QR detected, auto-selecting offer')
+      offer = await CustomerService.findOfferForBusiness(businessId)
+      if (!offer) {
+        logger.warn('Cannot auto-select offer for legacy QR in POS')
+        return res.status(400).json({
+          success: false,
+          error: 'This pass needs to be regenerated. Please contact support or regenerate your loyalty pass.'
+        })
+      }
+      logger.info(`Auto-selected offer for legacy QR in POS: ${offer.public_id}`)
+    } else {
+      offer = await CustomerService.findOfferByHash(offerHash, businessId)
+      if (!offer) {
+        logger.warn('Offer not found by hash in POS loyalty validation:', { offerHash })
+        return res.status(404).json({
+          success: false,
+          error: 'Offer not found'
+        })
+      }
     }
     
     // 4. Find or create customer progress
@@ -1030,7 +1045,7 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
     // 7. Check if reward can be redeemed
     const canRedeemReward = progress.is_completed === true
     
-    logger.info('POS loyalty validation successful:', {
+    logger.debug('POS loyalty validation successful:', {
       customerId,
       offerId: offer.public_id,
       currentStamps: progress.current_stamps,
