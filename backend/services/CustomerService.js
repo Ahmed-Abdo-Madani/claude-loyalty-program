@@ -166,7 +166,22 @@ class CustomerService {
       throw new Error('Customer progress not found')
     }
 
+    // Track if progress was completed before adding stamp
+    const wasCompleted = progress.is_completed
     await progress.addStamp(stampsToAdd)
+    const justCompleted = !wasCompleted && progress.is_completed
+
+    // 🎉 AUTO-CLAIM REWARD: If progress just completed, automatically claim and reset
+    if (justCompleted) {
+      console.log('🎊 Progress just completed! Auto-claiming reward and resetting cycle...')
+      await progress.claimReward(null, 'Auto-claimed via scan')
+      console.log('✅ Reward claimed, cycle reset:', {
+        rewardsClaimed: progress.rewards_claimed,
+        currentStamps: progress.current_stamps,
+        isCompleted: progress.is_completed
+      })
+    }
+
     return progress
   }
 
