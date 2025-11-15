@@ -37,7 +37,7 @@ export default defineConfig({
           'vendor-utils': ['axios', 'crypto-js', 'date-fns'],
 
           // QR functionality - only needed on specific pages
-          'qr-features': ['qrcode', 'qr-scanner'],
+          'qr-features': ['qrcode', 'barcode-detector'],
         },
         // Optimize chunk naming for better caching
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -48,8 +48,8 @@ export default defineConfig({
   },
   // Optimize dependency pre-bundling
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'qrcode'], // Include qrcode for CommonJS → ESM conversion
-    exclude: ['qr-scanner'] // Exclude qr-scanner only
+    include: ['react', 'react-dom', 'react-router-dom', 'qrcode', 'barcode-detector'], // Include for CommonJS → ESM conversion
+    exclude: [] // No exclusions needed
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
