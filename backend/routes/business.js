@@ -4443,7 +4443,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
     const { Counter } = await import('../models/index.js')
     
     const year = new Date().getFullYear()
-    const invoiceNumber = await Counter.getNextSequence('invoice', year)
+    const invoiceNumber = await Counter.getNextValue('invoice', year, { transaction })
     
     const invoice = await Invoice.create({
       business_id: businessId,
