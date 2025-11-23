@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import OffersTab from '../components/OffersTab'
@@ -17,6 +17,10 @@ import OperationalGlimpse from '../components/OperationalGlimpse'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
+
+const SubscriptionPlansPage = lazy(() => import('./SubscriptionPlansPage'))
+const SubscriptionManagementPage = lazy(() => import('./SubscriptionManagementPage'))
+const PaymentHistoryPage = lazy(() => import('./PaymentHistoryPage'))
 
 function Dashboard() {
   const { t } = useTranslation('dashboard')
@@ -52,6 +56,14 @@ function Dashboard() {
 
     // Get user info from secure auth data
     const authData = getAuthData()
+    
+    // Comment 2: Redirect suspended businesses to suspended account page
+    if (authData.businessStatus === 'suspended') {
+      console.warn('🚫 Business is suspended - redirecting to suspended page')
+      navigate('/subscription/suspended')
+      return
+    }
+    
     setUser({
       businessName: authData.businessName,
       userEmail: authData.userEmail,
@@ -183,7 +195,10 @@ function Dashboard() {
                   { id: 'products', label: t('tabs.products'), icon: '🛍️' },
                   { id: 'customers', label: t('tabs.customers'), icon: '👥' },
                   { id: 'wallet', label: t('tabs.mobileWallets'), icon: '📱' },
-                  { id: 'analytics', label: t('tabs.analytics'), icon: '📈' }
+                  { id: 'analytics', label: t('tabs.analytics'), icon: '📈' },
+                  { id: 'subscription', label: t('tabs.subscription'), icon: '💳' },
+                  { id: 'subscription-manage', label: t('tabs.subscriptionManage'), icon: '⚙️' },
+                  { id: 'payment-history', label: t('tabs.paymentHistory'), icon: '💳' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -260,6 +275,24 @@ function Dashboard() {
 
               {activeTab === 'analytics' && (
                 <POSAnalytics />
+              )}
+
+              {activeTab === 'subscription' && (
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
+                  <SubscriptionPlansPage />
+                </Suspense>
+              )}
+
+              {activeTab === 'subscription-manage' && (
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
+                  <SubscriptionManagementPage />
+                </Suspense>
+              )}
+
+              {activeTab === 'payment-history' && (
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
+                  <PaymentHistoryPage />
+                </Suspense>
               )}
             </div>
           </div>

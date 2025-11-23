@@ -22,11 +22,13 @@ import branchManagerRoutes from './routes/branchManager.js'
 import autoEngagementRoutes from './routes/autoEngagement.js'
 import posRoutes from './routes/pos.js'
 import receiptsRoutes from './routes/receipts.js'
+import webhookRoutes from './routes/webhooks.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
 import StampImageGenerator from './services/StampImageGenerator.js'
 import AutoEngagementService from './services/AutoEngagementService.js'
+import SubscriptionService from './services/SubscriptionService.js'
 import { extractLanguage, getLocalizedMessage } from './middleware/languageMiddleware.js'
 import AutoMigrationRunner from './services/AutoMigrationRunner.js'
 
@@ -151,6 +153,11 @@ app.use(cors({
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }))
+
+// Webhook routes require raw body for signature verification
+// Must be registered BEFORE express.json() middleware for /api/webhooks path
+app.use('/api/webhooks', express.raw({ type: 'application/json', limit: '1mb' }))
+
 app.use(express.json({ limit: '10mb' }))
 app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' }))
 
@@ -293,6 +300,7 @@ if (!process.env.UPLOADS_DIR && process.env.NODE_ENV === 'production') {
 app.use('/api/wallet', walletRoutes)
 app.use('/api/passes', passRoutes)
 app.use('/api/apple', appleWebServiceRoutes) // Apple Web Service Protocol (routes have /v1 prefix)
+app.use('/api/webhooks', webhookRoutes) // Moyasar webhook callbacks (signature verification, no auth)
 app.use('/api/admin', adminRoutes)
 app.use('/api/business', businessRoutes)
 app.use('/api/customers', customerRoutes)
@@ -717,6 +725,27 @@ async function initializeDatabase() {
         logger.info('⏰ Auto-engagement cron job initialized (daily at 9:00 AM UTC)');
       } else {
         logger.info('⏸️ Auto-engagement cron job disabled (DISABLE_AUTO_ENGAGEMENT=true)');
+      }
+
+      // Initialize recurring billing cron job
+      if (process.env.DISABLE_RECURRING_BILLING !== 'true') {
+        // Run daily at 2:00 AM UTC
+        cron.schedule('0 2 * * *', async () => {
+          logger.info('💳 Running scheduled recurring billing check...');
+          try {
+            const stats = await SubscriptionService.processRecurringPayments();
+            logger.info('✅ Scheduled recurring billing check completed', stats);
+          } catch (error) {
+            logger.error('❌ Scheduled recurring billing check failed', {
+              error: error.message,
+              stack: error.stack
+            });
+          }
+        });
+
+        logger.info('⏰ Recurring billing cron job initialized (daily at 2:00 AM UTC)');
+      } else {
+        logger.info('⏸️ Recurring billing cron job disabled (DISABLE_RECURRING_BILLING=true)');
       }
     })
 

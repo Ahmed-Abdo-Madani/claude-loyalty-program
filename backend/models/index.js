@@ -24,6 +24,11 @@ import Counter from './Counter.js'
 import Sale from './Sale.js'
 import SaleItem from './SaleItem.js'
 import Receipt from './Receipt.js'
+// Subscription and Payment Models
+import Subscription from './Subscription.js'
+import Payment from './Payment.js'
+import Invoice from './Invoice.js'
+import WebhookLog from './WebhookLog.js'
 
 const AutoEngagementConfig = AutoEngagementConfigModel(sequelize)
 
@@ -439,6 +444,98 @@ Receipt.belongsTo(Sale, {
   as: 'sale'
 })
 
+// Subscription and Payment Associations
+Business.hasMany(Subscription, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'subscriptions',
+  onDelete: 'CASCADE'
+})
+
+Subscription.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+Business.hasMany(Payment, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'payments',
+  onDelete: 'CASCADE'
+})
+
+Payment.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+Subscription.hasMany(Payment, {
+  foreignKey: 'subscription_id',
+  sourceKey: 'public_id',
+  as: 'payments',
+  onDelete: 'SET NULL'
+})
+
+Payment.belongsTo(Subscription, {
+  foreignKey: 'subscription_id',
+  targetKey: 'public_id',
+  as: 'subscription'
+})
+
+Business.hasMany(Invoice, {
+  foreignKey: 'business_id',
+  sourceKey: 'public_id',
+  as: 'invoices',
+  onDelete: 'CASCADE'
+})
+
+Invoice.belongsTo(Business, {
+  foreignKey: 'business_id',
+  targetKey: 'public_id',
+  as: 'business'
+})
+
+Payment.hasOne(Invoice, {
+  foreignKey: 'payment_id',
+  sourceKey: 'public_id',
+  as: 'invoice',
+  onDelete: 'SET NULL'
+})
+
+Invoice.belongsTo(Payment, {
+  foreignKey: 'payment_id',
+  targetKey: 'public_id',
+  as: 'payment'
+})
+
+Subscription.hasMany(Invoice, {
+  foreignKey: 'subscription_id',
+  sourceKey: 'public_id',
+  as: 'invoices',
+  onDelete: 'SET NULL'
+})
+
+Invoice.belongsTo(Subscription, {
+  foreignKey: 'subscription_id',
+  targetKey: 'public_id',
+  as: 'subscription'
+})
+
+// WebhookLog Associations
+WebhookLog.belongsTo(Payment, {
+  foreignKey: 'payment_id',
+  targetKey: 'public_id',
+  as: 'payment'
+})
+
+Payment.hasMany(WebhookLog, {
+  foreignKey: 'payment_id',
+  sourceKey: 'public_id',
+  as: 'webhookLogs'
+})
+
 // Export models and sequelize instance
 export {
   sequelize,
@@ -462,7 +559,11 @@ export {
   Sale,
   SaleItem,
   Receipt,
-  Counter
+  Counter,
+  Subscription,
+  Payment,
+  Invoice,
+  WebhookLog
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -589,6 +690,11 @@ export default {
   Sale,
   SaleItem,
   Receipt,
+  Counter,
+  Subscription,
+  Payment,
+  Invoice,
+  WebhookLog,
   syncDatabase,
   seedDatabase
 }

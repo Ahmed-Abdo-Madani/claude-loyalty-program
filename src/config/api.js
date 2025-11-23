@@ -177,7 +177,22 @@ export const endpoints = {
 
   // Analytics Helper Functions
   getOfferAnalytics: (offerId) => `${API_BASE_URL}/api/business/my/offers/${offerId}/analytics`,
-  getBranchAnalytics: (branchId) => `${API_BASE_URL}/api/business/my/branches/${branchId}/analytics`
+  getBranchAnalytics: (branchId) => `${API_BASE_URL}/api/business/my/branches/${branchId}/analytics`,
+
+  // Subscription management endpoints for plan changes and billing
+  subscriptionCheckout: `${API_BASE_URL}/api/business/subscription/checkout`,
+  subscriptionPaymentCallback: `${API_BASE_URL}/api/business/subscription/payment-callback`,
+  subscriptionReactivate: `${API_BASE_URL}/api/business/subscription/reactivate`,
+  subscriptionStatus: `${API_BASE_URL}/api/business/subscription/status`,
+  subscriptionDetails: `${API_BASE_URL}/api/business/subscription/details`,
+  subscriptionUpgrade: `${API_BASE_URL}/api/business/subscription/upgrade`,
+  subscriptionDowngrade: `${API_BASE_URL}/api/business/subscription/downgrade`,
+  subscriptionCancel: `${API_BASE_URL}/api/business/subscription/cancel`,
+  subscriptionPaymentMethod: `${API_BASE_URL}/api/business/subscription/payment-method`,
+
+  // Payment History & Invoice Management
+  businessPayments: `${API_BASE_URL}/api/business/payments`,
+  businessInvoices: (invoiceId) => `${API_BASE_URL}/api/business/invoices/${invoiceId}`
 }
 
 // Secure API helper functions

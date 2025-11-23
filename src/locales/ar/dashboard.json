@@ -18,6 +18,9 @@
     "customers": "العملاء",
     "mobileWallets": "المحافظ الرقمية",
     "analytics": "التحليلات",
+    "subscription": "الاشتراك",
+    "subscriptionManage": "إدارة الاشتراك",
+    "paymentHistory": "سجل المدفوعات",
     "comingSoon": "قريباً"
   },
   "header": {
@@ -35,6 +38,8 @@
     "customers": "العملاء",
     "mobileWallets": "المحافظ الرقمية",
     "analytics": "التحليلات",
+    "subscription": "الاشتراك",
+    "subscriptionManage": "إدارة الاشتراك",
     "lightMode": "الوضع الفاتح",
     "darkMode": "الوضع الداكن",
     "signOut": "تسجيل الخروج"
@@ -955,6 +960,12 @@
     "customerGrowth": "نمو العملاء",
     "revenueImpact": "تأثير الإيرادات",
     "exportReport": "تصدير التقرير"
+  },
+  "subscription": {
+    "title": "الاشتراك",
+    "viewPlans": "عرض الخطط",
+    "managePlan": "إدارة الاشتراك",
+    "currentPlan": "الخطة الحالية"
   },
   "settings": {
     "title": "الإعدادات",

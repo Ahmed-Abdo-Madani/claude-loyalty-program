@@ -111,6 +111,46 @@ class SecureIDGenerator {
   }
 
   /**
+   * Generate a secure subscription ID
+   * @returns {string} Subscription ID in format: sub_[20chars]
+   */
+  static generateSubscriptionID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `sub_${randomString}`
+  }
+
+  /**
+   * Generate a secure payment ID
+   * @returns {string} Payment ID in format: pay_[20chars]
+   */
+  static generatePaymentID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `pay_${randomString}`
+  }
+
+  /**
+   * Generate a secure invoice ID
+   * @returns {string} Invoice ID in format: inv_[20chars]
+   */
+  static generateInvoiceID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `inv_${randomString}`
+  }
+
+  /**
+   * Generate a secure webhook log ID
+   * @returns {string} Webhook log ID in format: whl_[16chars]
+   */
+  static generateWebhookLogID() {
+    const randomBytes = crypto.randomBytes(10)
+    const randomString = randomBytes.toString('hex').substring(0, 16)
+    return `whl_${randomString}`
+  }
+
+  /**
    * Validate if an ID follows secure format
    * @param {string} id - The ID to validate
    * @param {string} type - The expected type (business, offer, customer, branch, product, category, sale)
@@ -129,7 +169,11 @@ class SecureIDGenerator {
       auto_engagement_config: /^aec_[a-f0-9]{20}$/,
       product: /^prod_[a-f0-9]{20}$/,
       category: /^cat_[a-f0-9]{20}$/,
-      sale: /^sale_[a-f0-9]{20}$/
+      sale: /^sale_[a-f0-9]{20}$/,
+      subscription: /^sub_[a-f0-9]{20}$/,
+      payment: /^pay_[a-f0-9]{20}$/,
+      invoice: /^inv_[a-f0-9]{20}$/,
+      webhook_log: /^whl_[a-f0-9]{16}$/
     };
 
     return patterns[type]?.test(id) || false
@@ -153,6 +197,10 @@ class SecureIDGenerator {
     if (id.startsWith('prod_')) return 'product'
     if (id.startsWith('cat_')) return 'category'
     if (id.startsWith('sale_')) return 'sale'
+    if (id.startsWith('sub_')) return 'subscription'
+    if (id.startsWith('pay_')) return 'payment'
+    if (id.startsWith('inv_')) return 'invoice'
+    if (id.startsWith('whl_')) return 'webhook_log'
 
     return null
   }
@@ -174,12 +222,16 @@ class SecureIDGenerator {
       auto_engagement_config: this.generateAutoEngagementConfigID,
       product: this.generateProductID,
       category: this.generateCategoryID,
-      sale: this.generateSaleID
+      sale: this.generateSaleID,
+      subscription: this.generateSubscriptionID,
+      payment: this.generatePaymentID,
+      invoice: this.generateInvoiceID,
+      webhook_log: this.generateWebhookLogID
     };
 
     const generator = generators[type]
     if (!generator) {
-      throw new Error(`Invalid type: ${type}. Must be one of: business, offer, customer, branch, campaign, segment, product, category, sale`)
+      throw new Error(`Invalid type: ${type}. Must be one of: business, offer, customer, branch, campaign, segment, product, category, sale, subscription, payment, invoice, webhook_log`)
     }
 
     const ids = new Set()
@@ -205,6 +257,10 @@ export const {
   generateProductID,
   generateCategoryID,
   generateSaleID,
+  generateSubscriptionID,
+  generatePaymentID,
+  generateInvoiceID,
+  generateWebhookLogID,
   validateSecureID,
   getIDType,
   generateBatch

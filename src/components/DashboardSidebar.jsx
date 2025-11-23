@@ -14,7 +14,9 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
     { id: 'branches', label: t('sidebar.branches'), icon: '📍' },
     { id: 'customers', label: t('sidebar.customers'), icon: '👥', disabled: true, comingSoon: true },
     { id: 'wallet', label: t('sidebar.mobileWallets'), icon: '💳' },
-    { id: 'analytics', label: t('sidebar.analytics'), icon: '📊' }
+    { id: 'analytics', label: t('sidebar.analytics'), icon: '📊' },
+    { id: 'subscription', label: t('sidebar.subscription'), icon: '💳' },
+    { id: 'subscription-manage', label: t('sidebar.subscriptionManage'), icon: '⚙️' }
   ]
 
   const handleTabClick = (tabId) => {

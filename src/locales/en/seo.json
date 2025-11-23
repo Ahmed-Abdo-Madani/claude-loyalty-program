@@ -59,6 +59,20 @@
     "admin": {
       "title": "Admin Dashboard",
       "description": "Platform admin dashboard for managing businesses, users, and analytics."
+    },
+    "paymentCallback": {
+      "verifying": {
+        "title": "Verifying Payment",
+        "description": "Please wait while we verify your payment transaction."
+      },
+      "success": {
+        "title": "Payment Successful",
+        "description": "Your subscription payment has been processed successfully."
+      },
+      "failure": {
+        "title": "Payment Failed",
+        "description": "We could not process your payment. Please try again or contact support."
+      }
     }
   }
 }

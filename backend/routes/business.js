@@ -1,12 +1,19 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
 import logger from '../config/logger.js'
+import sequelize from '../config/database.js'
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
-import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession } from '../models/index.js'
+import SubscriptionService from '../services/SubscriptionService.js'
+import MoyasarService from '../services/MoyasarService.js'
+import InvoiceService from '../services/InvoiceService.js'
+import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice } from '../models/index.js'
+import { Op } from 'sequelize'
+import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
@@ -928,8 +935,26 @@ router.post('/customers', (req, res) => {
   }
 })
 
-// Customer signup endpoint - creates customer and customer_progress in database
-router.post('/customers/signup', async (req, res) => {
+// ===============================
+// CUSTOMER SIGNUP ENDPOINT (PUBLIC)
+// ===============================
+// This endpoint is INTENTIONALLY PUBLIC to allow customers to sign up for loyalty programs
+// via QR codes without requiring business authentication.
+// 
+// Security considerations:
+// - Business ID is derived from the offer (validated to exist)
+// - Subscription limit checking prevents quota exhaustion
+// - Rate limiting should be implemented at infrastructure level (nginx, cloudflare, etc.)
+// - Consider adding CAPTCHA for production to prevent automated abuse
+// 
+// Access control flow:
+// 1. Offer existence validated (prevents invalid business IDs)
+// 2. checkSubscriptionLimit derives business_id from offer and checks customer quota
+// 3. CustomerService handles duplicate detection and data validation
+// 
+// TODO: Add rate limiting (e.g., max 10 signups per IP per minute)
+// TODO: Consider CAPTCHA integration for production deployment
+router.post('/customers/signup', checkSubscriptionLimit('customers'), async (req, res) => {
   try {
     const { customerData, offerId } = req.body
 
@@ -1052,9 +1077,11 @@ router.post('/customers/signup', async (req, res) => {
 // ===============================
 // AUTHENTICATION MIDDLEWARE
 // ===============================
+// Note: checkTrialExpiration and checkSubscriptionLimit are imported from hybridBusinessAuth.js
+// They are centralized there to avoid duplication
 
-// Middleware to verify business session - SECURE VERSION
-const requireBusinessAuth = async (req, res, next) => {
+// Legacy local requireBusinessAuth kept for routes that haven't migrated to hybridBusinessAuth import
+const requireBusinessAuthLocal = async (req, res, next) => {
   try {
     const sessionToken = req.headers['x-session-token']
     const businessId = req.headers['x-business-id'] // Now expects secure ID (biz_*)
@@ -1077,6 +1104,7 @@ const requireBusinessAuth = async (req, res, next) => {
     }
 
     req.business = business
+    req.businessId = business.public_id
     next()
   } catch (error) {
     console.error('Auth middleware error:', error)
@@ -1092,7 +1120,7 @@ const requireBusinessAuth = async (req, res, next) => {
 // ===============================
 
 // Get business-specific offers - SECURE VERSION
-router.get('/my/offers', requireBusinessAuth, async (req, res) => {
+router.get('/my/offers', requireBusinessAuthLocal, async (req, res) => {
   try {
     // Get offers associated with this business using secure public_id
     const businessOffers = await Offer.findAll({
@@ -1135,6 +1163,30 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
       success: false,
       message: getLocalizedMessage('server.failedToGetBranches', req.locale),
       error: error.message
+    })
+  }
+})
+
+// Get current business status - SECURE VERSION (Comment 3)
+router.get('/my/status', requireBusinessAuth, async (req, res) => {
+  try {
+    const business = req.business
+
+    res.json({
+      success: true,
+      data: {
+        status: business.status,
+        subscription_status: business.subscription_status,
+        suspension_reason: business.suspension_reason,
+        suspension_date: business.suspension_date,
+        current_plan: business.current_plan
+      }
+    })
+  } catch (error) {
+    console.error('Get business status error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get business status'
     })
   }
 })
@@ -1242,7 +1294,7 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
 // ===============================
 
 // Create business offer - SECURE VERSION
-router.post('/my/offers', requireBusinessAuth, async (req, res) => {
+router.post('/my/offers', requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit('offers'), async (req, res) => {
   try {
     // Validate loyalty_tiers if provided
     if (req.body.loyalty_tiers !== undefined && req.body.loyalty_tiers !== null) {
@@ -1608,7 +1660,7 @@ router.get('/my/offers/:offerId/analytics', requireBusinessAuth, async (req, res
 })
 
 // Create business branch - SECURE VERSION
-router.post('/my/branches', requireBusinessAuth, async (req, res) => {
+router.post('/my/branches', requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit('locations'), async (req, res) => {
   try {
     // Handle street_name alias (frontend may send 'street_name' instead of 'address')
     const branchData = { ...req.body }
@@ -2228,13 +2280,11 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // Check if business is approved/active
-    if (business.status !== 'active') {
+    // Check if business is approved/active (allow suspended to login for reactivation flow)
+    if (business.status === 'pending') {
       return res.status(401).json({
         success: false,
-        message: business.status === 'pending'
-          ? getLocalizedMessage('auth.accountPendingApproval', req.locale)
-          : getLocalizedMessage('auth.accountSuspended', req.locale)
+        message: getLocalizedMessage('auth.accountPendingApproval', req.locale)
       })
     }
 
@@ -2265,6 +2315,45 @@ router.post('/login', async (req, res) => {
     // Update last activity
     await business.update({ last_activity_at: new Date() })
 
+    // Fetch subscription status
+    let subscriptionData = null
+    try {
+      const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(business.public_id)
+      
+      // Calculate trial days remaining
+      let trialDaysRemaining = null
+      if (business.trial_ends_at) {
+        const now = new Date()
+        const trialEnd = new Date(business.trial_ends_at)
+        trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)))
+      }
+      
+      // Comment 1 & 4: Include complete subscription metadata with retry/grace fields
+      subscriptionData = {
+        current_plan: subscriptionStatus.current_plan,
+        subscription_status: subscriptionStatus.subscription_status,
+        trial_ends_at: business.trial_ends_at,
+        trial_days_remaining: trialDaysRemaining,
+        limits: subscriptionStatus.limits,
+        usage: subscriptionStatus.usage,
+        features: subscriptionStatus.features,
+        retry_count: subscriptionStatus.retry_count,
+        grace_period_end: subscriptionStatus.grace_period_end,
+        next_retry_date: subscriptionStatus.next_retry_date
+      }
+      
+      logger.debug('Subscription data included in login', {
+        business_id: business.public_id,
+        plan: subscriptionStatus.current_plan
+      })
+    } catch (subscriptionError) {
+      logger.error('Failed to fetch subscription status', {
+        business_id: business.public_id,
+        error: subscriptionError.message
+      })
+      // Continue with login even if subscription fetch fails
+    }
+
     // Return business info (excluding password_hash) with SECURE public_id
     const businessObj = business.toJSON()
     const { password_hash: _, ...businessData } = businessObj
@@ -2282,7 +2371,13 @@ router.post('/login', async (req, res) => {
           owner_name_ar: businessData.owner_name_ar
         },
         session_token: sessionToken,
-        business_id: business.public_id // Return secure ID for frontend use
+        business_id: business.public_id, // Return secure ID for frontend use
+        subscription: subscriptionData,
+        // Include status fields for suspended account detection
+        status: business.status,
+        subscription_status: business.subscription_status,
+        suspension_reason: business.suspension_reason,
+        suspension_date: business.suspension_date
       }
     })
 
@@ -2338,6 +2433,7 @@ router.post('/register', async (req, res) => {
     const hashedPassword = bcrypt.hashSync(tempPassword, 10)
 
     // Create business using PostgreSQL with location data
+    // Note: subscription_status, trial_ends_at, and current_plan are set by SubscriptionService.initializeTrialPeriod
     const newBusiness = await Business.create({
       ...businessData,
       // Handle location metadata if provided
@@ -2362,6 +2458,28 @@ router.post('/register', async (req, res) => {
 
     // Update business total_branches count
     await newBusiness.update({ total_branches: 1 })
+
+    // Initialize trial period and create Subscription record
+    // This sets subscription_status, trial_ends_at, and current_plan on the Business record
+    try {
+      await SubscriptionService.initializeTrialPeriod(newBusiness.public_id, 7)
+      
+      // Reload business to get updated subscription fields
+      await newBusiness.reload()
+      
+      logger.info('Trial period activated', {
+        business_id: newBusiness.public_id,
+        trial_ends_at: newBusiness.trial_ends_at,
+        subscription_status: newBusiness.subscription_status,
+        current_plan: newBusiness.current_plan
+      })
+    } catch (subscriptionError) {
+      logger.error('Failed to initialize trial period', {
+        business_id: newBusiness.public_id,
+        error: subscriptionError.message
+      })
+      // Don't fail registration if subscription initialization fails
+    }
 
     // Remove password_hash from response for security
     const businessObj = newBusiness.toJSON()
@@ -3492,6 +3610,1653 @@ router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessA
     res.status(500).json({
       success: false,
       message: 'Failed to create wallet object',
+      error: error.message
+    })
+  }
+})
+
+// ===============================
+// SUBSCRIPTION CHECKOUT ROUTES
+// ===============================
+
+/**
+ * POST /api/business/subscription/checkout
+ * Initiate subscription payment checkout session
+ */
+router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
+  try {
+    const { planType, locationCount = 1 } = req.body
+    const businessId = req.businessId
+
+    logger.info('Subscription checkout initiated', { businessId, planType, locationCount })
+
+    // Validate plan type
+    const validPlans = ['free', 'professional', 'enterprise']
+    if (!planType || !validPlans.includes(planType.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidPlanType', req.locale)
+      })
+    }
+
+    // Validate Moyasar configuration (comprehensive check)
+    if (!process.env.MOYASAR_PUBLISHABLE_KEY || !process.env.MOYASAR_SECRET_KEY) {
+      logger.error('Moyasar configuration incomplete', {
+        hasPublishableKey: !!process.env.MOYASAR_PUBLISHABLE_KEY,
+        hasSecretKey: !!process.env.MOYASAR_SECRET_KEY
+      })
+      return res.status(500).json({
+        success: false,
+        message: getLocalizedMessage('server.paymentConfigError', req.locale)
+      })
+    }
+
+    // Validate publishable key format using MoyasarService helper
+    const publishableKey = process.env.MOYASAR_PUBLISHABLE_KEY
+    const { valid, environment } = MoyasarService.validatePublishableKey(publishableKey)
+    
+    if (!valid) {
+      logger.error('Invalid publishable key format', {
+        keyPrefix: publishableKey.substring(0, 15) + '...'
+      })
+      return res.status(500).json({
+        success: false,
+        message: getLocalizedMessage('server.invalidPublishableKeyFormat', req.locale)
+      })
+    }
+
+    // Warn if using test key in production
+    if (process.env.NODE_ENV === 'production' && environment === 'test') {
+      logger.warn('Using test payment key in production environment', {
+        businessId,
+        keyPrefix: publishableKey.substring(0, 15) + '...',
+        environment
+      })
+    }
+
+    // Calculate plan price
+    const amount = SubscriptionService.calculatePlanPrice(planType, locationCount)
+    
+    // Validate calculated amount
+    if (amount < 1 || amount > 100000) {
+      logger.error('Invalid subscription amount', { planType, locationCount, amount })
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('server.invalidSubscriptionAmount', req.locale)
+      })
+    }
+
+    // Generate checkout session ID
+    const sessionId = crypto.randomUUID()
+
+    // Construct and validate callback URL
+    const callbackUrl = process.env.MOYASAR_CALLBACK_URL || 
+                       `${process.env.FRONTEND_URL}/subscription/payment-callback`
+    
+    if (!callbackUrl.startsWith('http')) {
+      logger.error('Invalid callback URL', { callbackUrl })
+      return res.status(500).json({
+        success: false,
+        message: 'Payment callback URL not configured'
+      })
+    }
+    
+    logger.debug('Checkout callback URL', { callbackUrl })
+
+    // Create pending Payment record
+    const payment = await Payment.create({
+      business_id: businessId,
+      amount,
+      currency: 'SAR',
+      status: 'pending',
+      payment_method: 'card',
+      metadata: {
+        gateway: 'moyasar',
+        plan_type: planType,
+        location_count: locationCount,
+        session_id: sessionId,
+        callback_url: callbackUrl
+      }
+    })
+
+    // Fetch business name for payment description
+    const business = await Business.findOne({
+      where: { public_id: businessId },
+      attributes: ['business_name']
+    })
+
+    logger.info('Checkout session created', {
+      businessId,
+      planType,
+      amount,
+      paymentId: payment.public_id,
+      sessionId
+    })
+
+    // Prepare response data
+    const responseData = {
+      success: true,
+      amount,
+      currency: 'SAR',
+      description: `Subscription to ${planType} Plan`,
+      publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY,
+      callbackUrl,
+      sessionId,
+      businessId,
+      paymentId: payment.public_id,
+      businessName: business?.business_name || 'Business'
+    }
+    
+    // Log response (mask sensitive data)
+    logger.debug('Checkout session response', {
+      ...responseData,
+      publishableKey: responseData.publishableKey.substring(0, 15) + '...', // Mask key in logs
+      keyFormat: 'valid'
+    })
+
+    // Return checkout session data
+    res.json(responseData)
+
+  } catch (error) {
+    logger.error('Failed to initialize checkout', {
+      businessId: req.businessId,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.checkoutFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/business/subscription/payment-callback
+ * Verify payment and activate subscription after Moyasar redirect
+ * FLOW: Fetch Moyasar payment → Extract session ID → Link payment record → Verify
+ */
+router.post('/subscription/payment-callback', requireBusinessAuth, async (req, res) => {
+  const startTime = Date.now()
+  
+  try {
+    const { moyasarPaymentId, status, message } = req.body
+    const businessId = req.businessId
+
+    logger.info('Payment callback received', { 
+      businessId, 
+      moyasarPaymentId, 
+      status,
+      message,
+      requestBody: req.body
+    })
+    
+    logger.debug('Callback headers', {
+      authorization: req.headers.authorization ? 'present' : 'missing',
+      businessId: req.headers['x-business-id']
+    })
+
+    // Validate payment ID
+    if (!moyasarPaymentId) {
+      logger.warn('Payment ID missing in callback', {
+        businessId,
+        status,
+        message,
+        possibleCause: 'Payment may not have been initiated or redirect failed'
+      })
+      
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.paymentIdRequired', req.locale),
+        errorCode: 'PAYMENT_ID_REQUIRED',
+        details: 'The payment may not have been completed. Please try again.',
+        status,
+        message
+      })
+    }
+
+    // Step 1: Fetch payment details from Moyasar to get metadata with session ID
+    logger.debug('Fetching payment from Moyasar to extract session ID', { moyasarPaymentId })
+    let moyasarPayment
+    try {
+      moyasarPayment = await MoyasarService.fetchPaymentFromMoyasar(moyasarPaymentId)
+    } catch (error) {
+      if (error.message === 'MOYASAR_PAYMENT_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          errorCode: 'MOYASAR_PAYMENT_NOT_FOUND',
+          message: getLocalizedMessage('payment.moyasarPaymentNotFound', req.locale)
+        })
+      }
+      throw error // Re-throw other errors to be caught by outer try-catch
+    }
+
+    // Step 2: Extract session ID from Moyasar payment metadata
+    // FIXED: Check session_id first (matches checkout metadata key), then sessionId as fallback
+    const sessionId = moyasarPayment.metadata?.session_id || moyasarPayment.metadata?.sessionId
+    logger.debug('Extracted session ID from Moyasar metadata', { 
+      moyasarPaymentId, 
+      sessionId,
+      hasMetadata: !!moyasarPayment.metadata,
+      usedKey: moyasarPayment.metadata?.session_id ? 'session_id' : 'sessionId'
+    })
+
+    if (!sessionId) {
+      logger.error('Session ID missing from Moyasar payment metadata', {
+        moyasarPaymentId,
+        metadata: moyasarPayment.metadata
+      })
+      return res.status(400).json({
+        success: false,
+        errorCode: 'SESSION_ID_MISSING',
+        message: getLocalizedMessage('payment.sessionIdMissing', req.locale)
+      })
+    }
+
+    // Step 3: Look up Payment record by session ID in metadata
+    // FIXED: Use Sequelize JSON path condition for reliable JSONB querying
+    logger.debug('Looking up payment record by session ID', { sessionId })
+    const { Sequelize } = await import('sequelize')
+    const payment = await Payment.findOne({
+      where: {
+        business_id: businessId,
+        [Sequelize.Op.and]: [
+          Sequelize.where(
+            Sequelize.json('metadata.session_id'),
+            sessionId
+          )
+        ]
+      }
+    })
+
+    if (!payment) {
+      logger.error('Payment record not found for session ID', {
+        businessId,
+        sessionId,
+        moyasarPaymentId
+      })
+      return res.status(404).json({
+        success: false,
+        errorCode: 'SESSION_LINKING_FAILED',
+        message: getLocalizedMessage('payment.paymentRecordNotFoundBySession', req.locale),
+        transactionId: moyasarPaymentId
+      })
+    }
+
+    // Step 4: Update Payment record with Moyasar payment ID
+    logger.info('Linking payment record with Moyasar payment ID', {
+      paymentId: payment.public_id,
+      moyasarPaymentId,
+      previousMoyasarId: payment.moyasar_payment_id
+    })
+    
+    await payment.update({
+      moyasar_payment_id: moyasarPaymentId
+    })
+
+    logger.info('Payment record successfully linked', {
+      paymentId: payment.public_id,
+      moyasarPaymentId
+    })
+
+    // Step 5: Now verify payment with Moyasar and update our records
+    const verificationResult = await MoyasarService.verifyPayment(moyasarPaymentId)
+
+    if (!verificationResult.verified) {
+      // Log each verification issue separately
+      verificationResult.issues.forEach(issue => {
+        logger.warn('Verification issue', { businessId, moyasarPaymentId, issue })
+      })
+
+      // Determine specific error code
+      let errorCode = 'VERIFICATION_FAILED'
+      if (!verificationResult.payment) {
+        errorCode = 'PAYMENT_NOT_FOUND'
+      } else if (verificationResult.issues.some(i => i.includes('status'))) {
+        errorCode = 'STATUS_MISMATCH'
+      } else if (verificationResult.issues.some(i => i.includes('amount'))) {
+        errorCode = 'AMOUNT_MISMATCH'
+      } else if (verificationResult.issues.some(i => i.includes('currency'))) {
+        errorCode = 'CURRENCY_MISMATCH'
+      }
+
+      // Detailed logging with verification details
+      logger.warn('Payment verification failed with details', {
+        businessId,
+        moyasarPaymentId,
+        errorCode,
+        issues: verificationResult.issues,
+        verificationDetails: verificationResult.verificationDetails,
+        statusMatch: verificationResult.verificationDetails?.statusMatch,
+        amountMatch: verificationResult.verificationDetails?.amountMatch,
+        currencyMatch: verificationResult.verificationDetails?.currencyMatch
+      })
+      
+      // Special handling: Check if Moyasar says paid but verification failed
+      if (verificationResult.moyasarPayment?.status === 'paid' && !verificationResult.verified) {
+        logger.error('CRITICAL WARNING: Moyasar confirmed payment as PAID but verification failed', {
+          businessId,
+          moyasarPaymentId,
+          errorCode,
+          issues: verificationResult.issues,
+          verificationDetails: verificationResult.verificationDetails,
+          action: 'REQUIRES_MANUAL_REVIEW',
+          recommendation: 'Check for data mismatches (amount rounding, currency) - payment may be legitimate'
+        })
+      }
+
+      // Mark payment as failed if it exists
+      if (verificationResult.payment) {
+        await verificationResult.payment.markAsFailed(
+          message || verificationResult.issues.join(', ')
+        )
+      }
+      
+      // Build specific error message based on errorCode
+      let specificMessage = getLocalizedMessage('payment.verificationFailed', req.locale)
+      if (errorCode === 'STATUS_MISMATCH' && verificationResult.verificationDetails) {
+        specificMessage = getLocalizedMessage('payment.statusMismatch', req.locale, {
+          status: verificationResult.verificationDetails.actualStatus
+        })
+      } else if (errorCode === 'AMOUNT_MISMATCH' && verificationResult.verificationDetails) {
+        specificMessage = getLocalizedMessage('payment.amountMismatch', req.locale, {
+          expected: verificationResult.verificationDetails.expectedAmount,
+          actual: verificationResult.verificationDetails.actualAmount
+        })
+      } else if (errorCode === 'PAYMENT_NOT_FOUND') {
+        specificMessage = getLocalizedMessage('payment.paymentNotFound', req.locale)
+      }
+
+      // Prepare response with verification details (include full details in dev mode)
+      const errorResponse = {
+        success: false,
+        message: specificMessage,
+        errorCode,
+        issues: verificationResult.issues,
+        error: message || 'Payment verification failed'
+      }
+      
+      // Include verification details in development mode for debugging
+      if (process.env.NODE_ENV === 'development') {
+        errorResponse.verificationDetails = verificationResult.verificationDetails
+        errorResponse.fullVerificationResult = {
+          verified: verificationResult.verified,
+          issues: verificationResult.issues,
+          moyasarStatus: verificationResult.moyasarPayment?.status,
+          paymentFound: !!verificationResult.payment
+        }
+      } else if (verificationResult.verificationDetails) {
+        // In production, include only safe verification details
+        errorResponse.verificationDetails = {
+          statusMatch: verificationResult.verificationDetails.statusMatch,
+          amountMatch: verificationResult.verificationDetails.amountMatch,
+          currencyMatch: verificationResult.verificationDetails.currencyMatch
+        }
+      }
+
+      return res.status(400).json(errorResponse)
+    }
+
+    // Payment object already exists from Step 3 lookup
+    // moyasarPayment already declared with 'let' on line 3788 - just reassign
+    moyasarPayment = verificationResult.moyasarPayment
+
+    // Log payment metadata for debugging
+    logger.debug('Payment metadata', {
+      businessId,
+      paymentId: payment.public_id,
+      metadata: payment.metadata
+    })
+
+    // Extract plan details from payment metadata
+    const planType = payment.metadata?.plan_type
+    const locationCount = payment.metadata?.location_count || 1
+
+    if (!planType) {
+      logger.error('Payment metadata missing plan type', {
+        businessId,
+        paymentId: payment.public_id,
+        fullPayment: {
+          id: payment.public_id,
+          status: payment.status,
+          amount: payment.amount,
+          metadata: payment.metadata
+        }
+      })
+      return res.status(500).json({
+        success: false,
+        message: getLocalizedMessage('server.paymentDataIncomplete', req.locale)
+      })
+    }
+
+    // Use database transaction for atomic operations
+    const transaction = await sequelize.transaction()
+
+    try {
+      // Update Payment record to 'paid' status with transaction
+      await payment.update({
+        status: 'paid',
+        payment_date: new Date(),
+        metadata: {
+          ...payment.metadata,
+          moyasar_payment_id: moyasarPaymentId,
+          gateway: 'moyasar',
+          paid_at: new Date().toISOString(),
+          moyasar_response: moyasarPayment
+        }
+      }, { transaction })
+
+      logger.info('Payment record updated to paid', {
+        businessId,
+        paymentId: payment.public_id,
+        moyasarPaymentId
+      })
+
+      // Upgrade subscription with transaction for atomic operations
+      const upgradeResult = await SubscriptionService.upgradeSubscription(
+        businessId,
+        planType,
+        locationCount,
+        transaction
+      )
+
+      // Store payment token for recurring billing (if provided)
+      if (moyasarPayment.source?.token) {
+        const subscription = await Subscription.findOne({
+          where: { business_id: businessId },
+          transaction
+        })
+
+        if (subscription) {
+          await subscription.update({
+            moyasar_token: moyasarPayment.source.token,
+            payment_method_last4: moyasarPayment.source.last4,
+            payment_method_brand: moyasarPayment.source.company,
+            next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            last_payment_date: new Date()
+          }, { transaction })
+
+          logger.info('Payment token stored for recurring billing', {
+            businessId,
+            subscriptionId: subscription.public_id,
+            last4: moyasarPayment.source.last4
+          })
+        }
+      }
+
+      // Create invoice
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`
+      // FIXED: Parse payment.amount as float to ensure numeric operations
+      const paymentAmount = parseFloat(payment.amount)
+      const taxAmount = paymentAmount * 0.15 // 15% VAT
+      const totalAmount = paymentAmount + taxAmount
+
+      const invoice = await Invoice.create({
+        invoice_number: invoiceNumber,
+        business_id: businessId,
+        payment_id: payment.public_id,
+        subscription_id: upgradeResult.subscription?.public_id,
+        amount: paymentAmount,
+        tax_amount: taxAmount,
+        total_amount: totalAmount,
+        currency: 'SAR',
+        issued_date: new Date(),
+        due_date: new Date(),
+        paid_date: new Date(),
+        status: 'paid',
+        invoice_data: {
+          plan_type: planType,
+          location_count: locationCount,
+          payment_method: 'card',
+          moyasar_payment_id: moyasarPaymentId
+        }
+      }, { transaction })
+
+      logger.info('Invoice created', {
+        businessId,
+        invoiceNumber,
+        amount: totalAmount
+      })
+
+      // Commit transaction
+      await transaction.commit()
+
+      // Fetch updated subscription status
+      const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(businessId)
+
+      const processingTimeMs = Date.now() - startTime
+      
+      logger.info('Payment callback completed successfully', {
+        businessId,
+        moyasarPaymentId,
+        planType,
+        amount: payment.amount,
+        processingTimeMs
+      })
+
+      res.json({
+        success: true,
+        message: getLocalizedMessage('payment.subscriptionActivated', req.locale),
+        subscription: {
+          plan_type: planType,
+          amount: payment.amount,
+          status: 'active',
+          next_billing_date: subscriptionStatus.next_billing_date
+        },
+        limits: subscriptionStatus.limits,
+        usage: subscriptionStatus.usage
+      })
+
+    } catch (error) {
+      // Rollback transaction on error
+      await transaction.rollback()
+      
+      logger.error('Transaction rolled back', {
+        businessId,
+        moyasarPaymentId,
+        error: error.message,
+        stack: error.stack
+      })
+      
+      throw error
+    }
+
+  } catch (error) {
+    logger.error('Payment callback processing failed', {
+      businessId: req.businessId,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.paymentProcessingFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+// ===============================
+// SUBSCRIPTION MANAGEMENT ROUTES
+// ===============================
+
+/**
+ * GET /api/business/subscription/details
+ * Fetch comprehensive subscription details including payment method info
+ */
+router.get('/subscription/details', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.businessId
+
+    logger.debug('Fetching subscription details', { businessId })
+
+    // Get subscription status with limits and usage
+    const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(businessId)
+
+    // Fetch active Subscription record with payment method info
+    const subscription = await Subscription.findOne({
+      where: { business_id: businessId },
+      order: [['created_at', 'DESC']]
+    })
+
+    // Fetch last 3 payments
+    const recentPayments = await Payment.findAll({
+      where: { business_id: businessId },
+      order: [['payment_date', 'DESC']],
+      limit: 3,
+      attributes: ['payment_date', 'amount', 'currency', 'status', 'payment_method']
+    })
+
+    // Format response
+    const response = {
+      subscription: {
+        plan_type: subscriptionStatus.current_plan,
+        status: subscriptionStatus.subscription_status,
+        amount: subscription?.amount || 0,
+        currency: subscription?.currency || 'SAR',
+        billing_cycle_start: subscription?.billing_cycle_start || null,
+        next_billing_date: subscriptionStatus.next_billing_date,
+        payment_method: {
+          has_token: !!subscription?.moyasar_token,
+          last4: subscription?.payment_method_last4 || null,
+          brand: subscription?.payment_method_brand || null
+        }
+      },
+      limits: subscriptionStatus.limits,
+      usage: subscriptionStatus.usage,
+      trial_info: subscriptionStatus.trial_info || null,
+      recent_payments: recentPayments.map(p => ({
+        date: p.payment_date,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        payment_method: p.payment_method
+      }))
+    }
+
+    logger.info('Subscription details fetched', { businessId })
+
+    res.json({
+      success: true,
+      data: response,
+      message: getLocalizedMessage('subscription.detailsFetched', req.locale)
+    })
+
+  } catch (error) {
+    logger.error('Failed to fetch subscription details', {
+      businessId: req.businessId,
+      error: error.message
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.subscriptionUpdateFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/business/subscription/reactivate
+ * Reactivate suspended account after successful payment
+ * FLOW: Verify payment → Create payment record → Reset subscription → Reactivate business → Generate invoice
+ */
+router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) => {
+  const transaction = await sequelize.transaction()
+  
+  try {
+    const { moyasarPaymentId, planType, locationCount } = req.body
+    const businessId = req.businessId
+    const business = req.business
+
+    logger.info('Reactivation initiated', {
+      businessId,
+      moyasarPaymentId,
+      currentStatus: business.status,
+      suspensionReason: business.suspension_reason
+    })
+
+    // Step 1: Validate Business Status
+    if (business.status !== 'suspended') {
+      logger.warn('Reactivation attempted on non-suspended account', {
+        businessId,
+        currentStatus: business.status
+      })
+      
+      await transaction.rollback()
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('reactivation.notSuspended', req.locale),
+        code: 'NOT_SUSPENDED',
+        current_status: business.status
+      })
+    }
+
+    // Validate payment ID
+    if (!moyasarPaymentId) {
+      await transaction.rollback()
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.paymentIdRequired', req.locale),
+        code: 'PAYMENT_ID_REQUIRED'
+      })
+    }
+
+    // Step 2: Verify Payment with Moyasar
+    logger.info('Verifying payment with Moyasar', { moyasarPaymentId })
+    
+    let moyasarPayment
+    try {
+      moyasarPayment = await MoyasarService.fetchPaymentFromMoyasar(moyasarPaymentId)
+    } catch (error) {
+      await transaction.rollback()
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('reactivation.paymentVerificationFailed', req.locale),
+        code: 'PAYMENT_NOT_FOUND',
+        error: error.message
+      })
+    }
+
+    const verificationResult = await MoyasarService.verifyPayment(moyasarPaymentId)
+    
+    if (!verificationResult.verified) {
+      logger.error('Payment verification failed for reactivation', {
+        businessId,
+        moyasarPaymentId,
+        issues: verificationResult.issues
+      })
+      
+      await transaction.rollback()
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('reactivation.paymentVerificationFailed', req.locale),
+        code: 'VERIFICATION_FAILED',
+        issues: verificationResult.issues
+      })
+    }
+
+    // Extract payment details
+    const paymentAmount = moyasarPayment.amount / 100 // Convert from halalas
+    const paymentCurrency = moyasarPayment.currency
+    const paymentSource = moyasarPayment.source
+
+    logger.info('Payment verified successfully', {
+      moyasarPaymentId,
+      amount: paymentAmount,
+      currency: paymentCurrency
+    })
+
+    // Step 3: Fetch or Create Subscription
+    let subscription = await Subscription.findOne({
+      where: { business_id: businessId },
+      transaction
+    })
+
+    if (!subscription) {
+      // Create new subscription if none exists
+      subscription = await Subscription.create({
+        business_id: businessId,
+        plan_type: planType || 'basic',
+        status: 'active',
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        billing_cycle: 'monthly',
+        billing_cycle_start: new Date(),
+        next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // +30 days
+      }, { transaction })
+    }
+
+    // Step 4: Create Payment Record
+    logger.info('Creating payment record', { businessId, amount: paymentAmount })
+    
+    const payment = await Payment.create({
+      business_id: businessId,
+      subscription_id: subscription.id,
+      moyasar_payment_id: moyasarPaymentId,
+      amount: paymentAmount,
+      currency: paymentCurrency,
+      status: 'paid',
+      payment_date: new Date(),
+      payment_method: 'card',
+      metadata: {
+        reactivation: true,
+        previous_suspension_reason: business.suspension_reason,
+        card_brand: paymentSource?.company,
+        last4: paymentSource?.number
+      }
+    }, { transaction })
+
+    await payment.markAsPaid()
+
+    logger.info('Payment record created', {
+      paymentId: payment.public_id,
+      moyasarPaymentId
+    })
+
+    // Step 5: Reset Subscription Status (within transaction)
+    await subscription.update({
+      status: 'active',
+      retry_count: 0,
+      grace_period_end: null,
+      next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      moyasar_token: paymentSource?.token || subscription.moyasar_token,
+      payment_method_last4: paymentSource?.number || subscription.payment_method_last4,
+      payment_method_brand: paymentSource?.company || subscription.payment_method_brand
+    }, { transaction })
+
+    // If plan upgrade requested, process it
+    if (planType && planType !== subscription.plan_type) {
+      logger.info('Processing plan upgrade during reactivation', {
+        businessId,
+        fromPlan: subscription.plan_type,
+        toPlan: planType
+      })
+      
+      await subscription.update({
+        plan_type: planType
+      }, { transaction })
+    }
+
+    logger.info('Subscription reactivated', {
+      businessId,
+      planType: subscription.plan_type,
+      nextBillingDate: subscription.next_billing_date
+    })
+
+    // Step 6: Reactivate Business Account
+    await business.update({
+      status: 'active',
+      subscription_status: 'active',
+      suspension_reason: null,
+      suspension_date: null,
+      last_activity_at: new Date()
+    }, { transaction })
+
+    logger.info('Business account reactivated', {
+      businessId,
+      previousStatus: 'suspended'
+    })
+
+    // Step 7: Generate Invoice
+    const { Counter } = await import('../models/index.js')
+    
+    const year = new Date().getFullYear()
+    const invoiceNumber = await Counter.getNextSequence('invoice', year)
+    
+    const invoice = await Invoice.create({
+      business_id: businessId,
+      subscription_id: subscription.id,
+      payment_id: payment.id,
+      invoice_number: `INV-${year}-${String(invoiceNumber).padStart(6, '0')}`,
+      amount: paymentAmount,
+      tax_amount: paymentAmount * 0.15, // 15% VAT
+      total_amount: paymentAmount * 1.15,
+      currency: paymentCurrency,
+      status: 'paid',
+      issued_date: new Date(),
+      paid_date: new Date(),
+      metadata: {
+        reactivation: true,
+        plan_type: subscription.plan_type
+      }
+    }, { transaction })
+
+    logger.info('Invoice generated', {
+      invoiceId: invoice.public_id,
+      invoiceNumber: invoice.invoice_number
+    })
+
+    // Step 8: Commit Transaction
+    await transaction.commit()
+
+    // Step 9: Send Notification (non-blocking)
+    try {
+      const NotificationService = (await import('../services/NotificationService.js')).default
+      const notificationService = new NotificationService()
+      
+      await notificationService.sendReactivationSuccessNotification(businessId, {
+        plan_type: subscription.plan_type,
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        next_billing_date: subscription.next_billing_date
+      })
+    } catch (notificationError) {
+      logger.error('Failed to send reactivation notification', {
+        businessId,
+        error: notificationError.message
+      })
+      // Don't fail the request
+    }
+
+    // Step 10: Fetch Updated Subscription Status
+    const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(businessId)
+
+    logger.info('Reactivation completed successfully', {
+      businessId,
+      planType: subscription.plan_type,
+      nextBillingDate: subscription.next_billing_date
+    })
+
+    res.json({
+      success: true,
+      message: getLocalizedMessage('reactivation.success', req.locale),
+      subscription: {
+        plan_type: subscription.plan_type,
+        status: subscription.status,
+        next_billing_date: subscription.next_billing_date
+      },
+      limits: subscriptionStatus.limits,
+      usage: subscriptionStatus.usage,
+      payment: {
+        amount: paymentAmount,
+        currency: paymentCurrency,
+        payment_date: payment.payment_date,
+        invoice_number: invoice.invoice_number
+      }
+    })
+
+  } catch (error) {
+    await transaction.rollback()
+    
+    logger.error('Reactivation failed', {
+      businessId: req.businessId,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.reactivationFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * PUT /api/business/subscription/upgrade
+ * Process subscription upgrade with prorated billing
+ */
+router.put('/subscription/upgrade', requireBusinessAuth, async (req, res) => {
+  try {
+    const { newPlanType, locationCount, useStoredPayment } = req.body
+    const businessId = req.businessId
+
+    logger.info('Subscription upgrade initiated', {
+      businessId,
+      newPlanType,
+      locationCount,
+      useStoredPayment
+    })
+
+    // Validate plan type
+    const validPlans = ['professional', 'enterprise']
+    if (!validPlans.includes(newPlanType)) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidPlanType', req.locale)
+      })
+    }
+
+    if (!useStoredPayment) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.noPaymentMethod', req.locale),
+        redirect: `/subscription/checkout?plan=${newPlanType}&location=${locationCount || 1}`
+      })
+    }
+
+    // Fetch subscription to get stored token
+    const subscription = await Subscription.findOne({
+      where: { business_id: businessId }
+    })
+
+    if (!subscription || !subscription.moyasar_token) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.noPaymentMethod', req.locale)
+      })
+    }
+
+    // Get plan definition
+    const planDef = SubscriptionService.getPlanDefinition(newPlanType)
+    const planAmount = planDef.price * (locationCount || 1)
+
+    // Calculate prorated amount
+    const proratedAmount = await subscription.calculateProration(planAmount)
+
+    logger.debug('Prorated amount calculated', {
+      businessId,
+      planAmount,
+      proratedAmount
+    })
+
+    // Create Payment record
+    const payment = await Payment.create({
+      business_id: businessId,
+      subscription_id: subscription.public_id,
+      amount: proratedAmount,
+      currency: 'SAR',
+      status: 'pending',
+      payment_method: 'card',
+      metadata: {
+        gateway: 'moyasar',
+        plan_type: newPlanType,
+        location_count: locationCount || 1,
+        is_upgrade: true,
+        prorated: true
+      }
+    })
+
+    logger.debug('Payment record created for upgrade', {
+      businessId,
+      paymentId: payment.public_id
+    })
+
+    // Process payment with stored token
+    try {
+      const paymentResult = await MoyasarService.createTokenizedPayment({
+        businessId,
+        subscriptionId: subscription.public_id,
+        token: subscription.moyasar_token,
+        amount: proratedAmount,
+        currency: 'SAR',
+        description: `Upgrade to ${newPlanType} plan`,
+        callbackUrl: process.env.MOYASAR_CALLBACK_URL
+      })
+
+      if (!paymentResult.success) {
+        await payment.markAsFailed(paymentResult.error || 'Payment failed')
+        
+        return res.status(400).json({
+          success: false,
+          message: getLocalizedMessage('payment.tokenizationFailed', req.locale),
+          error: paymentResult.error
+        })
+      }
+
+      // Begin transaction for upgrade
+      const transaction = await sequelize.transaction()
+
+      try {
+        // Update payment to paid
+        await payment.update({
+          status: 'paid',
+          payment_date: new Date(),
+          moyasar_payment_id: paymentResult.moyasarPayment.id
+        }, { transaction })
+
+        // Upgrade subscription
+        const upgradeResult = await SubscriptionService.upgradeSubscription(
+          businessId,
+          newPlanType,
+          locationCount || 1,
+          transaction
+        )
+
+        // Create invoice
+        const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`
+        const paymentAmount = parseFloat(payment.amount)
+        const taxAmount = paymentAmount * 0.15
+        const totalAmount = paymentAmount + taxAmount
+
+        await Invoice.create({
+          invoice_number: invoiceNumber,
+          business_id: businessId,
+          payment_id: payment.public_id,
+          subscription_id: subscription.public_id,
+          amount: paymentAmount,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+          currency: 'SAR',
+          issued_date: new Date(),
+          due_date: new Date(),
+          paid_date: new Date(),
+          status: 'paid',
+          invoice_data: {
+            plan_type: newPlanType,
+            location_count: locationCount || 1,
+            payment_method: 'card',
+            is_upgrade: true
+          }
+        }, { transaction })
+
+        // Commit transaction
+        await transaction.commit()
+
+        logger.info('Subscription upgraded successfully', {
+          businessId,
+          newPlanType,
+          proratedAmount
+        })
+
+        // Fetch updated subscription status
+        const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(businessId)
+
+        res.json({
+          success: true,
+          message: getLocalizedMessage('subscription.upgraded', req.locale),
+          subscription: subscriptionStatus,
+          payment: {
+            amount: proratedAmount,
+            invoice_number: invoiceNumber
+          }
+        })
+
+      } catch (error) {
+        await transaction.rollback()
+        throw error
+      }
+
+    } catch (paymentError) {
+      logger.error('Upgrade payment failed', {
+        businessId,
+        error: paymentError.message
+      })
+      
+      await payment.markAsFailed(paymentError.message)
+      
+      throw paymentError
+    }
+
+  } catch (error) {
+    logger.error('Subscription upgrade failed', {
+      businessId: req.businessId,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.subscriptionUpdateFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * PUT /api/business/subscription/downgrade
+ * Schedule subscription downgrade at end of billing period
+ */
+router.put('/subscription/downgrade', requireBusinessAuth, async (req, res) => {
+  try {
+    const { newPlanType } = req.body
+    const businessId = req.businessId
+
+    logger.info('Subscription downgrade initiated', {
+      businessId,
+      newPlanType
+    })
+
+    // Validate plan type
+    const validPlans = ['free', 'professional']
+    if (!validPlans.includes(newPlanType)) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidPlanType', req.locale)
+      })
+    }
+
+    // Call service to schedule downgrade
+    const result = await SubscriptionService.downgradeSubscription(businessId, newPlanType)
+
+    logger.info('Subscription downgrade scheduled', {
+      businessId,
+      newPlanType,
+      effectiveDate: result.effective_date
+    })
+
+    res.json({
+      success: true,
+      message: getLocalizedMessage('subscription.downgraded', req.locale),
+      data: {
+        effective_date: result.effective_date,
+        credit_amount: result.credit || 0,
+        message: getLocalizedMessage('subscription.downgradeScheduled', req.locale)
+      }
+    })
+
+  } catch (error) {
+    logger.error('Subscription downgrade failed', {
+      businessId: req.businessId,
+      error: error.message
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.subscriptionUpdateFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * PUT /api/business/subscription/cancel
+ * Cancel subscription immediately or at end of billing period
+ */
+router.put('/subscription/cancel', requireBusinessAuth, async (req, res) => {
+  try {
+    const { reason } = req.body
+    const businessId = req.businessId
+
+    logger.info('Subscription cancellation initiated', {
+      businessId,
+      reason: reason || 'not provided'
+    })
+
+    // Call service to cancel subscription
+    const result = await SubscriptionService.cancelSubscription(businessId, reason)
+
+    logger.info('Subscription cancelled', {
+      businessId,
+      cancelledAt: result.cancelled_at,
+      accessUntil: result.access_until
+    })
+
+    res.json({
+      success: true,
+      message: getLocalizedMessage('subscription.cancelled', req.locale),
+      data: {
+        cancelled_at: result.cancelled_at,
+        access_until: result.access_until,
+        message: getLocalizedMessage('subscription.accessRetained', req.locale, { 
+          date: new Date(result.access_until).toLocaleDateString() 
+        })
+      }
+    })
+
+  } catch (error) {
+    logger.error('Subscription cancellation failed', {
+      businessId: req.businessId,
+      error: error.message
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.subscriptionUpdateFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * PUT /api/business/subscription/payment-method
+ * Update stored payment method token
+ */
+router.put('/subscription/payment-method', requireBusinessAuth, async (req, res) => {
+  try {
+    const { moyasarPaymentId } = req.body
+    const businessId = req.businessId
+
+    if (!moyasarPaymentId) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.paymentIdRequired', req.locale)
+      })
+    }
+
+    logger.info('Payment method update initiated', {
+      businessId,
+      moyasarPaymentId
+    })
+
+    // Verify payment with Moyasar
+    const verificationResult = await MoyasarService.verifyPayment(moyasarPaymentId)
+
+    if (!verificationResult.verified || !verificationResult.moyasarPayment) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('payment.verificationFailed', req.locale)
+      })
+    }
+
+    const moyasarPayment = verificationResult.moyasarPayment
+
+    // Extract payment method details
+    const token = moyasarPayment.source?.token
+    const last4 = moyasarPayment.source?.last4
+    const brand = moyasarPayment.source?.company
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('payment.tokenizationFailed', req.locale)
+      })
+    }
+
+    // Update subscription with new payment method
+    const subscription = await Subscription.findOne({
+      where: { business_id: businessId }
+    })
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscription not found'
+      })
+    }
+
+    await subscription.update({
+      moyasar_token: token,
+      payment_method_last4: last4,
+      payment_method_brand: brand
+    })
+
+    logger.info('Payment method updated', {
+      businessId,
+      last4,
+      brand
+    })
+
+    // Never return full token in response
+    res.json({
+      success: true,
+      message: getLocalizedMessage('subscription.paymentMethodUpdated', req.locale),
+      data: {
+        last4,
+        brand,
+        has_token: true
+      }
+    })
+
+  } catch (error) {
+    logger.error('Payment method update failed', {
+      businessId: req.businessId,
+      error: error.message
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.subscriptionUpdateFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/business/subscription/payment-debug/:moyasarPaymentId
+ * Debug endpoint to manually verify payment (development only)
+ * READ-ONLY: This endpoint does not mutate payment state or metadata
+ */
+router.get('/subscription/payment-debug/:moyasarPaymentId', requireBusinessAuth, async (req, res) => {
+  // Only available in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return res.status(404).json({
+      success: false,
+      message: 'Endpoint not available in production'
+    })
+  }
+
+  try {
+    const { moyasarPaymentId } = req.params
+    const businessId = req.businessId
+
+    logger.debug('Payment debug request (read-only)', { businessId, moyasarPaymentId })
+
+    // Call pure verification helper - no side effects, no mutations
+    const verificationResult = await MoyasarService.getVerificationResult(moyasarPaymentId)
+
+    // Return full verification details for debugging
+    res.json({
+      success: true,
+      moyasarPaymentId,
+      verificationResult: {
+        verified: verificationResult.verified,
+        issues: verificationResult.issues,
+        verificationDetails: verificationResult.verificationDetails,
+        payment: verificationResult.payment ? {
+          id: verificationResult.payment.public_id,
+          status: verificationResult.payment.status,
+          amount: verificationResult.payment.amount,
+          currency: verificationResult.payment.currency,
+          metadata: verificationResult.payment.metadata
+        } : null,
+        moyasarPayment: verificationResult.moyasarPayment ? {
+          id: verificationResult.moyasarPayment.id,
+          status: verificationResult.moyasarPayment.status,
+          amount: verificationResult.moyasarPayment.amount,
+          currency: verificationResult.moyasarPayment.currency,
+          created_at: verificationResult.moyasarPayment.created_at
+        } : null
+      }
+    })
+
+  } catch (error) {
+    logger.error('Payment debug request failed', {
+      businessId: req.businessId,
+      moyasarPaymentId: req.params.moyasarPaymentId,
+      error: error.message
+    })
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to debug payment',
+      error: error.message
+    })
+  }
+})
+
+// ============================================
+// PAYMENT HISTORY & INVOICE ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/business/payments - List payments with filters and pagination
+ * Returns paginated payment history for authenticated business
+ */
+router.get('/payments', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.businessId
+
+    // Extract query params with defaults
+    const page = parseInt(req.query.page) || 1
+    let limit = parseInt(req.query.limit) || 20
+    limit = Math.min(limit, 100) // Cap at 100
+
+    const { status, dateFrom, dateTo, minAmount, maxAmount, search, sortBy, sortOrder } = req.query
+
+    logger.debug('Fetching payment history', {
+      businessId,
+      page,
+      limit,
+      filters: { status, dateFrom, dateTo, minAmount, maxAmount, search },
+      sort: { sortBy, sortOrder }
+    })
+
+    // Build where clause
+    const whereClause = {
+      business_id: businessId
+    }
+
+    // Status filter
+    if (status) {
+      const validStatuses = ['pending', 'paid', 'failed', 'refunded', 'cancelled']
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: getLocalizedMessage('payment.invalidStatus', req.locale)
+        })
+      }
+      whereClause.status = status
+    }
+
+    // Date range filter
+    if (dateFrom && dateTo) {
+      try {
+        const fromDate = new Date(dateFrom)
+        const toDate = new Date(dateTo)
+        
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: getLocalizedMessage('payment.invalidDateRange', req.locale)
+          })
+        }
+
+        whereClause.payment_date = {
+          [Op.between]: [fromDate, toDate]
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: getLocalizedMessage('payment.invalidDateRange', req.locale)
+        })
+      }
+    }
+
+    // Amount range filter
+    if (minAmount || maxAmount) {
+      whereClause.amount = {}
+      
+      if (minAmount) {
+        const min = parseFloat(minAmount)
+        if (isNaN(min)) {
+          return res.status(400).json({
+            success: false,
+            message: getLocalizedMessage('payment.invalidAmount', req.locale || 'en')
+          })
+        }
+        whereClause.amount[Op.gte] = min
+      }
+
+      if (maxAmount) {
+        const max = parseFloat(maxAmount)
+        if (isNaN(max)) {
+          return res.status(400).json({
+            success: false,
+            message: getLocalizedMessage('payment.invalidAmount', req.locale || 'en')
+          })
+        }
+        whereClause.amount[Op.lte] = max
+      }
+    }
+
+    // Search filter (invoice number or Moyasar payment ID)
+    if (search) {
+      whereClause[Op.or] = [
+        { moyasar_payment_id: { [Op.iLike]: `%${search}%` } },
+        { '$invoice.invoice_number$': { [Op.iLike]: `%${search}%` } }
+      ]
+    }
+
+    // Build order clause
+    const validSortFields = ['payment_date', 'amount', 'created_at']
+    const orderField = validSortFields.includes(sortBy) ? sortBy : 'payment_date'
+    const orderDirection = sortOrder === 'asc' ? 'ASC' : 'DESC'
+
+    // Query payments
+    const { count, rows } = await Payment.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Subscription,
+          as: 'subscription',
+          attributes: ['plan_type']
+        },
+        {
+          model: Invoice,
+          as: 'invoice',
+          attributes: ['invoice_number', 'status']
+        }
+      ],
+      order: [[orderField, orderDirection]],
+      limit,
+      offset: (page - 1) * limit,
+      attributes: [
+        'public_id',
+        'amount',
+        'currency',
+        'status',
+        'payment_method',
+        'payment_date',
+        'moyasar_payment_id',
+        'created_at'
+      ]
+    })
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(count / limit)
+
+    const pagination = {
+      total_items: count,
+      total_pages: totalPages,
+      current_page: page,
+      per_page: limit,
+      has_next: page < totalPages,
+      has_prev: page > 1
+    }
+
+    logger.info('Payment history fetched successfully', {
+      businessId,
+      count,
+      page,
+      totalPages
+    })
+
+    res.json({
+      success: true,
+      data: {
+        payments: rows,
+        pagination
+      },
+      message: getLocalizedMessage('payment.historyFetched', req.locale)
+    })
+
+  } catch (error) {
+    logger.error('Failed to fetch payment history', {
+      businessId: req.businessId,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('errors.serverError', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * GET /api/business/invoices/:invoiceId - Download invoice PDF
+ * Returns PDF invoice for authenticated business
+ */
+router.get('/invoices/:invoiceId', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.businessId
+    const { invoiceId } = req.params
+
+    logger.debug('Invoice download request', { businessId, invoiceId })
+
+    // Fetch invoice
+    const invoice = await Invoice.findOne({
+      where: {
+        [Op.or]: [
+          { id: invoiceId },
+          { invoice_number: invoiceId }
+        ]
+      },
+      include: [
+        {
+          model: Business,
+          as: 'business',
+          attributes: ['public_id']
+        }
+      ]
+    })
+
+    // Check if invoice exists
+    if (!invoice) {
+      logger.warn('Invoice not found', { businessId, invoiceId })
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('invoice.notFound', req.locale)
+      })
+    }
+
+    // Verify ownership
+    if (invoice.business_id !== businessId) {
+      logger.warn('Invoice access denied - ownership mismatch', {
+        businessId,
+        invoiceBusinessId: invoice.business_id,
+        invoiceId
+      })
+      return res.status(403).json({
+        success: false,
+        message: getLocalizedMessage('invoice.accessDenied', req.locale)
+      })
+    }
+
+    // Generate PDF
+    const pdfBuffer = await InvoiceService.generateInvoicePDF(invoice.id)
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoice_number}.pdf"`)
+    res.setHeader('Content-Length', pdfBuffer.length)
+
+    logger.info('Invoice PDF downloaded successfully', {
+      businessId,
+      invoiceId,
+      invoiceNumber: invoice.invoice_number,
+      bufferSize: pdfBuffer.length
+    })
+
+    // Send PDF buffer
+    res.send(pdfBuffer)
+
+  } catch (error) {
+    logger.error('Failed to download invoice', {
+      businessId: req.businessId,
+      invoiceId: req.params.invoiceId,
+      error: error.message,
+      stack: error.stack
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('invoice.downloadFailed', req.locale),
       error: error.message
     })
   }

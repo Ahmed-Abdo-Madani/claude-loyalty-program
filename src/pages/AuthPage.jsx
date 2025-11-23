@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
+import { setSubscriptionData, setAuthData } from '../utils/secureAuth'
 import InteractiveLogo from '../components/InteractiveLogo'
 import SEO from '../components/SEO'
 
@@ -50,12 +51,32 @@ function AuthPage() {
         const data = await response.json()
 
         if (response.ok) {
-          // Store business authentication data - SECURE VERSION
-          localStorage.setItem('isAuthenticated', 'true')
-          localStorage.setItem('businessId', data.data.business_id) // Now secure ID (biz_*)
-          localStorage.setItem('businessName', data.data.business.business_name)
-          localStorage.setItem('userEmail', data.data.business.email)
-          localStorage.setItem('sessionToken', data.data.session_token)
+          // Comment 1: Use setAuthData helper to store authentication and status data
+          setAuthData({
+            sessionToken: data.data.session_token,
+            businessId: data.data.business_id,
+            businessName: data.data.business.business_name,
+            userEmail: data.data.business.email,
+            businessStatus: data.data.status || 'active',
+            subscriptionStatus: data.data.subscription_status || 'trial',
+            suspensionReason: data.data.suspension_reason || null,
+            suspensionDate: data.data.suspension_date || null
+          })
+          
+          // Comment 1: Normalize subscription data to include retry/grace fields
+          if (data.data.subscription) {
+            const normalizedSubscription = {
+              ...data.data.subscription,
+              subscription_status: data.data.subscription.subscription_status,
+              retry_count: data.data.subscription.retry_count || 0,
+              grace_period_end: data.data.subscription.grace_period_end || null,
+              next_retry_date: data.data.subscription.next_retry_date || null
+            }
+            setSubscriptionData(normalizedSubscription)
+          } else {
+            // Clear any stale subscription data if backend doesn't send it
+            setSubscriptionData(null)
+          }
           
           navigate('/dashboard')
         } else {

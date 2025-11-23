@@ -350,8 +350,8 @@ function BranchesTab({ analytics }) {
                 console.log('✅ Manager PIN updated and hashed')
               }
               
-              // Phase 2: Remove PIN from general update to prevent plaintext storage
-              const { manager_pin, ...cleanedBranchData } = branchData
+              // Phase 2: Remove PIN and internal flags from general update to prevent plaintext storage
+              const { manager_pin, _pinAlreadySaved, ...cleanedBranchData } = branchData
               
               if (showEditModal) {
                 // Update existing branch using secure ID

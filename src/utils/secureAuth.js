@@ -13,7 +13,84 @@ export function getAuthData() {
     businessId: localStorage.getItem('businessId'), // Now secure ID (biz_*)
     businessName: localStorage.getItem('businessName'),
     userEmail: localStorage.getItem('userEmail'),
-    sessionToken: localStorage.getItem('sessionToken')
+    sessionToken: localStorage.getItem('sessionToken'),
+    subscription: JSON.parse(localStorage.getItem('subscription') || 'null'),
+    businessStatus: localStorage.getItem('businessStatus') || 'active',
+    subscriptionStatus: localStorage.getItem('subscriptionStatus') || 'trial',
+    suspensionReason: localStorage.getItem('suspensionReason') || null,
+    suspensionDate: localStorage.getItem('suspensionDate') || null
+  }
+}
+
+/**
+ * Set authentication data including business status
+ */
+export function setAuthData({ 
+  sessionToken, 
+  businessId, 
+  businessName, 
+  userEmail, 
+  businessStatus, 
+  subscriptionStatus,
+  suspensionReason,
+  suspensionDate
+}) {
+  localStorage.setItem('isAuthenticated', 'true')
+  localStorage.setItem('sessionToken', sessionToken)
+  localStorage.setItem('businessId', businessId)
+  localStorage.setItem('businessName', businessName)
+  localStorage.setItem('userEmail', userEmail)
+  localStorage.setItem('businessStatus', businessStatus || 'active')
+  localStorage.setItem('subscriptionStatus', subscriptionStatus || 'trial')
+  localStorage.setItem('suspensionReason', suspensionReason || '')
+  localStorage.setItem('suspensionDate', suspensionDate || '')
+  
+  console.log('🔒 Authentication data stored with status:', businessStatus)
+}
+
+/**
+ * Get business status
+ */
+export function getBusinessStatus() {
+  return localStorage.getItem('businessStatus') || 'active'
+}
+
+/**
+ * Check if business is suspended
+ */
+export function isSuspended() {
+  return getBusinessStatus() === 'suspended'
+}
+
+/**
+ * Get subscription data from localStorage
+ */
+export function getSubscriptionData() {
+  const subscriptionStr = localStorage.getItem('subscription')
+  if (!subscriptionStr) return null
+  
+  try {
+    return JSON.parse(subscriptionStr)
+  } catch (error) {
+    console.error('Failed to parse subscription data:', error)
+    return null
+  }
+}
+
+/**
+ * Set subscription data in localStorage
+ */
+export function setSubscriptionData(subscriptionData) {
+  if (!subscriptionData) {
+    localStorage.removeItem('subscription')
+    return
+  }
+  
+  try {
+    localStorage.setItem('subscription', JSON.stringify(subscriptionData))
+    console.log('🔒 Subscription data stored')
+  } catch (error) {
+    console.error('Failed to store subscription data:', error)
   }
 }
 
@@ -77,6 +154,11 @@ export function logout() {
   localStorage.removeItem('businessName')
   localStorage.removeItem('userEmail')
   localStorage.removeItem('sessionToken')
+  localStorage.removeItem('subscription')
+  localStorage.removeItem('businessStatus')
+  localStorage.removeItem('subscriptionStatus')
+  localStorage.removeItem('suspensionReason')
+  localStorage.removeItem('suspensionDate')
   
   console.log('🔒 User logged out - secure data cleared')
   window.location.href = '/auth?mode=signin'
@@ -133,8 +215,33 @@ export function getSecureBusinessId() {
   return localStorage.getItem('businessId')
 }
 
+/**
+ * Update business and subscription status after payment operations
+ * Comment 1: Helper to keep post-login flows consistent with login-time state
+ */
+export function updateStatusAfterPayment({ businessStatus, subscriptionStatus, subscriptionData }) {
+  if (businessStatus) {
+    localStorage.setItem('businessStatus', businessStatus)
+  }
+  if (subscriptionStatus) {
+    localStorage.setItem('subscriptionStatus', subscriptionStatus)
+  }
+  if (subscriptionData) {
+    setSubscriptionData(subscriptionData)
+  }
+  
+  // Clear suspension fields if reactivated
+  if (businessStatus === 'active') {
+    localStorage.removeItem('suspensionReason')
+    localStorage.removeItem('suspensionDate')
+  }
+  
+  console.log('🔒 Status updated after payment', { businessStatus, subscriptionStatus })
+}
+
 export default {
   getAuthData,
+  setAuthData,
   getSecureAuthHeaders,
   secureApiRequest,
   logout,
@@ -143,7 +250,12 @@ export default {
   validateSecureOfferId,
   validateSecureBranchId,
   validateSecureCustomerId,
-  getSecureBusinessId
+  getSecureBusinessId,
+  getSubscriptionData,
+  setSubscriptionData,
+  getBusinessStatus,
+  isSuspended,
+  updateStatusAfterPayment
 }
 // ============================================
 // Branch Manager Authentication Functions

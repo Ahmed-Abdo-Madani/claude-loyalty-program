@@ -33,6 +33,7 @@
     "invalidLocationData": "Invalid location data",
     "locationTypeRequired": "Location type is required",
     "missingLocationFields": "Missing required location fields: {{fields}}",
+    "paymentIdRequired": "Payment ID is required to verify the transaction",
     "customerRequiredFields": "Missing required fields: first_name, last_name, email, phone",
     "customerAlreadyExists": "Customer with this email or phone already exists",
     "invalidStatus": "Invalid status. Must be: active, pending, or suspended",
@@ -45,7 +46,12 @@
     "passwordsRequired": "Current password and new password are required",
     "passwordMinLength": "New password must be at least 8 characters long",
     "sessionTokenRequired": "Session token and admin ID are required",
-    "invalidTierConfiguration": "Invalid tier configuration"
+    "invalidTierConfiguration": "Invalid tier configuration",
+    "invalidPlanType": "Invalid subscription plan selected.",
+    "paymentIdRequired": "Payment ID is required.",
+    "invalidPublishableKey": "Invalid publishable key format.",
+    "paymentConfigurationIncomplete": "Payment gateway configuration is incomplete.",
+    "noPaymentMethod": "No payment method on file"
   },
   "notFound": {
     "business": "Business not found",
@@ -98,7 +104,16 @@
     "prizeConfirmationFailed": "Prize confirmation failed",
     "rateLimitExceeded": "Too many requests",
     "rateLimitMessage": "Rate limit exceeded. Please try again in {{minutes}} minutes",
-    "routeNotFound": "Route not found"
+    "routeNotFound": "Route not found",
+    "paymentConfigError": "Payment gateway is not configured. Please contact support.",
+    "checkoutFailed": "Failed to initialize checkout session. Please try again.",
+    "paymentDataIncomplete": "Payment data is incomplete. Please contact support.",
+    "paymentProcessingFailed": "Failed to process payment. Please try again or contact support.",
+    "invalidSubscriptionAmount": "Invalid subscription amount calculated. Please contact support.",
+    "invalidPaymentConfig": "Payment gateway configuration is invalid. Please check environment variables.",
+    "invalidPublishableKeyFormat": "Moyasar publishable key format is invalid. Must start with pk_test_ or pk_live_.",
+    "testKeyInProduction": "Warning: Using test payment key in production environment.",
+    "subscriptionUpdateFailed": "Failed to update subscription. Please try again."
   },
   "customer": {
     "registrationSuccess": "Customer registered successfully",
@@ -140,5 +155,82 @@
       "congratulations": "Congratulations! You are now %@",
       "newMessage": "New message: %@"
     }
+  },
+  "payment": {
+    "verificationFailed": "Payment verification failed",
+    "paymentNotFound": "Payment record not found. Please retry the payment.",
+    "statusMismatch": "Payment status is {status}, expected 'paid'. Please wait and try again.",
+    "amountMismatch": "Payment amount verification failed. Expected {expected} SAR, received {actual} SAR.",
+    "currencyMismatch": "Payment currency mismatch. Expected {expected}, received {actual}.",
+    "verificationIssues": "Payment verification encountered issues: {issues}",
+    "subscriptionActivated": "Subscription activated successfully",
+    "sessionIdMissing": "Payment session ID not found in Moyasar metadata",
+    "paymentRecordNotFoundBySession": "Payment record not found for this session",
+    "moyasarPaymentNotFound": "Payment not found on Moyasar gateway",
+    "tokenizationFailed": "Failed to tokenize payment method. Please try again."
+  },
+  "subscription": {
+    "notFound": "Subscription not found",
+    "upgradeSuccess": "Subscription upgraded successfully to {{plan}}",
+    "upgraded": "Subscription upgraded successfully",
+    "downgradeSuccess": "Subscription downgrade scheduled for end of billing period",
+    "downgraded": "Subscription downgrade scheduled",
+    "cancelSuccess": "Subscription cancelled successfully",
+    "cancelled": "Subscription cancelled successfully",
+    "paymentMethodUpdateSuccess": "Payment method updated successfully",
+    "paymentMethodUpdated": "Payment method updated successfully",
+    "detailsFetched": "Subscription details retrieved successfully",
+    "downgradeScheduled": "Downgrade scheduled for end of billing period",
+    "accessRetained": "You will retain access until {{date}}",
+    "alreadyOnPlan": "You are already on the {{plan}} plan",
+    "cannotDowngradeToSamePlan": "Cannot downgrade to the same or higher plan",
+    "cannotUpgradeToLowerPlan": "Cannot upgrade to a lower tier plan",
+    "usageExceedsLimit": "Current usage exceeds limits for {{plan}} plan"
+  },
+  "debug": {
+    "verificationDetails": "Verification Details",
+    "statusMatch": "Status Match",
+    "amountMatch": "Amount Match",
+    "currencyMatch": "Currency Match",
+    "expectedAmount": "Expected Amount",
+    "actualAmount": "Actual Amount"
+  },
+  "payment": {
+    "historyFetched": "Payment history retrieved successfully",
+    "invalidStatus": "Invalid payment status. Valid statuses: pending, paid, failed, refunded, cancelled",
+    "invalidDateRange": "Invalid date range. Please provide valid dates in YYYY-MM-DD format",
+    "invalidAmount": "Invalid amount. Please provide valid numeric values",
+    "failureNotification": {
+      "subject": "Payment Failed - Action Required",
+      "body": "Dear {{businessName}},\n\nYour payment of {{amount}} {{currency}} for the {{planType}} plan has failed.\n\nAttempt: {{retryCount}} of 3\nNext retry: {{nextRetryDate}}\n\nPlease ensure your payment method has sufficient funds. If the issue persists, please update your payment method.\n\nThank you,\nMadna Loyalty Team",
+      "bodyFinal": "Dear {{businessName}},\n\nYour final payment attempt of {{amount}} {{currency}} for the {{planType}} plan has failed.\n\nYour account has entered a grace period until {{gracePeriodEnd}}. Please update your payment method before this date to avoid account suspension.\n\nUpdate payment: {{reactivationUrl}}\n\nThank you,\nMadna Loyalty Team"
+    },
+    "gracePeriodNotification": {
+      "subject": "Final Notice - Account Suspension Imminent",
+      "body": "Dear {{businessName}},\n\nYour account will be suspended on {{gracePeriodEnd}} due to failed payment attempts.\n\nTo prevent suspension, please update your payment method immediately:\n{{reactivationUrl}}\n\nIf you have any questions, please contact our support team.\n\nThank you,\nMadna Loyalty Team"
+    },
+    "suspensionNotification": {
+      "subject": "Account Suspended - Payment Required",
+      "body": "Dear {{businessName}},\n\nYour account has been suspended due to failed payment attempts.\n\nReason: {{suspensionReason}}\nSuspended on: {{suspensionDate}}\n\nTo reactivate your account, please update your payment method:\n{{reactivationUrl}}\n\nIf you need assistance, please contact support@madna.me\n\nThank you,\nMadna Loyalty Team"
+    },
+    "reactivationSuccessNotification": {
+      "subject": "Account Reactivated Successfully",
+      "body": "Dear {{businessName}},\n\nGreat news! Your account has been reactivated successfully.\n\nPlan: {{planType}}\nAmount paid: {{amount}} {{currency}}\nNext billing date: {{nextBillingDate}}\n\nThank you for resolving the payment issue. We're glad to have you back!\n\nMadna Loyalty Team"
+    }
+  },
+  "reactivation": {
+    "success": "Account reactivated successfully",
+    "notSuspended": "Account is not suspended",
+    "paymentVerificationFailed": "Payment verification failed",
+    "failed": "Reactivation failed"
+  },
+  "invoice": {
+    "notFound": "Invoice not found",
+    "accessDenied": "You do not have access to this invoice",
+    "downloadFailed": "Failed to download invoice. Please try again later",
+    "generationFailed": "Failed to generate invoice PDF"
+  },
+  "server": {
+    "reactivationFailed": "Failed to reactivate account. Please try again or contact support."
   }
 }

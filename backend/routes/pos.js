@@ -1,6 +1,6 @@
 import express from 'express'
 import { Op } from 'sequelize'
-import { requireBusinessAuth } from '../middleware/hybridBusinessAuth.js'
+import { requireBusinessAuth, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 import { requireBranchManagerAuth } from '../middleware/branchManagerAuth.js'
 import Product from '../models/Product.js'
 import ProductCategory from '../models/ProductCategory.js'
@@ -1093,8 +1093,9 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
 /**
  * POST /api/pos/sales
  * Create new sale (checkout)
+ * Enforces POS operations limit from subscription plan
  */
-router.post('/sales', requireBranchManagerAuth, async (req, res) => {
+router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOperations'), async (req, res) => {
   const transaction = await sequelize.transaction()
   
   try {

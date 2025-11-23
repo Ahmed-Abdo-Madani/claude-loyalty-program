@@ -165,6 +165,28 @@ const Business = sequelize.define('Business', {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: 'File size in bytes'
+  },
+  current_plan: {
+    type: DataTypes.ENUM('free', 'professional', 'enterprise'),
+    allowNull: false,
+    defaultValue: 'free',
+    comment: 'Current subscription plan'
+  },
+  subscription_status: {
+    type: DataTypes.ENUM('trial', 'active', 'past_due', 'cancelled', 'expired'),
+    allowNull: false,
+    defaultValue: 'trial',
+    comment: 'Current subscription status'
+  },
+  trial_ends_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Trial period end date (7 days from registration)'
+  },
+  subscription_started_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Date when paid subscription started'
   }
 }, {
   tableName: 'businesses',
@@ -216,6 +238,64 @@ Business.prototype.getAnalytics = async function() {
 Business.prototype.calculateOverallConversionRate = function() {
   if (this.total_customers === 0) return 0
   return ((this.total_redemptions / this.total_customers) * 100).toFixed(2)
+}
+
+// Subscription management methods
+Business.prototype.isOnTrial = function() {
+  return this.subscription_status === 'trial' && this.trial_ends_at && new Date(this.trial_ends_at) > new Date()
+}
+
+Business.prototype.isTrialExpired = function() {
+  return this.trial_ends_at && new Date(this.trial_ends_at) < new Date()
+}
+
+Business.prototype.hasActiveSubscription = function() {
+  return this.subscription_status === 'active'
+}
+
+Business.prototype.canAccessFeature = function(feature) {
+  const featureAccess = {
+    free: ['basic_offers'],
+    professional: ['basic_offers', 'unlimited_offers', 'api_access'],
+    enterprise: ['basic_offers', 'unlimited_offers', 'multiple_locations', 'api_access', 'advanced_analytics']
+  }
+  
+  const allowedFeatures = featureAccess[this.current_plan] || []
+  return allowedFeatures.includes(feature)
+}
+
+Business.prototype.getRemainingTrialDays = function() {
+  if (!this.trial_ends_at) return 0
+  const now = new Date()
+  const trialEnd = new Date(this.trial_ends_at)
+  const diffTime = trialEnd - now
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return Math.max(0, diffDays)
+}
+
+Business.prototype.getPlanLimits = function() {
+  const limits = {
+    free: {
+      offers: 1,
+      customers: 100,
+      posOperations: 20,
+      locations: 1
+    },
+    professional: {
+      offers: Infinity,
+      customers: 1000,
+      posOperations: Infinity,
+      locations: 1
+    },
+    enterprise: {
+      offers: Infinity,
+      customers: Infinity,
+      posOperations: Infinity,
+      locations: Infinity
+    }
+  }
+  
+  return limits[this.current_plan] || limits.free
 }
 
 export default Business

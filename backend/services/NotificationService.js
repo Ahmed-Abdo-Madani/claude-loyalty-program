@@ -1,6 +1,7 @@
-import { NotificationCampaign, NotificationLog, Customer } from '../models/index.js'
+import { NotificationCampaign, NotificationLog, Customer, Business } from '../models/index.js'
 import logger from '../config/logger.js'
 import { Op } from 'sequelize'
+import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 
 class NotificationService {
   constructor() {
@@ -798,6 +799,325 @@ class NotificationService {
     } catch (error) {
       logger.error('Failed to track campaign conversion', { error: error.message })
       throw error
+    }
+  }
+
+  /**
+   * Send payment failure notification to business owner
+   * @param {string} businessId - Business ID
+   * @param {object} paymentDetails - Payment details (amount, currency, payment_method_last4, etc.)
+   * @param {object} retryInfo - Retry information (retry_count, next_retry_date, grace_period_end)
+   */
+  async sendPaymentFailureNotification(businessId, paymentDetails, retryInfo) {
+    try {
+      logger.info('📧 Sending payment failure notification', { businessId, retryCount: retryInfo.retry_count })
+
+      // Fetch Business record to get owner email/phone
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
+
+      if (!business) {
+        throw new Error(`Business ${businessId} not found`)
+      }
+
+      // Determine notification urgency based on retry count
+      const isCritical = retryInfo.retry_count >= 3
+      const locale = business.preferred_language || 'ar'
+
+      // Build localized message
+      let message
+      if (isCritical || retryInfo.grace_period_end) {
+        // Final attempt failed - grace period started
+        message = {
+          subject: getLocalizedMessage('payment.failureNotification.subject', locale),
+          body: getLocalizedMessage('payment.failureNotification.bodyFinal', locale, {
+            businessName: business.business_name,
+            amount: paymentDetails.amount,
+            currency: paymentDetails.currency,
+            planType: paymentDetails.plan_type,
+            gracePeriodEnd: retryInfo.grace_period_end ? new Date(retryInfo.grace_period_end).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '',
+            reactivationUrl: `${process.env.BASE_URL || 'https://madna.me'}/subscription/suspended`
+          })
+        }
+      } else {
+        // Regular retry notification
+        message = {
+          subject: getLocalizedMessage('payment.failureNotification.subject', locale),
+          body: getLocalizedMessage('payment.failureNotification.body', locale, {
+            businessName: business.business_name,
+            amount: paymentDetails.amount,
+            currency: paymentDetails.currency,
+            planType: paymentDetails.plan_type,
+            retryCount: retryInfo.retry_count,
+            nextRetryDate: retryInfo.next_retry_date ? new Date(retryInfo.next_retry_date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : ''
+          })
+        }
+      }
+
+      // Send through email and SMS for maximum reach
+      const channels = ['email', 'sms']
+      
+      // Simulate sending (reuse existing channel logic)
+      const results = []
+      for (const channel of channels) {
+        try {
+          let result
+          if (channel === 'email') {
+            result = await this.sendBusinessEmail(business, message)
+          } else if (channel === 'sms') {
+            result = await this.sendBusinessSMS(business, message)
+          }
+          results.push({ channel, success: result.success })
+        } catch (channelError) {
+          logger.warn(`Failed to send payment failure notification via ${channel}`, {
+            businessId,
+            error: channelError.message
+          })
+          results.push({ channel, success: false, error: channelError.message })
+        }
+      }
+
+      logger.info('Payment failure notification sent', {
+        businessId,
+        retryCount: retryInfo.retry_count,
+        channels: results.map(r => r.channel),
+        success: results.some(r => r.success)
+      })
+
+      return { success: true, results }
+
+    } catch (error) {
+      logger.error('Failed to send payment failure notification', {
+        businessId,
+        error: error.message,
+        stack: error.stack
+      })
+      // Non-blocking: return success to not disrupt payment processing
+      return { success: true, error: error.message }
+    }
+  }
+
+  /**
+   * Send grace period notification to business owner
+   * @param {string} businessId - Business ID
+   * @param {Date} gracePeriodEnd - Grace period end date
+   */
+  async sendGracePeriodNotification(businessId, gracePeriodEnd) {
+    try {
+      logger.info('📧 Sending grace period notification', { businessId, gracePeriodEnd })
+
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
+
+      if (!business) {
+        throw new Error(`Business ${businessId} not found`)
+      }
+
+      const locale = business.preferred_language || 'ar'
+
+      const message = {
+        subject: getLocalizedMessage('payment.gracePeriodNotification.subject', locale),
+        body: getLocalizedMessage('payment.gracePeriodNotification.body', locale, {
+          businessName: business.business_name,
+          gracePeriodEnd: new Date(gracePeriodEnd).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US'),
+          reactivationUrl: `${process.env.BASE_URL || 'https://madna.me'}/subscription/suspended`
+        })
+      }
+
+      // Send via email and SMS
+      const results = []
+      const channels = ['email', 'sms']
+      
+      for (const channel of channels) {
+        try {
+          let result
+          if (channel === 'email') {
+            result = await this.sendBusinessEmail(business, message)
+          } else if (channel === 'sms') {
+            result = await this.sendBusinessSMS(business, message)
+          }
+          results.push({ channel, success: result.success })
+        } catch (channelError) {
+          logger.warn(`Failed to send grace period notification via ${channel}`, {
+            businessId,
+            error: channelError.message
+          })
+          results.push({ channel, success: false })
+        }
+      }
+
+      logger.info('Grace period notification sent', { businessId, channels: results.map(r => r.channel) })
+
+      return { success: true, results }
+
+    } catch (error) {
+      logger.error('Failed to send grace period notification', {
+        businessId,
+        error: error.message
+      })
+      return { success: true, error: error.message }
+    }
+  }
+
+  /**
+   * Send account suspension notification to business owner
+   * @param {string} businessId - Business ID
+   * @param {string} suspensionReason - Reason for suspension
+   */
+  async sendAccountSuspensionNotification(businessId, suspensionReason) {
+    try {
+      logger.info('📧 Sending account suspension notification', { businessId })
+
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
+
+      if (!business) {
+        throw new Error(`Business ${businessId} not found`)
+      }
+
+      const locale = business.preferred_language || 'ar'
+
+      const message = {
+        subject: getLocalizedMessage('payment.suspensionNotification.subject', locale),
+        body: getLocalizedMessage('payment.suspensionNotification.body', locale, {
+          businessName: business.business_name,
+          suspensionReason: suspensionReason,
+          suspensionDate: new Date().toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US'),
+          reactivationUrl: `${process.env.BASE_URL || 'https://madna.me'}/subscription/suspended`
+        })
+      }
+
+      // Email only (SMS too brief for detailed instructions)
+      const result = await this.sendBusinessEmail(business, message)
+
+      logger.info('Account suspension notification sent', { businessId, success: result.success })
+
+      return { success: true, result }
+
+    } catch (error) {
+      logger.error('Failed to send suspension notification', {
+        businessId,
+        error: error.message
+      })
+      return { success: true, error: error.message }
+    }
+  }
+
+  /**
+   * Send reactivation success notification to business owner
+   * @param {string} businessId - Business ID
+   * @param {object} newPlanDetails - New subscription details
+   */
+  async sendReactivationSuccessNotification(businessId, newPlanDetails) {
+    try {
+      logger.info('📧 Sending reactivation success notification', { businessId })
+
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
+
+      if (!business) {
+        throw new Error(`Business ${businessId} not found`)
+      }
+
+      const locale = business.preferred_language || 'ar'
+
+      const message = {
+        subject: getLocalizedMessage('payment.reactivationSuccessNotification.subject', locale),
+        body: getLocalizedMessage('payment.reactivationSuccessNotification.body', locale, {
+          businessName: business.business_name,
+          planType: newPlanDetails.plan_type,
+          amount: newPlanDetails.amount,
+          currency: newPlanDetails.currency || 'SAR',
+          nextBillingDate: newPlanDetails.next_billing_date ? new Date(newPlanDetails.next_billing_date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : ''
+        })
+      }
+
+      // Send via email and SMS for confirmation
+      const results = []
+      const channels = ['email', 'sms']
+      
+      for (const channel of channels) {
+        try {
+          let result
+          if (channel === 'email') {
+            result = await this.sendBusinessEmail(business, message)
+          } else if (channel === 'sms') {
+            result = await this.sendBusinessSMS(business, message)
+          }
+          results.push({ channel, success: result.success })
+        } catch (channelError) {
+          logger.warn(`Failed to send reactivation success notification via ${channel}`, {
+            businessId,
+            error: channelError.message
+          })
+          results.push({ channel, success: false })
+        }
+      }
+
+      logger.info('Reactivation success notification sent', { businessId, channels: results.map(r => r.channel) })
+
+      return { success: true, results }
+
+    } catch (error) {
+      logger.error('Failed to send reactivation notification', {
+        businessId,
+        error: error.message
+      })
+      return { success: true, error: error.message }
+    }
+  }
+
+  /**
+   * Send email to business owner
+   * @param {object} business - Business record
+   * @param {object} message - Message object with subject and body
+   */
+  async sendBusinessEmail(business, message) {
+    try {
+      logger.info(`📧 Sending business email to ${business.email}`, { subject: message.subject })
+
+      // In production, integrate with email service (SendGrid, AWS SES, etc.)
+      // For now, simulate successful send
+      const externalId = `business_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      return {
+        success: true,
+        externalId,
+        provider: 'sendgrid'
+      }
+
+    } catch (error) {
+      logger.error('Business email sending failed', { error: error.message })
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Send SMS to business owner
+   * @param {object} business - Business record
+   * @param {object} message - Message object with subject and body
+   */
+  async sendBusinessSMS(business, message) {
+    try {
+      logger.info(`📱 Sending business SMS to ${business.phone}`, { message: message.body?.substring(0, 50) })
+
+      // In production, integrate with SMS service (Twilio, AWS SNS, etc.)
+      // For now, simulate successful send
+      const externalId = `business_sms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      return {
+        success: true,
+        externalId,
+        provider: 'twilio'
+      }
+
+    } catch (error) {
+      logger.error('Business SMS sending failed', { error: error.message })
+      return { success: false, error: error.message }
     }
   }
 }

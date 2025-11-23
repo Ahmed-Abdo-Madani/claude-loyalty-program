@@ -18,6 +18,9 @@
     "customers": "Customers",
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
+    "subscription": "Subscription",
+    "subscriptionManage": "Manage Subscription",
+    "paymentHistory": "Payment History",
     "comingSoon": "Coming Soon"
   },
   "header": {
@@ -35,6 +38,8 @@
     "customers": "Customers",
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
+    "subscription": "Subscription",
+    "subscriptionManage": "Manage Subscription",
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode",
     "signOut": "Sign Out"
@@ -955,6 +960,12 @@
     "customerGrowth": "Customer Growth",
     "revenueImpact": "Revenue Impact",
     "exportReport": "Export Report"
+  },
+  "subscription": {
+    "title": "Subscription",
+    "viewPlans": "View Plans",
+    "managePlan": "Manage Subscription",
+    "currentPlan": "Current Plan"
   },
   "settings": {
     "title": "Settings",

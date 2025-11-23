@@ -6,6 +6,17 @@
 import { Business, BusinessSession } from '../models/index.js'
 import logger from '../config/logger.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
+import SubscriptionService from '../services/SubscriptionService.js'
+
+/**
+ * Helper function to check if route is a suspended account route
+ * @param {object} req - Express request object
+ * @returns {boolean} - True if route is reactivation endpoint
+ */
+const isSuspendedAccountRoute = (req) => {
+  const path = req.path || req.originalUrl
+  return path.includes('/subscription/reactivate')
+}
 
 /**
  * Enhanced authentication middleware that supports both ID formats
@@ -61,6 +72,40 @@ export const requireBusinessAuth = async (req, res, next) => {
       })
     }
 
+    // Check business status
+    if (business.status === 'suspended') {
+      // Allow suspended businesses to access reactivation endpoint only
+      if (isSuspendedAccountRoute(req)) {
+        logger.info('Suspended business accessing reactivation endpoint', {
+          businessId: business.public_id,
+          path: req.path,
+          suspensionReason: business.suspension_reason
+        })
+        
+        // Allow through to reactivation endpoint
+        req.business = business
+        req.businessId = business.public_id
+        return next()
+      }
+      
+      // Block access to all other routes for suspended businesses
+      logger.warn('Suspended business attempting to access restricted route', {
+        businessId: business.public_id,
+        path: req.path,
+        suspensionReason: business.suspension_reason
+      })
+      
+      return res.status(403).json({
+        success: false,
+        message: 'Account suspended due to payment failure',
+        code: 'ACCOUNT_SUSPENDED',
+        suspension_reason: business.suspension_reason,
+        suspension_date: business.suspension_date,
+        reactivation_required: true,
+        reactivation_url: '/subscription/reactivate'
+      })
+    }
+    
     if (business.status !== 'active') {
       logger.warn('Business account not active', {
         businessId: business.public_id || business.id,
@@ -297,9 +342,162 @@ export const findBusinessByAnyId = async (businessId) => {
   return null
 }
 
+/**
+ * Middleware to check if trial period has expired
+ * Must be used after requireBusinessAuth
+ */
+export const checkTrialExpiration = async (req, res, next) => {
+  try {
+    const business = req.business
+
+    if (!business) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+        code: 'MISSING_BUSINESS'
+      })
+    }
+
+    // Check if business is on trial
+    if (business.isOnTrial && business.isOnTrial()) {
+      // Check if trial has expired
+      if (business.isTrialExpired && business.isTrialExpired()) {
+        const daysExpired = Math.floor((new Date() - new Date(business.trial_ends_at)) / (1000 * 60 * 60 * 24))
+        
+        logger.warn('Trial period expired', {
+          business_id: business.public_id,
+          trial_ends_at: business.trial_ends_at,
+          days_expired: daysExpired
+        })
+
+        return res.status(403).json({
+          success: false,
+          message: 'Trial period has expired. Please upgrade your subscription.',
+          code: 'TRIAL_EXPIRED',
+          trial_ends_at: business.trial_ends_at,
+          days_expired: daysExpired
+        })
+      }
+    }
+
+    next()
+  } catch (error) {
+    logger.error('Trial expiration check error', {
+      error: error.message,
+      stack: error.stack,
+      business_id: req.business?.public_id
+    })
+    
+    res.status(500).json({
+      success: false,
+      message: 'Trial expiration check failed',
+      code: 'TRIAL_CHECK_ERROR'
+    })
+  }
+}
+
+/**
+ * Middleware factory to check subscription limits
+ * Must be used after requireBusinessAuth for authenticated routes
+ * For 'customers' limit type, can also derive business ID from offer in request body
+ * @param {string} limitType - Type of limit: 'offers', 'customers', 'posOperations', 'locations'
+ */
+export const checkSubscriptionLimit = (limitType) => {
+  return async (req, res, next) => {
+    try {
+      // Get business ID from req.business (set by requireBusinessAuth)
+      let businessId = req.business?.public_id
+
+      // For customer signup route without auth, derive business ID from offer
+      if (!businessId && limitType === 'customers' && req.body?.offerId) {
+        const { Offer } = await import('../models/index.js')
+        const offer = await Offer.findOne({ 
+          where: { public_id: req.body.offerId },
+          attributes: ['public_id', 'business_id']
+        })
+        
+        if (offer) {
+          businessId = offer.business_id
+          logger.debug('Resolved business ID from offer for customer limit check', {
+            offerId: req.body.offerId,
+            businessId
+          })
+        }
+      }
+
+      if (!businessId) {
+        logger.warn('No business ID found for limit check', {
+          limitType,
+          route: req.path,
+          hasReqBusiness: !!req.business,
+          hasOfferId: !!req.body?.offerId
+        })
+        
+        // Skip limit check if no business context
+        return next()
+      }
+
+      // Check subscription limits
+      const limitCheck = await SubscriptionService.checkSubscriptionLimits(businessId, limitType)
+
+      if (!limitCheck.allowed) {
+        logger.warn('Subscription limit exceeded', {
+          business_id: businessId,
+          limit_type: limitType,
+          current: limitCheck.current,
+          limit: limitCheck.limit,
+          plan: limitCheck.plan
+        })
+
+        return res.status(403).json({
+          success: false,
+          message: limitCheck.message,
+          code: 'LIMIT_EXCEEDED',
+          current_plan: limitCheck.plan,
+          limit_type: limitType,
+          current_usage: limitCheck.current,
+          limit: limitCheck.limit,
+          upgrade_prompt: `You've reached the ${limitType} limit for your ${limitCheck.plan} plan. Upgrade to continue.`
+        })
+      }
+
+      logger.debug('Subscription limit check passed', {
+        business_id: businessId,
+        limit_type: limitType,
+        current: limitCheck.current,
+        limit: limitCheck.limit
+      })
+
+      next()
+    } catch (error) {
+      logger.error('Subscription limit check error', {
+        error: error.message,
+        stack: error.stack,
+        limit_type: limitType,
+        business_id: req.business?.public_id
+      })
+      
+      // Don't block on limit check errors in development
+      if (process.env.NODE_ENV === 'production') {
+        res.status(500).json({
+          success: false,
+          message: 'Subscription limit check failed',
+          code: 'LIMIT_CHECK_ERROR'
+        })
+      } else {
+        // In development, log and continue
+        logger.warn('Skipping limit check due to error in development mode')
+        next()
+      }
+    }
+  }
+}
+
 export default {
   requireBusinessAuth,
   migrateBusinessIdIfNeeded,
   validateBusinessExists,
-  findBusinessByAnyId
+  findBusinessByAnyId,
+  checkTrialExpiration,
+  checkSubscriptionLimit
 }
