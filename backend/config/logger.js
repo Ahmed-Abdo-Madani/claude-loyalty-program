@@ -2,6 +2,9 @@ import winston from 'winston'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
+// Allow LOG_LEVEL override, default to 'info' in development, 'warn' in production
+const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'info' : 'warn')
+
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
@@ -21,7 +24,7 @@ const logFormat = winston.format.combine(
 )
 
 const logger = winston.createLogger({
-  level: isDevelopment ? 'debug' : 'warn',
+  level: logLevel,
   format: logFormat,
   transports: [
     new winston.transports.Console({
@@ -32,6 +35,11 @@ const logger = winston.createLogger({
     })
   ]
 })
+
+// Add helper method to check if debug logging is enabled
+logger.isDebugMode = () => {
+  return logger.level === 'debug' || process.env.LOG_LEVEL === 'debug'
+}
 
 // Add file logging in production
 if (!isDevelopment) {

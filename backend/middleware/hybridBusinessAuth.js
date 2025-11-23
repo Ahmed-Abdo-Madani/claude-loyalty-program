@@ -65,7 +65,7 @@ export const requireBusinessAuth = async (req, res, next) => {
       })
     }
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (logger.isDebugMode && logger.isDebugMode()) {
       logger.debug('Authenticated business via secure ID', {
         businessId: businessId.substring(0, 8) + '...',
         businessName: business.business_name
@@ -160,10 +160,12 @@ export const requireBusinessAuth = async (req, res, next) => {
       // Update session last_used_at timestamp
       await session.update({ last_used_at: new Date() })
 
-      logger.debug('Session validated', {
-        businessId: business.public_id,
-        sessionId: session.id
-      })
+      if (logger.isDebugMode && logger.isDebugMode()) {
+        logger.debug('Session validated', {
+          businessId: business.public_id,
+          sessionId: session.id
+        })
+      }
 
       // Attach session to request for downstream use
       req.session = session

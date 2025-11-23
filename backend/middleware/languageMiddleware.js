@@ -43,8 +43,8 @@ export const extractLanguage = (req, res, next) => {
     // 3. Attach validated language to request
     req.locale = language
 
-    // 4. Log language detection for debugging
-    if (process.env.NODE_ENV !== 'production') {
+    // 4. Log language detection for debugging (only in debug mode)
+    if (logger.isDebugMode && logger.isDebugMode()) {
       logger.debug(`Language detected: ${language}`, {
         acceptLanguage,
         queryLang: req.query.lang,

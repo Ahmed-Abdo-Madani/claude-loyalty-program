@@ -20,9 +20,7 @@ async function columnExists(queryInterface, tableName, columnName) {
 /**
  * UP: Add subscription fields to businesses table
  */
-export async function up(queryInterface, DataTypes) {
-  const transaction = await sequelize.transaction()
-  
+export async function up() {
   try {
     console.log('\n📋 Migration: Add subscription fields to businesses table')
     console.log('='.repeat(60))
@@ -30,86 +28,103 @@ export async function up(queryInterface, DataTypes) {
     // =================================================================
     // 1. Add current_plan column
     // =================================================================
-    if (await columnExists(queryInterface, TABLE_NAME, 'current_plan')) {
+    const [currentPlanExists] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = '${TABLE_NAME}' 
+      AND column_name = 'current_plan'
+    `)
+    
+    if (currentPlanExists.length > 0) {
       console.log('✅ Column current_plan already exists - skipping')
     } else {
-      console.log('\n📝 Adding current_plan column...')
-      await queryInterface.addColumn(TABLE_NAME, 'current_plan', {
-        type: DataTypes.ENUM('free', 'professional', 'enterprise'),
-        allowNull: false,
-        defaultValue: 'free',
-        after: 'logo_file_size'
-      }, { transaction })
-      console.log('✅ Column current_plan added')
+      console.log('\n📝 Creating ENUM type for current_plan...')
+      await sequelize.query(`
+        CREATE TYPE enum_businesses_current_plan AS ENUM ('free', 'professional', 'enterprise')
+      `)
       
-      // Set default value for existing businesses
-      console.log('📝 Setting current_plan to "free" for existing businesses...')
-      await queryInterface.sequelize.query(
-        `UPDATE ${TABLE_NAME} SET current_plan = 'free' WHERE current_plan IS NULL`,
-        { transaction }
-      )
-      console.log('✅ Default values set')
+      console.log('📝 Adding current_plan column...')
+      await sequelize.query(`
+        ALTER TABLE ${TABLE_NAME} 
+        ADD COLUMN current_plan enum_businesses_current_plan NOT NULL DEFAULT 'free'
+      `)
+      console.log('✅ Column current_plan added')
     }
     
     // =================================================================
     // 2. Add subscription_status column
     // =================================================================
-    if (await columnExists(queryInterface, TABLE_NAME, 'subscription_status')) {
+    const [subscriptionStatusExists] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = '${TABLE_NAME}' 
+      AND column_name = 'subscription_status'
+    `)
+    
+    if (subscriptionStatusExists.length > 0) {
       console.log('✅ Column subscription_status already exists - skipping')
     } else {
-      console.log('\n📝 Adding subscription_status column...')
-      await queryInterface.addColumn(TABLE_NAME, 'subscription_status', {
-        type: DataTypes.ENUM('trial', 'active', 'past_due', 'cancelled', 'expired'),
-        allowNull: false,
-        defaultValue: 'trial',
-        after: 'current_plan'
-      }, { transaction })
-      console.log('✅ Column subscription_status added')
+      console.log('\n📝 Creating ENUM type for subscription_status...')
+      await sequelize.query(`
+        CREATE TYPE enum_businesses_subscription_status AS ENUM ('trial', 'active', 'past_due', 'cancelled', 'expired')
+      `)
       
-      // Set default value for existing businesses
-      console.log('📝 Setting subscription_status to "trial" for existing businesses...')
-      await queryInterface.sequelize.query(
-        `UPDATE ${TABLE_NAME} SET subscription_status = 'trial' WHERE subscription_status IS NULL`,
-        { transaction }
-      )
-      console.log('✅ Default values set')
+      console.log('📝 Adding subscription_status column...')
+      await sequelize.query(`
+        ALTER TABLE ${TABLE_NAME} 
+        ADD COLUMN subscription_status enum_businesses_subscription_status NOT NULL DEFAULT 'trial'
+      `)
+      console.log('✅ Column subscription_status added')
     }
     
     // =================================================================
     // 3. Add trial_ends_at column
     // =================================================================
-    if (await columnExists(queryInterface, TABLE_NAME, 'trial_ends_at')) {
+    const [trialEndsExists] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = '${TABLE_NAME}' 
+      AND column_name = 'trial_ends_at'
+    `)
+    
+    if (trialEndsExists.length > 0) {
       console.log('✅ Column trial_ends_at already exists - skipping')
     } else {
       console.log('\n📝 Adding trial_ends_at column...')
-      await queryInterface.addColumn(TABLE_NAME, 'trial_ends_at', {
-        type: DataTypes.DATE,
-        allowNull: true,
-        after: 'subscription_status'
-      }, { transaction })
+      await sequelize.query(`
+        ALTER TABLE ${TABLE_NAME} 
+        ADD COLUMN trial_ends_at TIMESTAMP WITH TIME ZONE
+      `)
       console.log('✅ Column trial_ends_at added')
       
       // Set trial_ends_at to 7 days from now for existing businesses
       console.log('📝 Setting trial_ends_at to 7 days from now for existing businesses...')
-      await queryInterface.sequelize.query(
-        `UPDATE ${TABLE_NAME} SET trial_ends_at = NOW() + INTERVAL '7 days' WHERE trial_ends_at IS NULL`,
-        { transaction }
-      )
+      await sequelize.query(`
+        UPDATE ${TABLE_NAME} 
+        SET trial_ends_at = NOW() + INTERVAL '7 days' 
+        WHERE trial_ends_at IS NULL
+      `)
       console.log('✅ Trial end dates set')
     }
     
     // =================================================================
     // 4. Add subscription_started_at column
     // =================================================================
-    if (await columnExists(queryInterface, TABLE_NAME, 'subscription_started_at')) {
+    const [subscriptionStartedExists] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = '${TABLE_NAME}' 
+      AND column_name = 'subscription_started_at'
+    `)
+    
+    if (subscriptionStartedExists.length > 0) {
       console.log('✅ Column subscription_started_at already exists - skipping')
     } else {
       console.log('\n📝 Adding subscription_started_at column...')
-      await queryInterface.addColumn(TABLE_NAME, 'subscription_started_at', {
-        type: DataTypes.DATE,
-        allowNull: true,
-        after: 'trial_ends_at'
-      }, { transaction })
+      await sequelize.query(`
+        ALTER TABLE ${TABLE_NAME} 
+        ADD COLUMN subscription_started_at TIMESTAMP WITH TIME ZONE
+      `)
       console.log('✅ Column subscription_started_at added')
     }
     
@@ -118,74 +133,53 @@ export async function up(queryInterface, DataTypes) {
     // =================================================================
     console.log('\n📝 Creating indexes...')
     
-    try {
-      // Index on subscription_status
-      const statusIndexExists = await queryInterface.sequelize.query(
-        `SELECT 1 FROM pg_indexes WHERE indexname = 'idx_businesses_subscription_status'`,
-        { type: Sequelize.QueryTypes.SELECT, transaction }
-      )
-      
-      if (statusIndexExists.length === 0) {
-        await queryInterface.addIndex(TABLE_NAME, ['subscription_status'], {
-          name: 'idx_businesses_subscription_status',
-          transaction
-        })
-        console.log('✅ Index on subscription_status created')
-      } else {
-        console.log('✅ Index on subscription_status already exists')
-      }
-    } catch (error) {
-      console.log('⚠️  Index on subscription_status may already exist:', error.message)
+    // Index on subscription_status
+    const [statusIndexExists] = await sequelize.query(`
+      SELECT 1 FROM pg_indexes WHERE indexname = 'idx_businesses_subscription_status'
+    `)
+    
+    if (statusIndexExists.length === 0) {
+      await sequelize.query(`
+        CREATE INDEX idx_businesses_subscription_status ON ${TABLE_NAME} (subscription_status)
+      `)
+      console.log('✅ Index on subscription_status created')
+    } else {
+      console.log('✅ Index on subscription_status already exists')
     }
     
-    try {
-      // Index on trial_ends_at
-      const trialIndexExists = await queryInterface.sequelize.query(
-        `SELECT 1 FROM pg_indexes WHERE indexname = 'idx_businesses_trial_ends_at'`,
-        { type: Sequelize.QueryTypes.SELECT, transaction }
-      )
-      
-      if (trialIndexExists.length === 0) {
-        await queryInterface.addIndex(TABLE_NAME, ['trial_ends_at'], {
-          name: 'idx_businesses_trial_ends_at',
-          transaction
-        })
-        console.log('✅ Index on trial_ends_at created')
-      } else {
-        console.log('✅ Index on trial_ends_at already exists')
-      }
-    } catch (error) {
-      console.log('⚠️  Index on trial_ends_at may already exist:', error.message)
+    // Index on trial_ends_at
+    const [trialIndexExists] = await sequelize.query(`
+      SELECT 1 FROM pg_indexes WHERE indexname = 'idx_businesses_trial_ends_at'
+    `)
+    
+    if (trialIndexExists.length === 0) {
+      await sequelize.query(`
+        CREATE INDEX idx_businesses_trial_ends_at ON ${TABLE_NAME} (trial_ends_at)
+      `)
+      console.log('✅ Index on trial_ends_at created')
+    } else {
+      console.log('✅ Index on trial_ends_at already exists')
     }
     
-    try {
-      // Composite index on current_plan + subscription_status
-      const compositeIndexExists = await queryInterface.sequelize.query(
-        `SELECT 1 FROM pg_indexes WHERE indexname = 'idx_businesses_plan_status'`,
-        { type: Sequelize.QueryTypes.SELECT, transaction }
-      )
-      
-      if (compositeIndexExists.length === 0) {
-        await queryInterface.addIndex(TABLE_NAME, ['current_plan', 'subscription_status'], {
-          name: 'idx_businesses_plan_status',
-          transaction
-        })
-        console.log('✅ Composite index on current_plan + subscription_status created')
-      } else {
-        console.log('✅ Composite index on current_plan + subscription_status already exists')
-      }
-    } catch (error) {
-      console.log('⚠️  Composite index may already exist:', error.message)
-    }
+    // Composite index on current_plan + subscription_status
+    const [compositeIndexExists] = await sequelize.query(`
+      SELECT 1 FROM pg_indexes WHERE indexname = 'idx_businesses_plan_status'
+    `)
     
-    await transaction.commit()
+    if (compositeIndexExists.length === 0) {
+      await sequelize.query(`
+        CREATE INDEX idx_businesses_plan_status ON ${TABLE_NAME} (current_plan, subscription_status)
+      `)
+      console.log('✅ Composite index on current_plan + subscription_status created')
+    } else {
+      console.log('✅ Composite index on current_plan + subscription_status already exists')
+    }
     
     console.log('\n' + '='.repeat(60))
     console.log('✅ Migration completed successfully')
     console.log('='.repeat(60) + '\n')
     
   } catch (error) {
-    await transaction.rollback()
     console.error('\n❌ Migration failed:', error.message)
     console.error('Stack trace:', error.stack)
     throw error
@@ -195,9 +189,7 @@ export async function up(queryInterface, DataTypes) {
 /**
  * DOWN: Remove subscription fields from businesses table
  */
-export async function down(queryInterface) {
-  const transaction = await sequelize.transaction()
-  
+export async function down() {
   try {
     console.log('\n📋 Rollback: Remove subscription fields from businesses table')
     console.log('='.repeat(60))
@@ -210,12 +202,16 @@ export async function down(queryInterface) {
     ]
     
     for (const indexName of indexes) {
-      try {
+      const [indexExists] = await sequelize.query(`
+        SELECT 1 FROM pg_indexes WHERE indexname = '${indexName}'
+      `)
+      
+      if (indexExists.length > 0) {
         console.log(`\n📝 Removing index ${indexName}...`)
-        await queryInterface.removeIndex(TABLE_NAME, indexName, { transaction })
+        await sequelize.query(`DROP INDEX IF EXISTS ${indexName}`)
         console.log(`✅ Index ${indexName} removed`)
-      } catch (error) {
-        console.log(`ℹ️  Index ${indexName} does not exist or already removed`)
+      } else {
+        console.log(`ℹ️  Index ${indexName} does not exist - skipping`)
       }
     }
     
@@ -228,9 +224,16 @@ export async function down(queryInterface) {
     ]
     
     for (const column of columns) {
-      if (await columnExists(queryInterface, TABLE_NAME, column)) {
+      const [columnExists] = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = '${TABLE_NAME}' 
+        AND column_name = '${column}'
+      `)
+      
+      if (columnExists.length > 0) {
         console.log(`\n📝 Removing column ${column}...`)
-        await queryInterface.removeColumn(TABLE_NAME, column, { transaction })
+        await sequelize.query(`ALTER TABLE ${TABLE_NAME} DROP COLUMN ${column}`)
         console.log(`✅ Column ${column} removed`)
       } else {
         console.log(`ℹ️  Column ${column} does not exist - skipping`)
@@ -247,24 +250,18 @@ export async function down(queryInterface) {
     for (const enumType of enumTypes) {
       try {
         console.log(`📝 Dropping ENUM type ${enumType}...`)
-        await queryInterface.sequelize.query(
-          `DROP TYPE IF EXISTS ${enumType} CASCADE`,
-          { transaction }
-        )
+        await sequelize.query(`DROP TYPE IF EXISTS ${enumType} CASCADE`)
         console.log(`✅ ENUM type ${enumType} dropped`)
       } catch (error) {
         console.log(`ℹ️  ENUM type ${enumType} does not exist or already removed: ${error.message}`)
       }
     }
     
-    await transaction.commit()
-    
     console.log('\n' + '='.repeat(60))
     console.log('✅ Rollback completed successfully')
     console.log('='.repeat(60) + '\n')
     
   } catch (error) {
-    await transaction.rollback()
     console.error('\n❌ Rollback failed:', error.message)
     console.error('Stack trace:', error.stack)
     throw error

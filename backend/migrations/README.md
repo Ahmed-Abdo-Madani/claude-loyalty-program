@@ -503,6 +503,80 @@ npm run migrate:auto
 - Or run as superuser (not recommended for production)
 - Check `pg_hba.conf` authentication settings
 
+### Error: Migration Hangs After Adding Columns
+
+**Symptom:** Migration appears to add columns successfully but then hangs indefinitely, never completing or closing the database connection.
+
+**Example Output:**
+```
+📝 Adding current_plan column...
+✅ Column current_plan added
+📝 Setting current_plan to "free" for existing businesses...
+✅ Default values set
+[hangs here - never completes]
+```
+
+**Cause:** Using `queryInterface.addColumn()` with transactions can cause deadlocks or hanging connections, especially when:
+- Using the unsupported `after` option (MySQL-specific, not supported in PostgreSQL)
+- Combining `queryInterface` methods with `sequelize.query()` in the same transaction
+- Transaction is not properly committed or rolled back
+
+**Solution:** Use raw SQL queries via `sequelize.query()` instead of `queryInterface` methods:
+
+**Before (problematic):**
+```javascript
+export async function up(queryInterface, DataTypes) {
+  const transaction = await sequelize.transaction()
+  
+  await queryInterface.addColumn(TABLE_NAME, 'current_plan', {
+    type: DataTypes.ENUM('free', 'professional', 'enterprise'),
+    allowNull: false,
+    defaultValue: 'free',
+    after: 'logo_file_size'  // ❌ Not supported in PostgreSQL
+  }, { transaction })
+  
+  await transaction.commit()
+}
+```
+
+**After (fixed):**
+```javascript
+export async function up() {
+  // Check if column exists
+  const [columnExists] = await sequelize.query(`
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'businesses' 
+    AND column_name = 'current_plan'
+  `)
+  
+  if (columnExists.length === 0) {
+    // Create ENUM type
+    await sequelize.query(`
+      CREATE TYPE enum_businesses_current_plan AS ENUM ('free', 'professional', 'enterprise')
+    `)
+    
+    // Add column
+    await sequelize.query(`
+      ALTER TABLE businesses 
+      ADD COLUMN current_plan enum_businesses_current_plan NOT NULL DEFAULT 'free'
+    `)
+  }
+}
+```
+
+**Key differences:**
+- Remove function parameters (`queryInterface`, `DataTypes`) - get them directly from sequelize
+- Remove explicit transaction wrapping - each SQL query auto-commits
+- Remove `after` option - not supported in PostgreSQL
+- Use raw SQL for ENUM creation and column addition
+- Check for existing columns/types before creating to ensure idempotency
+
+**Related issues:**
+- If columns were partially added before the hang, check the database schema before re-running
+- Drop any partially created ENUM types: `DROP TYPE IF EXISTS enum_name CASCADE`
+- Check for hanging transactions: `SELECT * FROM pg_stat_activity WHERE datname = 'your_db'`
+
 ## Migration File Structure
 
 ### Naming Convention
@@ -512,7 +586,7 @@ npm run migrate:auto
 **Critical:** The auto-migration system **only executes** files following this format. Non-compliant filenames are automatically excluded to ensure deterministic execution order across all environments.
 
 Examples:
-- `20250202-create-or-sync-business-sessions.js` - **Handles schema drift** (creates or alters table)
+- `20250221-add-grace-period-end-to-subscriptions.js` - **Handles schema drift** (creates or alters table)
 - `20250131-add-notification-campaign-fields.js`
 - `20250114-add-wallet-notification-tracking.js`
 - `20250129-add-loyalty-tiers-to-offers.js`
@@ -545,7 +619,7 @@ node backend/run-migration.js 20250121-cleanup-old-apple-wallet-passes.js
 **Sync Migrations:** Handle schema drift (create OR alter)
 - Checks if table exists; creates if missing, alters if present
 - **Use for tables created outside migration system**
-- Example: `20250202-create-or-sync-business-sessions.js`
+- Example: `20250221-add-grace-period-end-to-subscriptions.js`
 
 ### Required Exports
 
