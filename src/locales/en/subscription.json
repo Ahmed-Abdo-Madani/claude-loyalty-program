@@ -92,7 +92,8 @@
     "updatePaymentMethod": "Update Payment Method",
     "viewPlans": "View All Plans",
     "processing": "Processing...",
-    "retry": "Retry"
+    "retry": "Retry",
+    "backToBilling": "Back to Billing & Subscription"
   },
   "banner": {
     "trialEnding": "Your trial ends in {{days}} days",
@@ -223,13 +224,27 @@
       "title": "Downgrade to {{plan}}",
       "subtitle": "You're downgrading from {{currentPlan}} to {{newPlan}}",
       "warning": "Downgrading may limit access to some features",
-      "effectiveDate": "Effective at end of billing period",
+      "effectiveDate": "Changes will take effect on {{date}}",
+      "effectiveDateUnknown": "Changes will take effect at the end of your current billing period",
       "comingSoon": "Downgrade management coming soon",
       "comingSoonMessage": "The downgrade workflow will be available in the next phase. Your current plan will remain active until you complete the downgrade.",
       "confirmDowngrade": "Confirm Downgrade",
       "creditNote": "You'll receive a credit of {{amount}} SAR for unused time",
       "featuresLost": "Features you'll lose:",
-      "continueWithDowngrade": "Continue with Downgrade"
+      "continueWithDowngrade": "Continue with Downgrade",
+      "featureLoss": {
+        "free": [
+          "Limited to 1 loyalty offer",
+          "Maximum 100 customers",
+          "20 POS operations per month",
+          "Advanced analytics removed"
+        ],
+        "professional": [
+          "Limited to 1 location",
+          "Maximum 1,000 customers",
+          "No dedicated account manager"
+        ]
+      }
     }
   },
   "limits": {
@@ -265,6 +280,7 @@
     "subtitle": "Are you sure you want to cancel your subscription?",
     "warning": "You will lose access to premium features at the end of your billing period",
     "accessUntil": "You'll have access until {{date}}",
+    "accessUntilUnknown": "Access period will be determined based on your billing cycle",
     "reasonLabel": "Why are you cancelling? (Optional)",
     "reasonPlaceholder": "Select a reason",
     "reasons": {
@@ -410,5 +426,19 @@
     "notSuspended": "Your account is not suspended.",
     "redirecting": "Redirecting to dashboard...",
     "backToSuspended": "Back to Suspended Account"
+  },
+  "errors": {
+    "fetchFailed": "Failed to load subscription details. Please try again.",
+    "upgradeFailed": "Failed to upgrade subscription. Please try again.",
+    "downgradeFailed": "Failed to downgrade subscription. Please try again.",
+    "cancelFailed": "Failed to cancel subscription. Please try again."
+  },
+  "planLabel": "Plan",
+  "usage": {
+    "title": "Usage & Limits",
+    "offers": "Offers",
+    "customers": "Customers",
+    "locations": "Locations",
+    "posOperations": "POS Operations"
   }
 }

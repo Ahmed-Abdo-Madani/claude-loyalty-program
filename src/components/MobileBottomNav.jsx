@@ -73,6 +73,13 @@ function MobileBottomNav() {
       icon: UsersIcon,
       iconSolid: UsersIconSolid,
       tabName: 'customers'
+    },
+    {
+      name: t('mobileNav.billingSubscription'),
+      path: '/dashboard?tab=billing-subscription',
+      icon: CreditCardIcon,
+      iconSolid: CreditCardIconSolid,
+      tabName: 'billing-subscription'
     }
   ]
 

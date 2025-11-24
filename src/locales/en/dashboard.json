@@ -19,9 +19,7 @@
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
     "subscription": "Subscription",
-    "subscriptionManage": "Manage Subscription",
-    "paymentHistory": "Payment History",
-    "comingSoon": "Coming Soon"
+    "billingSubscription": "Billing & Subscription"
   },
   "header": {
     "dashboard": "Dashboard",
@@ -39,10 +37,7 @@
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
     "subscription": "Subscription",
-    "subscriptionManage": "Manage Subscription",
-    "lightMode": "Light Mode",
-    "darkMode": "Dark Mode",
-    "signOut": "Sign Out"
+    "billingSubscription": "Billing & Subscription"
   },
   "mobileNav": {
     "overview": "Overview",
@@ -50,7 +45,8 @@
     "analytics": "Analytics",
     "branches": "Branches",
     "products": "Products",
-    "customers": "Customers"
+    "customers": "Customers",
+    "billingSubscription": "Billing"
   },
   "quickActions": {
     "title": "Quick Actions",

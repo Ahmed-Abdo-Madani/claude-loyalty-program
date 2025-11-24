@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { secureApi, endpoints } from '../config/api'
@@ -8,7 +8,6 @@ import SEO from '../components/SEO'
 export default function SubscriptionManagementPage() {
   const { t, i18n } = useTranslation(['subscription', 'dashboard'])
   const navigate = useNavigate()
-  const moyasarFormRef = useRef(null)
 
   // State management
   const [loading, setLoading] = useState(true)
@@ -17,33 +16,11 @@ export default function SubscriptionManagementPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showDowngradeModal, setShowDowngradeModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
-  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [cancellationReason, setCancellationReason] = useState('')
   const [proratedAmount, setProratedAmount] = useState(null)
   const [creditAmount, setCreditAmount] = useState(null)
-  const [moyasarLoaded, setMoyasarLoaded] = useState(false)
-
-  // Check if Moyasar is loaded
-  useEffect(() => {
-    if (window.Moyasar) {
-      setMoyasarLoaded(true)
-    } else {
-      // Poll for Moyasar availability
-      const pollInterval = setInterval(() => {
-        if (window.Moyasar) {
-          setMoyasarLoaded(true)
-          clearInterval(pollInterval)
-        }
-      }, 200)
-      
-      // Timeout after 10 seconds
-      setTimeout(() => clearInterval(pollInterval), 10000)
-      
-      return () => clearInterval(pollInterval)
-    }
-  }, [])
 
   // Fetch subscription details on mount
   useEffect(() => {
@@ -206,91 +183,6 @@ export default function SubscriptionManagementPage() {
     }
   }
 
-  // Initialize Moyasar form when payment method modal opens
-  useEffect(() => {
-    if (!showPaymentMethodModal || !moyasarFormRef.current || !moyasarLoaded) {
-      return
-    }
-
-    if (!window.Moyasar) {
-      console.error('Moyasar not available for payment method update')
-      return
-    }
-
-    let moyasarInstance = null
-    
-    const initTimer = setTimeout(() => {
-      try {
-        setProcessing(true)
-        
-        // Minimal amount for payment method update (1 SAR in halalas)
-        const amount = 100
-        
-        moyasarInstance = window.Moyasar.init({
-          element: moyasarFormRef.current,
-          language: i18n.language === 'ar' ? 'ar' : 'en',
-          amount: amount,
-          currency: 'SAR',
-          description: 'Payment method update',
-          publishable_api_key: process.env.REACT_APP_MOYASAR_PUBLISHABLE_KEY || process.env.MOYASAR_PUBLISHABLE_KEY,
-          callback_url: `${window.location.origin}/subscription/payment-callback`,
-          methods: ['creditcard'],
-          on_completed: function(payment) {
-            console.log('Payment completed for method update:', payment)
-            if (payment.id) {
-              handlePaymentMethodUpdate(payment.id)
-            }
-          },
-          on_failure: function(error) {
-            console.error('Payment method update failed:', error)
-            alert(error.message || t('subscription:paymentMethodUpdate.failure'))
-            setProcessing(false)
-          }
-        })
-        
-        setProcessing(false)
-      } catch (err) {
-        console.error('Failed to initialize Moyasar form:', err)
-        setProcessing(false)
-      }
-    }, 100)
-    
-    return () => {
-      clearTimeout(initTimer)
-      if (moyasarInstance && typeof moyasarInstance.destroy === 'function') {
-        moyasarInstance.destroy()
-      }
-    }
-  }, [showPaymentMethodModal, moyasarLoaded, i18n.language])
-
-  // Handle payment method update
-  const handlePaymentMethodUpdate = async (moyasarPaymentId) => {
-    try {
-      setProcessing(true)
-      
-      const response = await secureApi.put(endpoints.subscriptionPaymentMethod, {
-        moyasarPaymentId
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        // Refresh subscription details
-        await fetchSubscriptionDetails()
-        
-        setShowPaymentMethodModal(false)
-        alert(t('subscription:paymentMethodUpdate.success'))
-      } else {
-        alert(data.message || t('subscription:paymentMethodUpdate.failure'))
-      }
-    } catch (err) {
-      console.error('Payment method update failed:', err)
-      alert(t('subscription:paymentMethodUpdate.failure'))
-    } finally {
-      setProcessing(false)
-    }
-  }
-
   // Get usage progress color
   const getProgressColor = (percentage) => {
     if (percentage >= 90) return 'bg-red-500'
@@ -435,12 +327,61 @@ export default function SubscriptionManagementPage() {
               </div>
 
               <button
-                onClick={() => setShowPaymentMethodModal(true)}
+                onClick={() => navigate('/subscription/checkout?update_payment=true')}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 {subscription?.payment_method?.has_token ? t('subscription:management.updatePaymentMethod') : t('subscription:management.addPaymentMethod')}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Subscription Actions */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            {t('subscription:management.subscriptionActions')}
+          </h2>
+          
+          <div className="flex flex-wrap gap-4">
+            {subscription?.plan_type !== 'enterprise' && (
+              <button
+                onClick={() => {
+                  setSelectedPlan(subscription?.plan_type === 'free' ? 'professional' : 'enterprise')
+                  setShowUpgradeModal(true)
+                }}
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-semibold"
+              >
+                {t('subscription:actions.upgrade')}
+              </button>
+            )}
+
+            {subscription?.plan_type !== 'free' && subscription?.status !== 'cancelled' && (
+              <button
+                onClick={() => {
+                  setSelectedPlan(subscription?.plan_type === 'enterprise' ? 'professional' : 'free')
+                  setShowDowngradeModal(true)
+                }}
+                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+              >
+                {t('subscription:actions.downgrade')}
+              </button>
+            )}
+
+            <button
+              onClick={() => navigate('/subscription/plans')}
+              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+            >
+              {t('subscription:actions.viewPlans')}
+            </button>
+
+            {subscription?.status !== 'cancelled' && subscription?.plan_type !== 'free' && (
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="px-6 py-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-semibold"
+              >
+                {t('subscription:actions.cancelSubscription')}
+              </button>
+            )}
           </div>
         </div>
 
@@ -525,57 +466,8 @@ export default function SubscriptionManagementPage() {
           </div>
         </div>
 
-        {/* Subscription Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            {t('subscription:management.subscriptionActions')}
-          </h2>
-          
-          <div className="flex flex-wrap gap-4">
-            {subscription?.plan_type !== 'enterprise' && (
-              <button
-                onClick={() => {
-                  setSelectedPlan(subscription?.plan_type === 'free' ? 'professional' : 'enterprise')
-                  setShowUpgradeModal(true)
-                }}
-                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-semibold"
-              >
-                {t('subscription:actions.upgrade')}
-              </button>
-            )}
-
-            {subscription?.plan_type !== 'free' && subscription?.status !== 'cancelled' && (
-              <button
-                onClick={() => {
-                  setSelectedPlan(subscription?.plan_type === 'enterprise' ? 'professional' : 'free')
-                  setShowDowngradeModal(true)
-                }}
-                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
-              >
-                {t('subscription:actions.downgrade')}
-              </button>
-            )}
-
-            <button
-              onClick={() => navigate('/dashboard/subscription')}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
-            >
-              {t('subscription:actions.viewPlans')}
-            </button>
-
-            {subscription?.status !== 'cancelled' && subscription?.plan_type !== 'free' && (
-              <button
-                onClick={() => setShowCancelModal(true)}
-                className="px-6 py-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-semibold"
-              >
-                {t('subscription:actions.cancelSubscription')}
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Billing History */}
-        {recent_payments && recent_payments.length > 0 && (
+        {recent_payments && recent_payments.length > 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               {t('subscription:management.billingHistory')}
@@ -594,7 +486,7 @@ export default function SubscriptionManagementPage() {
                   {recent_payments.map((payment, index) => (
                     <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
                       <td className="py-3 px-4 text-gray-900 dark:text-white">
-                        {new Date(payment.date).toLocaleDateString(i18n.language)}
+                        {payment.date && !isNaN(new Date(payment.date).getTime()) ? new Date(payment.date).toLocaleDateString(i18n.language) : '-'}
                       </td>
                       <td className="py-3 px-4 text-gray-900 dark:text-white">
                         {payment.amount} {payment.currency || 'SAR'}
@@ -614,17 +506,20 @@ export default function SubscriptionManagementPage() {
               </table>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Upgrade Modal */}
         {showUpgradeModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowUpgradeModal(false)}>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {t('subscription:modal.upgrade.title')}
+                {t('subscription:modal.upgrade.title', { plan: t(`subscription:plans.${selectedPlan}.name`) })}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {t('subscription:modal.upgrade.subtitle', { plan: t(`subscription:plans.${selectedPlan}.name`) })}
+                {t('subscription:modal.upgrade.subtitle', {
+                  currentPlan: t(`subscription:plans.${subscription?.plan_type}.name`),
+                  newPlan: t(`subscription:plans.${selectedPlan}.name`)
+                })}
               </p>
               {subscription?.payment_method?.has_token && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
@@ -664,14 +559,19 @@ export default function SubscriptionManagementPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDowngradeModal(false)}>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {t('subscription:modal.downgrade.title')}
+                {t('subscription:modal.downgrade.title', { plan: t(`subscription:plans.${selectedPlan}.name`) })}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {t('subscription:modal.downgrade.subtitle', { plan: t(`subscription:plans.${selectedPlan}.name`) })}
+                {t('subscription:modal.downgrade.subtitle', {
+                  currentPlan: t(`subscription:plans.${subscription?.plan_type}.name`),
+                  newPlan: t(`subscription:plans.${selectedPlan}.name`)
+                })}
               </p>
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
                 <p className="text-sm text-yellow-900 dark:text-yellow-100 mb-2">
-                  {t('subscription:modal.downgrade.effectiveDate', { date: subscription?.next_billing_date ? new Date(subscription.next_billing_date).toLocaleDateString(i18n.language) : '-' })}
+                  {subscription?.next_billing_date
+                    ? t('subscription:modal.downgrade.effectiveDate', { date: new Date(subscription.next_billing_date).toLocaleDateString(i18n.language) })
+                    : t('subscription:modal.downgrade.effectiveDateUnknown')}
                 </p>
                 {creditAmount && (
                   <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">
@@ -685,21 +585,17 @@ export default function SubscriptionManagementPage() {
                     {t('subscription:modal.downgrade.featuresLost')}
                   </p>
                   <ul className="text-xs text-red-800 dark:text-red-200 list-disc list-inside space-y-1">
-                    {selectedPlan === 'free' && (
-                      <>
-                        <li>Limited to 1 loyalty offer</li>
-                        <li>Maximum 100 customers</li>
-                        <li>20 POS operations per month</li>
-                        <li>Advanced analytics removed</li>
-                      </>
-                    )}
-                    {selectedPlan === 'professional' && (
-                      <>
-                        <li>Limited to 1 location</li>
-                        <li>Maximum 1,000 customers</li>
-                        <li>No dedicated account manager</li>
-                      </>
-                    )}
+                    {selectedPlan === 'free' && 
+                      t('subscription:modal.downgrade.featureLoss.free', { returnObjects: true }).map((feature, index) => (
+                        <li key={index}>{feature}</li>
+                      ))
+                    }
+
+                    {selectedPlan === 'professional' && 
+                      t('subscription:modal.downgrade.featureLoss.professional', { returnObjects: true }).map((feature, index) => (
+                        <li key={index}>{feature}</li>
+                      ))
+                    }
                   </ul>
                 </div>
               )}
@@ -738,7 +634,9 @@ export default function SubscriptionManagementPage() {
                   {t('subscription:cancel.warning')}
                 </p>
                 <p className="text-sm text-red-900 dark:text-red-100">
-                  {t('subscription:cancel.accessUntil', { date: subscription?.next_billing_date ? new Date(subscription.next_billing_date).toLocaleDateString(i18n.language) : '-' })}
+                  {subscription?.next_billing_date
+                    ? t('subscription:cancel.accessUntil', { date: new Date(subscription.next_billing_date).toLocaleDateString(i18n.language) })
+                    : t('subscription:cancel.accessUntilUnknown')}
                 </p>
               </div>
               <div className="mb-4">
@@ -777,46 +675,6 @@ export default function SubscriptionManagementPage() {
           </div>
         )}
 
-        {/* Payment Method Update Modal */}
-        {showPaymentMethodModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => !processing && setShowPaymentMethodModal(false)}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {t('subscription:paymentMethodUpdate.title')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {t('subscription:paymentMethodUpdate.subtitle')}
-              </p>
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  {t('subscription:paymentMethodUpdate.securityNote')}
-                </p>
-              </div>
-              
-              {/* Moyasar Form Container */}
-              <div ref={moyasarFormRef} className="moyasar-form-container mb-4">
-                {processing && (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                )}
-                {!moyasarLoaded && !processing && (
-                  <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-                    Loading payment form...
-                  </div>
-                )}
-              </div>
-              
-              <button
-                onClick={() => setShowPaymentMethodModal(false)}
-                disabled={processing}
-                className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
-              >
-                {t('subscription:paymentMethodUpdate.close')}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

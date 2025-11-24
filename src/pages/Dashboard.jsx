@@ -18,9 +18,7 @@ import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
 
-const SubscriptionPlansPage = lazy(() => import('./SubscriptionPlansPage'))
 const SubscriptionManagementPage = lazy(() => import('./SubscriptionManagementPage'))
-const PaymentHistoryPage = lazy(() => import('./PaymentHistoryPage'))
 
 function Dashboard() {
   const { t } = useTranslation('dashboard')
@@ -40,9 +38,12 @@ function Dashboard() {
 
   // Sync activeTab with URL query parameter
   useEffect(() => {
-    const tabParam = searchParams.get('tab') || 'overview'
-    if (tabParam !== activeTab) {
-      setActiveTab(tabParam)
+    const tabParam = searchParams.get('tab') || 'overview';
+    const normalizedTab = ['subscription', 'subscription-manage', 'payment-history'].includes(tabParam)
+      ? 'billing-subscription'
+      : tabParam;
+    if (normalizedTab !== activeTab) {
+      setActiveTab(normalizedTab);
     }
   }, [searchParams, location.search])
 
@@ -160,6 +161,11 @@ function Dashboard() {
     )
   }
 
+  // Update tab content rendering logic
+  const resolvedTab = ['subscription', 'subscription-manage', 'payment-history'].includes(activeTab)
+    ? 'billing-subscription'
+    : activeTab;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 pb-20 lg:pb-0">
       <SEO titleKey="pages.dashboard.title" descriptionKey="pages.dashboard.description" noindex={true} />
@@ -196,9 +202,7 @@ function Dashboard() {
                   { id: 'customers', label: t('tabs.customers'), icon: '👥' },
                   { id: 'wallet', label: t('tabs.mobileWallets'), icon: '📱' },
                   { id: 'analytics', label: t('tabs.analytics'), icon: '📈' },
-                  { id: 'subscription', label: t('tabs.subscription'), icon: '💳' },
-                  { id: 'subscription-manage', label: t('tabs.subscriptionManage'), icon: '⚙️' },
-                  { id: 'payment-history', label: t('tabs.paymentHistory'), icon: '💳' }
+                  { id: 'billing-subscription', label: t('tabs.billingSubscription'), icon: '💳' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -277,21 +281,9 @@ function Dashboard() {
                 <POSAnalytics />
               )}
 
-              {activeTab === 'subscription' && (
-                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
-                  <SubscriptionPlansPage />
-                </Suspense>
-              )}
-
-              {activeTab === 'subscription-manage' && (
+              {resolvedTab === 'billing-subscription' && (
                 <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
                   <SubscriptionManagementPage />
-                </Suspense>
-              )}
-
-              {activeTab === 'payment-history' && (
-                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
-                  <PaymentHistoryPage />
                 </Suspense>
               )}
             </div>

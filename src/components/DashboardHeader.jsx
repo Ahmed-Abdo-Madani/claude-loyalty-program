@@ -172,7 +172,7 @@ function DashboardHeader({ user }) {
   }
 
   const handleUpgradeClick = () => {
-    navigate('/dashboard?tab=subscription')
+    navigate('/subscription/plans');
   }
 
   const calculateDaysRemaining = (dateString) => {

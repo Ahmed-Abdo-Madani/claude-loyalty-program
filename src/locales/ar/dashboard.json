@@ -21,7 +21,8 @@
     "subscription": "الاشتراك",
     "subscriptionManage": "إدارة الاشتراك",
     "paymentHistory": "سجل المدفوعات",
-    "comingSoon": "قريباً"
+    "comingSoon": "قريباً",
+    "billingSubscription": "الفواتير والاشتراك"
   },
   "header": {
     "dashboard": "لوحة التحكم",
@@ -42,7 +43,8 @@
     "subscriptionManage": "إدارة الاشتراك",
     "lightMode": "الوضع الفاتح",
     "darkMode": "الوضع الداكن",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "billingSubscription": "الفواتير والاشتراك"
   },
   "mobileNav": {
     "overview": "عام",
@@ -50,7 +52,8 @@
     "analytics": "التحليلات",
     "branches": "الفروع",
     "products": "المنتجات",
-    "customers": "العملاء"
+    "customers": "العملاء",
+    "billingSubscription": "الفواتير"
   },
   "quickActions": {
     "title": "إجراءات سريعة",

@@ -212,11 +212,11 @@ export default function PaymentCallbackPage() {
 
   // Start countdown timer for auto-redirect
   const startCountdown = () => {
-    countdownIntervalRef.current = setInterval(() => {
+      countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownIntervalRef.current)
-          navigate('/dashboard/subscription')
+          navigate('/dashboard?tab=billing-subscription')
           return 0
         }
         return prev - 1
@@ -260,7 +260,7 @@ export default function PaymentCallbackPage() {
 
   // Handle continue to dashboard
   const handleContinue = () => {
-    navigate('/dashboard/subscription')
+    navigate('/dashboard?tab=billing-subscription')
   }
 
   if (verifying) {

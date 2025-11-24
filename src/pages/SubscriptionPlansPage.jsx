@@ -190,6 +190,17 @@ const SubscriptionPlansPage = () => {
           </p>
         </div>
 
+        {/* Back Navigation Button */}
+        <div className="flex items-center gap-2 mb-4">
+          <button
+            onClick={() => navigate('/dashboard?tab=billing-subscription')}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-2"
+          >
+            <span className={i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}>←</span>
+            {t('actions.backToBilling')}
+          </button>
+        </div>
+
         {/* Trial Status Banner */}
         {subscriptionData?.trial_info && subscriptionData.subscription_status === 'trial' && (
           <div className={`mb-8 p-4 rounded-lg border ${

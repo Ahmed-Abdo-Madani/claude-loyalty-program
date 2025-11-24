@@ -138,35 +138,33 @@ export default function PaymentHistoryPage() {
     try {
       const response = await secureApi.get(endpoints.businessInvoices(invoiceId), {
         responseType: 'blob'
-      })
+      });
 
-      // Create blob URL and trigger download
-      const blob = new Blob([response.data], { type: 'application/pdf' })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `invoice-${invoiceNumber}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
-      // Show success toast
       setToast({
         show: true,
-        message: t('subscription:payment.actions.downloadSuccess'),
+        message: t('subscription:payment.history.actions.downloadSuccess'),
         type: 'success'
-      })
-      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000)
+      });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
 
     } catch (err) {
-      console.error('Failed to download invoice:', err)
+      console.error('Failed to download invoice:', err);
       setToast({
         show: true,
-        message: t('subscription:payment.actions.downloadFailed'),
+        message: t('subscription:payment.history.actions.downloadFailed'),
         type: 'error'
-      })
-      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000)
+      });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
     }
   }
 
@@ -207,13 +205,13 @@ export default function PaymentHistoryPage() {
       failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
       refunded: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
       cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-    }
+    };
 
-    const badgeClass = badges[status] || badges.pending
+    const badgeClass = badges[status] || badges.pending;
 
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${badgeClass}`}>
-        {t(`subscription:payment.statuses.${status}`)}
+        {t(`subscription:payment.history.statuses.${status}`)}
       </span>
     )
   }
@@ -296,11 +294,11 @@ export default function PaymentHistoryPage() {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">{t('subscription:payment.history.filters.allStatuses')}</option>
-              <option value="paid">{t('subscription:payment.statuses.paid')}</option>
-              <option value="pending">{t('subscription:payment.statuses.pending')}</option>
-              <option value="failed">{t('subscription:payment.statuses.failed')}</option>
-              <option value="refunded">{t('subscription:payment.statuses.refunded')}</option>
-              <option value="cancelled">{t('subscription:payment.statuses.cancelled')}</option>
+              <option value="paid">{t('subscription:payment.history.statuses.paid')}</option>
+              <option value="pending">{t('subscription:payment.history.statuses.pending')}</option>
+              <option value="failed">{t('subscription:payment.history.statuses.failed')}</option>
+              <option value="refunded">{t('subscription:payment.history.statuses.refunded')}</option>
+              <option value="cancelled">{t('subscription:payment.history.statuses.cancelled')}</option>
             </select>
           </div>
 
@@ -381,7 +379,7 @@ export default function PaymentHistoryPage() {
               onClick={loadPayments}
               className="px-3 py-1 text-sm font-medium text-red-800 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors"
             >
-              {t('subscription:payment.actions.retry')}
+              {t('subscription:payment.history.actions.retry')}
             </button>
           </div>
         </div>
@@ -438,7 +436,7 @@ export default function PaymentHistoryPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       <span className="flex items-center gap-2">
                         <span>{getPaymentMethodIcon(payment.payment_method)}</span>
-                        <span>{t(`subscription:payment.paymentMethods.${payment.payment_method}`)}</span>
+                        <span>{t(`subscription:payment.history.paymentMethods.${payment.payment_method}`)}</span>
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -447,7 +445,7 @@ export default function PaymentHistoryPage() {
                           onClick={() => handleDownloadInvoice(payment.invoice.invoice_number, payment.invoice.invoice_number)}
                           className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                         >
-                          {t('subscription:payment.actions.downloadInvoice')}
+                          {t('subscription:payment.history.actions.downloadInvoice')}
                         </button>
                       )}
                     </td>
