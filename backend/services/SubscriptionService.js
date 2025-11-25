@@ -157,8 +157,8 @@ class SubscriptionService {
         plan_type: 'free',
         status: 'trial',
         trial_ends_at: trialEndsAt,
-        current_period_start: new Date(),
-        current_period_end: trialEndsAt,
+        billing_cycle_start: new Date(),
+        next_billing_date: trialEndsAt,
         metadata: {
           trial_days: trialDays,
           activated_at: new Date().toISOString()
@@ -318,7 +318,7 @@ class SubscriptionService {
         usage,
         features: plan.features,
         can_upgrade: business.current_plan !== 'enterprise',
-        next_billing_date: business.next_billing_date,
+        next_billing_date: subscription?.next_billing_date || null,
         // Comment 4: Include retry and grace metadata for payment failure banner
         retry_count: subscription?.retry_count || 0,
         grace_period_end: subscription?.grace_period_end || null,
@@ -410,6 +410,13 @@ class SubscriptionService {
         throw new Error(`Business not found: ${businessId}`);
       }
 
+      // Fetch latest Subscription record for next_billing_date
+      const subscription = await Subscription.findOne({
+        where: { business_id: businessId },
+        order: [['created_at', 'DESC']],
+        transaction
+      });
+
       const currentPlan = business.current_plan;
       const newPlan = this.getPlanDefinition(newPlanType);
       
@@ -427,9 +434,9 @@ class SubscriptionService {
 
       // Calculate prorated amount if upgrading mid-period
       let proratedAmount = newPrice;
-      if (business.next_billing_date) {
+      if (subscription?.next_billing_date) {
         const now = new Date();
-        const nextBilling = new Date(business.next_billing_date);
+        const nextBilling = new Date(subscription.next_billing_date);
         const daysRemaining = Math.ceil((nextBilling - now) / (1000 * 60 * 60 * 24));
         const totalDays = 30;
         proratedAmount = Math.round((newPrice * daysRemaining) / totalDays);
@@ -442,17 +449,14 @@ class SubscriptionService {
         trial_ends_at: null
       }, { transaction });
 
-      // Update or create subscription record
-      const subscription = await Subscription.findOne({
-        where: { business_id: businessId },
-        transaction
-      });
-
+      // Update or create subscription record (already fetched above)
       if (subscription) {
         await subscription.update({
           plan_type: newPlanType,
           status: 'active',
           amount: newPrice,
+          billing_cycle_start: new Date(),
+          next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           metadata: {
             ...subscription.metadata,
             upgraded_from: currentPlan,
@@ -514,6 +518,12 @@ class SubscriptionService {
         throw new Error(`Business not found: ${businessId}`);
       }
 
+      // Fetch latest Subscription record for next_billing_date
+      const subscription = await Subscription.findOne({
+        where: { business_id: businessId },
+        order: [['created_at', 'DESC']]
+      });
+
       const currentPlan = business.current_plan;
       const newPlan = this.getPlanDefinition(newPlanType);
       
@@ -528,10 +538,10 @@ class SubscriptionService {
 
       // Calculate credit for unused portion
       let creditAmount = 0;
-      if (business.next_billing_date) {
+      if (subscription?.next_billing_date) {
         const currentPrice = this.calculatePlanPrice(currentPlan);
         const now = new Date();
-        const nextBilling = new Date(business.next_billing_date);
+        const nextBilling = new Date(subscription.next_billing_date);
         const daysRemaining = Math.ceil((nextBilling - now) / (1000 * 60 * 60 * 24));
         const totalDays = 30;
         creditAmount = Math.round((currentPrice * daysRemaining) / totalDays);
@@ -544,7 +554,7 @@ class SubscriptionService {
           pending_downgrade: {
             to_plan: newPlanType,
             scheduled_at: new Date().toISOString(),
-            effective_date: business.next_billing_date,
+            effective_date: subscription?.next_billing_date || null,
             credit_amount: creditAmount
           }
         }
@@ -554,7 +564,7 @@ class SubscriptionService {
         businessId,
         from: currentPlan,
         to: newPlanType,
-        effectiveDate: business.next_billing_date,
+        effectiveDate: subscription?.next_billing_date || null,
         creditAmount
       });
 
@@ -562,9 +572,9 @@ class SubscriptionService {
         success: true,
         current_plan: currentPlan,
         scheduled_plan: newPlanType,
-        effective_date: business.next_billing_date,
+        effective_date: subscription?.next_billing_date || null,
         credit_amount: creditAmount,
-        message: `Downgrade will take effect on ${business.next_billing_date}`
+        message: subscription?.next_billing_date ? `Downgrade will take effect on ${subscription.next_billing_date}` : 'Downgrade scheduled'
       };
 
     } catch (error) {
@@ -598,6 +608,12 @@ class SubscriptionService {
         throw new Error(`Business not found: ${businessId}`);
       }
 
+      // Fetch latest Subscription record for next_billing_date
+      const subscription = await Subscription.findOne({
+        where: { business_id: businessId },
+        order: [['created_at', 'DESC']]
+      });
+
       // Update business status
       await business.update({
         subscription_status: 'cancelled',
@@ -612,10 +628,6 @@ class SubscriptionService {
       });
 
       // Update subscription record
-      const subscription = await Subscription.findOne({
-        where: { business_id: businessId }
-      });
-
       if (subscription) {
         await subscription.update({
           status: 'cancelled',
@@ -637,7 +649,7 @@ class SubscriptionService {
         success: true,
         cancelled_at: new Date(),
         plan: business.current_plan,
-        access_until: business.next_billing_date,
+        access_until: subscription?.next_billing_date || null,
         message: 'Subscription cancelled. Access will continue until the end of the billing period.'
       };
 

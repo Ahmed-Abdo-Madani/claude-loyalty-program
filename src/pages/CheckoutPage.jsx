@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   // Get plan details from navigation state or query params
   const searchParams = new URLSearchParams(location.search)
   const isReactivation = searchParams.get('reactivation') === 'true'
+  const isPaymentMethodUpdate = searchParams.get('update_payment') === 'true'
   const planFromQuery = searchParams.get('plan')
   const locationsFromQuery = parseInt(searchParams.get('locations')) || 1
   
@@ -91,12 +92,12 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!planType) {
+    if (!planType && !isPaymentMethodUpdate) {
       navigate('/dashboard/subscription')
       return
     }
 
-    // Fetch checkout session
+    // Fetch checkout session (will handle payment method update logic internally)
     fetchCheckoutSession()
   }, [])
 
@@ -106,9 +107,34 @@ export default function CheckoutPage() {
       setLoading(true)
       setError(null)
 
+      // For payment method updates, fetch current subscription details first
+      let effectivePlanType = planType
+      let effectiveLocationCount = locationCount
+      
+      if (isPaymentMethodUpdate) {
+        const subResponse = await secureApi.get(endpoints.subscriptionDetails)
+        if (!subResponse.ok) {
+          throw new Error('Failed to fetch subscription details')
+        }
+        const subData = await subResponse.json()
+        
+        // Validate response shape and subscription existence
+        if (!subData.success || !subData.data?.subscription) {
+          setError(t('checkout.noActiveSubscription'))
+          setLoading(false)
+          return
+        }
+        
+        // Extract plan details from correct response shape (data.data.subscription)
+        effectivePlanType = subData.data.subscription.plan_type || 'professional'
+        effectiveLocationCount = subData.data.subscription.location_count || 1
+      }
+
       const response = await secureApi.post(endpoints.subscriptionCheckout, {
-        planType,
-        locationCount
+        planType: effectivePlanType,
+        locationCount: effectiveLocationCount,
+        // For payment method updates, use minimal amount (1 SAR) for card verification
+        isPaymentMethodUpdate: isPaymentMethodUpdate
       })
 
       if (!response.ok) {
@@ -124,7 +150,12 @@ export default function CheckoutPage() {
         description: data.description
       })
       
-      setCheckoutSession(data)
+      // Store resolved plan metadata in checkout session for Moyasar initialization
+      setCheckoutSession({
+        ...data,
+        resolvedPlanType: effectivePlanType,
+        resolvedLocationCount: effectiveLocationCount
+      })
       setLoading(false)
     } catch (err) {
       console.error('Checkout initialization failed:', err)
@@ -223,10 +254,13 @@ export default function CheckoutPage() {
           keyValid: keyFormatValid
         })
         
-        // Build callback URL with reactivation flag if applicable
-        const callbackUrl = isReactivation
-          ? `${checkoutSession.callbackUrl}?reactivation=true&plan=${planType}&locations=${locationCount}`
-          : checkoutSession.callbackUrl
+        // Build callback URL with reactivation or update_payment flags
+        let callbackUrl = checkoutSession.callbackUrl
+        if (isReactivation) {
+          callbackUrl = `${callbackUrl}?reactivation=true&plan=${planType}&locations=${locationCount}`
+        } else if (isPaymentMethodUpdate) {
+          callbackUrl = `${callbackUrl}?update_payment=true`
+        }
         
         // Initialize Moyasar embedded form
         moyasarInstance = window.Moyasar.init({
@@ -243,10 +277,11 @@ export default function CheckoutPage() {
           methods: ['creditcard'],
           metadata: {
             businessId: checkoutSession.businessId,
-            planType: planType,
+            planType: checkoutSession.resolvedPlanType || planType,
             sessionId: checkoutSession.sessionId,
             is_reactivation: isReactivation,
-            location_count: locationCount
+            is_payment_method_update: isPaymentMethodUpdate,
+            location_count: checkoutSession.resolvedLocationCount || locationCount
           },
           on_completed: function(payment) {
             console.log('✅ Payment completed:', payment)
@@ -342,10 +377,10 @@ export default function CheckoutPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {isReactivation ? t('checkout.reactivationTitle') : t('checkout.title')}
+            {isPaymentMethodUpdate ? t('checkout.updatePaymentMethodTitle') : (isReactivation ? t('checkout.reactivationTitle') : t('checkout.title'))}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            {isReactivation ? t('checkout.reactivationDescription') : t('checkout.subtitle')}
+            {isPaymentMethodUpdate ? t('checkout.updatePaymentMethodDescription') : (isReactivation ? t('checkout.reactivationDescription') : t('checkout.subtitle'))}
           </p>
         </div>
         
@@ -360,6 +395,23 @@ export default function CheckoutPage() {
                 </h3>
                 <p className="text-sm text-yellow-800 dark:text-yellow-300">
                   {t('checkout.reactivationNoticeDescription')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Payment Method Update Notice Banner */}
+        {isPaymentMethodUpdate && (
+          <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">💳</span>
+              <div>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                  {t('checkout.cardVerificationNotice')}
+                </h3>
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  {t('checkout.cardVerificationDescription')}
                 </p>
               </div>
             </div>

@@ -83,6 +83,7 @@
     "currentPlan": "الخطة الحالية",
     "selectPlan": "اختر الخطة",
     "upgrade": "ترقية",
+    "upgradeFromFree": "الترقية إلى الاحترافي",
     "downgrade": "تخفيض",
     "upgradeNow": "قم بالترقية الآن",
     "contactSales": "اتصل بالمبيعات",
@@ -170,7 +171,12 @@
     "reactivationTitle": "إعادة تفعيل حسابك",
     "reactivationDescription": "أكمل الدفع لإعادة تفعيل حسابك المعلق",
     "reactivationNotice": "إعادة تفعيل الحساب",
-    "reactivationNoticeDescription": "سيتم إعادة تفعيل حسابك فورًا بعد نجاح الدفع. ستستعيد الوصول الكامل إلى جميع الميزات."
+    "reactivationNoticeDescription": "سيتم إعادة تفعيل حسابك فورًا بعد نجاح الدفع. ستستعيد الوصول الكامل إلى جميع الميزات.",
+    "noActiveSubscription": "يجب أن يكون لديك اشتراك نشط قبل تحديث طريقة الدفع. يرجى الاشتراك في خطة أولاً.",
+    "updatePaymentMethodTitle": "تحديث طريقة الدفع",
+    "updatePaymentMethodDescription": "أضف أو حدّث بطاقتك للفوترة التلقائية",
+    "cardVerificationNotice": "التحقق من البطاقة",
+    "cardVerificationDescription": "سيتم إجراء رسم مؤقت بقيمة 1 ريال للتحقق من بطاقتك. سيتم استرداد هذا المبلغ فوراً."
   },
   "paymentCallback": {
     "verifying": "جاري التحقق من الدفع...",
@@ -202,7 +208,16 @@
     "hideTechnicalDetails": "إخفاء التفاصيل التقنية",
     "expectedAmount": "المبلغ المتوقع",
     "actualAmount": "المبلغ الفعلي",
-    "waitAndRetry": "يرجى الانتظار لحظة والمحاولة مرة أخرى"
+    "waitAndRetry": "يرجى الانتظار لحظة والمحاولة مرة أخرى",
+    "paymentMethodUpdated": "تم تحديث طريقة الدفع بنجاح!",
+    "paymentMethodUpdatedMessage": "تم تحديث طريقة الدفع الخاصة بك وسيتم استخدامها للفواتير المستقبلية",
+    "cardBrand": "نوع البطاقة",
+    "lastFourDigits": "أخر 4 أرقام",
+    "paymentMethodUpdateFailed": "فشل تحديث طريقة الدفع. يرجى المحاولة مرة أخرى.",
+    "cardVerificationFailed": "فشل التحقق من البطاقة. يرجى التحقق من تفاصيل بطاقتك والمحاولة مرة أخرى.",
+    "cardVerificationNotFound": "لم يتم العثور على عملية التحقق من البطاقة. قد تكون هذه مشكلة مؤقتة - يرجى المحاولة مرة أخرى.",
+    "cardTokenFailed": "فشل حفظ تفاصيل البطاقة. يرجى المحاولة مرة أخرى أو استخدام بطاقة أخرى.",
+    "noSubscriptionForUpdate": "لم يتم العثور على اشتراك نشط. يرجى الاشتراك في خطة قبل تحديث طريقة الدفع."
   },
   "modal": {
     "upgrade": {

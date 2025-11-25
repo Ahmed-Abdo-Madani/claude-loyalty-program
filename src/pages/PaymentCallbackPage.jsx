@@ -27,13 +27,32 @@ export default function PaymentCallbackPage() {
   const status = searchParams.get('status')
   const message = searchParams.get('message')
   const isReactivation = searchParams.get('reactivation') === 'true'
+  const isPaymentMethodUpdate = searchParams.get('update_payment') === 'true'
   const planType = searchParams.get('plan')
   const locationCount = parseInt(searchParams.get('locations')) || 1
 
+  // Track the last processed payment ID to prevent duplicate API calls
+  // This prevents issues from React StrictMode double-mounting in development
+  // and potential duplicate calls from navigation/refresh, while still allowing
+  // verification when the payment ID legitimately changes on a still-mounted component
+  const lastPaymentIdRef = useRef(null)
+
+  // NOTE: React.StrictMode (enabled in src/main.jsx) intentionally double-invokes
+  // effects in development to help detect side effects. The lastPaymentIdRef prevents
+  // duplicate API calls while still allowing StrictMode to do its job.
   useEffect(() => {
     // Log URL parameters for debugging
     console.log('Callback URL params:', Object.fromEntries(searchParams))
     console.log('Is reactivation flow:', isReactivation)
+    console.log('Last processed payment ID:', lastPaymentIdRef.current)
+    console.log('Current payment ID:', moyasarPaymentId)
+    
+    // Prevent duplicate API calls for the same payment ID (React StrictMode, navigation, or refresh)
+    // Allow verification if payment ID changes (legitimate new payment on same component instance)
+    if (lastPaymentIdRef.current === moyasarPaymentId && moyasarPaymentId !== null) {
+      console.log('Skipping duplicate verifyPayment call for same payment ID')
+      return
+    }
     
     if (!moyasarPaymentId) {
       // Check if payment was declined without redirect
@@ -52,6 +71,8 @@ export default function PaymentCallbackPage() {
       return
     }
 
+    // Mark this payment ID as processed before invoking to prevent race conditions
+    lastPaymentIdRef.current = moyasarPaymentId
     verifyPayment()
   }, [moyasarPaymentId])
 
@@ -60,13 +81,22 @@ export default function PaymentCallbackPage() {
     try {
       setVerifying(true)
 
-      // Use different endpoint based on reactivation flag
-      const endpoint = isReactivation ? endpoints.subscriptionReactivate : endpoints.subscriptionPaymentCallback
-      const requestBody = isReactivation
-        ? { moyasarPaymentId, planType, locationCount }
-        : { moyasarPaymentId, status, message }
+      // Use different endpoint based on flow type
+      let endpoint, requestBody
+      if (isPaymentMethodUpdate) {
+        endpoint = endpoints.subscriptionPaymentMethod
+        requestBody = { moyasarPaymentId }
+      } else if (isReactivation) {
+        endpoint = endpoints.subscriptionReactivate
+        requestBody = { moyasarPaymentId, planType, locationCount }
+      } else {
+        endpoint = endpoints.subscriptionPaymentCallback
+        requestBody = { moyasarPaymentId, status, message }
+      }
 
-      const response = await secureApi.post(endpoint, requestBody)
+      const response = isPaymentMethodUpdate 
+        ? await secureApi.put(endpoint, requestBody)
+        : await secureApi.post(endpoint, requestBody)
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -91,29 +121,51 @@ export default function PaymentCallbackPage() {
           let errorMessage = errorData.message || 'Payment verification failed'
           
           // Map backend error codes to localized messages
-          if (errorCode === 'PAYMENT_ID_REQUIRED') {
-            errorMessage = t('paymentCallback.paymentNotCompleted')
-          } else if (errorCode === 'STATUS_MISMATCH') {
-            errorMessage = t('paymentCallback.statusMismatch')
-          } else if (errorCode === 'VERIFICATION_FAILED') {
-            errorMessage = t('paymentCallback.paymentDeclinedMessage')
-          } else if (errorCode === 'PAYMENT_NOT_FOUND') {
-            errorMessage = t('paymentCallback.paymentNotCompleted')
-          } else if (errorCode === 'AMOUNT_MISMATCH') {
-            errorMessage = t('paymentCallback.amountMismatch')
-            // Add specific amount details if available
-            if (verificationDetails?.expectedAmount && verificationDetails?.actualAmount) {
-              errorMessage += ` (${t('paymentCallback.expectedAmount')}: ${verificationDetails.expectedAmount} SAR, ${t('paymentCallback.actualAmount')}: ${verificationDetails.actualAmount} SAR)`
+          // Branch on isPaymentMethodUpdate for payment-method-specific errors
+          if (isPaymentMethodUpdate) {
+            // Payment method update specific errors
+            if (errorCode === 'PAYMENT_ID_REQUIRED') {
+              errorMessage = t('paymentCallback.paymentMethodUpdateFailed')
+            } else if (errorCode === 'VERIFICATION_FAILED') {
+              errorMessage = t('paymentCallback.cardVerificationFailed')
+            } else if (errorCode === 'PAYMENT_NOT_FOUND') {
+              errorMessage = t('paymentCallback.paymentMethodUpdateFailed')
+            } else if (errorCode === 'MOYASAR_PAYMENT_NOT_FOUND') {
+              errorMessage = t('paymentCallback.cardVerificationNotFound')
+            } else if (errorCode === 'TOKEN_EXTRACTION_FAILED') {
+              errorMessage = t('paymentCallback.cardTokenFailed')
+            } else if (errorCode === 'NO_SUBSCRIPTION_FOUND') {
+              errorMessage = t('paymentCallback.noSubscriptionForUpdate')
+            } else {
+              // Generic payment method update error
+              errorMessage = errorData.message || t('paymentCallback.paymentMethodUpdateFailed')
             }
-          } else if (errorCode === 'CURRENCY_MISMATCH') {
-            errorMessage = t('paymentCallback.currencyMismatch')
-          } else if (errorCode === 'SESSION_LINKING_FAILED') {
-            // FIXED: Use errorData.transactionId and moyasarPaymentId from query string
-            errorMessage = t('paymentCallback.sessionLinkingFailed', { 
-              transactionId: errorData.transactionId || moyasarPaymentId 
-            })
-          } else if (errorCode === 'MOYASAR_PAYMENT_NOT_FOUND') {
-            errorMessage = t('paymentCallback.moyasarPaymentNotFound')
+          } else {
+            // Subscription activation/reactivation errors
+            if (errorCode === 'PAYMENT_ID_REQUIRED') {
+              errorMessage = t('paymentCallback.paymentNotCompleted')
+            } else if (errorCode === 'STATUS_MISMATCH') {
+              errorMessage = t('paymentCallback.statusMismatch')
+            } else if (errorCode === 'VERIFICATION_FAILED') {
+              errorMessage = t('paymentCallback.paymentDeclinedMessage')
+            } else if (errorCode === 'PAYMENT_NOT_FOUND') {
+              errorMessage = t('paymentCallback.paymentNotCompleted')
+            } else if (errorCode === 'AMOUNT_MISMATCH') {
+              errorMessage = t('paymentCallback.amountMismatch')
+              // Add specific amount details if available
+              if (verificationDetails?.expectedAmount && verificationDetails?.actualAmount) {
+                errorMessage += ` (${t('paymentCallback.expectedAmount')}: ${verificationDetails.expectedAmount} SAR, ${t('paymentCallback.actualAmount')}: ${verificationDetails.actualAmount} SAR)`
+              }
+            } else if (errorCode === 'CURRENCY_MISMATCH') {
+              errorMessage = t('paymentCallback.currencyMismatch')
+            } else if (errorCode === 'SESSION_LINKING_FAILED') {
+              // FIXED: Use errorData.transactionId and moyasarPaymentId from query string
+              errorMessage = t('paymentCallback.sessionLinkingFailed', { 
+                transactionId: errorData.transactionId || moyasarPaymentId 
+              })
+            } else if (errorCode === 'MOYASAR_PAYMENT_NOT_FOUND') {
+              errorMessage = t('paymentCallback.moyasarPaymentNotFound')
+            }
           }
           
           // Create error with verification details attached
@@ -135,28 +187,39 @@ export default function PaymentCallbackPage() {
 
       if (data.success) {
         // Payment successful
-        setPaymentResult({
-          success: true,
-          isReactivation,
-          subscription: data.subscription,
-          planName: data.subscription?.plan_type,
-          amount: data.subscription?.amount,
-          nextBillingDate: data.subscription?.next_billing_date
-        })
+        if (isPaymentMethodUpdate) {
+          // Payment method update success
+          setPaymentResult({
+            success: true,
+            isPaymentMethodUpdate: true,
+            paymentMethod: data.data,
+            message: data.message
+          })
+        } else {
+          // Subscription activation/reactivation success
+          setPaymentResult({
+            success: true,
+            isReactivation,
+            subscription: data.subscription,
+            planName: data.subscription?.plan_type,
+            amount: data.subscription?.amount,
+            nextBillingDate: data.subscription?.next_billing_date
+          })
 
-        // Update localStorage with new subscription data (Comment 1: use helper)
-        if (data.subscription) {
-          const normalizedSubscription = {
-            current_plan: data.subscription.plan_type,
-            subscription_status: data.subscription.status,
-            trial_info: null,
-            limits: data.limits || {},
-            usage: data.usage || {},
-            retry_count: data.subscription.retry_count || 0,
-            grace_period_end: data.subscription.grace_period_end || null,
-            next_retry_date: data.subscription.next_retry_date || null
+          // Update localStorage with new subscription data (Comment 1: use helper)
+          if (data.subscription) {
+            const normalizedSubscription = {
+              current_plan: data.subscription.plan_type,
+              subscription_status: data.subscription.status,
+              trial_info: null,
+              limits: data.limits || {},
+              usage: data.usage || {},
+              retry_count: data.subscription.retry_count || 0,
+              grace_period_end: data.subscription.grace_period_end || null,
+              next_retry_date: data.subscription.next_retry_date || null
+            }
+            setSubscriptionData(normalizedSubscription)
           }
-          setSubscriptionData(normalizedSubscription)
         }
 
         // Comment 1: Update business status using helper after payment
@@ -216,7 +279,12 @@ export default function PaymentCallbackPage() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownIntervalRef.current)
-          navigate('/dashboard?tab=billing-subscription')
+          // Different redirect targets based on flow type
+          if (isPaymentMethodUpdate) {
+            navigate('/dashboard/subscription')
+          } else {
+            navigate('/dashboard?tab=billing-subscription')
+          }
           return 0
         }
         return prev - 1
@@ -260,7 +328,11 @@ export default function PaymentCallbackPage() {
 
   // Handle continue to dashboard
   const handleContinue = () => {
-    navigate('/dashboard?tab=billing-subscription')
+    if (isPaymentMethodUpdate) {
+      navigate('/dashboard/subscription')
+    } else {
+      navigate('/dashboard?tab=billing-subscription')
+    }
   }
 
   if (verifying) {
@@ -297,53 +369,94 @@ export default function PaymentCallbackPage() {
 
             {/* Success Message */}
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
-              {paymentResult.isReactivation ? t('reactivation.success') : t('paymentCallback.success')}
+              {paymentResult.isPaymentMethodUpdate 
+                ? t('paymentCallback.paymentMethodUpdated') 
+                : (paymentResult.isReactivation ? t('reactivation.success') : t('paymentCallback.success'))}
             </h1>
             
             <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
-              {paymentResult.isReactivation ? t('reactivation.redirecting') : t('paymentCallback.successMessage')}
+              {paymentResult.isPaymentMethodUpdate 
+                ? t('paymentCallback.paymentMethodUpdatedMessage') 
+                : (paymentResult.isReactivation ? t('reactivation.redirecting') : t('paymentCallback.successMessage'))}
             </p>
 
             {/* Subscription Details */}
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('checkout.planLabel')}
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-white capitalize">
-                  {t(`plans.${paymentResult.planName}.name`)}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('checkout.amountLabel')}
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {paymentResult.amount} SAR
-                </span>
-              </div>
-              
-              {paymentResult.nextBillingDate && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Next Billing Date
-                  </span>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {new Date(paymentResult.nextBillingDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')}
-                  </span>
-                </div>
-              )}
-              
-              {moyasarPaymentId && (
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
-                  <span className="text-xs text-gray-500 dark:text-gray-500">
-                    {t('paymentCallback.transactionId')}
-                  </span>
-                  <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
-                    {moyasarPaymentId.substring(0, 20)}...
-                  </span>
-                </div>
+              {paymentResult.isPaymentMethodUpdate ? (
+                // Payment method update details
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('paymentCallback.cardBrand')}
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white capitalize">
+                      {paymentResult.paymentMethod?.brand || 'N/A'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('paymentCallback.lastFourDigits')}
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      •••• {paymentResult.paymentMethod?.last4 || '****'}
+                    </span>
+                  </div>
+                  
+                  {moyasarPaymentId && (
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <span className="text-xs text-gray-500 dark:text-gray-500">
+                        {t('paymentCallback.transactionId')}
+                      </span>
+                      <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                        {moyasarPaymentId.substring(0, 20)}...
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                // Subscription activation details
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('checkout.planLabel')}
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white capitalize">
+                      {t(`plans.${paymentResult.planName}.name`)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('checkout.amountLabel')}
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {paymentResult.amount} SAR
+                    </span>
+                  </div>
+                  
+                  {paymentResult.nextBillingDate && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Next Billing Date
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {new Date(paymentResult.nextBillingDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {moyasarPaymentId && (
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <span className="text-xs text-gray-500 dark:text-gray-500">
+                        {t('paymentCallback.transactionId')}
+                      </span>
+                      <span className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                        {moyasarPaymentId.substring(0, 20)}...
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

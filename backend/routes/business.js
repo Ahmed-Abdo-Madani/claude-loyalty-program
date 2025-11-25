@@ -3816,6 +3816,70 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
       })
     }
 
+    // IDEMPOTENCY CHECK: Prevent duplicate processing of the same payment
+    // Check if this payment has already been processed successfully
+    logger.debug('Checking for existing payment to ensure idempotency', { moyasarPaymentId, businessId })
+    const existingPayment = await Payment.findOne({
+      where: {
+        moyasar_payment_id: moyasarPaymentId,
+        business_id: businessId
+      }
+    })
+
+    if (existingPayment && existingPayment.status === 'paid') {
+      // Payment already processed - check if subscription is also upgraded
+      const business = await Business.findOne({
+        where: { public_id: businessId },
+        attributes: ['public_id', 'current_plan']
+      })
+
+      const targetPlan = existingPayment.metadata?.plan_type || 'professional'
+      const currentPlan = business?.current_plan
+
+      logger.info('Payment callback idempotency check', {
+        moyasarPaymentId,
+        businessId,
+        paymentStatus: existingPayment.status,
+        currentPlan,
+        targetPlan,
+        isAlreadyUpgraded: currentPlan === targetPlan
+      })
+
+      if (currentPlan === targetPlan) {
+        // Both payment processed AND subscription upgraded - return success immediately
+        logger.info('Payment callback idempotent - already fully processed', {
+          moyasarPaymentId,
+          businessId,
+          plan: currentPlan
+        })
+
+        // Get current subscription status to return consistent response
+        const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(businessId)
+
+        return res.json({
+          success: true,
+          message: getLocalizedMessage('payment.subscriptionActivated', req.locale),
+          subscription: {
+            plan_type: currentPlan,
+            amount: existingPayment.amount,
+            status: 'active',
+            next_billing_date: subscriptionStatus.next_billing_date
+          },
+          limits: subscriptionStatus.limits,
+          usage: subscriptionStatus.usage,
+          idempotent: true // Flag for monitoring purposes
+        })
+      } else {
+        // Payment processed but subscription upgrade incomplete - continue with normal flow
+        logger.warn('Payment marked as paid but subscription not upgraded - continuing with upgrade', {
+          moyasarPaymentId,
+          businessId,
+          currentPlan,
+          targetPlan
+        })
+      }
+    }
+
     // Step 1: Fetch payment details from Moyasar to get metadata with session ID
     logger.debug('Fetching payment from Moyasar to extract session ID', { moyasarPaymentId })
     let moyasarPayment
@@ -4073,6 +4137,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
             moyasar_token: moyasarPayment.source.token,
             payment_method_last4: moyasarPayment.source.last4,
             payment_method_brand: moyasarPayment.source.company,
+            billing_cycle_start: new Date(),
             next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
             last_payment_date: new Date()
           }, { transaction })
@@ -4400,6 +4465,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
       status: 'active',
       retry_count: 0,
       grace_period_end: null,
+      billing_cycle_start: new Date(),
       next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       moyasar_token: paymentSource?.token || subscription.moyasar_token,
       payment_method_last4: paymentSource?.number || subscription.payment_method_last4,

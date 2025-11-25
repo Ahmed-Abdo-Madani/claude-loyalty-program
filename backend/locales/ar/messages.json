@@ -113,7 +113,8 @@
     "invalidPaymentConfig": "إعدادات بوابة الدفع غير صالحة. يرجى التحقق من متغيرات البيئة.",
     "invalidPublishableKeyFormat": "تنسيق مفتاح Moyasar العام غير صالح. يجب أن يبدأ بـ pk_test_ أو pk_live_.",
     "testKeyInProduction": "تحذير: استخدام مفتاح دفع تجريبي في بيئة الإنتاج.",
-    "subscriptionUpdateFailed": "فشل تحديث الاشتراك. يرجى المحاولة مرة أخرى."
+    "subscriptionUpdateFailed": "فشل تحديث الاشتراك. يرجى المحاولة مرة أخرى.",
+    "reactivationFailed": "فشلت إعادة تفعيل الحساب. يرجى المحاولة مرة أخرى أو الاتصال بالدعم."
   },
   "customer": {
     "registrationSuccess": "تم تسجيل العميل بنجاح",
@@ -167,7 +168,28 @@
     "sessionIdMissing": "معرف جلسة الدفع غير موجود في بيانات ميسر",
     "paymentRecordNotFoundBySession": "سجل الدفع غير موجود لهذه الجلسة",
     "moyasarPaymentNotFound": "الدفع غير موجود على بوابة ميسر",
-    "tokenizationFailed": "فشل في حفظ طريقة الدفع. يرجى المحاولة مرة أخرى."
+    "tokenizationFailed": "فشل في حفظ طريقة الدفع. يرجى المحاولة مرة أخرى.",
+    "historyFetched": "تم استرجاع سجل المدفوعات بنجاح",
+    "invalidStatus": "حالة دفع غير صالحة. الحالات الصالحة: قيد الانتظار، مدفوع، فشل، مسترد، ملغى",
+    "invalidDateRange": "نطاق تاريخ غير صالح. يرجى تقديم تواريخ صالحة بتنسيق YYYY-MM-DD",
+    "invalidAmount": "مبلغ غير صالح. يرجى تقديم قيم رقمية صالحة",
+    "failureNotification": {
+      "subject": "فشل الدفع - مطلوب إجراء",
+      "body": "عزيزي {{businessName}}،\n\nفشل دفعك بمبلغ {{amount}} {{currency}} لخطة {{planType}}.\n\nالمحاولة: {{retryCount}} من 3\nالمحاولة التالية: {{nextRetryDate}}\n\nيرجى التأكد من أن طريقة الدفع الخاصة بك تحتوي على أموال كافية. إذا استمرت المشكلة، يرجى تحديث طريقة الدفع الخاصة بك.\n\nشكرًا لك،\nفريق مدنا للولاء",
+      "bodyFinal": "عزيزي {{businessName}}،\n\nفشلت محاولة الدفع الأخيرة بمبلغ {{amount}} {{currency}} لخطة {{planType}}.\n\nدخل حسابك فترة سماح حتى {{gracePeriodEnd}}. يرجى تحديث طريقة الدفع الخاصة بك قبل هذا التاريخ لتجنب تعليق الحساب.\n\nتحديث الدفع: {{reactivationUrl}}\n\nشكرًا لك،\nفريق مدنا للولاء"
+    },
+    "gracePeriodNotification": {
+      "subject": "إشعار نهائي - تعليق الحساب وشيك",
+      "body": "عزيزي {{businessName}}،\n\nسيتم تعليق حسابك في {{gracePeriodEnd}} بسبب فشل محاولات الدفع.\n\nلمنع التعليق، يرجى تحديث طريقة الدفع الخاصة بك فورًا:\n{{reactivationUrl}}\n\nإذا كان لديك أي أسئلة، يرجى الاتصال بفريق الدعم لدينا.\n\nشكرًا لك،\nفريق مدنا للولاء"
+    },
+    "suspensionNotification": {
+      "subject": "تم تعليق الحساب - الدفع مطلوب",
+      "body": "عزيزي {{businessName}}،\n\nتم تعليق حسابك بسبب فشل محاولات الدفع.\n\nالسبب: {{suspensionReason}}\nتاريخ التعليق: {{suspensionDate}}\n\nلإعادة تفعيل حسابك، يرجى تحديث طريقة الدفع الخاصة بك:\n{{reactivationUrl}}\n\nإذا كنت بحاجة إلى مساعدة، يرجى الاتصال بـ support@madna.me\n\nشكرًا لك،\nفريق مدنا للولاء"
+    },
+    "reactivationSuccessNotification": {
+      "subject": "تم إعادة تفعيل الحساب بنجاح",
+      "body": "عزيزي {{businessName}}،\n\nأخبار رائعة! تم إعادة تفعيل حسابك بنجاح.\n\nالخطة: {{planType}}\nالمبلغ المدفوع: {{amount}} {{currency}}\nتاريخ الفوترة التالي: {{nextBillingDate}}\n\nشكرًا لك على حل مشكلة الدفع. نحن سعداء بعودتك!\n\nفريق مدنا للولاء"
+    }
   },
   "subscription": {
     "notFound": "الاشتراك غير موجود",
@@ -195,29 +217,6 @@
     "expectedAmount": "المبلغ المتوقع",
     "actualAmount": "المبلغ الفعلي"
   },
-  "payment": {
-    "historyFetched": "تم استرجاع سجل المدفوعات بنجاح",
-    "invalidStatus": "حالة دفع غير صالحة. الحالات الصالحة: قيد الانتظار، مدفوع، فشل، مسترد، ملغى",
-    "invalidDateRange": "نطاق تاريخ غير صالح. يرجى تقديم تواريخ صالحة بتنسيق YYYY-MM-DD",
-    "invalidAmount": "مبلغ غير صالح. يرجى تقديم قيم رقمية صالحة",
-    "failureNotification": {
-      "subject": "فشل الدفع - مطلوب إجراء",
-      "body": "عزيزي {{businessName}}،\n\nفشل دفعك بمبلغ {{amount}} {{currency}} لخطة {{planType}}.\n\nالمحاولة: {{retryCount}} من 3\nالمحاولة التالية: {{nextRetryDate}}\n\nيرجى التأكد من أن طريقة الدفع الخاصة بك تحتوي على أموال كافية. إذا استمرت المشكلة، يرجى تحديث طريقة الدفع الخاصة بك.\n\nشكرًا لك،\nفريق مدنا للولاء",
-      "bodyFinal": "عزيزي {{businessName}}،\n\nفشلت محاولة الدفع الأخيرة بمبلغ {{amount}} {{currency}} لخطة {{planType}}.\n\nدخل حسابك فترة سماح حتى {{gracePeriodEnd}}. يرجى تحديث طريقة الدفع الخاصة بك قبل هذا التاريخ لتجنب تعليق الحساب.\n\nتحديث الدفع: {{reactivationUrl}}\n\nشكرًا لك،\nفريق مدنا للولاء"
-    },
-    "gracePeriodNotification": {
-      "subject": "إشعار نهائي - تعليق الحساب وشيك",
-      "body": "عزيزي {{businessName}}،\n\nسيتم تعليق حسابك في {{gracePeriodEnd}} بسبب فشل محاولات الدفع.\n\nلمنع التعليق، يرجى تحديث طريقة الدفع الخاصة بك فورًا:\n{{reactivationUrl}}\n\nإذا كان لديك أي أسئلة، يرجى الاتصال بفريق الدعم لدينا.\n\nشكرًا لك،\nفريق مدنا للولاء"
-    },
-    "suspensionNotification": {
-      "subject": "تم تعليق الحساب - الدفع مطلوب",
-      "body": "عزيزي {{businessName}}،\n\nتم تعليق حسابك بسبب فشل محاولات الدفع.\n\nالسبب: {{suspensionReason}}\nتاريخ التعليق: {{suspensionDate}}\n\nلإعادة تفعيل حسابك، يرجى تحديث طريقة الدفع الخاصة بك:\n{{reactivationUrl}}\n\nإذا كنت بحاجة إلى مساعدة، يرجى الاتصال بـ support@madna.me\n\nشكرًا لك،\nفريق مدنا للولاء"
-    },
-    "reactivationSuccessNotification": {
-      "subject": "تم إعادة تفعيل الحساب بنجاح",
-      "body": "عزيزي {{businessName}}،\n\nأخبار رائعة! تم إعادة تفعيل حسابك بنجاح.\n\nالخطة: {{planType}}\nالمبلغ المدفوع: {{amount}} {{currency}}\nتاريخ الفوترة التالي: {{nextBillingDate}}\n\nشكرًا لك على حل مشكلة الدفع. نحن سعداء بعودتك!\n\nفريق مدنا للولاء"
-    }
-  },
   "reactivation": {
     "success": "تم إعادة تفعيل الحساب بنجاح",
     "notSuspended": "الحساب غير معلق",
@@ -229,8 +228,5 @@
     "accessDenied": "ليس لديك صلاحية الوصول إلى هذه الفاتورة",
     "downloadFailed": "فشل تحميل الفاتورة. يرجى المحاولة مرة أخرى لاحقاً",
     "generationFailed": "فشل إنشاء ملف PDF للفاتورة"
-  },
-  "server": {
-    "reactivationFailed": "فشلت إعادة تفعيل الحساب. يرجى المحاولة مرة أخرى أو الاتصال بالدعم."
   }
 }

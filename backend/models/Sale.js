@@ -12,8 +12,8 @@ const Sale = sequelize.define('Sale', {
   },
   sale_number: {
     type: DataTypes.STRING(50),
-    unique: true,
     allowNull: false
+    // NOTE: Uniqueness enforced via composite index (business_id, sale_number) below
   },
   business_id: {
     type: DataTypes.STRING(50),
@@ -126,7 +126,9 @@ const Sale = sequelize.define('Sale', {
       fields: ['payment_method']
     },
     {
-      fields: ['sale_number']
+      unique: true,
+      fields: ['business_id', 'sale_number'],
+      name: 'unique_business_sale_number'
     },
     {
       fields: ['business_id', 'sale_date'],

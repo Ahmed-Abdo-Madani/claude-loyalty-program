@@ -86,7 +86,7 @@ export default function SubscriptionManagementPage() {
         }
       } else {
         // Redirect to checkout page
-        navigate(`/subscription/checkout?plan=${selectedPlan}&location=1`)
+        navigate(`/subscription/checkout?plan=${selectedPlan}&locations=1`)
       }
     } catch (err) {
       console.error('Upgrade failed:', err)
@@ -326,12 +326,22 @@ export default function SubscriptionManagementPage() {
                 )}
               </div>
 
-              <button
-                onClick={() => navigate('/subscription/checkout?update_payment=true')}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                {subscription?.payment_method?.has_token ? t('subscription:management.updatePaymentMethod') : t('subscription:management.addPaymentMethod')}
-              </button>
+              {/* Add/Update Payment Method Button or Upgrade Button for Free Tier */}
+              {subscription?.plan_type === 'free' ? (
+                <button
+                  onClick={() => navigate('/subscription/plans')}
+                  className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                >
+                  {t('subscription:actions.upgradeFromFree')}
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/subscription/checkout?update_payment=true')}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {subscription?.payment_method?.has_token ? t('subscription:management.updatePaymentMethod') : t('subscription:management.addPaymentMethod')}
+                </button>
+              )}
             </div>
           </div>
         </div>

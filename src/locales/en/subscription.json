@@ -83,6 +83,7 @@
     "currentPlan": "Current Plan",
     "selectPlan": "Select Plan",
     "upgrade": "Upgrade",
+    "upgradeFromFree": "Upgrade to Professional",
     "downgrade": "Downgrade",
     "upgradeNow": "Upgrade Now",
     "contactSales": "Contact Sales",
@@ -170,7 +171,12 @@
     "reactivationTitle": "Reactivate Your Account",
     "reactivationDescription": "Complete payment to reactivate your suspended account",
     "reactivationNotice": "Account Reactivation",
-    "reactivationNoticeDescription": "Your account will be reactivated immediately after successful payment. You'll regain full access to all features."
+    "reactivationNoticeDescription": "Your account will be reactivated immediately after successful payment. You'll regain full access to all features.",
+    "noActiveSubscription": "You must have an active subscription before updating your payment method. Please subscribe to a plan first.",
+    "updatePaymentMethodTitle": "Update Payment Method",
+    "updatePaymentMethodDescription": "Add or update your payment card for automatic billing",
+    "cardVerificationNotice": "Card Verification",
+    "cardVerificationDescription": "A temporary 1 SAR charge will be made to verify your card. This amount will be refunded immediately."
   },
   "paymentCallback": {
     "verifying": "Verifying payment...",
@@ -202,7 +208,16 @@
     "hideTechnicalDetails": "Hide Technical Details",
     "expectedAmount": "Expected Amount",
     "actualAmount": "Actual Amount",
-    "waitAndRetry": "Please wait a moment and try again"
+    "waitAndRetry": "Please wait a moment and try again",
+    "paymentMethodUpdated": "Payment Method Updated Successfully!",
+    "paymentMethodUpdatedMessage": "Your payment method has been updated and will be used for future billing",
+    "cardBrand": "Card Brand",
+    "lastFourDigits": "Last 4 Digits",
+    "paymentMethodUpdateFailed": "Failed to update payment method. Please try again.",
+    "cardVerificationFailed": "Card verification failed. Please check your card details and try again.",
+    "cardVerificationNotFound": "Card verification payment not found. This may be a temporary issue - please try again.",
+    "cardTokenFailed": "Failed to save card details. Please try again or use a different card.",
+    "noSubscriptionForUpdate": "No active subscription found. Please subscribe to a plan before updating payment method."
   },
   "modal": {
     "upgrade": {

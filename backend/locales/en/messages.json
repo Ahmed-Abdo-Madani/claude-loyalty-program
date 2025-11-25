@@ -113,7 +113,8 @@
     "invalidPaymentConfig": "Payment gateway configuration is invalid. Please check environment variables.",
     "invalidPublishableKeyFormat": "Moyasar publishable key format is invalid. Must start with pk_test_ or pk_live_.",
     "testKeyInProduction": "Warning: Using test payment key in production environment.",
-    "subscriptionUpdateFailed": "Failed to update subscription. Please try again."
+    "subscriptionUpdateFailed": "Failed to update subscription. Please try again.",
+    "reactivationFailed": "Failed to reactivate account. Please try again or contact support."
   },
   "customer": {
     "registrationSuccess": "Customer registered successfully",
@@ -167,7 +168,28 @@
     "sessionIdMissing": "Payment session ID not found in Moyasar metadata",
     "paymentRecordNotFoundBySession": "Payment record not found for this session",
     "moyasarPaymentNotFound": "Payment not found on Moyasar gateway",
-    "tokenizationFailed": "Failed to tokenize payment method. Please try again."
+    "tokenizationFailed": "Failed to tokenize payment method. Please try again.",
+    "historyFetched": "Payment history retrieved successfully",
+    "invalidStatus": "Invalid payment status. Valid statuses: pending, paid, failed, refunded, cancelled",
+    "invalidDateRange": "Invalid date range. Please provide valid dates in YYYY-MM-DD format",
+    "invalidAmount": "Invalid amount. Please provide valid numeric values",
+    "failureNotification": {
+      "subject": "Payment Failed - Action Required",
+      "body": "Dear {{businessName}},\n\nYour payment of {{amount}} {{currency}} for the {{planType}} plan has failed.\n\nAttempt: {{retryCount}} of 3\nNext retry: {{nextRetryDate}}\n\nPlease ensure your payment method has sufficient funds. If the issue persists, please update your payment method.\n\nThank you,\nMadna Loyalty Team",
+      "bodyFinal": "Dear {{businessName}},\n\nYour final payment attempt of {{amount}} {{currency}} for the {{planType}} plan has failed.\n\nYour account has entered a grace period until {{gracePeriodEnd}}. Please update your payment method before this date to avoid account suspension.\n\nUpdate payment: {{reactivationUrl}}\n\nThank you,\nMadna Loyalty Team"
+    },
+    "gracePeriodNotification": {
+      "subject": "Final Notice - Account Suspension Imminent",
+      "body": "Dear {{businessName}},\n\nYour account will be suspended on {{gracePeriodEnd}} due to failed payment attempts.\n\nTo prevent suspension, please update your payment method immediately:\n{{reactivationUrl}}\n\nIf you have any questions, please contact our support team.\n\nThank you,\nMadna Loyalty Team"
+    },
+    "suspensionNotification": {
+      "subject": "Account Suspended - Payment Required",
+      "body": "Dear {{businessName}},\n\nYour account has been suspended due to failed payment attempts.\n\nReason: {{suspensionReason}}\nSuspended on: {{suspensionDate}}\n\nTo reactivate your account, please update your payment method:\n{{reactivationUrl}}\n\nIf you need assistance, please contact support@madna.me\n\nThank you,\nMadna Loyalty Team"
+    },
+    "reactivationSuccessNotification": {
+      "subject": "Account Reactivated Successfully",
+      "body": "Dear {{businessName}},\n\nGreat news! Your account has been reactivated successfully.\n\nPlan: {{planType}}\nAmount paid: {{amount}} {{currency}}\nNext billing date: {{nextBillingDate}}\n\nThank you for resolving the payment issue. We're glad to have you back!\n\nMadna Loyalty Team"
+    }
   },
   "subscription": {
     "notFound": "Subscription not found",
@@ -195,29 +217,6 @@
     "expectedAmount": "Expected Amount",
     "actualAmount": "Actual Amount"
   },
-  "payment": {
-    "historyFetched": "Payment history retrieved successfully",
-    "invalidStatus": "Invalid payment status. Valid statuses: pending, paid, failed, refunded, cancelled",
-    "invalidDateRange": "Invalid date range. Please provide valid dates in YYYY-MM-DD format",
-    "invalidAmount": "Invalid amount. Please provide valid numeric values",
-    "failureNotification": {
-      "subject": "Payment Failed - Action Required",
-      "body": "Dear {{businessName}},\n\nYour payment of {{amount}} {{currency}} for the {{planType}} plan has failed.\n\nAttempt: {{retryCount}} of 3\nNext retry: {{nextRetryDate}}\n\nPlease ensure your payment method has sufficient funds. If the issue persists, please update your payment method.\n\nThank you,\nMadna Loyalty Team",
-      "bodyFinal": "Dear {{businessName}},\n\nYour final payment attempt of {{amount}} {{currency}} for the {{planType}} plan has failed.\n\nYour account has entered a grace period until {{gracePeriodEnd}}. Please update your payment method before this date to avoid account suspension.\n\nUpdate payment: {{reactivationUrl}}\n\nThank you,\nMadna Loyalty Team"
-    },
-    "gracePeriodNotification": {
-      "subject": "Final Notice - Account Suspension Imminent",
-      "body": "Dear {{businessName}},\n\nYour account will be suspended on {{gracePeriodEnd}} due to failed payment attempts.\n\nTo prevent suspension, please update your payment method immediately:\n{{reactivationUrl}}\n\nIf you have any questions, please contact our support team.\n\nThank you,\nMadna Loyalty Team"
-    },
-    "suspensionNotification": {
-      "subject": "Account Suspended - Payment Required",
-      "body": "Dear {{businessName}},\n\nYour account has been suspended due to failed payment attempts.\n\nReason: {{suspensionReason}}\nSuspended on: {{suspensionDate}}\n\nTo reactivate your account, please update your payment method:\n{{reactivationUrl}}\n\nIf you need assistance, please contact support@madna.me\n\nThank you,\nMadna Loyalty Team"
-    },
-    "reactivationSuccessNotification": {
-      "subject": "Account Reactivated Successfully",
-      "body": "Dear {{businessName}},\n\nGreat news! Your account has been reactivated successfully.\n\nPlan: {{planType}}\nAmount paid: {{amount}} {{currency}}\nNext billing date: {{nextBillingDate}}\n\nThank you for resolving the payment issue. We're glad to have you back!\n\nMadna Loyalty Team"
-    }
-  },
   "reactivation": {
     "success": "Account reactivated successfully",
     "notSuspended": "Account is not suspended",
@@ -229,8 +228,5 @@
     "accessDenied": "You do not have access to this invoice",
     "downloadFailed": "Failed to download invoice. Please try again later",
     "generationFailed": "Failed to generate invoice PDF"
-  },
-  "server": {
-    "reactivationFailed": "Failed to reactivate account. Please try again or contact support."
   }
 }
