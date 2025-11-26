@@ -1744,6 +1744,7 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
     }
 
     await branch.update(updateData)
+    await branch.reload() // Reload to get fresh data from database
 
     res.json({
       success: true,
@@ -3703,21 +3704,63 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
     
     logger.debug('Checkout callback URL', { callbackUrl })
 
-    // Create pending Payment record
-    const payment = await Payment.create({
-      business_id: businessId,
-      amount,
-      currency: 'SAR',
-      status: 'pending',
-      payment_method: 'card',
-      metadata: {
-        gateway: 'moyasar',
-        plan_type: planType,
-        location_count: locationCount,
-        session_id: sessionId,
-        callback_url: callbackUrl
-      }
+    // Check for existing pending payment to prevent duplicates (within last 10 minutes)
+    const { Sequelize } = await import('sequelize')
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+    
+    const existingPendingPayment = await Payment.findOne({
+      where: {
+        business_id: businessId,
+        status: 'pending',
+        amount,
+        created_at: {
+          [Sequelize.Op.gte]: tenMinutesAgo
+        },
+        [Sequelize.Op.and]: [
+          Sequelize.where(
+            Sequelize.json('metadata.plan_type'),
+            planType
+          )
+        ]
+      },
+      order: [['created_at', 'DESC']]
     })
+
+    // If there's a recent pending payment, reuse it
+    let payment
+    if (existingPendingPayment) {
+      logger.info('Reusing existing pending payment', {
+        businessId,
+        paymentId: existingPendingPayment.public_id,
+        createdAt: existingPendingPayment.created_at
+      })
+      payment = existingPendingPayment
+      
+      // Update session ID for the reused payment
+      await payment.update({
+        metadata: {
+          ...payment.metadata,
+          session_id: sessionId,
+          reused: true
+        }
+      })
+    } else {
+      // Create new pending Payment record
+      payment = await Payment.create({
+        business_id: businessId,
+        amount,
+        currency: 'SAR',
+        status: 'pending',
+        payment_method: 'card',
+        metadata: {
+          gateway: 'moyasar',
+          plan_type: planType,
+          location_count: locationCount,
+          session_id: sessionId,
+          callback_url: callbackUrl
+        }
+      })
+    }
 
     // Fetch business name for payment description
     const business = await Business.findOne({
@@ -4125,29 +4168,47 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
         transaction
       )
 
-      // Store payment token for recurring billing (if provided)
-      if (moyasarPayment.source?.token) {
-        const subscription = await Subscription.findOne({
-          where: { business_id: businessId },
-          transaction
-        })
+      // Store payment method details for display and future recurring billing
+      // Note: Moyasar token for recurring billing comes from moyasarPayment.source.token (if saveCard was enabled)
+      const subscription = await Subscription.findOne({
+        where: { business_id: businessId },
+        transaction
+      })
 
-        if (subscription) {
-          await subscription.update({
-            moyasar_token: moyasarPayment.source.token,
-            payment_method_last4: moyasarPayment.source.last4,
-            payment_method_brand: moyasarPayment.source.company,
-            billing_cycle_start: new Date(),
-            next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-            last_payment_date: new Date()
-          }, { transaction })
+      if (subscription && moyasarPayment.source) {
+        const updateData = {
+          payment_method_last4: moyasarPayment.source.number || moyasarPayment.source.last4,
+          payment_method_brand: moyasarPayment.source.company,
+          billing_cycle_start: new Date(),
+          next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          last_payment_date: new Date()
+        }
 
+        // Store token if available (requires saveCard: true in frontend Moyasar.js)
+        if (moyasarPayment.source.token) {
+          updateData.moyasar_token = moyasarPayment.source.token
           logger.info('Payment token stored for recurring billing', {
             businessId,
             subscriptionId: subscription.public_id,
-            last4: moyasarPayment.source.last4
+            hasToken: true
+          })
+        } else {
+          logger.warn('No payment token in response - saveCard may not be enabled', {
+            businessId,
+            subscriptionId: subscription.public_id,
+            sourceType: moyasarPayment.source.type
           })
         }
+
+        await subscription.update(updateData, { transaction })
+
+        logger.info('Payment method details stored', {
+          businessId,
+          subscriptionId: subscription.public_id,
+          last4: updateData.payment_method_last4,
+          brand: updateData.payment_method_brand,
+          hasToken: !!updateData.moyasar_token
+        })
       }
 
       // Create invoice
@@ -4265,9 +4326,28 @@ router.get('/subscription/details', requireBusinessAuth, async (req, res) => {
       order: [['created_at', 'DESC']]
     })
 
-    // Fetch last 3 payments
+    // Calculate monthly price from plan definition
+    const business = await Business.findOne({
+      where: { public_id: businessId },
+      attributes: ['current_plan']
+    })
+
+    // Count locations for Enterprise pricing
+    const locationCount = await Branch.count({
+      where: { business_id: businessId }
+    })
+
+    const monthlyPrice = SubscriptionService.calculatePlanPrice(
+      subscriptionStatus.current_plan,
+      locationCount || 1
+    )
+
+    // Fetch last 3 payments - only show successful payments
     const recentPayments = await Payment.findAll({
-      where: { business_id: businessId },
+      where: { 
+        business_id: businessId,
+        status: 'paid' // Only show paid payments to avoid duplicates
+      },
       order: [['payment_date', 'DESC']],
       limit: 3,
       attributes: ['payment_date', 'amount', 'currency', 'status', 'payment_method']
@@ -4278,10 +4358,10 @@ router.get('/subscription/details', requireBusinessAuth, async (req, res) => {
       subscription: {
         plan_type: subscriptionStatus.current_plan,
         status: subscriptionStatus.subscription_status,
-        amount: subscription?.amount || 0,
+        amount: monthlyPrice, // Use calculated price from plan definition
         currency: subscription?.currency || 'SAR',
         billing_cycle_start: subscription?.billing_cycle_start || null,
-        next_billing_date: subscriptionStatus.next_billing_date,
+        next_billing_date: subscription?.next_billing_date || null,
         payment_method: {
           has_token: !!subscription?.moyasar_token,
           last4: subscription?.payment_method_last4 || null,
