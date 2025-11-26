@@ -7,8 +7,8 @@ function BranchGrid({
   onEdit,
   onDelete,
   onToggleStatus,
-  onAnalytics,
-  onManageOffers
+  onRefresh,
+  onManagerAccess
 }) {
   const { t } = useTranslation('dashboard')
   
@@ -58,8 +58,8 @@ function BranchGrid({
             onEdit={onEdit}
             onDelete={onDelete}
             onToggleStatus={onToggleStatus}
-            onAnalytics={onAnalytics}
-            onManageOffers={onManageOffers}
+            onRefresh={onRefresh}
+            onManagerAccess={onManagerAccess}
           />
         ))}
       </div>

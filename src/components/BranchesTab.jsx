@@ -3,10 +3,9 @@ import { useTranslation } from 'react-i18next'
 import BranchGrid from './BranchGrid'
 import LocationAutocomplete from './LocationAutocomplete'
 import CompactStatsBar from './CompactStatsBar'
+import BranchManagerAccessModal from './BranchManagerAccessModal'
 import { endpoints, secureApi } from '../config/api'
-import { updateBranchManagerPin } from '../utils/secureAuth'
 import { validateSecureBranchId } from '../utils/secureAuth'
-import BranchAnalyticsModal from './BranchAnalyticsModal'
 
 function BranchesTab({ analytics }) {
   const { t } = useTranslation('dashboard')
@@ -17,8 +16,7 @@ function BranchesTab({ analytics }) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
-  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
-  const [selectedBranchForAnalytics, setSelectedBranchForAnalytics] = useState(null)
+  const [showManagerAccessModal, setShowManagerAccessModal] = useState(null) // Store branch object
 
   // Filter states - use internal constants, not translated strings
   const [statusFilter, setStatusFilter] = useState('all')
@@ -127,12 +125,6 @@ function BranchesTab({ analytics }) {
       setError(err.message || 'Failed to duplicate branch')
       console.error('Error duplicating branch:', err)
     }
-  }
-
-  const handleAnalytics = (branch) => {
-    console.log('📊 Opening analytics for branch:', branch.public_id)
-    setSelectedBranchForAnalytics(branch)
-    setAnalyticsModalOpen(true)
   }
 
   // Filter branches based on selected filters - use constants for comparison
@@ -272,11 +264,8 @@ function BranchesTab({ analytics }) {
         onEdit={setShowEditModal}
         onDelete={setShowDeleteConfirm}
         onToggleStatus={toggleBranchStatus}
-        onAnalytics={handleAnalytics}
-        onManageOffers={(branch) => {
-          // Manage offers functionality placeholder
-          console.log('Manage offers for branch:', branch.public_id || branch.id)
-        }}
+        onRefresh={loadBranches}
+        onManagerAccess={setShowManagerAccessModal}
       />
 
       {/* Delete Confirmation Modal - Full-screen on mobile */}
@@ -321,42 +310,10 @@ function BranchesTab({ analytics }) {
               
               const branchId = showEditModal?.public_id || showEditModal?.id
               
-              // Phase 1: Handle PIN update via dedicated endpoint (if needed)
-              // Skip if PIN was already saved via "Save PIN" button (existing branches)
-              // Still run for new branches being created with PIN
-              if (branchData.manager_pin_enabled === true && 
-                  branchData.manager_pin && 
-                  branchData.manager_pin.trim() !== '' && 
-                  branchId &&
-                  !branchData._pinAlreadySaved) {  // Skip if auto-saved
-                console.log('🔐 Updating manager PIN via dedicated endpoint')
-                
-                const result = await updateBranchManagerPin(branchId, branchData.manager_pin)
-                
-                if (!result.success) {
-                  // Translate error code to localized message
-                  const errorCodeMap = {
-                    'PIN_FORMAT_INVALID': t('branches.pinFormatInvalid'),
-                    'BRANCH_ID_REQUIRED': t('branches.branchIdRequired'),
-                    'SESSION_EXPIRED': t('branches.sessionExpired'),
-                    'BRANCH_NOT_FOUND': t('branches.branchNotFound'),
-                    'SERVER_ERROR': t('branches.serverError'),
-                    'NETWORK_ERROR': t('branches.networkError'),
-                    'PIN_SAVE_FAILED': t('branches.pinSaveFailed')
-                  }
-                  throw new Error(errorCodeMap[result.code] || result.message || t('branches.failedToSetPin'))
-                }
-                
-                console.log('✅ Manager PIN updated and hashed')
-              }
-              
-              // Phase 2: Remove PIN and internal flags from general update to prevent plaintext storage
-              const { manager_pin, _pinAlreadySaved, ...cleanedBranchData } = branchData
-              
               if (showEditModal) {
                 // Update existing branch using secure ID
                 console.log('📝 Updating branch:', showEditModal.public_id)
-                const response = await secureApi.put(`${endpoints.myBranches}/${branchId}`, cleanedBranchData)
+                const response = await secureApi.put(`${endpoints.myBranches}/${branchId}`, branchData)
                 const data = await response.json()
                 
                 if (!data.success) {
@@ -366,37 +323,13 @@ function BranchesTab({ analytics }) {
               } else {
                 // Create new branch
                 console.log('➕ Creating new branch')
-                const response = await secureApi.post(endpoints.myBranches, cleanedBranchData)
+                const response = await secureApi.post(endpoints.myBranches, branchData)
                 const data = await response.json()
                 
                 if (!data.success) {
                   throw new Error(data.message || 'Failed to create branch')
                 }
-                
-                const newBranchId = data.data?.public_id
-                console.log('✅ Branch created successfully:', newBranchId)
-                
-                // Phase 3: If PIN was provided in create mode AND manager access is enabled, save it now
-                if (branchData.manager_pin_enabled === true &&
-                    manager_pin && 
-                    manager_pin.trim() !== '' && 
-                    newBranchId) {
-                  try {
-                    console.log('🔐 Setting manager PIN for new branch')
-                    
-                    const result = await updateBranchManagerPin(newBranchId, manager_pin)
-                    
-                    if (!result.success) {
-                      console.error('⚠️ Branch saved but PIN failed:', result.code)
-                      setError(t('branches.savedButPinFailed'))
-                    } else {
-                      console.log('✅ Manager PIN set for new branch')
-                    }
-                  } catch (pinError) {
-                    console.error('⚠️ Branch saved but PIN failed:', pinError)
-                    setError(t('branches.savedButPinFailed'))
-                  }
-                }
+                console.log('✅ Branch created successfully:', data.data?.public_id)
               }
               await loadBranches() // Reload to get updated data
               setShowCreateModal(false)
@@ -409,15 +342,13 @@ function BranchesTab({ analytics }) {
         />
       )}
 
-      {/* Branch Analytics Modal */}
-      {analyticsModalOpen && selectedBranchForAnalytics && (
-        <BranchAnalyticsModal
-          isOpen={analyticsModalOpen}
-          onClose={() => {
-            setAnalyticsModalOpen(false)
-            setSelectedBranchForAnalytics(null)
-          }}
-          branch={selectedBranchForAnalytics}
+      {/* Manager Access Modal */}
+      {showManagerAccessModal && (
+        <BranchManagerAccessModal
+          branch={showManagerAccessModal}
+          isOpen={!!showManagerAccessModal}
+          onClose={() => setShowManagerAccessModal(null)}
+          onSuccess={loadBranches}
         />
       )}
     </div>
@@ -441,13 +372,6 @@ function BranchModal({ branch, onClose, onSave }) {
     manager_pin_enabled: branch?.manager_pin_enabled || false,
     manager_pin: ''
   })
-
-  // Manager PIN state
-  const [showPin, setShowPin] = useState(false)
-  const [pinValidated, setPinValidated] = useState(false)
-  const [pinSaving, setPinSaving] = useState(false)
-  const [pinSaveError, setPinSaveError] = useState(null)
-  const [pinSavedSuccessfully, setPinSavedSuccessfully] = useState(false)
 
   // District management state
   const [loadingDistricts, setLoadingDistricts] = useState(false)
@@ -659,12 +583,7 @@ function BranchModal({ branch, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // Mark if PIN was already saved via "Save PIN" button
-    const dataToSave = {
-      ...formData,
-      _pinAlreadySaved: pinSavedSuccessfully && branch?.public_id  // Only for existing branches
-    }
-    onSave(dataToSave)
+    onSave(formData)
   }
 
   return (
@@ -843,158 +762,6 @@ function BranchModal({ branch, onClose, onSave }) {
                       placeholder={t('branches.emailPlaceholder')}
                     />
                   </div>
-                </div>
-
-                {/* Manager Access Section */}
-                <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
-                        🔐 {t('branches.managerAccess')}
-                      </h3>
-                      <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                        {t('branches.managerAccessDesc')}
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      id="manager_pin_enabled"
-                      checked={formData.manager_pin_enabled}
-                      onChange={(e) => setFormData({...formData, manager_pin_enabled: e.target.checked})}
-                      className="h-6 w-6 min-h-[24px] min-w-[24px] text-purple-600 focus:ring-purple-500 border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-gray-700"
-                    />
-                  </div>
-
-                  {formData.manager_pin_enabled && (
-                    <div className="space-y-4 mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
-                      {/* PIN Input */}
-                      <div>
-                        <label className="block text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                          📱 {t('branches.managerPin')}
-                        </label>
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <input
-                              type={showPin ? "text" : "password"}
-                              value={formData.manager_pin}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, '').substring(0, 6)
-                                setFormData({...formData, manager_pin: value})
-                                setPinValidated(false)
-                                setPinSavedSuccessfully(false)
-                                setPinSaveError(null)
-                              }}
-                              maxLength={6}
-                              pattern="[0-9]{4,6}"
-                              className="w-full px-4 py-3 min-h-[44px] border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all touch-target font-mono text-lg tracking-widest"
-                              placeholder={t('branches.pinPlaceholder')}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPin(!showPin)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
-                            >
-                              {showPin ? '👁️' : '👁️‍🗨️'}
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              // New branch: Can't save PIN until branch exists
-                              if (!branch?.public_id) {
-                                setPinValidated(true)
-                                return
-                              }
-
-                              // Existing branch: Save PIN immediately
-                              if (formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)) {
-                                setPinSaving(true)
-                                setPinSaveError(null)
-                                
-                                const result = await updateBranchManagerPin(branch.public_id, formData.manager_pin)
-                                
-                                setPinSaving(false)
-                                
-                                if (result.success) {
-                                  setPinValidated(true)
-                                  setPinSavedSuccessfully(true)
-                                  setPinSaveError(null)
-                                } else {
-                                  setPinValidated(false)
-                                  setPinSavedSuccessfully(false)
-                                  // Translate error code to localized message
-                                  const errorCodeMap = {
-                                    'PIN_FORMAT_INVALID': t('branches.pinFormatInvalid'),
-                                    'BRANCH_ID_REQUIRED': t('branches.branchIdRequired'),
-                                    'SESSION_EXPIRED': t('branches.sessionExpired'),
-                                    'BRANCH_NOT_FOUND': t('branches.branchNotFound'),
-                                    'SERVER_ERROR': t('branches.serverError'),
-                                    'NETWORK_ERROR': t('branches.networkError'),
-                                    'PIN_SAVE_FAILED': t('branches.pinSaveFailed')
-                                  }
-                                  setPinSaveError(errorCodeMap[result.code] || result.message || t('branches.pinSaveFailed'))
-                                }
-                              }
-                            }}
-                            disabled={!formData.manager_pin || !/^\d{4,6}$/.test(formData.manager_pin) || pinSaving}
-                            className={`px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md disabled:opacity-50 whitespace-nowrap ${
-                              pinSavedSuccessfully 
-                                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                : pinSaveError
-                                ? 'bg-red-600 hover:bg-red-700 text-white'
-                                : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-95'
-                            }`}
-                          >
-                            {pinSaving ? '⏳ ' + t('branches.savingPin') : 
-                             pinSavedSuccessfully ? '✓ ' + t('branches.pinSaved') : 
-                             pinSaveError ? '❌ ' + t('branches.retryPin') :
-                             '💾 ' + t('branches.savePin')}
-                          </button>
-                        </div>
-                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
-                          {pinSavedSuccessfully
-                            ? `✓ ${t('branches.pinSavedAndEncrypted')}`
-                            : pinSaveError
-                            ? `❌ ${pinSaveError}`
-                            : !branch?.public_id
-                            ? `ℹ️ ${t('branches.pinWillBeSavedAfterCreation')}`
-                            : formData.manager_pin && /^\d{4,6}$/.test(formData.manager_pin)
-                            ? `✓ ${t('branches.enterPinAndClickSave')}`
-                            : t('branches.pinValidation')}
-                        </p>
-                      </div>
-
-                      {/* Branch Login QR Code */}
-                      {branch?.public_id && (
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
-                          <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                            📱 Manager Login QR Code
-                          </h4>
-                          <div className="flex items-center gap-4">
-                            <div className="bg-white p-2 rounded-lg border border-gray-200">
-                              <img
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-                                  `${window.location.origin}/branch-manager-login?branch=${branch.public_id}`
-                                )}`}
-                                alt="Branch Manager Login QR Code"
-                                className="w-[120px] h-[120px]"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
-                                Branch managers can scan this QR code to access the login page
-                              </p>
-                              <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
-                                <code className="text-xs text-purple-900 dark:text-purple-200 break-all">
-                                  {branch.public_id}
-                                </code>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
                 {/* Main Branch Setting */}
