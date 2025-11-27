@@ -65,6 +65,7 @@ export const endpoints = {
 
   // Public Customer APIs
   publicOffer: `${API_BASE_URL}/api/business/public/offer`,
+  publicMenu: (identifier, type = 'business') => `${API_BASE_URL}/api/business/public/menu/${identifier}?type=${type}`,
 
   // Progress Scanning APIs
   scanProgress: `${API_BASE_URL}/api/business/scan/progress`,
@@ -167,6 +168,7 @@ export const endpoints = {
   posReceiptRegenerate: (saleId) => `${API_BASE_URL}/api/receipts/${saleId}/regenerate`,
 
   // POS - Analytics APIs (Business Dashboard Access)
+  posAnalyticsToday: `${API_BASE_URL}/api/pos/analytics/today`,
   posAnalyticsSummary: `${API_BASE_URL}/api/pos/analytics/summary`,
   posAnalyticsTopProducts: `${API_BASE_URL}/api/pos/analytics/top-products`,
   posAnalyticsTrends: `${API_BASE_URL}/api/pos/analytics/sales-trends`,

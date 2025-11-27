@@ -863,6 +863,156 @@ router.get('/public/offer/:id', async (req, res) => {
   }
 })
 
+// Get public menu endpoint - accessible without authentication
+router.get('/public/menu/:identifier', async (req, res) => {
+  try {
+    const { identifier } = req.params
+    const type = req.query.type || 'business' // Default to business type
+
+    logger.info(`Public menu access: ${type}/${identifier}`)
+
+    let business
+    let branch = null
+    let businessId
+
+    if (type === 'branch') {
+      // Fetch branch with business details
+      branch = await Branch.findByPk(identifier, {
+        include: [{
+          model: Business,
+          as: 'business',
+          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address']
+        }]
+      })
+
+      if (!branch) {
+        return res.status(404).json({
+          success: false,
+          message: 'Branch not found'
+        })
+      }
+
+      business = branch.business
+      businessId = branch.business_id
+    } else {
+      // Fetch business details
+      business = await Business.findByPk(identifier, {
+        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address']
+      })
+
+      if (!business) {
+        return res.status(404).json({
+          success: false,
+          message: 'Business not found'
+        })
+      }
+
+      businessId = identifier
+    }
+
+    // Import Product and ProductCategory models
+    const { Product, ProductCategory } = await import('../models/index.js')
+
+    // Fetch all active products for the business
+    const products = await Product.findAll({
+      where: {
+        business_id: businessId,
+        status: 'active'
+      },
+      include: [{
+        model: ProductCategory,
+        as: 'category',
+        attributes: ['public_id', 'name', 'name_ar', 'display_order']
+      }],
+      order: [
+        [{ model: ProductCategory, as: 'category' }, 'display_order', 'ASC'],
+        ['name', 'ASC']
+      ]
+    })
+
+    // Group products by category
+    const categoriesMap = new Map()
+    const uncategorizedProducts = []
+
+    products.forEach(product => {
+      if (product.category) {
+        const categoryId = product.category.public_id
+        if (!categoriesMap.has(categoryId)) {
+          categoriesMap.set(categoryId, {
+            id: product.category.public_id,
+            name: product.category.name,
+            name_ar: product.category.name_ar,
+            display_order: product.category.display_order,
+            products: []
+          })
+        }
+        categoriesMap.get(categoryId).products.push({
+          id: product.public_id,
+          name: product.name,
+          name_ar: product.name_ar,
+          description: product.description,
+          price: product.price,
+          image_url: product.image_url,
+          status: product.status
+        })
+      } else {
+        uncategorizedProducts.push({
+          id: product.public_id,
+          name: product.name,
+          name_ar: product.name_ar,
+          description: product.description,
+          price: product.price,
+          image_url: product.image_url,
+          status: product.status
+        })
+      }
+    })
+
+    // Convert map to array and sort by display_order
+    const categories = Array.from(categoriesMap.values()).sort((a, b) => a.display_order - b.display_order)
+
+    // Format response
+    const menuData = {
+      business: {
+        id: business.public_id,
+        name: business.business_name,
+        name_ar: business.business_name_ar,
+        logo_url: business.logo_url ? `/api/business/public/logo/${business.public_id}/${business.logo_filename}` : null,
+        description: business.description,
+        phone: business.phone,
+        city: business.city,
+        district: business.district,
+        region: business.region,
+        address: business.address
+      },
+      categories,
+      uncategorizedProducts
+    }
+
+    // Add branch info if applicable
+    if (branch) {
+      menuData.branch = {
+        id: branch.public_id,
+        name: branch.name,
+        address: branch.address,
+        city: branch.city
+      }
+    }
+
+    res.json({
+      success: true,
+      data: menuData
+    })
+  } catch (error) {
+    logger.error('Get public menu error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch menu',
+      error: error.message
+    })
+  }
+})
+
 // ===============================
 // CUSTOMERS ROUTES
 // ===============================

@@ -43,9 +43,21 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     }
   }, [isOpen, branch?.public_id])
 
+
+  // Sync managerPinEnabled with branch prop only on initial mount or when modal reopens
+  useEffect(() => {
+    if (isOpen && branch) {
+      setManagerPinEnabled(branch.manager_pin_enabled || false)
+    }
+  }, [isOpen, branch?.public_id]) // Only sync when modal opens or different branch
+
   // Defensive close handler
   const handleClose = () => {
     if (isMounted) {
+      // Refresh branch list when closing modal to sync any changes
+      if (onSuccess) {
+        onSuccess()
+      }
       onClose()
     }
   }
@@ -105,6 +117,8 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
       return
     }
 
+    // Optimistically update UI immediately
+    setManagerPinEnabled(enabled)
     setToggleSaving(true)
     
     try {
@@ -122,10 +136,8 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
       const data = await response.json()
 
       if (data.success) {
-        setManagerPinEnabled(enabled)
-        if (onSuccess) {
-          onSuccess() // Refresh branch list
-        }
+        console.log('✅ Manager access updated:', data.data?.manager_pin_enabled)
+        // Keep optimistic state, don't call onSuccess to avoid branch list reload during modal interaction
       } else {
         throw new Error(data.message || 'Failed to update manager access')
       }

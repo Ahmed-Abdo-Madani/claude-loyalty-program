@@ -1811,6 +1811,7 @@ router.post('/receipts/:saleId/email', requireBranchManagerAuth, async (req, res
 // ============================================
 
 // POS Analytics Endpoints (using dedicated controller)
+router.get('/analytics/today', requireBusinessAuth, POSAnalyticsController.getTodaysSummary)
 router.get('/analytics/summary', requireBusinessAuth, POSAnalyticsController.getSalesSummary)
 router.get('/analytics/top-products', requireBusinessAuth, POSAnalyticsController.getTopProducts)
 router.get('/analytics/sales-trends', requireBusinessAuth, POSAnalyticsController.getSalesTrends)

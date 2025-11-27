@@ -3,15 +3,16 @@ import { useTranslation } from 'react-i18next'
 import QRCodeGenerator from '../utils/qrCodeGenerator'
 import useMediaQuery from '../hooks/useMediaQuery'
 
-function QRCodeModal({ offer, onClose }) {
-  const { t } = useTranslation('cardDesign')
+function QRCodeModal({ offer, type, identifier, options, onClose }) {
+  const { t } = useTranslation(['common', 'cardDesign'])
   const [qrData, setQrData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [downloadFormat, setDownloadFormat] = useState('png')
   const [qrOptions, setQrOptions] = useState({
     size: 256,
     source: 'dashboard',
-    branchId: offer?.branchId || null
+    branchId: offer?.branchId || null,
+    type: options?.type || 'business'
   })
   const [analytics, setAnalytics] = useState({
     scans: 0,
@@ -72,24 +73,56 @@ function QRCodeModal({ offer, onClose }) {
   }, [onClose])
 
   useEffect(() => {
-    if (offer) {
+    if (type === 'menu' && identifier) {
+      generateQRCode()
+    } else if (offer) {
       generateQRCode()
       loadAnalytics()
     }
-  }, [offer])
+  }, [offer, identifier, type])
 
   // Auto-regenerate QR when size or source changes (debounced)
   useEffect(() => {
-    if (!offer) return
+    if (type === 'menu') {
+      if (!identifier) return
+    } else {
+      if (!offer) return
+    }
     
     const timeoutId = setTimeout(() => {
       generateQRCode()
     }, 200) // 200ms debounce
 
     return () => clearTimeout(timeoutId)
-  }, [qrOptions.size, qrOptions.source])
+  }, [qrOptions.size, qrOptions.source, qrOptions.type])
 
   const generateQRCode = async () => {
+    // Check if this is a menu QR or offer QR
+    if (type === 'menu') {
+      if (!identifier) return
+
+      setLoading(true)
+      try {
+        const result = await QRCodeGenerator.generateMenuQRCode(identifier, {
+          size: qrOptions.size,
+          type: qrOptions.type,
+          source: qrOptions.source
+        })
+
+        if (result.success) {
+          setQrData(result.data)
+        } else {
+          console.error('Menu QR Generation failed:', result.error)
+        }
+      } catch (error) {
+        console.error('Menu QR Generation error:', error)
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    // Existing offer QR logic
     if (!offer) return
 
     setLoading(true)
@@ -139,14 +172,28 @@ function QRCodeModal({ offer, onClose }) {
     if (!qrData) return
 
     try {
-      const result = await QRCodeGenerator.generateForDownload(
-        qrData.offerId,
-        format,
-        {
-          size: format === 'png' ? 512 : 256,
-          branchId: qrOptions.branchId
-        }
-      )
+      let result
+      
+      // Branch on type to use the correct download method
+      if (type === 'menu') {
+        result = await QRCodeGenerator.generateMenuForDownload(
+          identifier,
+          format,
+          {
+            size: format === 'png' ? 512 : 256,
+            type: qrOptions.type
+          }
+        )
+      } else {
+        result = await QRCodeGenerator.generateForDownload(
+          qrData.offerId,
+          format,
+          {
+            size: format === 'png' ? 512 : 256,
+            branchId: qrOptions.branchId
+          }
+        )
+      }
 
       if (result.success) {
         const downloadResult = QRCodeGenerator.downloadQRCode(
@@ -156,11 +203,13 @@ function QRCodeModal({ offer, onClose }) {
         )
 
         if (downloadResult.success) {
-          // Track download event
-          QRCodeGenerator.trackQREvent(qrData.offerId, 'downloaded', {
-            format,
-            offerTitle: offer.title
-          })
+          // Track download event (only for offers, skip for menu)
+          if (type !== 'menu' && qrData.offerId) {
+            QRCodeGenerator.trackQREvent(qrData.offerId, 'downloaded', {
+              format,
+              offerTitle: offer?.title
+            })
+          }
 
           // Update analytics
           setAnalytics(prev => ({
@@ -258,7 +307,8 @@ function QRCodeModal({ offer, onClose }) {
     )
   }
 
-  if (!offer) return null
+  // Only return null if it's not a menu type and offer is missing
+  if (type !== 'menu' && !offer) return null
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -273,17 +323,19 @@ function QRCodeModal({ offer, onClose }) {
         <div className="flex items-center justify-between p-4 lg:p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h3 id="qr-modal-title" className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
-              {t('qrCode.title')}
+              {type === 'menu' ? t('common:menu.generateMenuQR') : t('cardDesign:qrCode.title')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {t('qrCode.generateFor', { offerTitle: offer.title })}
+              {type === 'menu' 
+                ? t('common:menu.shareMenu')
+                : t('cardDesign:qrCode.generateFor', { offerTitle: offer?.title || '' })}
             </p>
           </div>
           <button
             ref={closeButtonRef}
             onClick={onClose}
             className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label={t('qrCode.closeModal')}
+            aria-label={type === 'menu' ? t('common:close') : t('cardDesign:qrCode.closeModal')}
           >
             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -309,14 +361,14 @@ function QRCodeModal({ offer, onClose }) {
                       className="w-48 h-48 lg:w-64 lg:h-64 mx-auto border-2 border-white dark:border-gray-700 rounded-xl shadow-lg"
                     />
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                      {t('qrCode.scanToAccess')}
+                      {type === 'menu' ? t('common:menu.viewMenu') : t('cardDesign:qrCode.scanToAccess')}
                     </p>
                   </div>
                 ) : (
                   <div className="w-48 h-48 lg:w-64 lg:h-64 bg-red-100 dark:bg-red-900/20 rounded-xl flex items-center justify-center mx-auto border border-red-200 dark:border-red-800">
                     <div className="text-center">
                       <span className="text-red-600 dark:text-red-400 text-4xl mb-2 block">⚠️</span>
-                      <span className="text-red-600 dark:text-red-400 text-sm">{t('qrCode.failedToGenerate')}</span>
+                      <span className="text-red-600 dark:text-red-400 text-sm">{t('common:error')}</span>
                     </div>
                   </div>
                 )}
@@ -349,60 +401,62 @@ function QRCodeModal({ offer, onClose }) {
 
             {/* Controls and Analytics - Collapsible on Mobile */}
             <div className="lg:order-2 space-y-4 lg:space-y-6">
-              {/* Analytics Accordion */}
-              <AccordionSection
-                id="analytics"
-                title={t('qrCode.performanceAnalytics')}
-                icon="📊"
-                isExpanded={expandedSection === 'analytics'}
-                onToggle={() => setExpandedSection(expandedSection === 'analytics' ? null : 'analytics')}
-              >
-                <div className="bg-white dark:bg-gray-700 rounded-xl p-4 lg:p-6 border border-gray-200 dark:border-gray-600 mt-3">
-                  <div className="grid grid-cols-3 gap-3 lg:gap-4 mb-4">
-                    <div className="text-center p-2 lg:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <div className="text-xl lg:text-2xl font-bold text-primary">{analytics.scans}</div>
-                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">{t('qrCode.scans')}</div>
+              {/* Analytics Accordion - Only show for offers, not for menu */}
+              {type !== 'menu' && (
+                <AccordionSection
+                  id="analytics"
+                  title={t('cardDesign:qrCode.performanceAnalytics')}
+                  icon="📊"
+                  isExpanded={expandedSection === 'analytics'}
+                  onToggle={() => setExpandedSection(expandedSection === 'analytics' ? null : 'analytics')}
+                >
+                  <div className="bg-white dark:bg-gray-700 rounded-xl p-4 lg:p-6 border border-gray-200 dark:border-gray-600 mt-3">
+                    <div className="grid grid-cols-3 gap-3 lg:gap-4 mb-4">
+                      <div className="text-center p-2 lg:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-xl lg:text-2xl font-bold text-primary">{analytics.scans}</div>
+                        <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">{t('cardDesign:qrCode.scans')}</div>
+                      </div>
+                      <div className="text-center p-2 lg:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="text-xl lg:text-2xl font-bold text-green-600">{analytics.conversions}</div>
+                        <div className="text-xs text-green-600 dark:text-green-400 font-medium">{t('cardDesign:qrCode.signups')}</div>
+                      </div>
+                      <div className="text-center p-2 lg:p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div className="text-xl lg:text-2xl font-bold text-purple-600">{analytics.downloads}</div>
+                        <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">{t('cardDesign:qrCode.downloads')}</div>
+                      </div>
                     </div>
-                    <div className="text-center p-2 lg:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="text-xl lg:text-2xl font-bold text-green-600">{analytics.conversions}</div>
-                      <div className="text-xs text-green-600 dark:text-green-400 font-medium">{t('qrCode.signups')}</div>
-                    </div>
-                    <div className="text-center p-2 lg:p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                      <div className="text-xl lg:text-2xl font-bold text-purple-600">{analytics.downloads}</div>
-                      <div className="text-xs text-purple-600 dark:text-purple-400 font-medium">{t('qrCode.downloads')}</div>
+                    <div className="text-center py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {t('cardDesign:qrCode.conversionRate', { rate: analytics.scans > 0 ? Math.round((analytics.conversions / analytics.scans) * 100) : 0 })}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {t('qrCode.conversionRate', { rate: analytics.scans > 0 ? Math.round((analytics.conversions / analytics.scans) * 100) : 0 })}
-                    </div>
-                  </div>
-                </div>
-              </AccordionSection>
+                </AccordionSection>
+              )}
 
               {/* Download Options - Desktop Only (Mobile has primary actions) */}
               <div className="hidden lg:block">
                 <div className="bg-white dark:bg-gray-700 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-4">{t('qrCode.downloadOptions')}</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-4">{t('cardDesign:qrCode.downloadOptions')}</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <button
                       onClick={() => handleDownload('png')}
                       disabled={!qrData}
                       className="px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-semibold border border-blue-200 dark:border-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {t('qrCode.pngFormat')}
+                      {t('cardDesign:qrCode.pngFormat')}
                     </button>
                     <button
                       onClick={() => handleDownload('svg')}
                       disabled={!qrData}
                       className="px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm font-semibold border border-green-200 dark:border-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {t('qrCode.svgFormat')}
+                      {t('cardDesign:qrCode.svgFormat')}
                     </button>
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <strong>PNG:</strong> {t('qrCode.pngUse')}<br/>
-                    <strong>SVG:</strong> {t('qrCode.svgUse')}
+                    <strong>PNG:</strong> {t('cardDesign:qrCode.pngUse')}<br/>
+                    <strong>SVG:</strong> {t('cardDesign:qrCode.svgUse')}
                   </div>
                 </div>
               </div>
@@ -410,7 +464,7 @@ function QRCodeModal({ offer, onClose }) {
               {/* Settings Accordion */}
               <AccordionSection
                 id="settings"
-                title={t('qrCode.configuration')}
+                title={t('cardDesign:qrCode.configuration')}
                 icon="⚙️"
                 isExpanded={expandedSection === 'settings'}
                 onToggle={() => setExpandedSection(expandedSection === 'settings' ? null : 'settings')}
@@ -419,34 +473,34 @@ function QRCodeModal({ offer, onClose }) {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        {t('qrCode.qrCodeSize')}
+                        {t('cardDesign:qrCode.qrCodeSize')}
                       </label>
                       <select
                         value={qrOptions.size}
                         onChange={(e) => setQrOptions({...qrOptions, size: parseInt(e.target.value)})}
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       >
-                        <option value={128}>{t('qrCode.size.small')}</option>
-                        <option value={256}>{t('qrCode.size.medium')}</option>
-                        <option value={512}>{t('qrCode.size.large')}</option>
+                        <option value={128}>{t('cardDesign:qrCode.size.small')}</option>
+                        <option value={256}>{t('cardDesign:qrCode.size.medium')}</option>
+                        <option value={512}>{t('cardDesign:qrCode.size.large')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        {t('qrCode.sourceTracking')}
+                        {t('cardDesign:qrCode.sourceTracking')}
                       </label>
                       <select
                         value={qrOptions.source}
                         onChange={(e) => setQrOptions({...qrOptions, source: e.target.value})}
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       >
-                        <option value="dashboard">{t('qrCode.source.dashboard')}</option>
-                        <option value="checkout">{t('qrCode.source.checkout')}</option>
-                        <option value="table">{t('qrCode.source.table')}</option>
-                        <option value="window">{t('qrCode.source.window')}</option>
-                        <option value="social">{t('qrCode.source.social')}</option>
-                        <option value="print">{t('qrCode.source.print')}</option>
+                        <option value="dashboard">{t('cardDesign:qrCode.source.dashboard')}</option>
+                        <option value="checkout">{t('cardDesign:qrCode.source.checkout')}</option>
+                        <option value="table">{t('cardDesign:qrCode.source.table')}</option>
+                        <option value="window">{t('cardDesign:qrCode.source.window')}</option>
+                        <option value="social">{t('cardDesign:qrCode.source.social')}</option>
+                        <option value="print">{t('cardDesign:qrCode.source.print')}</option>
                       </select>
                     </div>
                   </div>
@@ -456,7 +510,7 @@ function QRCodeModal({ offer, onClose }) {
               {/* Advanced Options Accordion */}
               <AccordionSection
                 id="advanced"
-                title={t('qrCode.advancedOptions')}
+                title={t('cardDesign:qrCode.advancedOptions')}
                 icon="🚀"
                 isExpanded={expandedSection === 'advanced'}
                 onToggle={() => setExpandedSection(expandedSection === 'advanced' ? null : 'advanced')}
@@ -466,7 +520,7 @@ function QRCodeModal({ offer, onClose }) {
                   {qrData && (
                     <div>
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        {t('qrCode.landingPageUrl')}
+                        {t('cardDesign:qrCode.landingPageUrl')}
                       </div>
                       <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-xs break-all font-mono text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
                         {qrData.url}
@@ -475,7 +529,7 @@ function QRCodeModal({ offer, onClose }) {
                         onClick={copyUrl}
                         className="mt-2 text-sm text-primary hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
                       >
-                        {t('qrCode.copyUrl')}
+                        {t('cardDesign:qrCode.copyUrl')}
                       </button>
                     </div>
                   )}
@@ -486,14 +540,14 @@ function QRCodeModal({ offer, onClose }) {
                       onClick={regenerateQR}
                       className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 active:scale-95 transition-all duration-200 text-sm font-semibold border border-gray-200 dark:border-gray-600"
                     >
-                      {t('qrCode.regenerateQR')}
+                      {t('cardDesign:qrCode.regenerateQR')}
                     </button>
                     <button
                       onClick={() => window.open(qrData?.url, '_blank')}
                       className="w-full px-4 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-200 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       disabled={!qrData}
                     >
-                      {t('qrCode.previewExperience')}
+                      {t('cardDesign:qrCode.previewExperience')}
                     </button>
                   </div>
                 </div>
@@ -508,7 +562,7 @@ function QRCodeModal({ offer, onClose }) {
             onClick={onClose}
             className="w-full lg:w-auto px-8 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all duration-200 font-semibold shadow-lg"
           >
-            {t('qrCode.done')}
+            {t('cardDesign:qrCode.done')}
           </button>
         </div>
       </div>

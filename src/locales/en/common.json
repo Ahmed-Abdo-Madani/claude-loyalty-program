@@ -127,5 +127,26 @@
   },
   "location": {
     "searchPlaceholder": "Search for region, city, or district..."
+  },
+  "menu": {
+    "title": "Menu",
+    "viewMenu": "View Menu",
+    "ourMenu": "Our Menu",
+    "allCategories": "All Categories",
+    "noProducts": "No products available",
+    "noProductsDesc": "Check back later for our menu items",
+    "loadingMenu": "Loading menu...",
+    "errorLoading": "Failed to load menu",
+    "retryLoading": "Retry",
+    "category": "Category",
+    "price": "Price",
+    "sar": "SAR",
+    "poweredBy": "Powered by Madna",
+    "businessInfo": "Business Information",
+    "branchInfo": "Branch Information",
+    "generateMenuQR": "Generate Menu QR Code",
+    "downloadMenuQR": "Download Menu QR",
+    "shareMenu": "Share Menu",
+    "menuQRGenerated": "Menu QR code generated successfully"
   }
 }

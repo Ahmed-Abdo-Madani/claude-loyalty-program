@@ -16,6 +16,7 @@ import ManagerProtectedRoute from './components/ManagerProtectedRoute'
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const CustomerSignup = lazy(() => import('./pages/CustomerSignup'))
+const MenuPage = lazy(() => import('./pages/MenuPage'))
 const TestPage = lazy(() => import('./pages/TestPage'))
 const BusinessRegistrationPage = lazy(() => import('./pages/BusinessRegistrationPage'))
 const RegistrationSuccessPage = lazy(() => import('./pages/RegistrationSuccessPage'))
@@ -79,6 +80,8 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/join/:offerId" element={<CustomerSignup />} />
             <Route path="/customer-signup/:offerId" element={<CustomerSignup />} />
+            <Route path="/menu/business/:businessId" element={<MenuPage type="business" />} />
+            <Route path="/menu/branch/:branchId" element={<MenuPage type="branch" />} />
             <Route path="/test" element={<TestPage />} />
             <Route path="/business/register" element={<BusinessRegistrationPage />} />
             <Route path="/registration-success" element={<RegistrationSuccessPage />} />

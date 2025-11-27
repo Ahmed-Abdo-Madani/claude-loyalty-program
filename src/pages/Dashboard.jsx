@@ -14,6 +14,7 @@ import MobileBottomNav from '../components/MobileBottomNav'
 import QuickActions from '../components/QuickActions'
 import TodaysSnapshot from '../components/TodaysSnapshot'
 import OperationalGlimpse from '../components/OperationalGlimpse'
+import QRCodeModal from '../components/QRCodeModal'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
@@ -35,6 +36,7 @@ function Dashboard() {
   const [analytics, setAnalytics] = useState(null)
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showMenuQRModal, setShowMenuQRModal] = useState(false)
 
   // Sync activeTab with URL query parameter
   useEffect(() => {
@@ -150,6 +152,10 @@ function Dashboard() {
     handleTabChange('analytics') // Switch to analytics tab
   }
 
+  const handleGenerateMenuQR = () => {
+    setShowMenuQRModal(true)
+  }
+
   if (!user || loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -232,7 +238,10 @@ function Dashboard() {
             <div className="p-3 sm:p-5">
               {activeTab === 'overview' && (
                 <div className="space-y-6">
-                  {/* Quick Actions - Expanded to 6 Actions */}
+                  {/* Today's Snapshot - Real-time POS Metrics */}
+                  <TodaysSnapshot />
+                  
+                  {/* Quick Actions - Expanded to 7 Actions */}
                   <QuickActions
                     onNewOffer={handleNewOffer}
                     onScanQR={handleScanQR}
@@ -240,10 +249,8 @@ function Dashboard() {
                     onManageProducts={() => handleTabChange('products')}
                     onManageBranches={() => handleTabChange('branches')}
                     onSettings={() => navigate('/settings')}
+                    onGenerateMenuQR={handleGenerateMenuQR}
                   />
-                  
-                  {/* Today's Snapshot - Real-time POS Metrics */}
-                  <TodaysSnapshot />
                   
                   {/* Operational Glimpse - Quick Navigation Links */}
                   <OperationalGlimpse 
@@ -290,6 +297,16 @@ function Dashboard() {
           </div>
         </main>
       </div>
+
+      {/* Menu QR Code Modal */}
+      {showMenuQRModal && user && (
+        <QRCodeModal
+          type="menu"
+          identifier={user.businessId}
+          options={{ type: 'business' }}
+          onClose={() => setShowMenuQRModal(false)}
+        />
+      )}
     </div>
   )
 }

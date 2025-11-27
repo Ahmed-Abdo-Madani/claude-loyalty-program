@@ -69,7 +69,7 @@
     "totalSales": "إجمالي المبيعات",
     "ordersCount": "الطلبات",
     "averageOrderValue": "متوسط الطلب",
-    "activeCustomers": "العملاء",
+    "activeCustomers": "العملاء المسجلين",
     "refresh": "تحديث",
     "error": "فشل تحميل مقاييس اليوم",
     "asOf": "اعتباراً من"
@@ -342,9 +342,9 @@
     "phonePlaceholder": "+966 XX XXX XXXX",
     "email": "البريد الإلكتروني",
     "emailPlaceholder": "branch@example.com",
-    "managerAccess": "🔐 وصول المدير",
-    "enableManagerAccess": "تفعيل وصول مدير الفرع",
-    "managerAccessDesc": "السماح لمدير الفرع بمسح رموز QR للعملاء باستخدام رمز PIN",
+    "managerAccess": "🔐 وصول نقاط البيع",
+    "enableManagerAccess": "تفعيل وصول نقاط البيع",
+    "managerAccessDesc": "السماح لمدير الفرع بإجراء عمليات نقاط البيع",
     "managerPin": "رمز PIN للمدير (4-6 أرقام)",
     "managerPinPlaceholder": "أدخل رمز PIN",
     "pinPlaceholder": "أدخل رمز PIN",

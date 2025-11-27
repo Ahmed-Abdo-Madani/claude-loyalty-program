@@ -123,5 +123,26 @@
   },
   "location": {
     "searchPlaceholder": "ابحث عن المنطقة أو المدينة أو الحي..."
+  },
+  "menu": {
+    "title": "القائمة",
+    "viewMenu": "عرض القائمة",
+    "ourMenu": "قائمتنا",
+    "allCategories": "جميع الفئات",
+    "noProducts": "لا توجد منتجات متاحة",
+    "noProductsDesc": "تحقق لاحقاً من عناصر القائمة",
+    "loadingMenu": "جاري تحميل القائمة...",
+    "errorLoading": "فشل تحميل القائمة",
+    "retryLoading": "إعادة المحاولة",
+    "category": "الفئة",
+    "price": "السعر",
+    "sar": "ريال",
+    "poweredBy": "مدعوم من مدنا",
+    "businessInfo": "معلومات النشاط التجاري",
+    "branchInfo": "معلومات الفرع",
+    "generateMenuQR": "إنشاء رمز QR للقائمة",
+    "downloadMenuQR": "تحميل رمز QR للقائمة",
+    "shareMenu": "مشاركة القائمة",
+    "menuQRGenerated": "تم إنشاء رمز QR للقائمة بنجاح"
   }
 }

@@ -275,6 +275,8 @@ export default function CheckoutPage() {
           callback_url: callbackUrl,
           // Only credit card enabled - Apple Pay and STC Pay require merchant account setup
           methods: ['creditcard'],
+          // Enable card tokenization for recurring billing
+          save_card: true,
           metadata: {
             businessId: checkoutSession.businessId,
             planType: checkoutSession.resolvedPlanType || planType,

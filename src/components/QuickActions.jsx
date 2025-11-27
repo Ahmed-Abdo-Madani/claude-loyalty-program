@@ -5,11 +5,12 @@ import {
   ChartBarIcon, 
   ShoppingBagIcon, 
   MapPinIcon, 
-  Cog6ToothIcon 
+  Cog6ToothIcon,
+  DocumentTextIcon 
 } from '@heroicons/react/24/outline'
 
-function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, onManageBranches, onSettings }) {
-  const { t } = useTranslation('dashboard')
+function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, onManageBranches, onSettings, onGenerateMenuQR }) {
+  const { t } = useTranslation(['dashboard', 'common'])
   
   const actions = [
     {
@@ -29,6 +30,15 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, o
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
       iconColor: 'text-orange-600 dark:text-orange-400',
       hoverBg: 'hover:bg-orange-100 dark:hover:bg-orange-900/30'
+    },
+    {
+      id: 'menu_qr',
+      label: t('common:menu.generateMenuQR'),
+      icon: <DocumentTextIcon className="w-5 h-5" />,
+      action: onGenerateMenuQR,
+      bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+      iconColor: 'text-pink-600 dark:text-pink-400',
+      hoverBg: 'hover:bg-pink-100 dark:hover:bg-pink-900/30'
     },
     {
       id: 'scan_qr',
@@ -72,13 +82,14 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, o
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-5">
       <h3 className="text-lg sm:text-xl font-semibold mb-4 text-gray-900 dark:text-white">{t('quickActions.title')}</h3>
 
-      {/* Grid Layout: 2 columns on mobile, 3 on tablet, 6 on desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* Grid Layout: 2 columns on mobile, 3 on tablet, 4 on desktop (to accommodate 7 actions) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {actions.map((action) => (
           <button
             key={action.id}
             onClick={action.action}
-            className={`flex flex-col items-center justify-center space-y-2 p-4 rounded-lg ${action.bgColor} ${action.hoverBg} ${action.iconColor} active:scale-95 transition-all duration-200 text-center group touch-manipulation min-h-[100px]`}
+            disabled={!action.action}
+            className={`flex flex-col items-center justify-center space-y-2 p-4 rounded-lg ${action.bgColor} ${action.hoverBg} ${action.iconColor} active:scale-95 transition-all duration-200 text-center group touch-manipulation min-h-[100px] ${!action.action ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
               {action.icon}

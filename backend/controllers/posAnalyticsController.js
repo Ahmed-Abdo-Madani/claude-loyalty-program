@@ -260,6 +260,94 @@ class POSAnalyticsController {
       })
     }
   }
+
+  /**
+   * GET /api/pos/analytics/today
+   * Convenience endpoint for today's sales summary (midnight to now)
+   */
+  static async getTodaysSummary(req, res) {
+    try {
+      const businessId = req.businessId
+      const { branchId } = req.query
+      
+      // Calculate today's date range (midnight to now)
+      const today = new Date()
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+      
+      logger.debug('📊 getTodaysSummary called:', {
+        businessId,
+        branchId: branchId || 'all',
+        startOfDay: startOfDay.toISOString(),
+        endOfDay: endOfDay.toISOString()
+      })
+
+      // Build query filters
+      const whereClause = {
+        business_id: businessId,
+        sale_date: {
+          [Op.between]: [startOfDay, endOfDay]
+        },
+        status: 'completed'
+      }
+
+      if (branchId) {
+        whereClause.branch_id = branchId
+      }
+
+      // Query completed sales for today
+      const sales = await Sale.findAll({
+        where: whereClause,
+        attributes: [
+          'total_amount',
+          'customer_id'
+        ],
+        raw: true
+      })
+
+      logger.debug('📊 Today\'s sales query result:', {
+        salesCount: sales.length,
+        sample: sales.slice(0, 2)
+      })
+
+      // Calculate metrics
+      const totalSales = sales.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0)
+      const ordersCount = sales.length
+      const averageOrderValue = ordersCount > 0 ? totalSales / ordersCount : 0
+      
+      // Count distinct customers (filter out nulls for non-loyalty sales)
+      const uniqueCustomers = new Set(sales.filter(s => s.customer_id).map(s => s.customer_id))
+      const activeCustomers = uniqueCustomers.size
+
+      const metricsData = {
+        totalSales: Math.round(totalSales * 100) / 100,  // Round to 2 decimals
+        ordersCount,
+        averageOrderValue: Math.round(averageOrderValue * 100) / 100,  // Round to 2 decimals
+        activeCustomers
+      }
+
+      logger.info('✅ Today\'s metrics calculated successfully:', metricsData)
+
+      res.json({
+        success: true,
+        data: metricsData
+      })
+
+    } catch (error) {
+      logger.error('❌ Error fetching today\'s metrics:', {
+        error: error.message,
+        stack: error.stack,
+        sqlMessage: error.parent?.sqlMessage,
+        sqlState: error.parent?.sqlState
+      })
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch today\'s metrics',
+        code: 'FETCH_TODAY_METRICS_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    }
+  }
   
   /**
    * GET /api/pos/analytics/top-products

@@ -9,7 +9,7 @@ import {
 import { secureApi, endpoints } from '../config/api'
 
 function TodaysSnapshot() {
-  const { t } = useTranslation('dashboard')
+  const { t, i18n } = useTranslation('dashboard')
   const [metrics, setMetrics] = useState({
     totalSales: 0,
     ordersCount: 0,
@@ -28,31 +28,15 @@ function TodaysSnapshot() {
       setLoading(true)
       setError(null)
 
-      // NOTE: This endpoint doesn't exist yet in the backend
-      // Using fallback data until /api/pos/sales/today is implemented
-      // When implemented, this will fetch real-time POS data
+      console.log('🔍 Fetching today\'s metrics from:', endpoints.posAnalyticsToday)
+      const response = await secureApi.get(endpoints.posAnalyticsToday)
+      console.log('📊 API Response:', response)
       
-      // Temporarily commenting out API call to prevent dashboard crash
-      /*
-      const response = await secureApi.get(`${endpoints.posSales}/today`)
-      
-      // Check if response is ok before parsing JSON
-      if (!response.ok) {
-        // If endpoint doesn't exist (404) or other error, use fallback silently
-        console.warn('POS sales endpoint not available, using fallback data')
-        setMetrics({
-          totalSales: 0,
-          ordersCount: 0,
-          averageOrderValue: 0,
-          activeCustomers: 0
-        })
-        setLoading(false)
-        return
-      }
-
+      // secureApi returns a fetch Response object, need to parse JSON
       const data = await response.json()
+      console.log('📊 Response data:', data)
 
-      if (data.success) {
+      if (data && data.success) {
         // Coerce all metrics to numbers with NaN fallback to 0
         const totalSales = Number(data.data.totalSales)
         const ordersCount = Number(data.data.ordersCount)
@@ -65,24 +49,23 @@ function TodaysSnapshot() {
           averageOrderValue: Number.isNaN(averageOrderValue) ? 0 : averageOrderValue,
           activeCustomers: Number.isNaN(activeCustomers) ? 0 : activeCustomers
         })
+        
+        console.info('✅ Today\'s metrics loaded successfully:', {
+          totalSales,
+          ordersCount,
+          averageOrderValue,
+          activeCustomers
+        })
       } else {
-        throw new Error(data.message || 'Failed to fetch today\'s metrics')
+        console.error('❌ API response not successful:', data)
+        throw new Error(data?.message || 'Failed to fetch today\'s metrics')
       }
-      */
-
-      // Use fallback data for now
-      console.info('TodaysSnapshot: Using placeholder data (endpoint not implemented yet)')
-      setMetrics({
-        totalSales: 0,
-        ordersCount: 0,
-        averageOrderValue: 0,
-        activeCustomers: 0
-      })
       
     } catch (err) {
-      console.error('Error fetching today\'s metrics:', err)
-      // Don't show error to user if endpoint doesn't exist yet
-      // Just use fallback data silently
+      console.error('❌ Error fetching today\'s metrics:', err)
+      console.error('❌ Error response:', err.response?.data)
+      setError(true)
+      // Set fallback zeros to prevent UI crash
       setMetrics({
         totalSales: 0,
         ordersCount: 0,
@@ -199,7 +182,7 @@ function TodaysSnapshot() {
 
       {/* Today's Date Footer */}
       <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
-        {t('todaysSnapshot.asOf')}: {new Date().toLocaleDateString(undefined, { 
+        {t('todaysSnapshot.asOf')}: {new Date().toLocaleDateString(i18n.language, { 
           weekday: 'long', 
           year: 'numeric', 
           month: 'long', 
