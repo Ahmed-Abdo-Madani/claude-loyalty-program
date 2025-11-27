@@ -13,7 +13,6 @@ import DashboardHeader from '../components/DashboardHeader'
 import MobileBottomNav from '../components/MobileBottomNav'
 import QuickActions from '../components/QuickActions'
 import TodaysSnapshot from '../components/TodaysSnapshot'
-import OperationalGlimpse from '../components/OperationalGlimpse'
 import QRCodeModal from '../components/QRCodeModal'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
@@ -250,12 +249,6 @@ function Dashboard() {
                     onManageBranches={() => handleTabChange('branches')}
                     onSettings={() => navigate('/settings')}
                     onGenerateMenuQR={handleGenerateMenuQR}
-                  />
-                  
-                  {/* Operational Glimpse - Quick Navigation Links */}
-                  <OperationalGlimpse 
-                    onNavigate={handleTabChange} 
-                    onOpenSettings={() => navigate('/settings')}
                   />
                 </div>
               )}

@@ -18,6 +18,7 @@ import appleWalletController from '../controllers/appleWalletController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
+import { getTemplateById } from '../constants/cardDesignTemplates.js'
 
 const router = express.Router()
 
@@ -971,6 +972,59 @@ router.get('/public/menu/:identifier', async (req, res) => {
     // Convert map to array and sort by display_order
     const categories = Array.from(categoriesMap.values()).sort((a, b) => a.display_order - b.display_order)
 
+    // Fetch first active offer's card design
+    let cardDesign = null
+    
+    try {
+      const firstOffer = await Offer.findOne({
+        where: {
+          business_id: businessId,
+          status: 'active'
+        },
+        include: [{
+          model: OfferCardDesign,
+          as: 'cardDesign',
+          attributes: ['background_color', 'foreground_color', 'label_color', 'stamp_icon', 'logo_url']
+        }],
+        order: [['created_at', 'DESC']]
+      })
+
+      if (firstOffer && firstOffer.cardDesign) {
+        cardDesign = {
+          background_color: firstOffer.cardDesign.background_color,
+          foreground_color: firstOffer.cardDesign.foreground_color,
+          label_color: firstOffer.cardDesign.label_color,
+          stamp_icon: firstOffer.cardDesign.stamp_icon,
+          logo_url: firstOffer.cardDesign.logo_url
+        }
+      }
+    } catch (error) {
+      logger.error('Error fetching card design for menu:', error)
+    }
+
+    // Use professional_default template as fallback if no card design found
+    if (!cardDesign) {
+      const defaultTemplate = getTemplateById('professional_default')
+      if (defaultTemplate && defaultTemplate.config) {
+        cardDesign = {
+          background_color: defaultTemplate.config.background_color,
+          foreground_color: defaultTemplate.config.foreground_color,
+          label_color: defaultTemplate.config.label_color,
+          stamp_icon: defaultTemplate.config.stamp_icon,
+          logo_url: null
+        }
+      } else {
+        // Ultimate fallback if template not found
+        cardDesign = {
+          background_color: '#1E40AF',
+          foreground_color: '#FFFFFF',
+          label_color: '#DBEAFE',
+          stamp_icon: '⭐',
+          logo_url: null
+        }
+      }
+    }
+
     // Format response
     const menuData = {
       business: {
@@ -986,7 +1040,8 @@ router.get('/public/menu/:identifier', async (req, res) => {
         address: business.address
       },
       categories,
-      uncategorizedProducts
+      uncategorizedProducts,
+      cardDesign
     }
 
     // Add branch info if applicable

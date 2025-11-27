@@ -15,6 +15,7 @@ function MenuPage({ type }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [cardDesign, setCardDesign] = useState(null)
 
   // Determine identifier based on type
   const identifier = type === 'branch' ? branchId : businessId
@@ -39,6 +40,7 @@ function MenuPage({ type }) {
 
       if (data.success) {
         setMenu(data.data)
+        setCardDesign(data.data.cardDesign || null)
       } else {
         throw new Error(data.message || 'Failed to load menu')
       }
@@ -77,6 +79,32 @@ function MenuPage({ type }) {
     }
     // Relative URL, prepend API base
     return `${apiBaseUrl}${url}`
+  }
+
+  const getHeaderGradientStyle = () => {
+    if (cardDesign?.background_color) {
+      // Create a subtle gradient using the background color
+      return {
+        background: `linear-gradient(to bottom right, ${cardDesign.background_color}, ${cardDesign.background_color})`
+      }
+    }
+    return {} // Fall back to Tailwind classes
+  }
+
+  const getCategoryButtonStyle = (isSelected) => {
+    if (isSelected) {
+      return {
+        backgroundColor: cardDesign?.background_color || '#7C3AED',
+        color: cardDesign?.foreground_color || '#FFFFFF'
+      }
+    }
+    return {}
+  }
+
+  const getPriceStyle = () => {
+    return {
+      color: cardDesign?.background_color || '#7C3AED'
+    }
   }
 
   const filteredProducts = () => {
@@ -162,7 +190,10 @@ function MenuPage({ type }) {
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Header Section */}
-        <div className="bg-gradient-to-br from-purple-600 to-purple-800 dark:from-purple-900 dark:to-purple-950 text-white pt-safe">
+        <div 
+          className={`bg-gradient-to-br ${!cardDesign?.background_color ? 'from-purple-600 to-purple-800 dark:from-purple-900 dark:to-purple-950' : ''} text-white pt-safe`}
+          style={getHeaderGradientStyle()}
+        >
           <div className="max-w-4xl mx-auto px-4 py-6">
             {/* Language Switcher */}
             <div className="flex justify-end mb-4">
@@ -182,9 +213,19 @@ function MenuPage({ type }) {
                 />
               )}
               <div className="flex-1">
-                <h1 className="text-2xl font-bold mb-1">{businessName}</h1>
+                <h1 
+                  className="text-2xl font-bold mb-1"
+                  style={{ color: cardDesign?.foreground_color || '#FFFFFF' }}
+                >
+                  {businessName}
+                </h1>
                 {menu?.business?.description && (
-                  <p className="text-purple-100 text-sm">{menu.business.description}</p>
+                  <p 
+                    className="text-sm"
+                    style={{ color: cardDesign?.label_color || 'rgba(243, 232, 255, 1)' }}
+                  >
+                    {menu.business.description}
+                  </p>
                 )}
               </div>
             </div>
@@ -193,11 +234,22 @@ function MenuPage({ type }) {
             {menu?.branch && (
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 mb-4">
                 <div className="flex items-start gap-2">
-                  <MapPinIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <MapPinIcon 
+                    className="w-5 h-5 flex-shrink-0 mt-0.5" 
+                    style={{ color: cardDesign?.foreground_color || '#FFFFFF' }}
+                  />
                   <div className="flex-1">
-                    <p className="font-medium">{menu.branch.name}</p>
+                    <p 
+                      className="font-medium"
+                      style={{ color: cardDesign?.foreground_color || '#FFFFFF' }}
+                    >
+                      {menu.branch.name}
+                    </p>
                     {menu.branch.address && (
-                      <p className="text-sm text-purple-100">
+                      <p 
+                        className="text-sm"
+                        style={{ color: cardDesign?.label_color || 'rgba(243, 232, 255, 1)' }}
+                      >
                         {menu.branch.address}, {menu.branch.city}
                       </p>
                     )}
@@ -213,13 +265,17 @@ function MenuPage({ type }) {
                   <a
                     href={`tel:${menu.business.phone}`}
                     className="flex items-center gap-1 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors"
+                    style={{ color: cardDesign?.foreground_color || '#FFFFFF' }}
                   >
                     <PhoneIcon className="w-4 h-4" />
                     {menu.business.phone}
                   </a>
                 )}
                 {menu.business.address && !menu.branch && (
-                  <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                  <div 
+                    className="flex items-center gap-1 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full"
+                    style={{ color: cardDesign?.foreground_color || '#FFFFFF' }}
+                  >
                     <MapPinIcon className="w-4 h-4" />
                     <span className="text-sm">
                       {menu.business.city && `${menu.business.city}, `}
@@ -241,9 +297,10 @@ function MenuPage({ type }) {
                   onClick={() => setSelectedCategory('all')}
                   className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                     selectedCategory === 'all'
-                      ? 'bg-purple-600 text-white'
+                      ? ''
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
+                  style={selectedCategory === 'all' ? getCategoryButtonStyle(true) : {}}
                 >
                   {t('menu.allCategories')}
                 </button>
@@ -253,9 +310,10 @@ function MenuPage({ type }) {
                     onClick={() => setSelectedCategory(category.id)}
                     className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                       selectedCategory === category.id
-                        ? 'bg-purple-600 text-white'
+                        ? ''
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
+                    style={selectedCategory === category.id ? getCategoryButtonStyle(true) : {}}
                   >
                     {getCategoryName(category)}
                   </button>
@@ -265,9 +323,10 @@ function MenuPage({ type }) {
                     onClick={() => setSelectedCategory('uncategorized')}
                     className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                       selectedCategory === 'uncategorized'
-                        ? 'bg-purple-600 text-white'
+                        ? ''
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
+                    style={selectedCategory === 'uncategorized' ? getCategoryButtonStyle(true) : {}}
                   >
                     {t('common:other')}
                   </button>
@@ -324,7 +383,10 @@ function MenuPage({ type }) {
                         </p>
                       )}
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                        <span 
+                          className="text-lg font-bold"
+                          style={getPriceStyle()}
+                        >
                           {formatPrice(product.price)}
                         </span>
                         <span className="text-sm text-gray-500 dark:text-gray-400">
