@@ -4,6 +4,8 @@ import { endpoints, secureApi } from '../config/api'
 import ProductModal from './ProductModal'
 import CompactStatsBar from './CompactStatsBar'
 import StatusBadge from './StatusBadge'
+import QRCodeModal from './QRCodeModal'
+import { getSecureBusinessId } from '../utils/secureAuth'
 
 export default function ProductsTab() {
   const { t, i18n } = useTranslation('dashboard')
@@ -17,6 +19,7 @@ export default function ProductsTab() {
   const [showProductModal, setShowProductModal] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showMenuQRModal, setShowMenuQRModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [filters, setFilters] = useState({
@@ -407,6 +410,12 @@ export default function ProductsTab() {
             📁 {t('products.manageCategories')}
           </button>
           <button
+            onClick={() => setShowMenuQRModal(true)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          >
+            📱 {t('products.generateMenuQR')}
+          </button>
+          <button
             onClick={() => {
               setSelectedProduct(null)
               setShowProductModal(true)
@@ -695,6 +704,15 @@ export default function ProductsTab() {
           onConfirm={handleDeleteProduct}
           productName={selectedProduct?.name}
           t={t}
+        />
+      )}
+
+      {/* Menu QR Code Modal */}
+      {showMenuQRModal && (
+        <QRCodeModal
+          type="menu"
+          identifier={getSecureBusinessId()}
+          onClose={() => setShowMenuQRModal(false)}
         />
       )}
     </div>
