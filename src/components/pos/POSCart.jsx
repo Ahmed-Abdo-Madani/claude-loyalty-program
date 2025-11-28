@@ -34,7 +34,7 @@ export default function POSCart({
       </div>
       
       {/* Cart Items List - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 pb-6">
         {cart.length === 0 ? (
           /* Empty Cart State */
           <div className="text-center py-12">
@@ -122,7 +122,7 @@ export default function POSCart({
       </div>
       
       {/* Cart Footer - Totals & Checkout */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-white dark:bg-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
         {/* Totals Breakdown */}
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-gray-600 dark:text-gray-400">

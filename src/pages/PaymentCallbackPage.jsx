@@ -203,7 +203,8 @@ export default function PaymentCallbackPage() {
             subscription: data.subscription,
             planName: data.subscription?.plan_type,
             amount: data.subscription?.amount,
-            nextBillingDate: data.subscription?.next_billing_date
+            nextBillingDate: data.subscription?.next_billing_date,
+            hasToken: data.subscription?.has_token
           })
 
           // Update localStorage with new subscription data (Comment 1: use helper)
@@ -338,7 +339,7 @@ export default function PaymentCallbackPage() {
   if (verifying) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" dir={i18n.dir()}>
-        <SEO titleKey="paymentCallback.verifying" noindex={true} />
+        <SEO titleKey="pages.paymentCallback.verifying.title" noindex={true} />
         
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-6"></div>
@@ -356,7 +357,7 @@ export default function PaymentCallbackPage() {
   if (paymentResult?.success) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12" dir={i18n.dir()}>
-        <SEO titleKey="paymentCallback.success" noindex={true} />
+        <SEO titleKey="pages.paymentCallback.success.title" noindex={true} />
         
         <div className="max-w-md mx-auto px-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
@@ -379,6 +380,24 @@ export default function PaymentCallbackPage() {
                 ? t('paymentCallback.paymentMethodUpdatedMessage') 
                 : (paymentResult.isReactivation ? t('reactivation.redirecting') : t('paymentCallback.successMessage'))}
             </p>
+
+            {/* Warning if token not saved */}
+            {!paymentResult.isPaymentMethodUpdate && paymentResult.hasToken === false && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-100">
+                      {t('paymentCallback.cardTokenFailed')}
+                    </h3>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Subscription Details */}
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6 space-y-3">
@@ -483,7 +502,7 @@ export default function PaymentCallbackPage() {
   // Payment Failed
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12" dir={i18n.dir()}>
-      <SEO titleKey="paymentCallback.failure" noindex={true} />
+      <SEO titleKey="pages.paymentCallback.failure.title" noindex={true} />
       
       <div className="max-w-md mx-auto px-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">

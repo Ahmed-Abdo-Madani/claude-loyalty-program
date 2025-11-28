@@ -454,7 +454,7 @@ export default function CheckoutPage() {
                     {t('checkout.planLabel')}
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
-                    {t(`plans.${planType}.name`)}
+                    {t(`plans.${checkoutSession?.resolvedPlanType || planType || 'professional'}.name`)}
                   </p>
                 </div>
 
@@ -537,6 +537,8 @@ export default function CheckoutPage() {
                 </div>
               )}
               
+
+
               {/* Moyasar Form Container */}
               <div ref={moyasarFormRef} className="moyasar-form-container">
                 {processing && (

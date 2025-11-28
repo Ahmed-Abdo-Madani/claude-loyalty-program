@@ -164,7 +164,7 @@
       "cityRequired": "المدينة مطلوبة",
       "addressRequired": "اسم الشارع مطلوب",
       "phoneRequired": "رقم الهاتف مطلوب",
-      "invalidPhoneFormat": "تنسيق الهاتف غير صحيح. استخدم: +966XXXXXXXXX",
+      "invalidPhoneFormat": "تنسيق الهاتف غير صحيح. استخدم: 05xxxxxxxx أو +966xxxxxxxxx",
       "emailRequired": "البريد الإلكتروني مطلوب",
       "invalidEmailFormat": "تنسيق البريد الإلكتروني غير صحيح",
       "ownerNameRequired": "اسم المالك مطلوب",

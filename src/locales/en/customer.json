@@ -164,7 +164,7 @@
       "cityRequired": "City is required",
       "addressRequired": "Street name is required",
       "phoneRequired": "Phone number is required",
-      "invalidPhoneFormat": "Invalid phone format. Use: +966XXXXXXXXX",
+      "invalidPhoneFormat": "Invalid phone format. Use: 05xxxxxxxx or +966xxxxxxxxx",
       "emailRequired": "Email is required",
       "invalidEmailFormat": "Invalid email format",
       "ownerNameRequired": "Owner name is required",

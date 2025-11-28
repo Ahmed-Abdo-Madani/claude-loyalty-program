@@ -205,8 +205,9 @@ function Dashboard() {
                   { id: 'scanner', label: t('tabs.qrScanner'), icon: '📱' },
                   { id: 'branches', label: t('tabs.branches'), icon: '🏪' },
                   { id: 'products', label: t('tabs.products'), icon: '🛍️' },
-                  { id: 'customers', label: t('tabs.customers'), icon: '👥' },
-                  { id: 'wallet', label: t('tabs.mobileWallets'), icon: '📱' },
+                  // Temporarily hidden - can be re-enabled in future
+                  // { id: 'customers', label: t('tabs.customers'), icon: '👥' },
+                  // { id: 'wallet', label: t('tabs.mobileWallets'), icon: '📱' },
                   { id: 'analytics', label: t('tabs.analytics'), icon: '📈' },
                   { id: 'billing-subscription', label: t('tabs.billingSubscription'), icon: '💳' }
                 ].map((tab) => (

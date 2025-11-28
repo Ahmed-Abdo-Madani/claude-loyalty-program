@@ -176,7 +176,8 @@
     "updatePaymentMethodTitle": "تحديث طريقة الدفع",
     "updatePaymentMethodDescription": "أضف أو حدّث بطاقتك للفوترة التلقائية",
     "cardVerificationNotice": "التحقق من البطاقة",
-    "cardVerificationDescription": "سيتم إجراء رسم مؤقت بقيمة 1 ريال للتحقق من بطاقتك. سيتم استرداد هذا المبلغ فوراً."
+    "cardVerificationDescription": "سيتم إجراء رسم مؤقت بقيمة 1 ريال للتحقق من بطاقتك. سيتم استرداد هذا المبلغ فوراً.",
+    "saveCardNote": "للفوترة المتكررة، يرجى التأكد من تحديد مربع 'حفظ هذه البطاقة' إذا ظهر لك."
   },
   "paymentCallback": {
     "verifying": "جاري التحقق من الدفع...",
@@ -216,7 +217,7 @@
     "paymentMethodUpdateFailed": "فشل تحديث طريقة الدفع. يرجى المحاولة مرة أخرى.",
     "cardVerificationFailed": "فشل التحقق من البطاقة. يرجى التحقق من تفاصيل بطاقتك والمحاولة مرة أخرى.",
     "cardVerificationNotFound": "لم يتم العثور على عملية التحقق من البطاقة. قد تكون هذه مشكلة مؤقتة - يرجى المحاولة مرة أخرى.",
-    "cardTokenFailed": "فشل حفظ تفاصيل البطاقة. يرجى المحاولة مرة أخرى أو استخدام بطاقة أخرى.",
+    "cardTokenFailed": "فشل حفظ تفاصيل البطاقة. يرجى التأكد من تحديد مربع 'حفظ هذه البطاقة' إذا كان متاحاً، أو تجربة بطاقة أخرى.",
     "noSubscriptionForUpdate": "لم يتم العثور على اشتراك نشط. يرجى الاشتراك في خطة قبل تحديث طريقة الدفع."
   },
   "modal": {
@@ -286,6 +287,7 @@
     "cardEnding": "بطاقة تنتهي بـ {{last4}}",
     "updatePaymentMethod": "تحديث طريقة الدفع",
     "addPaymentMethod": "إضافة طريقة دفع",
+    "deletePaymentMethod": "حذف طريقة الدفع",
     "billingHistory": "المدفوعات الأخيرة",
     "viewFullHistory": "عرض السجل الكامل",
     "noBillingHistory": "لا يوجد سجل دفع بعد",

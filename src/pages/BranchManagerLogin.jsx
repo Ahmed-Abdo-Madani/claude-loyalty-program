@@ -67,7 +67,7 @@ export default function BranchManagerLogin() {
       const result = await managerLogin(branchId, pin)
       
       if (result.success) {
-        navigate('/branch-scanner')
+        navigate('/branch-pos')
       } else {
         setError(result.error || t('branchManagerAuth.errors.loginFailed'))
       }

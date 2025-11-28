@@ -270,8 +270,15 @@ function BusinessRegistrationPage() {
 
   const validateSaudiPhone = (phone) => {
     // Convert Arabic numerals before validation
-    const convertedPhone = convertArabicToEnglishNumbers(phone)
-    const phonePattern = /^\+966\d{9}$/
+    let convertedPhone = convertArabicToEnglishNumbers(phone)
+    
+    // Normalize 05xxxxxxxx format to +9665xxxxxxxx
+    if (convertedPhone.startsWith('05')) {
+      convertedPhone = '+9665' + convertedPhone.substring(2)
+    }
+    
+    // Validate Saudi mobile numbers (start with 5, followed by 8 digits)
+    const phonePattern = /^\+966[5][0-9]{8}$/
     return phonePattern.test(convertedPhone)
   }
 
@@ -289,7 +296,13 @@ function BusinessRegistrationPage() {
       handleLanguageSpecificInput(name, value)
     } else if (name === 'phone' || name === 'owner_phone') {
       // Convert Arabic numerals to English in real-time for phone fields
-      const convertedValue = convertArabicToEnglishNumbers(value)
+      let convertedValue = convertArabicToEnglishNumbers(value)
+      
+      // Auto-normalize 05xxxxxxxx format to +9665xxxxxxxx
+      if (convertedValue.startsWith('05') && convertedValue.length >= 2) {
+        convertedValue = '+9665' + convertedValue.substring(2)
+      }
+      
       setFormData(prev => ({ ...prev, [name]: convertedValue }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
@@ -709,7 +722,7 @@ function BusinessRegistrationPage() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                  placeholder="+966551234567"
+                  placeholder="05xxxxxxxx or +966xxxxxxxx"
                   required
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t('registration.validation.arabicNumbersSupported')}</p>
@@ -783,7 +796,7 @@ function BusinessRegistrationPage() {
                     value={formData.owner_phone}
                     onChange={handleInputChange}
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm"
-                    placeholder="+966501234567"
+                    placeholder="05xxxxxxxx or +966xxxxxxxx"
                     required
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">✓ {t('registration.validation.arabicNumbersSupported')}</p>

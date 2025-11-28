@@ -645,10 +645,13 @@ class MoyasarService {
       });
 
       // FIXED: Add fallback lookup path if primary lookup fails
-      if (!payment && moyasarPayment.metadata?.session_id) {
+      // Check both snake_case (backend standard) and camelCase (frontend standard)
+      const sessionId = moyasarPayment.metadata?.session_id || moyasarPayment.metadata?.sessionId;
+
+      if (!payment && sessionId) {
         logger.info('Primary lookup failed, attempting fallback by session_id', {
           moyasarPaymentId,
-          sessionId: moyasarPayment.metadata.session_id
+          sessionId
         });
         
         const { Sequelize } = await import('sequelize');
@@ -657,7 +660,7 @@ class MoyasarService {
             [Sequelize.Op.and]: [
               Sequelize.where(
                 Sequelize.json('metadata.session_id'),
-                moyasarPayment.metadata.session_id
+                sessionId
               )
             ]
           }

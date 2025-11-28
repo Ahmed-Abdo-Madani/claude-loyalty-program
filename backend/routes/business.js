@@ -1317,6 +1317,102 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
   }
 })
 
+// Update branch details
+router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const businessId = req.business.public_id
+    const updates = req.body
+
+    const branch = await Branch.findOne({
+      where: {
+        public_id: id,
+        business_id: businessId
+      }
+    })
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        error: getLocalizedMessage('errors.notFound', req.locale)
+      })
+    }
+
+    // Allowed fields to update
+    const allowedFields = [
+      'name', 'address', 'city', 'region', 'district', 
+      'phone', 'email', 'manager_name', 'manager_pin_enabled',
+      'status', 'operating_hours', 'location_id', 'location_type', 'location_hierarchy'
+    ]
+
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key)) {
+        branch[key] = updates[key]
+      }
+    })
+
+    await branch.save()
+
+    res.json({
+      success: true,
+      branch
+    })
+  } catch (error) {
+    logger.error('Error updating branch:', error)
+    res.status(500).json({
+      success: false,
+      error: getLocalizedMessage('errors.serverError', req.locale)
+    })
+  }
+})
+
+// Update branch manager PIN
+router.put('/my/branches/:id/manager-pin', requireBusinessAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const businessId = req.business.public_id
+    const { manager_pin } = req.body
+    const pin = manager_pin // Alias for clarity
+
+    if (!pin || pin.length < 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'PIN must be at least 4 digits'
+      })
+    }
+
+    const branch = await Branch.findOne({
+      where: {
+        public_id: id,
+        business_id: businessId
+      }
+    })
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        error: getLocalizedMessage('errors.notFound', req.locale)
+      })
+    }
+
+    const salt = await bcrypt.genSalt(10)
+    branch.manager_pin = await bcrypt.hash(pin, salt)
+    branch.manager_pin_enabled = true // Auto-enable when setting PIN
+    await branch.save()
+
+    res.json({
+      success: true,
+      message: 'Manager PIN updated successfully'
+    })
+  } catch (error) {
+    logger.error('Error updating manager PIN:', error)
+    res.status(500).json({
+      success: false,
+      error: getLocalizedMessage('errors.serverError', req.locale)
+    })
+  }
+})
+
 // Get current business status - SECURE VERSION (Comment 3)
 router.get('/my/status', requireBusinessAuth, async (req, res) => {
   try {
@@ -1440,973 +1536,7 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
 })
 
 // ===============================
-// AUTHENTICATED CRUD OPERATIONS
-// ===============================
-
-// Create business offer - SECURE VERSION
-router.post('/my/offers', requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit('offers'), async (req, res) => {
-  try {
-    // Validate loyalty_tiers if provided
-    if (req.body.loyalty_tiers !== undefined && req.body.loyalty_tiers !== null) {
-      try {
-        validateLoyaltyTiers(req.body.loyalty_tiers)
-      } catch (validationError) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid loyalty_tiers configuration',
-          error: validationError.message
-        })
-      }
-    }
-    
-    // Validate barcode_preference if provided
-    if (req.body.barcode_preference !== undefined && req.body.barcode_preference !== null) {
-      const validBarcodeTypes = ['QR_CODE', 'PDF417']
-      if (!validBarcodeTypes.includes(req.body.barcode_preference)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid barcode_preference value',
-          error: `barcode_preference must be one of: ${validBarcodeTypes.join(', ')}`
-        })
-      }
-    }
-    
-    // Process date fields - convert empty strings to null
-    const processedBody = {
-      ...req.body,
-      start_date: req.body.start_date && req.body.start_date.trim() !== '' ? req.body.start_date : null,
-      end_date: req.body.end_date && req.body.end_date.trim() !== '' ? req.body.end_date : null
-    }
-    
-    const newOfferData = {
-      ...processedBody,
-      business_id: req.business.public_id, // Use secure public_id
-      status: req.body.status || 'active'
-    }
-
-    const newOffer = await Offer.create(newOfferData)
-
-    res.status(201).json({
-      success: true,
-      data: newOffer,
-      message: 'Offer created successfully'
-    })
-  } catch (error) {
-    console.error('❌ Create offer error:', error)
-    console.error('❌ Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack?.substring(0, 500)
-    })
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create offer',
-      error: error.message
-    })
-  }
-})
-
-// Update business offer - SECURE VERSION
-router.put('/my/offers/:id', requireBusinessAuth, async (req, res) => {
-  try {
-    const offerId = req.params.id // Now expects secure offer ID (off_*)
-    const businessId = req.business.public_id // Use secure business ID
-
-    const offer = await Offer.findOne({
-      where: { 
-        public_id: offerId, // Use secure public_id for lookup
-        business_id: businessId // Secure business reference
-      }
-    })
-
-    if (!offer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Offer not found or not owned by your business'
-      })
-    }
-
-    // Validate loyalty_tiers if provided
-    if (req.body.loyalty_tiers !== undefined && req.body.loyalty_tiers !== null) {
-      try {
-        validateLoyaltyTiers(req.body.loyalty_tiers)
-      } catch (validationError) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid loyalty_tiers configuration',
-          error: validationError.message
-        })
-      }
-    }
-
-    // Validate barcode_preference if provided
-    if (req.body.barcode_preference !== undefined && req.body.barcode_preference !== null) {
-      const validBarcodeTypes = ['QR_CODE', 'PDF417']
-      if (!validBarcodeTypes.includes(req.body.barcode_preference)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid barcode_preference value',
-          error: `barcode_preference must be one of: ${validBarcodeTypes.join(', ')}`
-        })
-      }
-    }
-
-    // Process date fields - convert empty strings to null
-    const processedBody = {
-      ...req.body,
-      start_date: req.body.start_date && req.body.start_date.trim() !== '' ? req.body.start_date : null,
-      end_date: req.body.end_date && req.body.end_date.trim() !== '' ? req.body.end_date : null
-    }
-
-    await offer.update(processedBody)
-
-    res.json({
-      success: true,
-      data: offer,
-      message: 'Offer updated successfully'
-    })
-  } catch (error) {
-    console.error('Update offer error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update offer',
-      error: error.message
-    })
-  }
-})
-
-// Delete business offer - SECURE VERSION
-router.delete('/my/offers/:id', requireBusinessAuth, async (req, res) => {
-  try {
-    const offerId = req.params.id // Now expects secure offer ID (off_*)
-    const businessId = req.business.public_id // Use secure business ID
-
-    const offer = await Offer.findOne({
-      where: { 
-        public_id: offerId, // Use secure public_id for lookup
-        business_id: businessId // Secure business reference
-      }
-    })
-
-    if (!offer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Offer not found or not owned by your business'
-      })
-    }
-
-    await offer.destroy()
-
-    res.json({
-      success: true,
-      message: 'Offer deleted successfully'
-    })
-  } catch (error) {
-    console.error('Delete offer error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete offer',
-      error: error.message
-    })
-  }
-})
-
-// Toggle business offer status - SECURE VERSION
-router.patch('/my/offers/:id/status', requireBusinessAuth, async (req, res) => {
-  try {
-    const offerId = req.params.id // Now expects secure offer ID (off_*)
-    const businessId = req.business.public_id // Use secure business ID
-
-    const offer = await Offer.findOne({
-      where: { 
-        public_id: offerId, // Use secure public_id for lookup
-        business_id: businessId // Secure business reference
-      }
-    })
-
-    if (!offer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Offer not found or not owned by your business'
-      })
-    }
-
-    const newStatus = offer.status === 'active' ? 'paused' : 'active'
-    await offer.update({ status: newStatus })
-
-    res.json({
-      success: true,
-      data: offer,
-      message: `Offer ${newStatus === 'active' ? 'activated' : 'paused'} successfully`
-    })
-  } catch (error) {
-    console.error('Toggle offer status error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update offer status',
-      error: error.message
-    })
-  }
-})
-
-// Get offer analytics - SECURE VERSION
-router.get('/my/offers/:offerId/analytics', requireBusinessAuth, async (req, res) => {
-  try {
-    const offerId = req.params.offerId
-    const businessId = req.business.public_id
-    const period = req.query.period || '30d'
-    
-    // Validate period
-    const validPeriods = ['7d', '30d', '90d', 'all']
-    if (!validPeriods.includes(period)) {
-      return res.status(400).json({
-        success: false,
-        message: getLocalizedMessage('validation.invalidPeriod', req.locale)
-      })
-    }
-    
-    // Verify offer ownership
-    const offer = await Offer.findOne({
-      where: { 
-        public_id: offerId,
-        business_id: businessId
-      }
-    })
-    
-    if (!offer) {
-      return res.status(404).json({
-        success: false,
-        message: getLocalizedMessage('notFound.offer', req.locale)
-      })
-    }
-    
-    // Calculate date range
-    let startDate = null
-    const now = new Date()
-    if (period === '7d') {
-      startDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
-    } else if (period === '30d') {
-      startDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
-    } else if (period === '90d') {
-      startDate = new Date(now - 90 * 24 * 60 * 60 * 1000)
-    }
-    
-    // Build where clause
-    const whereClause = { offer_id: offerId }
-    if (startDate) {
-      const { Op } = await import('sequelize')
-      whereClause.created_at = { [Op.gte]: startDate }
-    }
-    
-    // Get customer progress data
-    const progressRecords = await CustomerProgress.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['customer_id', 'name', 'email']
-        }
-      ]
-    })
-    
-    // Calculate overview metrics
-    const totalSignups = progressRecords.length
-    const activeCustomers = progressRecords.filter(p => p.status === 'active').length
-    const completedRewards = progressRecords.reduce((sum, p) => sum + (p.total_completions || 0), 0)
-    const totalStamps = progressRecords.reduce((sum, p) => sum + (p.current_stamps || 0), 0)
-    const avgStampsPerCustomer = totalSignups > 0 ? totalStamps / totalSignups : 0
-    
-    // Mock scan data (TODO: implement actual scan tracking)
-    const totalScans = Math.round(totalSignups * 1.5) // Estimate
-    const conversionRate = totalScans > 0 ? (totalSignups / totalScans * 100).toFixed(1) : 0
-    const redemptionRate = totalSignups > 0 ? (completedRewards / totalSignups * 100).toFixed(1) : 0
-    const engagementRate = totalSignups > 0 ? (activeCustomers / totalSignups * 100).toFixed(1) : 0
-    const churnRate = (100 - engagementRate).toFixed(1)
-    
-    // Top customers by stamps
-    const topCustomers = progressRecords
-      .sort((a, b) => (b.current_stamps || 0) - (a.current_stamps || 0))
-      .slice(0, 10)
-      .map(p => ({
-        name: p.customer?.name || 'Unknown',
-        stamps: p.current_stamps || 0
-      }))
-    
-    // Recent signups
-    const recentSignups = progressRecords
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 10)
-      .map(p => ({
-        name: p.customer?.name || 'Unknown',
-        date: p.created_at
-      }))
-    
-    // Close to reward
-    const stampsRequired = offer.stamps_required || 10
-    const closeToReward = progressRecords
-      .filter(p => {
-        const remaining = stampsRequired - (p.current_stamps || 0)
-        return remaining > 0 && remaining <= 2
-      })
-      .slice(0, 10)
-      .map(p => ({
-        name: p.customer?.name || 'Unknown',
-        remaining: stampsRequired - (p.current_stamps || 0)
-      }))
-    
-    // Mock trends data (TODO: implement time-series aggregation)
-    const trends = {
-      signups: [],
-      scans: []
-    }
-    
-    // Mock source data
-    const sources = {
-      checkout: Math.round(totalScans * 0.4),
-      table: Math.round(totalScans * 0.3),
-      window: Math.round(totalScans * 0.2),
-      social: Math.round(totalScans * 0.08),
-      other: Math.round(totalScans * 0.02)
-    }
-    
-    const analytics = {
-      overview: {
-        totalScans,
-        totalSignups,
-        conversionRate: parseFloat(conversionRate),
-        activeCustomers,
-        completedRewards,
-        redemptionRate: parseFloat(redemptionRate)
-      },
-      trends,
-      customers: {
-        topCustomers,
-        recentSignups,
-        closeToReward
-      },
-      sources,
-      performance: {
-        engagementRate: parseFloat(engagementRate),
-        churnRate: parseFloat(churnRate),
-        avgStampsPerCustomer: parseFloat(avgStampsPerCustomer.toFixed(1)),
-        avgVisitsPerCustomer: parseFloat((avgStampsPerCustomer * 1.2).toFixed(1)),
-        avgDaysToComplete: 14 // Mock value
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: analytics
-    })
-  } catch (error) {
-    console.error('❌ Get offer analytics error:', error)
-    res.status(500).json({
-      success: false,
-      message: getLocalizedMessage('server.failedToGetAnalytics', req.locale),
-      error: error.message
-    })
-  }
-})
-
-// Create business branch - SECURE VERSION
-router.post('/my/branches', requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit('locations'), async (req, res) => {
-  try {
-    // Handle street_name alias (frontend may send 'street_name' instead of 'address')
-    const branchData = { ...req.body }
-    if (branchData.street_name) {
-      branchData.address = branchData.street_name
-      delete branchData.street_name
-    }
-
-    // Process location_data if provided
-    if (branchData.location_data) {
-      // Extract location metadata from location_data object
-      branchData.location_id = branchData.location_data.id || null
-      branchData.location_type = branchData.location_data.type || null
-      branchData.location_hierarchy = branchData.location_data.hierarchy || null
-    }
-
-    const newBranchData = {
-      ...branchData,
-      business_id: req.business.public_id, // Use secure public_id
-      status: branchData.status || 'active'
-    }
-
-    // Validate that location data is provided
-    if (!newBranchData.region && !newBranchData.city) {
-      return res.status(400).json({
-        success: false,
-        message: 'Location data is required. Please provide region and city information.'
-      })
-    }
-
-    const newBranch = await Branch.create(newBranchData)
-
-    res.status(201).json({
-      success: true,
-      data: newBranch,
-      message: 'Branch created successfully'
-    })
-  } catch (error) {
-    console.error('Create branch error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create branch',
-      error: error.message
-    })
-  }
-})
-
-// Update business branch - SECURE VERSION
-router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
-  try {
-    const branchId = req.params.id // Now expects secure branch ID (branch_*)
-    const businessId = req.business.public_id // Use secure business ID
-
-    const branch = await Branch.findOne({
-      where: {
-        public_id: branchId, // Use secure public_id for lookup
-        business_id: businessId // Secure business reference
-      }
-    })
-
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found or not owned by your business'
-      })
-    }
-
-    // Handle street_name alias (frontend may send 'street_name' instead of 'address')
-    const updateData = { ...req.body }
-    if (updateData.street_name) {
-      updateData.address = updateData.street_name
-      delete updateData.street_name
-    }
-
-    // Process location_data if provided
-    if (updateData.location_data) {
-      // Extract location metadata from location_data object
-      updateData.location_id = updateData.location_data.id || null
-      updateData.location_type = updateData.location_data.type || null
-      updateData.location_hierarchy = updateData.location_data.hierarchy || null
-    }
-
-    await branch.update(updateData)
-    await branch.reload() // Reload to get fresh data from database
-
-    res.json({
-      success: true,
-      data: branch,
-      message: 'Branch updated successfully'
-    })
-  } catch (error) {
-    console.error('Update branch error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update branch',
-      error: error.message
-    })
-  }
-})
-
-// Delete business branch
-router.delete('/my/branches/:id', requireBusinessAuth, async (req, res) => {
-  try {
-    const branchId = req.params.id  // Use secure branch ID directly (branch_*)
-    const businessId = req.business.public_id  // Use secure ID directly
-
-    const branch = await Branch.findOne({
-      where: { public_id: branchId, business_id: businessId }  // Use secure IDs
-    })
-
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found or not owned by your business'
-      })
-    }
-
-    // Safety checks
-    if (branch.isMain) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete the main branch'
-      })
-    }
-
-    // Only prevent deletion if this is the last active branch
-    if (branch.status === 'active') {
-      const activeBranchCount = await Branch.count({
-        where: { business_id: businessId, status: 'active' }
-      })
-      if (activeBranchCount <= 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot delete the last active branch'
-        })
-      }
-    }
-
-    // Check if there are any offers tied to this branch
-    const branchSpecificOffers = await Offer.findAll({
-      where: {
-        business_id: businessId,
-        branch: branch.name
-      }
-    })
-
-    // Delete associated offers if any (branch-specific offers only)
-    const deletedOfferCount = branchSpecificOffers.length
-    if (deletedOfferCount > 0) {
-      // Note: In a real implementation, you might want to reassign offers to another branch
-      // or set them to "All Branches" rather than deleting them
-      await Offer.destroy({
-        where: {
-          business_id: businessId,
-          branch: branch.name
-        }
-      })
-    }
-
-    await branch.destroy()
-
-    res.json({
-      success: true,
-      message: `Branch deleted successfully${deletedOfferCount > 0 ? ` and ${deletedOfferCount} associated offer(s) removed` : ''}`,
-      deletedOffers: deletedOfferCount
-    })
-  } catch (error) {
-    console.error('Delete branch error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete branch',
-      error: error.message
-    })
-  }
-})
-
-// Toggle business branch status
-router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) => {
-  try {
-    const branchId = req.params.id  // Use secure branch ID directly (branch_*)
-    const businessId = req.business.public_id  // Use secure ID directly
-
-    const branch = await Branch.findOne({
-      where: { public_id: branchId, business_id: businessId }  // Use secure IDs
-    })
-
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found or not owned by your business'
-      })
-    }
-
-    const newStatus = branch.status === 'active' ? 'inactive' : 'active'
-    await branch.update({ status: newStatus })
-
-    res.json({
-      success: true,
-      data: branch,
-      message: `Branch ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`
-    })
-  } catch (error) {
-    console.error('Toggle branch status error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update branch status',
-      error: error.message
-    })
-  }
-})
-
-// Update branch manager PIN - SECURE VERSION
-router.put('/my/branches/:id/manager-pin', requireBusinessAuth, async (req, res) => {
-  try {
-    const branchId = req.params.id
-    const businessId = req.business.public_id
-    const { manager_pin } = req.body
-
-    // Validate PIN format (4-6 digits)
-    if (!manager_pin || !/^\d{4,6}$/.test(manager_pin)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Manager PIN must be 4-6 digits'
-      })
-    }
-
-    // Find branch and verify ownership
-    const branch = await Branch.findOne({
-      where: { public_id: branchId, business_id: businessId }
-    })
-
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: 'Branch not found or not owned by your business'
-      })
-    }
-
-    // Hash PIN with bcryptjs (same as business password)
-    const hashedPIN = await bcrypt.hash(manager_pin, 10)
-
-    // Update branch with hashed PIN and enable manager login
-    await branch.update({
-      manager_pin: hashedPIN,
-      manager_pin_enabled: true
-    })
-
-    logger.info('Branch manager PIN updated', {
-      branchId: branch.public_id,
-      branchName: branch.name,
-      businessId
-    })
-
-    res.json({
-      success: true,
-      message: 'Manager PIN updated successfully',
-      data: {
-        public_id: branch.public_id,
-        name: branch.name,
-        manager_pin_enabled: true
-      }
-    })
-  } catch (error) {
-    logger.error('Update manager PIN error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update manager PIN',
-      error: error.message
-    })
-  }
-})
-
-// Get branch analytics - SECURE VERSION
-router.get('/my/branches/:branchId/analytics', requireBusinessAuth, async (req, res) => {
-  try {
-    const branchId = req.params.branchId
-    const businessId = req.business.public_id
-    const period = req.query.period || '30d'
-    
-    // Validate period
-    const validPeriods = ['7d', '30d', '90d', 'all']
-    if (!validPeriods.includes(period)) {
-      return res.status(400).json({
-        success: false,
-        message: getLocalizedMessage('validation.invalidPeriod', req.locale)
-      })
-    }
-    
-    // Verify branch ownership
-    const branch = await Branch.findOne({
-      where: { 
-        public_id: branchId,
-        business_id: businessId
-      }
-    })
-    
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: getLocalizedMessage('notFound.branch', req.locale)
-      })
-    }
-    
-    // Calculate date range
-    let startDate = null
-    const now = new Date()
-    if (period === '7d') {
-      startDate = new Date(now - 7 * 24 * 60 * 60 * 1000)
-    } else if (period === '30d') {
-      startDate = new Date(now - 30 * 24 * 60 * 60 * 1000)
-    } else if (period === '90d') {
-      startDate = new Date(now - 90 * 24 * 60 * 60 * 1000)
-    }
-    
-    // Get offers at this branch (match by branch name, not branchId)
-    // Include both branch-specific offers and all-branch offers
-    const { Op } = await import('sequelize')
-    const branchOffers = await Offer.findAll({
-      where: {
-        business_id: businessId,
-        branch: {
-          [Op.or]: [
-            branch.name,
-            'All Branches',
-            'جميع الفروع - All Branches'
-          ]
-        }
-      }
-    })
-    
-    const activeOffers = branchOffers.filter(o => o.status === 'active')
-    const offerIds = branchOffers.map(o => o.public_id)
-    
-    // Early return if no offers found for this branch
-    if (offerIds.length === 0) {
-      return res.json({
-        success: true,
-        data: {
-          overview: {
-            totalCustomers: 0,
-            activeCustomers: 0,
-            totalOffers: 0,
-            activeOffers: 0,
-            totalScans: 0,
-            monthlyRevenue: 0
-          },
-          trends: {
-            signups: [],
-            scans: [],
-            revenue: []
-          },
-          customers: {
-            topCustomers: [],
-            recentSignups: []
-          },
-          performance: {
-            retentionRate: 0,
-            offerPerformance: [],
-            manager: {
-              totalScans: 0,
-              recentActivity: []
-            }
-          }
-        }
-      })
-    }
-    
-    // Build where clause for customer progress
-    const whereClause = { offer_id: { [Op.in]: offerIds } }
-    if (startDate) {
-      whereClause.created_at = { [Op.gte]: startDate }
-    }
-    
-    // Get customer progress data for all offers at this branch
-    const progressRecords = await CustomerProgress.findAll({
-      where: whereClause,
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['customer_id', 'name', 'email']
-        }
-      ]
-    })
-    
-    // Calculate overview metrics
-    const totalCustomers = new Set(progressRecords.map(p => p.customer_id)).size
-    const activeCustomers = progressRecords.filter(p => p.status === 'active').length
-    const totalScans = Math.round(progressRecords.length * 1.5) // Estimate
-    const monthlyRevenue = branchOffers.reduce((sum, o) => sum + (o.base_reward_value || 0), 0) * 10 // Mock
-    
-    // Top customers by visits
-    const customerVisits = {}
-    progressRecords.forEach(p => {
-      const custId = p.customer_id
-      customerVisits[custId] = (customerVisits[custId] || 0) + (p.current_stamps || 0)
-    })
-    
-    const topCustomers = Object.entries(customerVisits)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([custId, visits]) => {
-        const record = progressRecords.find(p => p.customer_id === custId)
-        return {
-          name: record?.customer?.name || 'Unknown',
-          visits
-        }
-      })
-    
-    // Recent signups
-    const recentSignups = progressRecords
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 10)
-      .map(p => ({
-        name: p.customer?.name || 'Unknown',
-        date: p.created_at
-      }))
-    
-    // Retention rate calculation
-    const returningCustomers = progressRecords.filter(p => (p.current_stamps || 0) > 1).length
-    const retentionRate = totalCustomers > 0 ? ((returningCustomers / totalCustomers) * 100).toFixed(1) : 0
-    
-    // Offer performance
-    const offerPerformance = branchOffers.map(offer => {
-      const offerProgress = progressRecords.filter(p => p.offer_id === offer.public_id)
-      const signups = offerProgress.length
-      const active = offerProgress.filter(p => p.status === 'active').length
-      const completed = offerProgress.filter(p => (p.total_completions || 0) > 0).length
-      const completionRate = signups > 0 ? ((completed / signups) * 100).toFixed(1) : 0
-      
-      return {
-        name: offer.title,
-        signups,
-        activeCustomers: active,
-        completionRate: parseFloat(completionRate)
-      }
-    })
-    
-    // Mock trends data
-    const trends = {
-      signups: [],
-      scans: [],
-      revenue: []
-    }
-    
-    // Mock manager activity
-    const manager = {
-      totalScans: Math.round(totalScans * 0.7), // Mock: 70% by manager
-      recentActivity: []
-    }
-    
-    const analytics = {
-      overview: {
-        totalCustomers,
-        activeCustomers,
-        totalOffers: branchOffers.length,
-        activeOffers: activeOffers.length,
-        totalScans,
-        monthlyRevenue
-      },
-      trends,
-      customers: {
-        topCustomers,
-        recentSignups,
-        retentionRate: parseFloat(retentionRate)
-      },
-      offers: offerPerformance,
-      manager
-    }
-    
-    // Add POS analytics if requested
-    if (req.query.includePOS === 'true') {
-      try {
-        const Sale = (await import('../models/Sale.js')).default
-        const SaleItem = (await import('../models/SaleItem.js')).default
-        const Product = (await import('../models/Product.js')).default
-        
-        // Build POS where clause
-        const posWhereClause = { 
-          branch_id: branchId,
-          business_id: businessId,
-          status: 'completed'
-        }
-        if (startDate) {
-          posWhereClause.sale_date = { [Op.gte]: startDate }
-        }
-        
-        // Get sales data
-        const sales = await Sale.findAll({
-          where: posWhereClause,
-          include: [
-            {
-              model: SaleItem,
-              as: 'items',
-              include: [
-                {
-                  model: Product,
-                  as: 'product',
-                  attributes: ['public_id', 'name', 'name_ar', 'price']
-                }
-              ]
-            }
-          ]
-        })
-        
-        // Calculate POS metrics
-        const totalSales = sales.length
-        const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0)
-        const avgTransaction = totalSales > 0 ? (totalRevenue / totalSales).toFixed(2) : 0
-        
-        // Payment methods breakdown
-        const paymentMethods = {
-          cash: 0,
-          card: 0,
-          gift_offer: 0,
-          mixed: 0
-        }
-        sales.forEach(sale => {
-          const method = sale.payment_method || 'cash'
-          if (paymentMethods.hasOwnProperty(method)) {
-            paymentMethods[method] += parseFloat(sale.total_amount || 0)
-          }
-        })
-        
-        // Top products
-        const productStats = {}
-        sales.forEach(sale => {
-          sale.items?.forEach(item => {
-            const productId = item.product_id
-            const productName = item.product?.name || 'Unknown'
-            const productNameAr = item.product?.name_ar
-            
-            if (!productStats[productId]) {
-              productStats[productId] = {
-                name: productName,
-                name_ar: productNameAr,
-                quantity: 0,
-                revenue: 0
-              }
-            }
-            productStats[productId].quantity += item.quantity || 0
-            productStats[productId].revenue += parseFloat(item.total || 0)
-          })
-        })
-        
-        const topProducts = Object.values(productStats)
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 5)
-          .map(p => ({
-            name: p.name,
-            name_ar: p.name_ar,
-            quantity: p.quantity,
-            revenue: parseFloat(p.revenue).toFixed(2)
-          }))
-        
-        analytics.pos = {
-          totalSales,
-          totalRevenue: parseFloat(totalRevenue).toFixed(2),
-          avgTransaction: parseFloat(avgTransaction),
-          paymentMethods: {
-            cash: parseFloat(paymentMethods.cash).toFixed(2),
-            card: parseFloat(paymentMethods.card).toFixed(2),
-            gift_offer: parseFloat(paymentMethods.gift_offer).toFixed(2),
-            mixed: parseFloat(paymentMethods.mixed).toFixed(2)
-          },
-          topProducts
-        }
-      } catch (posError) {
-        console.error('❌ POS analytics error:', posError)
-        // Continue without POS data on error
-        analytics.pos = {
-          totalSales: 0,
-          totalRevenue: 0,
-          avgTransaction: 0,
-          paymentMethods: { cash: 0, card: 0, gift_offer: 0, mixed: 0 },
-          topProducts: []
-        }
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: analytics
-    })
-  } catch (error) {
-    console.error('❌ Get branch analytics error:', error)
-    res.status(500).json({
-      success: false,
-      message: getLocalizedMessage('server.failedToGetAnalytics', req.locale),
-      error: error.message
-    })
-  }
-})
-
-// ===============================
-// BUSINESS AUTHENTICATION ROUTES
+// AUTHENTICATION ROUTES
 // ===============================
 
 // Business login endpoint - SECURE VERSION
@@ -2545,6 +1675,26 @@ router.post('/login', async (req, res) => {
 // BUSINESS REGISTRATION ROUTES
 // ===============================
 
+// Helper function to normalize and validate Saudi phone numbers
+const normalizeAndValidateSaudiPhone = (phone) => {
+  if (!phone) return null
+  
+  let normalizedPhone = phone.trim()
+  
+  // Normalize 05xxxxxxxx format to +9665xxxxxxxx
+  if (normalizedPhone.startsWith('05')) {
+    normalizedPhone = '+9665' + normalizedPhone.substring(2)
+  }
+  
+  // Validate Saudi mobile numbers (start with 5, followed by 8 digits)
+  const phonePattern = /^\+966[5][0-9]{8}$/
+  if (!phonePattern.test(normalizedPhone)) {
+    throw new Error('Invalid Saudi phone format')
+  }
+  
+  return normalizedPhone
+}
+
 // Business registration endpoint
 router.post('/register', async (req, res) => {
   try {
@@ -2567,6 +1717,21 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: getLocalizedMessage('validation.missingRequiredFields', req.locale, { fields: missingFields.join(', ') })
+      })
+    }
+
+    // Validate and normalize phone numbers
+    try {
+      if (businessData.phone) {
+        businessData.phone = normalizeAndValidateSaudiPhone(businessData.phone)
+      }
+      if (businessData.owner_phone) {
+        businessData.owner_phone = normalizeAndValidateSaudiPhone(businessData.owner_phone)
+      }
+    } catch (phoneError) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidPhoneFormat', req.locale)
       })
     }
 
@@ -2629,7 +1794,7 @@ router.post('/register', async (req, res) => {
         business_id: newBusiness.public_id,
         error: subscriptionError.message
       })
-      // Don't fail registration if subscription initialization fails
+      // Continue with registration even if subscription initialization fails
     }
 
     // Remove password_hash from response for security
@@ -3372,7 +2537,7 @@ router.post('/scan/confirm-prize/:customerId/:offerId', requireBusinessAuth, asy
     console.error('Prize confirmation error:', error)
     res.status(500).json({
       success: false,
-      error: 'Prize confirmation failed'
+      message: 'Prize confirmation failed'
     })
   }
 })
@@ -3638,7 +2803,12 @@ router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, asy
         }
       })
       
-      if (response.ok) {
+      if (!response.ok && response.status === 404) {
+        walletStatus = {
+          exists: false,
+          objectId: objectId
+        }
+      } else if (response.ok) {
         const walletObject = await response.json()
         walletStatus = {
           exists: true,
@@ -3776,10 +2946,10 @@ router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessA
  */
 router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
   try {
-    const { planType, locationCount = 1 } = req.body
+    const { planType, locationCount = 1, isPaymentMethodUpdate } = req.body
     const businessId = req.businessId
 
-    logger.info('Subscription checkout initiated', { businessId, planType, locationCount })
+    logger.info('Subscription checkout initiated', { businessId, planType, locationCount, isPaymentMethodUpdate })
 
     // Validate plan type
     const validPlans = ['free', 'professional', 'enterprise']
@@ -3826,7 +2996,13 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
     }
 
     // Calculate plan price
-    const amount = SubscriptionService.calculatePlanPrice(planType, locationCount)
+    let amount = SubscriptionService.calculatePlanPrice(planType, locationCount)
+    
+    // If updating payment method, use minimal amount for verification (1 SAR)
+    if (isPaymentMethodUpdate) {
+      amount = 1.00
+      logger.info('Using minimal amount for payment method update', { businessId, amount })
+    }
     
     // Validate calculated amount
     if (amount < 1 || amount > 100000) {
@@ -3931,7 +3107,9 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
       success: true,
       amount,
       currency: 'SAR',
-      description: `Subscription to ${planType} Plan`,
+      description: isPaymentMethodUpdate 
+        ? 'Payment Method Verification' 
+        : `Subscription to ${planType} Plan`,
       publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY,
       callbackUrl,
       sessionId,
@@ -4322,12 +3500,17 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
       // Note: Moyasar token for recurring billing comes from moyasarPayment.source.token (if saveCard was enabled)
       const subscription = await Subscription.findOne({
         where: { business_id: businessId },
+        order: [['created_at', 'DESC']],
         transaction
       })
 
       if (subscription && moyasarPayment.source) {
+        // Extract last 4 digits safely to avoid "value too long" errors
+        const rawLast4 = moyasarPayment.source.number || moyasarPayment.source.last4
+        const safeLast4 = rawLast4 ? String(rawLast4).slice(-4) : null
+
         const updateData = {
-          payment_method_last4: moyasarPayment.source.number || moyasarPayment.source.last4,
+          payment_method_last4: safeLast4,
           payment_method_brand: moyasarPayment.source.company,
           billing_cycle_start: new Date(),
           next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
@@ -4337,27 +3520,38 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
         // Store token if available (requires saveCard: true in frontend Moyasar.js)
         if (moyasarPayment.source.token) {
           updateData.moyasar_token = moyasarPayment.source.token
-          logger.info('Payment token stored for recurring billing', {
+          logger.info('✅ Payment token stored for recurring billing', {
             businessId,
             subscriptionId: subscription.public_id,
-            hasToken: true
+            hasToken: true,
+            last4: safeLast4,
+            brand: moyasarPayment.source.company
           })
         } else {
-          logger.warn('No payment token in response - saveCard may not be enabled', {
+          // No token returned - store card details anyway for display
+          // This can happen in test environment or with certain card types
+          updateData.moyasar_token = null
+          logger.warn('⚠️ Payment approved but token not returned - recurring billing unavailable', {
             businessId,
             subscriptionId: subscription.public_id,
-            sourceType: moyasarPayment.source.type
+            sourceType: moyasarPayment.source.type,
+            cardCompany: moyasarPayment.source.company,
+            last4: safeLast4,
+            message: moyasarPayment.source.message,
+            environment: process.env.NODE_ENV,
+            note: 'Test cards may not return tokens in sandbox mode. Card details saved for display.'
           })
         }
 
         await subscription.update(updateData, { transaction })
 
-        logger.info('Payment method details stored', {
+        logger.info('💳 Payment method details stored in subscription', {
           businessId,
           subscriptionId: subscription.public_id,
           last4: updateData.payment_method_last4,
           brand: updateData.payment_method_brand,
-          hasToken: !!updateData.moyasar_token
+          hasToken: !!updateData.moyasar_token,
+          canRecurBill: !!updateData.moyasar_token
         })
       }
 
@@ -4513,7 +3707,7 @@ router.get('/subscription/details', requireBusinessAuth, async (req, res) => {
         billing_cycle_start: subscription?.billing_cycle_start || null,
         next_billing_date: subscription?.next_billing_date || null,
         payment_method: {
-          has_token: !!subscription?.moyasar_token,
+          has_token: !!subscription?.moyasar_token, // For recurring billing capability
           last4: subscription?.payment_method_last4 || null,
           brand: subscription?.payment_method_brand || null
         }
@@ -4646,6 +3840,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
     // Step 3: Fetch or Create Subscription
     let subscription = await Subscription.findOne({
       where: { business_id: businessId },
+      order: [['created_at', 'DESC']],
       transaction
     })
 
@@ -4668,7 +3863,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
     
     const payment = await Payment.create({
       business_id: businessId,
-      subscription_id: subscription.id,
+      subscription_id: subscription.public_id,
       moyasar_payment_id: moyasarPaymentId,
       amount: paymentAmount,
       currency: paymentCurrency,
@@ -4698,7 +3893,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
       billing_cycle_start: new Date(),
       next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       moyasar_token: paymentSource?.token || subscription.moyasar_token,
-      payment_method_last4: paymentSource?.number || subscription.payment_method_last4,
+      payment_method_last4: paymentSource?.number ? String(paymentSource.number).slice(-4) : (subscription.payment_method_last4 || null),
       payment_method_brand: paymentSource?.company || subscription.payment_method_brand
     }, { transaction })
 
@@ -4749,7 +3944,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
       amount: paymentAmount,
       tax_amount: paymentAmount * 0.15, // 15% VAT
       total_amount: paymentAmount * 1.15,
-      currency: paymentCurrency,
+      currency: 'SAR',
       status: 'paid',
       issued_date: new Date(),
       paid_date: new Date(),
@@ -4966,6 +4161,7 @@ router.put('/subscription/upgrade', requireBusinessAuth, async (req, res) => {
           tax_amount: taxAmount,
           total_amount: totalAmount,
           currency: 'SAR',
+          status: 'paid',
           issued_date: new Date(),
           due_date: new Date(),
           paid_date: new Date(),
@@ -5171,19 +4367,14 @@ router.put('/subscription/payment-method', requireBusinessAuth, async (req, res)
 
     // Extract payment method details
     const token = moyasarPayment.source?.token
-    const last4 = moyasarPayment.source?.last4
+    const rawLast4 = moyasarPayment.source?.last4 || moyasarPayment.source?.number
+    const last4 = rawLast4 ? String(rawLast4).slice(-4) : null
     const brand = moyasarPayment.source?.company
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: getLocalizedMessage('payment.tokenizationFailed', req.locale)
-      })
-    }
 
     // Update subscription with new payment method
     const subscription = await Subscription.findOne({
-      where: { business_id: businessId }
+      where: { business_id: businessId },
+      order: [['created_at', 'DESC']]
     })
 
     if (!subscription) {
@@ -5193,17 +4384,30 @@ router.put('/subscription/payment-method', requireBusinessAuth, async (req, res)
       })
     }
 
+    // Store card details even if token is missing (for display purposes)
+    // Token is required for recurring billing but optional for manual payments
     await subscription.update({
-      moyasar_token: token,
+      moyasar_token: token || null,
       payment_method_last4: last4,
       payment_method_brand: brand
     })
 
-    logger.info('Payment method updated', {
-      businessId,
-      last4,
-      brand
-    })
+    if (token) {
+      logger.info('✅ Payment method updated with token', {
+        businessId,
+        last4,
+        brand,
+        hasToken: true
+      })
+    } else {
+      logger.warn('⚠️ Payment method updated without token - recurring billing unavailable', {
+        businessId,
+        last4,
+        brand,
+        hasToken: false,
+        note: 'Card details saved for display. Customer will need to re-enter card for recurring payments.'
+      })
+    }
 
     // Never return full token in response
     res.json({
@@ -5216,8 +4420,59 @@ router.put('/subscription/payment-method', requireBusinessAuth, async (req, res)
       }
     })
 
+ 
   } catch (error) {
     logger.error('Payment method update failed', {
+      businessId: req.businessId,
+      error: error.message
+    })
+
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.subscriptionUpdateFailed', req.locale),
+      error: error.message
+    })
+  }
+})
+
+/**
+ * DELETE /api/business/subscription/payment-method
+ * Remove stored payment method
+ */
+router.delete('/subscription/payment-method', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.businessId
+
+    logger.info('Payment method removal initiated', { businessId })
+
+    // Find subscription
+    const subscription = await Subscription.findOne({
+      where: { business_id: businessId }
+    })
+
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscription not found'
+      })
+    }
+
+    // Clear payment method details
+    await subscription.update({
+      moyasar_token: null,
+      payment_method_last4: null,
+      payment_method_brand: null
+    })
+
+    logger.info('Payment method removed', { businessId })
+
+    res.json({
+      success: true,
+      message: getLocalizedMessage('subscription.paymentMethodRemoved', req.locale)
+    })
+
+  } catch (error) {
+    logger.error('Payment method removal failed', {
       businessId: req.businessId,
       error: error.message
     })

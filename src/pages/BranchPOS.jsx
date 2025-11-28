@@ -325,7 +325,7 @@ export default function BranchPOS() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col" dir={i18n.dir()}>
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col overflow-hidden" dir={i18n.dir()}>
       {/* SEO Component */}
       <SEO title={t('title')} description={t('description')} noindex={true} />
       
@@ -431,7 +431,7 @@ export default function BranchPOS() {
         </div>
         
         {/* Right Side: Cart (40% on desktop, bottom sheet on mobile) */}
-        <div className="lg:w-2/5 bg-white dark:bg-gray-800 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700">
+        <div className="h-[45vh] lg:h-full lg:w-2/5 bg-white dark:bg-gray-800 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700">
           <POSCart 
             cart={cart}
             onUpdateQuantity={updateQuantity}

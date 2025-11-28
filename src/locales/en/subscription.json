@@ -176,7 +176,8 @@
     "updatePaymentMethodTitle": "Update Payment Method",
     "updatePaymentMethodDescription": "Add or update your payment card for automatic billing",
     "cardVerificationNotice": "Card Verification",
-    "cardVerificationDescription": "A temporary 1 SAR charge will be made to verify your card. This amount will be refunded immediately."
+    "cardVerificationDescription": "A temporary 1 SAR charge will be made to verify your card. This amount will be refunded immediately.",
+    "saveCardNote": "For recurring billing, please ensure you check the 'Save this card' box if it appears."
   },
   "paymentCallback": {
     "verifying": "Verifying payment...",
@@ -216,7 +217,7 @@
     "paymentMethodUpdateFailed": "Failed to update payment method. Please try again.",
     "cardVerificationFailed": "Card verification failed. Please check your card details and try again.",
     "cardVerificationNotFound": "Card verification payment not found. This may be a temporary issue - please try again.",
-    "cardTokenFailed": "Failed to save card details. Please try again or use a different card.",
+    "cardTokenFailed": "Failed to save card details. Please ensure you check the 'Save this card' box if available, or try a different card.",
     "noSubscriptionForUpdate": "No active subscription found. Please subscribe to a plan before updating payment method."
   },
   "modal": {
@@ -282,6 +283,7 @@
     "cardEnding": "Card ending in {{last4}}",
     "updatePaymentMethod": "Update Payment Method",
     "addPaymentMethod": "Add Payment Method",
+    "deletePaymentMethod": "Delete Payment Method",
     "billingHistory": "Recent Payments",
     "viewFullHistory": "View Full History",
     "noBillingHistory": "No payment history yet",

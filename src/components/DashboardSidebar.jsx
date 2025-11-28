@@ -12,8 +12,9 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
     { id: 'offers', label: t('sidebar.myOffers'), icon: '🎁' },
     { id: 'scanner', label: t('sidebar.qrScanner'), icon: '📱' },
     { id: 'branches', label: t('sidebar.branches'), icon: '📍' },
-    { id: 'customers', label: t('sidebar.customers'), icon: '👥', disabled: true, comingSoon: true },
-    { id: 'wallet', label: t('sidebar.mobileWallets'), icon: '💳' },
+    // Temporarily hidden for future development
+    // { id: 'customers', label: t('sidebar.customers'), icon: '👥', disabled: true, comingSoon: true },
+    // { id: 'wallet', label: t('sidebar.mobileWallets'), icon: '💳' },
     { id: 'analytics', label: t('sidebar.analytics'), icon: '📊' },
     { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: '💳' }
   ]
