@@ -193,10 +193,15 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
       <div className="mb-3">
         <div className="relative">
           <input
-            type="text"
+            type="search"
+            name="branch-search"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             placeholder={t('branches.searchPlaceholder')}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
             className="w-full pl-10 pr-4 py-2 text-sm min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
           />
           <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,7 +264,7 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
       {/* Branches Grid */}
       <BranchGrid
         branches={filteredBranches}
-        loading={false}
+        loading={loading}
         onEdit={setShowEditModal}
         onDelete={setShowDeleteConfirm}
         onToggleStatus={toggleBranchStatus}
@@ -638,6 +643,55 @@ function BranchModal({ branch, onClose, onSave }) {
                     className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                     placeholder={t('branches.managerNamePlaceholder')}
                   />
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    📞 {t('branches.phoneNumber')}
+                  </label>
+                  <input
+                    type="tel"
+                    name="branch-phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    autoComplete="off"
+                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    placeholder={t('branches.phonePlaceholder')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    📧 {t('branches.email')}
+                  </label>
+                  <input
+                    type="email"
+                    name="branch-email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    autoComplete="off"
+                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    placeholder={t('branches.emailPlaceholder')}
+                  />
+                </div>
+              </div>
+
+              {/* Main Branch Setting */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="isMain"
+                    checked={formData.isMain}
+                    onChange={(e) => setFormData({...formData, isMain: e.target.checked})}
+                    className="h-5 w-5 min-h-[20px] min-w-[20px] text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                  />
+                  <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                    ⭐ Set as main branch
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Primary location)</span>
+                  </label>
                 </div>
               </div>
 
