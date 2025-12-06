@@ -117,6 +117,54 @@ class QRCodeGenerator {
     }
   }
 
+  /**
+   * Generate manager login QR code for a branch
+   * @param {string} branchId - Branch public ID
+   * @param {Object} options - QR code generation options
+   * @returns {Promise<Object>} Generated QR code data
+   */
+  async generateManagerLoginQRCode(branchId, options = {}) {
+    try {
+      if (!branchId) {
+        throw new Error('Branch ID is required')
+      }
+
+      const baseUrl = import.meta.env.VITE_BASE_URL || 'https://app.madna.me'
+      const loginUrl = `${baseUrl}/branch-manager-login?branch=${branchId}`
+
+      const qrOptions = {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: options.darkColor || '#000000',
+          light: options.lightColor || '#FFFFFF'
+        },
+        width: options.size || 256
+      }
+
+      const qrCodeDataUrl = await QRCode.toDataURL(loginUrl, qrOptions)
+
+      return {
+        success: true,
+        data: {
+          qrCodeDataUrl,
+          url: loginUrl,
+          branchId,
+          timestamp: new Date().toISOString(),
+          options: qrOptions
+        }
+      }
+    } catch (error) {
+      console.error('Error generating manager login QR code:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  }
+
   // Generate QR code for download (different formats)
   async generateForDownload(offerId, format = 'png', options = {}) {
     try {

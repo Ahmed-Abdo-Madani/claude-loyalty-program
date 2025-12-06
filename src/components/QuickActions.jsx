@@ -9,7 +9,7 @@ import {
   DocumentTextIcon 
 } from '@heroicons/react/24/outline'
 
-function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, onManageBranches, onSettings, onGenerateMenuQR }) {
+function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, onManageBranches, onGenerateMenuQR }) {
   const { t } = useTranslation(['dashboard', 'common'])
   
   const actions = [
@@ -66,15 +66,6 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, o
       bgColor: 'bg-teal-50 dark:bg-teal-900/20',
       iconColor: 'text-teal-600 dark:text-teal-400',
       hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-900/30'
-    },
-    {
-      id: 'settings',
-      label: t('quickActions.settings'),
-      icon: <Cog6ToothIcon className="w-5 h-5" />,
-      action: onSettings,
-      bgColor: 'bg-gray-50 dark:bg-gray-900/20',
-      iconColor: 'text-gray-600 dark:text-gray-400',
-      hoverBg: 'hover:bg-gray-100 dark:hover:bg-gray-900/30'
     }
   ]
 

@@ -10,7 +10,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
   const navigationItems = [
     { id: 'overview', label: t('sidebar.overview'), icon: '🏠' },
     { id: 'offers', label: t('sidebar.myOffers'), icon: '🎁' },
-    { id: 'scanner', label: t('sidebar.qrScanner'), icon: '📱' },
+    // { id: 'scanner', label: t('sidebar.qrScanner'), icon: '📱' },
     { id: 'branches', label: t('sidebar.branches'), icon: '📍' },
     // Temporarily hidden for future development
     // { id: 'customers', label: t('sidebar.customers'), icon: '👥', disabled: true, comingSoon: true },

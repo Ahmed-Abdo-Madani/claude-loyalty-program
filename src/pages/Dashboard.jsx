@@ -201,7 +201,7 @@ function Dashboard() {
                 {[
                   { id: 'overview', label: t('tabs.overview'), icon: '📊' },
                   { id: 'offers', label: t('tabs.myOffers'), icon: '🎯' },
-                  { id: 'scanner', label: t('tabs.qrScanner'), icon: '📱' },
+                  // { id: 'scanner', label: t('tabs.qrScanner'), icon: '📱' },
                   { id: 'branches', label: t('tabs.branches'), icon: '🏪' },
                   { id: 'products', label: t('tabs.products'), icon: '🛍️' },
                   // Temporarily hidden - can be re-enabled in future
@@ -248,7 +248,6 @@ function Dashboard() {
                     onViewReports={handleViewReports}
                     onManageProducts={() => handleTabChange('products')}
                     onManageBranches={() => handleTabChange('branches')}
-                    onSettings={() => navigate('/settings')}
                     onGenerateMenuQR={handleGenerateMenuQR}
                   />
                 </div>

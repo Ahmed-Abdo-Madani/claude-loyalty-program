@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { updateBranchManagerPin, secureApiRequest, getSecureAuthHeaders } from '../utils/secureAuth'
 import { endpoints } from '../config/api'
+import QRCodeGenerator from '../utils/qrCodeGenerator'
 
 function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   const { t } = useTranslation('dashboard')
@@ -17,6 +18,8 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   const [managerPin, setManagerPin] = useState('')
   const [toggleSaving, setToggleSaving] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [managerQrData, setManagerQrData] = useState(null)
+  const [managerQrLoading, setManagerQrLoading] = useState(false)
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -50,6 +53,37 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
       setManagerPinEnabled(branch.manager_pin_enabled || false)
     }
   }, [isOpen, branch?.public_id]) // Only sync when modal opens or different branch
+
+  // Generate QR code when modal opens, branch changes, or manager access is enabled
+  useEffect(() => {
+    const generateManagerLoginQR = async () => {
+      if (!branch?.public_id) return
+
+      try {
+        setManagerQrLoading(true)
+        const result = await QRCodeGenerator.generateManagerLoginQRCode(
+          branch.public_id,
+          { size: 120 }
+        )
+
+        if (result.success) {
+          setManagerQrData(result.data)
+        } else {
+          console.error('Failed to generate manager login QR:', result.error)
+          setManagerQrData(null)
+        }
+      } catch (error) {
+        console.error('Error generating manager login QR:', error)
+        setManagerQrData(null)
+      } finally {
+        setManagerQrLoading(false)
+      }
+    }
+
+    if (isOpen && branch?.public_id && managerPinEnabled) {
+      generateManagerLoginQR()
+    }
+  }, [isOpen, branch?.public_id, managerPinEnabled])
 
   // Defensive close handler
   const handleClose = () => {
@@ -281,13 +315,23 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                       </h4>
                       <div className="flex items-center gap-4">
                         <div className="bg-white p-2 rounded-lg border border-gray-200">
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-                              `${window.location.origin}/branch-manager-login?branch=${branch.public_id}`
-                            )}`}
-                            alt={t('branches.managerLoginQRAlt')}
-                            className="w-[120px] h-[120px]"
-                          />
+                          {managerQrLoading ? (
+                            <div className="w-[120px] h-[120px] flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                            </div>
+                          ) : managerQrData ? (
+                            <img
+                              src={managerQrData.qrCodeDataUrl}
+                              alt={t('branches.managerLoginQRAlt')}
+                              className="w-[120px] h-[120px]"
+                            />
+                          ) : (
+                            <div className="w-[120px] h-[120px] flex items-center justify-center text-gray-400">
+                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1">
                           <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
