@@ -7,10 +7,10 @@ import BranchManagerAccessModal from './BranchManagerAccessModal'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
 
-function BranchesTab({ analytics }) {
+function BranchesTab({ analytics, demoData, onAddBranch }) {
   const { t } = useTranslation('dashboard')
-  const [branches, setBranches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [branches, setBranches] = useState(demoData || [])
+  const [loading, setLoading] = useState(!demoData)
   const [error, setError] = useState('')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -25,8 +25,10 @@ function BranchesTab({ analytics }) {
 
   // Load branches on component mount
   useEffect(() => {
-    loadBranches()
-  }, [])
+    if (!demoData) {
+      loadBranches()
+    }
+  }, [demoData])
 
   const loadBranches = async () => {
     try {
@@ -35,7 +37,7 @@ function BranchesTab({ analytics }) {
       console.log('🔒 Loading branches with secure authentication...')
       const response = await secureApi.get(endpoints.myBranches)
       const data = await response.json()
-      
+
       if (data.success) {
         setBranches(data.data || [])
         console.log('🔒 Branches loaded successfully:', data.data?.length || 0)
@@ -55,12 +57,12 @@ function BranchesTab({ analytics }) {
     try {
       console.log('🔒 Toggling branch status:', { secureBranchId, currentStatus })
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
-      
+
       const response = await secureApi.patch(`${endpoints.myBranches}/${secureBranchId}/status`, {
         status: newStatus
       })
       const data = await response.json()
-      
+
       if (data.success) {
         await loadBranches() // Reload to get updated data
         console.log('🔒 Branch status updated successfully')
@@ -78,7 +80,7 @@ function BranchesTab({ analytics }) {
       console.log('🔒 Deleting branch:', secureBranchId)
       const response = await secureApi.delete(`${endpoints.myBranches}/${secureBranchId}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setShowDeleteConfirm(null)
         await loadBranches() // Reload to get updated data
@@ -110,10 +112,10 @@ function BranchesTab({ analytics }) {
         }
         delete newBranch.public_id // Remove ID so API creates a new one
         delete newBranch.id // Remove any legacy ID
-        
+
         const response = await secureApi.post(endpoints.myBranches, newBranch)
         const data = await response.json()
-        
+
         if (data.success) {
           await loadBranches() // Reload to get updated data
           console.log('🔒 Branch duplicated successfully')
@@ -152,7 +154,7 @@ function BranchesTab({ analytics }) {
     <div className="compact-spacing">
       {/* Compact Stats Bar - Space-efficient metrics */}
       {analytics && <CompactStatsBar analytics={analytics} />}
-      
+
       {/* Header Section - Mobile-first: Stack vertically */}
       <div className="flex flex-col space-y-4 compact-header">
         <div>
@@ -160,7 +162,7 @@ function BranchesTab({ analytics }) {
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('branches.manageLocations')}</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => onAddBranch ? onAddBranch() : setShowCreateModal(true)}
           className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm min-h-[44px] w-full sm:w-auto sm:self-start touch-target"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,31 +211,28 @@ function BranchesTab({ analytics }) {
           {/* Quick Filter Pills */}
           <button
             onClick={() => { setStatusFilter('all'); setCityFilter('all'); }}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
-              statusFilter === 'all' && cityFilter === 'all'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${statusFilter === 'all' && cityFilter === 'all'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+              }`}
           >
             {t('branches.all')}
           </button>
           <button
             onClick={() => setStatusFilter('active')}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
-              statusFilter === 'active'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${statusFilter === 'active'
                 ? 'bg-green-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+              }`}
           >
             {t('branches.active')}
           </button>
           <button
             onClick={() => setStatusFilter('inactive')}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${
-              statusFilter === 'inactive'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${statusFilter === 'inactive'
                 ? 'bg-red-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+              }`}
           >
             {t('branches.inactive')}
           </button>
@@ -307,15 +306,15 @@ function BranchesTab({ analytics }) {
           onSave={async (branchData) => {
             try {
               console.log('🔒 Saving branch data:', JSON.stringify(branchData, null, 2))
-              
+
               const branchId = showEditModal?.public_id || showEditModal?.id
-              
+
               if (showEditModal) {
                 // Update existing branch using secure ID
                 console.log('📝 Updating branch:', showEditModal.public_id)
                 const response = await secureApi.put(`${endpoints.myBranches}/${branchId}`, branchData)
                 const data = await response.json()
-                
+
                 if (!data.success) {
                   throw new Error(data.message || 'Failed to update branch')
                 }
@@ -325,7 +324,7 @@ function BranchesTab({ analytics }) {
                 console.log('➕ Creating new branch')
                 const response = await secureApi.post(endpoints.myBranches, branchData)
                 const data = await response.json()
-                
+
                 if (!data.success) {
                   throw new Error(data.message || 'Failed to create branch')
                 }
@@ -402,7 +401,7 @@ function BranchModal({ branch, onClose, onSave }) {
         name_ar: locationName,
         name_en: locationName,
         hierarchy: branch.location_hierarchy ||
-                   constructHierarchy(branch.district, branch.city, branch.region),
+          constructHierarchy(branch.district, branch.city, branch.region),
         id: branch.location_id || null,
         city_id: branch.location_id || null,
         district_id: branch.location_id || null,
@@ -613,174 +612,174 @@ function BranchModal({ branch, onClose, onSave }) {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <form id="branch-form" onSubmit={handleSubmit}>
             <div className="space-y-4 sm:space-y-6">
-                {/* Branch Name and Manager */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      🏪 {t('branches.branchName')} *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder={t('branches.branchNamePlaceholder')}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      👤 {t('branches.manager')}
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.manager_name}
-                      onChange={(e) => setFormData({...formData, manager_name: e.target.value})}
-                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder={t('branches.managerNamePlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                {/* Saudi Location Search */}
+              {/* Branch Name and Manager */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    🗺️ {t('branches.locationLabel')} *
-                  </label>
-                  <LocationAutocomplete
-                    value={formData.location}
-                    onChange={handleLocationSelect}
-                    language="ar"
-                    placeholder={t('branches.locationPlaceholderAr')}
-                    placeholderEn={t('branches.locationPlaceholderEn')}
-                    className="w-full"
-                    required
-                  />
-                  {formData.location && (
-                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <div className="text-sm text-blue-800 dark:text-blue-300">
-                        <strong>{t('branches.selectedLocation')}:</strong>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          {formData.region && (
-                            <span className="inline-block bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs">
-                              Region: {formData.region}
-                            </span>
-                          )}
-                          {formData.city && (
-                            <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-md text-xs">
-                              City: {formData.city}
-                            </span>
-                          )}
-                          {formData.district && (
-                            <span className="inline-block bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-md text-xs">
-                              District: {formData.district}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* District Dropdown - shown when city is selected and multiple districts are available */}
-                {showDistrictDropdown && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      🏘️ District (Neighborhood) *
-                    </label>
-                    {loadingDistricts ? (
-                      <div className="animate-pulse">
-                        <div className="h-[44px] bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                      </div>
-                    ) : (
-                      <select
-                        value={formData.district}
-                        onChange={handleDistrictSelect}
-                        required
-                        className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      >
-                        <option value="">Select a district...</option>
-                        {districtOptions.map((district, index) => (
-                          <option
-                            key={district.district_id || district.id || index}
-                            value={district.name_ar || district.name_en}
-                          >
-                            {district.name_ar} ({district.name_en})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    {loadingDistricts && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Loading districts for {formData.city}...
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Street Name */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    📍 Street Name *
+                    🏪 {t('branches.branchName')} *
                   </label>
                   <input
                     type="text"
                     required
-                    value={formData.street_name}
-                    onChange={(e) => setFormData({...formData, street_name: e.target.value})}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                    placeholder="e.g., King Fahd Road"
+                    placeholder={t('branches.branchNamePlaceholder')}
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Enter the street name only
-                  </p>
                 </div>
-
-                {/* Contact Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      📞 {t('branches.phoneNumber')}
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder={t('branches.phonePlaceholder')}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      📧 {t('branches.email')}
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                      placeholder={t('branches.emailPlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                {/* Main Branch Setting */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="isMain"
-                      checked={formData.isMain}
-                      onChange={(e) => setFormData({...formData, isMain: e.target.checked})}
-                      className="h-5 w-5 min-h-[20px] min-w-[20px] text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                    />
-                    <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
-                      ⭐ Set as main branch
-                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Primary location)</span>
-                    </label>
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    👤 {t('branches.manager')}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.manager_name}
+                    onChange={(e) => setFormData({ ...formData, manager_name: e.target.value })}
+                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    placeholder={t('branches.managerNamePlaceholder')}
+                  />
                 </div>
               </div>
+
+              {/* Saudi Location Search */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  🗺️ {t('branches.locationLabel')} *
+                </label>
+                <LocationAutocomplete
+                  value={formData.location}
+                  onChange={handleLocationSelect}
+                  language="ar"
+                  placeholder={t('branches.locationPlaceholderAr')}
+                  placeholderEn={t('branches.locationPlaceholderEn')}
+                  className="w-full"
+                  required
+                />
+                {formData.location && (
+                  <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                      <strong>{t('branches.selectedLocation')}:</strong>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {formData.region && (
+                          <span className="inline-block bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-md text-xs">
+                            Region: {formData.region}
+                          </span>
+                        )}
+                        {formData.city && (
+                          <span className="inline-block bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-md text-xs">
+                            City: {formData.city}
+                          </span>
+                        )}
+                        {formData.district && (
+                          <span className="inline-block bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-md text-xs">
+                            District: {formData.district}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* District Dropdown - shown when city is selected and multiple districts are available */}
+              {showDistrictDropdown && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    🏘️ District (Neighborhood) *
+                  </label>
+                  {loadingDistricts ? (
+                    <div className="animate-pulse">
+                      <div className="h-[44px] bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.district}
+                      onChange={handleDistrictSelect}
+                      required
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    >
+                      <option value="">Select a district...</option>
+                      {districtOptions.map((district, index) => (
+                        <option
+                          key={district.district_id || district.id || index}
+                          value={district.name_ar || district.name_en}
+                        >
+                          {district.name_ar} ({district.name_en})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {loadingDistricts && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Loading districts for {formData.city}...
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Street Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  📍 Street Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.street_name}
+                  onChange={(e) => setFormData({ ...formData, street_name: e.target.value })}
+                  className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                  placeholder="e.g., King Fahd Road"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Enter the street name only
+                </p>
+              </div>
+
+              {/* Contact Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    📞 {t('branches.phoneNumber')}
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    placeholder={t('branches.phonePlaceholder')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    📧 {t('branches.email')}
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
+                    placeholder={t('branches.emailPlaceholder')}
+                  />
+                </div>
+              </div>
+
+              {/* Main Branch Setting */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="isMain"
+                    checked={formData.isMain}
+                    onChange={(e) => setFormData({ ...formData, isMain: e.target.checked })}
+                    className="h-5 w-5 min-h-[20px] min-w-[20px] text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                  />
+                  <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+                    ⭐ Set as main branch
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Primary location)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </form>
         </div>
 

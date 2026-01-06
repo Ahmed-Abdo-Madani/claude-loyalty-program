@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SEO from '../components/SEO'
-import { 
-  MegaphoneIcon, 
-  ChartBarIcon, 
-  CloudIcon, 
-  ShieldCheckIcon, 
+import {
+  MegaphoneIcon,
+  ChartBarIcon,
+  CloudIcon,
+  ShieldCheckIcon,
   GlobeAltIcon,
   QrCodeIcon,
   ArrowRightIcon,
@@ -59,7 +59,7 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 transition-colors duration-300 font-sans">
       <SEO titleKey="pages.home.title" descriptionKey="pages.home.description" />
-      
+
       <Header />
 
       <main>
@@ -90,21 +90,27 @@ function LandingPage() {
                   {t('hero.description')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <Link 
-                    to="/business/register" 
+                  <Link
+                    to="/business/register"
                     className="btn-primary text-lg px-8 py-4 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     {t('hero.getStarted')}
                     <ArrowRightIcon className="w-5 h-5" />
                   </Link>
-                  <Link 
-                    to="/auth?mode=signin" 
+                  <Link
+                    to="/auth?mode=signin"
                     className="px-8 py-4 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold text-lg transition-all duration-300 hover:-translate-y-1"
                   >
                     {t('hero.signIn')}
                   </Link>
+                  <Link
+                    to="/demo"
+                    className="px-8 py-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-semibold text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2"
+                  >
+                    {t('header.tryDemo')}
+                  </Link>
                 </div>
-                
+
                 <div className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-2">
                     <CheckCircleIcon className="w-5 h-5 text-green-500" />
@@ -116,7 +122,7 @@ function LandingPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="lg:w-1/2 relative">
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 aspect-[4/3] group">
                   <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
@@ -169,8 +175,8 @@ function LandingPage() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {features.map((feature, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="group p-8 rounded-3xl bg-gray-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 border border-gray-100 dark:border-slate-700 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 hover:-translate-y-1"
                 >
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 ${feature.color}`}>
@@ -235,7 +241,7 @@ function LandingPage() {
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
           </div>
-          
+
           <div className="container-max section-padding relative z-10 text-center">
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight">
               {t('cta.title')}
@@ -243,8 +249,8 @@ function LandingPage() {
             <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
               {t('cta.subtitle')}
             </p>
-            <Link 
-              to="/business/register" 
+            <Link
+              to="/business/register"
               className="inline-flex items-center gap-2 bg-white text-primary font-bold text-lg px-10 py-4 rounded-xl hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
             >
               {t('cta.button')}

@@ -8,11 +8,11 @@ import { CardDesignProvider } from '../contexts/CardDesignContext'
 import CardDesignEditor from './cardDesign/CardDesignEditor'
 import OfferAnalyticsModal from './OfferAnalyticsModal'
 
-function OffersTab({ analytics }) {
+function OffersTab({ analytics, demoData, onAddOffer }) {
   const { t } = useTranslation('dashboard')
-  const [offers, setOffers] = useState([])
+  const [offers, setOffers] = useState(demoData || [])
   const [branches, setBranches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!demoData)
   const [error, setError] = useState('')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -43,19 +43,24 @@ function OffersTab({ analytics }) {
 
   // Load offers and branches on component mount
   useEffect(() => {
-    loadOffers()
-    loadBranches()
-  }, [])
+    if (!demoData) {
+      loadOffers()
+      loadBranches()
+    } else {
+      // For demo mode, we might want dummy branches too if filtered
+      setBranches([{ id: 'demo-branch', name: 'Main Branch (Demo)' }])
+    }
+  }, [demoData])
 
   const loadOffers = async () => {
     try {
       setLoading(true)
       setError('')
-      
+
       console.log('🔒 Loading offers with secure authentication...')
       const response = await secureApi.get(endpoints.myOffers)
       const data = await response.json()
-      
+
       if (data.success) {
         setOffers(data.data || [])
         console.log('🔒 Offers loaded successfully:', data.data?.length || 0)
@@ -75,7 +80,7 @@ function OffersTab({ analytics }) {
       console.log('🔒 Loading branches with secure authentication...')
       const response = await secureApi.get(endpoints.myBranches)
       const data = await response.json()
-      
+
       if (data.success) {
         setBranches(data.data || [])
         console.log('🔒 Branches loaded successfully:', data.data?.length || 0)
@@ -91,15 +96,15 @@ function OffersTab({ analytics }) {
     try {
       console.log('🔒 Toggling offer status:', { secureOfferId, currentStatus })
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
-      
+
       const response = await secureApi.patch(`${endpoints.myOffers}/${secureOfferId}/status`, {
         status: newStatus
       })
       const data = await response.json()
-      
+
       if (data.success) {
-        setOffers(offers.map(offer => 
-          offer.public_id === secureOfferId 
+        setOffers(offers.map(offer =>
+          offer.public_id === secureOfferId
             ? { ...offer, status: newStatus }
             : offer
         ))
@@ -112,13 +117,13 @@ function OffersTab({ analytics }) {
       alert(t('offers.statusUpdateFailed'))
     }
   }
-  
+
   const deleteOffer = async (secureOfferId) => {
     try {
       console.log('🔒 Deleting offer:', secureOfferId)
       const response = await secureApi.delete(`${endpoints.myOffers}/${secureOfferId}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setShowDeleteConfirm(null)
         await loadOffers() // Reload to get updated data
@@ -190,7 +195,7 @@ function OffersTab({ analytics }) {
     <div className="compact-spacing">
       {/* Compact Stats Bar - Space-efficient metrics */}
       {analytics && <CompactStatsBar analytics={analytics} />}
-      
+
       {/* Header Section - Mobile-first: Stack vertically */}
       <div className="flex flex-col space-y-3 compact-header">
         <div>
@@ -198,7 +203,7 @@ function OffersTab({ analytics }) {
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('offers.managePrograms')}</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => onAddOffer ? onAddOffer() : setShowCreateModal(true)}
           className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2 shadow-lg min-h-[44px] active:scale-95"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,10 +244,10 @@ function OffersTab({ analytics }) {
                 {[statusFilter !== 'all', branchFilter !== 'all', typeFilter !== 'all'].filter(Boolean).length}
               </span>
             )}
-            <svg 
-              className={`w-4 h-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className={`w-4 h-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -252,31 +257,28 @@ function OffersTab({ analytics }) {
           {/* Quick Filter Pills */}
           <button
             onClick={() => { setStatusFilter('all'); setBranchFilter('all'); setTypeFilter('all'); }}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === 'all' && branchFilter === 'all' && typeFilter === 'all'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === 'all' && branchFilter === 'all' && typeFilter === 'all'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+              }`}
           >
             {t('offers.all')}
           </button>
           <button
             onClick={() => setStatusFilter('active')}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === 'active'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === 'active'
                 ? 'bg-green-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+              }`}
           >
             {t('offers.active')}
           </button>
           <button
             onClick={() => setStatusFilter('inactive')}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === 'inactive'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === 'inactive'
                 ? 'bg-yellow-500 text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+              }`}
           >
             {t('offers.inactive')}
           </button>
@@ -395,13 +397,13 @@ function OffersTab({ analytics }) {
           onSave={async (offerData) => {
             try {
               console.log('💾 Saving offer data:', JSON.stringify(offerData, null, 2))
-              
+
               if (showEditModal) {
                 // Update existing offer using secure ID
                 console.log('📝 Updating offer:', showEditModal.public_id)
                 const response = await secureApi.put(`${endpoints.myOffers}/${showEditModal.public_id}`, offerData)
                 const data = await response.json()
-                
+
                 if (!data.success) {
                   throw new Error(data.message || t('offers.saveFailed'))
                 }
@@ -411,7 +413,7 @@ function OffersTab({ analytics }) {
                 console.log('➕ Creating new offer')
                 const response = await secureApi.post(endpoints.myOffers, offerData)
                 const data = await response.json()
-                
+
                 if (!data.success) {
                   throw new Error(data.message || t('offers.saveFailed'))
                 }
@@ -508,7 +510,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
     if (tiers.length < 5) {
       const lastTier = tiers[tiers.length - 1]
       const newMinRewards = (lastTier.maxRewards || lastTier.minRewards) + 1
-      
+
       // Update previous last tier's maxRewards if it's currently null
       const updatedTiers = [...tiers]
       if (lastTier.maxRewards === null) {
@@ -517,7 +519,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
           maxRewards: newMinRewards - 1
         }
       }
-      
+
       // Add new tier
       setTiers([
         ...updatedTiers,
@@ -550,13 +552,13 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
+
     // Include tier configuration in form data
     const dataToSave = {
       ...formData,
       loyalty_tiers: tiersEnabled ? { enabled: true, tiers } : null
     }
-    
+
     onSave(dataToSave)
   }
 
@@ -595,7 +597,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 type="text"
                 required
                 value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 placeholder={t('offers.offerTitlePlaceholder')}
               />
@@ -608,7 +610,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-4 py-3 min-h-[88px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 resize-none"
                 rows="3"
                 placeholder={t('offers.descriptionPlaceholder')}
@@ -623,7 +625,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 </label>
                 <select
                   value={formData.branch}
-                  onChange={(e) => setFormData({...formData, branch: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                   className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                 >
                   <option value="all">{t('offers.allBranches')}</option>
@@ -641,7 +643,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 </label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 >
                   <option value="stamps">🎫 {t('offers.stampCard')}</option>
@@ -661,7 +663,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                 min="1"
                 max="50"
                 value={formData.stamps_required}
-                onChange={(e) => setFormData({...formData, stamps_required: parseInt(e.target.value)})}
+                onChange={(e) => setFormData({ ...formData, stamps_required: parseInt(e.target.value) })}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                 placeholder={formData.type === 'stamps' ? t('offers.stampsPlaceholder') : formData.type === 'points' ? t('offers.pointsPlaceholder') : t('offers.minimumPurchasePlaceholder')}
               />
@@ -857,7 +859,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                   type="checkbox"
                   id="timeLimited"
                   checked={formData.is_time_limited}
-                  onChange={(e) => setFormData({...formData, is_time_limited: e.target.checked})}
+                  onChange={(e) => setFormData({ ...formData, is_time_limited: e.target.checked })}
                   className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                 />
                 <label htmlFor="timeLimited" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -876,7 +878,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                         type="date"
                         required={formData.is_time_limited}
                         value={formData.start_date}
-                        onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                         className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       />
                     </div>
@@ -888,7 +890,7 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
                         type="date"
                         required={formData.is_time_limited}
                         value={formData.end_date}
-                        onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                         className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
                       />
                     </div>

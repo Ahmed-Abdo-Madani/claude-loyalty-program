@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { 
-  CurrencyDollarIcon, 
-  ShoppingCartIcon, 
-  ChartBarIcon, 
-  UsersIcon 
+import {
+  CurrencyDollarIcon,
+  ShoppingCartIcon,
+  ChartBarIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline'
 import { secureApi, endpoints } from '../config/api'
 
-function TodaysSnapshot() {
+function TodaysSnapshot({ demoData }) {
   const { t, i18n } = useTranslation('dashboard')
   const [metrics, setMetrics] = useState({
-    totalSales: 0,
-    ordersCount: 0,
-    averageOrderValue: 0,
-    activeCustomers: 0
+    totalSales: demoData?.sales || 0,
+    ordersCount: demoData?.transactions || 0,
+    averageOrderValue: demoData?.averageOrderValue || 0,
+    activeCustomers: demoData?.stampsAwarded || 0 // Reusing for demo mapping
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!demoData)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetchTodaysMetrics()
-  }, [])
+    if (!demoData) {
+      fetchTodaysMetrics()
+    }
+  }, [demoData])
 
   const fetchTodaysMetrics = async () => {
     try {
@@ -31,7 +33,7 @@ function TodaysSnapshot() {
       console.log('🔍 Fetching today\'s metrics from:', endpoints.posAnalyticsToday)
       const response = await secureApi.get(endpoints.posAnalyticsToday)
       console.log('📊 API Response:', response)
-      
+
       // secureApi returns a fetch Response object, need to parse JSON
       const data = await response.json()
       console.log('📊 Response data:', data)
@@ -49,7 +51,7 @@ function TodaysSnapshot() {
           averageOrderValue: Number.isNaN(averageOrderValue) ? 0 : averageOrderValue,
           activeCustomers: Number.isNaN(activeCustomers) ? 0 : activeCustomers
         })
-        
+
         console.info('✅ Today\'s metrics loaded successfully:', {
           totalSales,
           ordersCount,
@@ -60,7 +62,7 @@ function TodaysSnapshot() {
         console.error('❌ API response not successful:', data)
         throw new Error(data?.message || 'Failed to fetch today\'s metrics')
       }
-      
+
     } catch (err) {
       console.error('❌ Error fetching today\'s metrics:', err)
       console.error('❌ Error response:', err.response?.data)
@@ -138,14 +140,16 @@ function TodaysSnapshot() {
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
           {t('todaysSnapshot.title')}
         </h3>
-        <button
-          onClick={fetchTodaysMetrics}
-          disabled={loading}
-          className="text-sm text-primary hover:text-primary-dark disabled:opacity-50 transition-colors"
-          aria-label={t('todaysSnapshot.refresh')}
-        >
-          {t('todaysSnapshot.refresh')}
-        </button>
+        {!demoData && (
+          <button
+            onClick={fetchTodaysMetrics}
+            disabled={loading}
+            className="text-sm text-primary hover:text-primary-dark disabled:opacity-50 transition-colors"
+            aria-label={t('todaysSnapshot.refresh')}
+          >
+            {t('todaysSnapshot.refresh')}
+          </button>
+        )}
       </div>
 
       {/* Error Message */}
@@ -182,11 +186,11 @@ function TodaysSnapshot() {
 
       {/* Today's Date Footer */}
       <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
-        {t('todaysSnapshot.asOf')}: {new Date().toLocaleDateString(i18n.language, { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        {t('todaysSnapshot.asOf')}: {new Date().toLocaleDateString(i18n.language, {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
         })}
       </div>
     </div>

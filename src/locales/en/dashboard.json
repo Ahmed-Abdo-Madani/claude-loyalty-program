@@ -7,7 +7,8 @@
     "totalCustomers": "Total Customers",
     "activeMembers": "Active Members",
     "vip": "VIP",
-    "pointsRedeemed": "Points Redeemed"
+    "pointsRedeemed": "Points Redeemed",
+    "demo": "Try Demo"
   },
   "tabs": {
     "overview": "Overview",
@@ -417,7 +418,8 @@
       "totalProducts": "Total Products",
       "activeProducts": "Active Products",
       "totalCategories": "Categories",
-      "totalValue": "Total Value"
+      "totalValue": "Total Value",
+      "outOfStock": "Out of Stock"
     },
     "noProductsFound": "No products found",
     "noProductsDesc": "Get started by adding your first product",
@@ -949,5 +951,19 @@
     "saving": "Saving...",
     "saved": "Settings saved successfully",
     "saveFailed": "Failed to save settings"
+  },
+  "demo": {
+    "banner": {
+      "title": "Welcome to the Interactive Demo!",
+      "description": "Explore the full potential of our Loyalty & POS platform with live sample data. No registration required.",
+      "cta": "Get Started for Free"
+    },
+    "restricted": {
+      "title": "Feature Restricted in Demo",
+      "description": "Creating or modifying data is disabled in the preview mode to maintain a consistent experience for all users.",
+      "action": "Sign Up to Unlock Full Access"
+    },
+    "bannerText": "You are exploring the Madna Demo. Ready to grow your business?",
+    "startTrial": "Start Free Trial"
   }
 }

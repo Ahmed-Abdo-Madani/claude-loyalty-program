@@ -32,6 +32,13 @@ function Header() {
             <LanguageSwitcher variant="button" className="hidden md:block" />
             <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
             <Link
+              to="/demo"
+              className="text-sm font-medium text-primary dark:text-blue-400 hover:text-primary-dark transition-colors"
+            >
+              {t('header.tryDemo')}
+            </Link>
+            <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
+            <Link
               to="/auth?mode=signin"
               className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-blue-400 transition-colors hidden sm:block"
             >

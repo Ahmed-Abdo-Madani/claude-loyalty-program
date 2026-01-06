@@ -32,6 +32,7 @@ const ContactPage = lazy(() => import('./pages/ContactPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
 const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage'))
+const DemoDashboard = lazy(() => import('./pages/DemoDashboard'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -75,6 +76,7 @@ function App() {
 
             {/* Heavy pages - lazy loaded */}
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/demo" element={<DemoDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/join/:offerId" element={<CustomerSignup />} />
             <Route path="/customer-signup/:offerId" element={<CustomerSignup />} />

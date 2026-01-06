@@ -5,9 +5,9 @@ import { secureApiRequest } from '../utils/secureAuth'
 import WalletCard from './WalletCard'
 import MonthlyChart from './MonthlyChart'
 
-export default function POSAnalytics() {
+export default function POSAnalytics({ demoData }) {
   const { t, i18n } = useTranslation('dashboard')
-  
+
   // Currency formatter for SAR
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
@@ -16,12 +16,12 @@ export default function POSAnalytics() {
       maximumFractionDigits: 2
     }).format(amount || 0)
   }
-  
+
   // Number formatter
   const formatNumber = (number) => {
     return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US').format(number || 0)
   }
-  
+
   // Percentage formatter
   const formatPercentage = (percentage) => {
     return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
@@ -30,32 +30,58 @@ export default function POSAnalytics() {
       maximumFractionDigits: 1
     }).format(percentage || 0)
   }
-  
+
   // Parse growth string to numeric value (e.g., "+5.0%" -> 5.0)
   const parseGrowthString = (growthValue) => {
     // Handle edge cases
     if (growthValue === null || growthValue === undefined || growthValue === '') {
       return null
     }
-    
+
     // If already numeric, return as-is
     if (typeof growthValue === 'number') {
       return growthValue
     }
-    
+
     // Extract numeric portion from string (e.g., "+5.0%" -> "5.0")
     const match = String(growthValue).match(/([+-]?\d+\.?\d*)/)
     if (match && match[1]) {
       const numericValue = parseFloat(match[1])
       return isNaN(numericValue) ? null : numericValue
     }
-    
+
     return null
   }
-  
+
+  // Mapping demo data to state if provided
+  const initialAnalytics = demoData ? {
+    summary: {
+      totalSales: demoData.dailySales.reduce((acc, curr) => acc + curr.total, 0),
+      totalRevenue: demoData.dailySales.reduce((acc, curr) => acc + curr.total, 0) * 0.95,
+      avgTransaction: 45.50,
+      totalTax: demoData.dailySales.reduce((acc, curr) => acc + curr.total, 0) * 0.15,
+      salesGrowth: '+12.5%',
+      revenueGrowth: '+10.2%'
+    },
+    paymentBreakdown: [
+      { method: 'Cash', amount: 450, percentage: 30 },
+      { method: 'Card', amount: 1050, percentage: 70 }
+    ],
+    trends: demoData.dailySales.map(item => ({ date: item.date, sales: item.total })),
+    topProducts: [
+      { name: 'Demo Product 1', quantity: 45, revenue: 900 },
+      { name: 'Demo Product 2', quantity: 30, revenue: 600 }
+    ],
+    categories: [
+      { name: 'Category 1', amount: 1000, percentage: 66 },
+      { name: 'Category 2', amount: 500, percentage: 33 }
+    ],
+    hourlyDistribution: Array.from({ length: 24 }, (_, i) => ({ hour: i, count: Math.floor(Math.random() * 20) }))
+  } : null
+
   // State Management
-  const [analytics, setAnalytics] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [analytics, setAnalytics] = useState(initialAnalytics)
+  const [loading, setLoading] = useState(!demoData)
   const [error, setError] = useState(null)
   const [exportError, setExportError] = useState(null)
   const [selectedPeriod, setSelectedPeriod] = useState('30d')
@@ -67,19 +93,19 @@ export default function POSAnalytics() {
   const [isEmpty, setIsEmpty] = useState(false)
   const [failedEndpoints, setFailedEndpoints] = useState([])
   const [loadingProgress, setLoadingProgress] = useState('')
-  
+
   // Load branches on mount
   useEffect(() => {
     loadBranches()
   }, [])
-  
+
   // Load analytics when filters change
   useEffect(() => {
-    if (selectedPeriod !== 'custom' || (customStartDate && customEndDate)) {
+    if (!demoData && (selectedPeriod !== 'custom' || (customStartDate && customEndDate))) {
       loadAnalytics()
     }
-  }, [selectedPeriod, selectedBranch, customStartDate, customEndDate])
-  
+  }, [selectedPeriod, selectedBranch, customStartDate, customEndDate, demoData])
+
   // Load branches for filter dropdown
   const loadBranches = async () => {
     try {
@@ -93,33 +119,33 @@ export default function POSAnalytics() {
       console.error('Failed to load branches:', error)
     }
   }
-  
+
   // Calculate date range based on selected period
   const getDateRange = () => {
     const end = new Date()
     let start = new Date()
-    
+
     if (selectedPeriod === 'custom') {
       return {
         startDate: customStartDate,
         endDate: customEndDate
       }
     }
-    
+
     const days = {
       '7d': 7,
       '30d': 30,
       '90d': 90
     }[selectedPeriod] || 30
-    
+
     start.setDate(start.getDate() - days)
-    
+
     return {
       startDate: start.toISOString().split('T')[0],
       endDate: end.toISOString().split('T')[0]
     }
   }
-  
+
   // Load analytics data with enhanced error handling and debugging
   const loadAnalytics = async () => {
     try {
@@ -127,23 +153,23 @@ export default function POSAnalytics() {
       setError(null)
       setFailedEndpoints([])
       setIsEmpty(false)
-      
+
       const { startDate, endDate } = getDateRange()
       const queryParams = new URLSearchParams({
         startDate,
         endDate
       })
-      
+
       if (selectedBranch) {
         queryParams.append('branchId', selectedBranch)
       }
-      
+
       console.log('📊 Loading POS Analytics with params:', {
         startDate,
         endDate,
         branchId: selectedBranch || 'all'
       })
-      
+
       // Fetch analytics with individual error handling for graceful degradation
       const failed = []
       let summaryData = null
@@ -152,28 +178,28 @@ export default function POSAnalytics() {
       let paymentData = null
       let categoryData = null
       let hourlyData = null
-      
+
       // 1. Sales Summary
       try {
         setLoadingProgress('Loading sales summary...')
         console.log('🔄 Fetching sales summary:', `${endpoints.posAnalyticsSummary}?${queryParams}`)
         const summaryRes = await secureApi.get(`${endpoints.posAnalyticsSummary}?${queryParams}`)
-        
+
         // Check HTTP status
         if (!summaryRes.ok) {
           const errorText = await summaryRes.text()
           throw new Error(`HTTP ${summaryRes.status}: ${errorText || summaryRes.statusText}`)
         }
-        
+
         summaryData = await summaryRes.json()
-        
+
         // Check backend success flag
         if (summaryData.success === false) {
           throw new Error(summaryData.error || 'Request failed')
         }
-        
+
         console.log('✅ Sales summary loaded:', summaryData.data?.summary)
-        
+
         // Log diagnostics if zero sales found
         if (summaryData.data?.summary?.totalSales === 0) {
           console.warn('⚠️  No sales found. Full response:', summaryData)
@@ -183,7 +209,7 @@ export default function POSAnalytics() {
             console.warn('💡 Suggestion:', summaryData.diagnostics.suggestion)
           }
         }
-        
+
         // Validate response structure
         if (!summaryData.data || !summaryData.data.summary) {
           console.warn('⚠️  Sales summary response missing expected structure:', summaryData)
@@ -192,26 +218,26 @@ export default function POSAnalytics() {
         console.error('❌ Failed to load sales summary:', err)
         failed.push({ endpoint: 'sales summary', error: err.message })
       }
-      
+
       // 2. Top Products
       try {
         setLoadingProgress('Loading top products...')
         console.log('🔄 Fetching top products:', `${endpoints.posAnalyticsTopProducts}?${queryParams}`)
         const topProductsRes = await secureApi.get(`${endpoints.posAnalyticsTopProducts}?${queryParams}`)
-        
+
         if (!topProductsRes.ok) {
           const errorText = await topProductsRes.text()
           throw new Error(`HTTP ${topProductsRes.status}: ${errorText || topProductsRes.statusText}`)
         }
-        
+
         topProductsData = await topProductsRes.json()
-        
+
         if (topProductsData.success === false) {
           throw new Error(topProductsData.error || 'Request failed')
         }
-        
+
         console.log('✅ Top products loaded:', topProductsData.data?.topProducts?.length, 'products')
-        
+
         if (!topProductsData.data || !Array.isArray(topProductsData.data.topProducts)) {
           console.warn('⚠️  Top products response missing expected structure:', topProductsData)
         }
@@ -219,26 +245,26 @@ export default function POSAnalytics() {
         console.error('❌ Failed to load top products:', err)
         failed.push({ endpoint: 'top products', error: err.message })
       }
-      
+
       // 3. Sales Trends
       try {
         setLoadingProgress('Loading sales trends...')
         console.log('🔄 Fetching sales trends:', `${endpoints.posAnalyticsTrends}?${queryParams}&granularity=daily`)
         const trendsRes = await secureApi.get(`${endpoints.posAnalyticsTrends}?${queryParams}&granularity=daily`)
-        
+
         if (!trendsRes.ok) {
           const errorText = await trendsRes.text()
           throw new Error(`HTTP ${trendsRes.status}: ${errorText || trendsRes.statusText}`)
         }
-        
+
         trendsData = await trendsRes.json()
-        
+
         if (trendsData.success === false) {
           throw new Error(trendsData.error || 'Request failed')
         }
-        
+
         console.log('✅ Sales trends loaded:', trendsData.data?.trends?.length, 'data points')
-        
+
         if (!trendsData.data || !Array.isArray(trendsData.data.trends)) {
           console.warn('⚠️  Sales trends response missing expected structure:', trendsData)
         }
@@ -246,26 +272,26 @@ export default function POSAnalytics() {
         console.error('❌ Failed to load sales trends:', err)
         failed.push({ endpoint: 'sales trends', error: err.message })
       }
-      
+
       // 4. Payment Breakdown
       try {
         setLoadingProgress('Loading payment breakdown...')
         console.log('🔄 Fetching payment breakdown:', `${endpoints.posAnalyticsPaymentBreakdown}?${queryParams}`)
         const paymentRes = await secureApi.get(`${endpoints.posAnalyticsPaymentBreakdown}?${queryParams}`)
-        
+
         if (!paymentRes.ok) {
           const errorText = await paymentRes.text()
           throw new Error(`HTTP ${paymentRes.status}: ${errorText || paymentRes.statusText}`)
         }
-        
+
         paymentData = await paymentRes.json()
-        
+
         if (paymentData.success === false) {
           throw new Error(paymentData.error || 'Request failed')
         }
-        
+
         console.log('✅ Payment breakdown loaded:', paymentData.data?.breakdown?.length, 'payment methods')
-        
+
         if (!paymentData.data || !Array.isArray(paymentData.data.breakdown)) {
           console.warn('⚠️  Payment breakdown response missing expected structure:', paymentData)
         }
@@ -273,26 +299,26 @@ export default function POSAnalytics() {
         console.error('❌ Failed to load payment breakdown:', err)
         failed.push({ endpoint: 'payment breakdown', error: err.message })
       }
-      
+
       // 5. Category Performance
       try {
         setLoadingProgress('Loading category performance...')
         console.log('🔄 Fetching category performance:', `${endpoints.posAnalyticsCategoryPerformance}?${queryParams}`)
         const categoryRes = await secureApi.get(`${endpoints.posAnalyticsCategoryPerformance}?${queryParams}`)
-        
+
         if (!categoryRes.ok) {
           const errorText = await categoryRes.text()
           throw new Error(`HTTP ${categoryRes.status}: ${errorText || categoryRes.statusText}`)
         }
-        
+
         categoryData = await categoryRes.json()
-        
+
         if (categoryData.success === false) {
           throw new Error(categoryData.error || 'Request failed')
         }
-        
+
         console.log('✅ Category performance loaded:', categoryData.data?.categories?.length, 'categories')
-        
+
         if (!categoryData.data || !Array.isArray(categoryData.data.categories)) {
           console.warn('⚠️  Category performance response missing expected structure:', categoryData)
         }
@@ -300,26 +326,26 @@ export default function POSAnalytics() {
         console.error('❌ Failed to load category performance:', err)
         failed.push({ endpoint: 'category performance', error: err.message })
       }
-      
+
       // 6. Hourly Distribution
       try {
         setLoadingProgress('Loading hourly distribution...')
         console.log('🔄 Fetching hourly distribution:', `${endpoints.posAnalyticsHourlyDistribution}?${queryParams}`)
         const hourlyRes = await secureApi.get(`${endpoints.posAnalyticsHourlyDistribution}?${queryParams}`)
-        
+
         if (!hourlyRes.ok) {
           const errorText = await hourlyRes.text()
           throw new Error(`HTTP ${hourlyRes.status}: ${errorText || hourlyRes.statusText}`)
         }
-        
+
         hourlyData = await hourlyRes.json()
-        
+
         if (hourlyData.success === false) {
           throw new Error(hourlyData.error || 'Request failed')
         }
-        
+
         console.log('✅ Hourly distribution loaded:', hourlyData.data?.hourlyDistribution?.length, 'hours')
-        
+
         if (!hourlyData.data || !Array.isArray(hourlyData.data.hourlyDistribution)) {
           console.warn('⚠️  Hourly distribution response missing expected structure:', hourlyData)
         }
@@ -327,13 +353,13 @@ export default function POSAnalytics() {
         console.error('❌ Failed to load hourly distribution:', err)
         failed.push({ endpoint: 'hourly distribution', error: err.message })
       }
-      
+
       // Set failed endpoints for display
       if (failed.length > 0) {
         console.warn('⚠️  Some analytics endpoints failed:', failed)
         setFailedEndpoints(failed)
       }
-      
+
       // Build analytics object with available data
       const analyticsData = {
         summary: summaryData?.data?.summary || {},
@@ -345,16 +371,16 @@ export default function POSAnalytics() {
         categories: categoryData?.data?.categories || [],
         hourlyDistribution: hourlyData?.data?.hourlyDistribution || []
       }
-      
+
       setAnalytics(analyticsData)
-      
+
       // If all endpoints failed, show error instead of empty state
       if (failed.length === 6) {
         console.error('❌ All analytics endpoints failed')
         setError(t('pos.analytics.error') || 'Failed to load analytics')
         return
       }
-      
+
       // Check if data is empty (all arrays empty and summary has no sales)
       const hasNoData = (
         (!analyticsData.summary.totalSales || analyticsData.summary.totalSales === 0) &&
@@ -362,12 +388,12 @@ export default function POSAnalytics() {
         analyticsData.trends.length === 0 &&
         analyticsData.categories.length === 0
       )
-      
+
       if (hasNoData && failed.length === 0) {
         console.log('ℹ️  No sales data found for the selected period')
         setIsEmpty(true)
       }
-      
+
       console.log('✅ Analytics loading complete:', {
         totalSales: analyticsData.summary.totalSales || 0,
         topProductsCount: analyticsData.topProducts.length,
@@ -375,7 +401,7 @@ export default function POSAnalytics() {
         isEmpty: hasNoData,
         failedEndpoints: failed.length
       })
-      
+
     } catch (err) {
       console.error('❌ Critical error loading analytics:', err)
       setError(t('pos.analytics.error'))
@@ -384,7 +410,7 @@ export default function POSAnalytics() {
       setLoadingProgress('')
     }
   }
-  
+
   // Handle export to CSV with enhanced logging
   const handleExport = async () => {
     try {
@@ -395,30 +421,30 @@ export default function POSAnalytics() {
         endDate,
         format: 'csv'
       })
-      
+
       if (selectedBranch) {
         queryParams.append('branchId', selectedBranch)
       }
-      
+
       console.log('📥 Exporting analytics to CSV:', {
         startDate,
         endDate,
         branchId: selectedBranch || 'all'
       })
-      
+
       const response = await secureApiRequest(
         `${endpoints.posAnalyticsExport}?${queryParams}`,
         {
           method: 'GET'
         }
       )
-      
+
       if (!response.ok) {
         const errorText = await response.text()
         console.error('❌ Export failed with status:', response.status, errorText)
         throw new Error(t('pos.analytics.exportFailed'))
       }
-      
+
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -428,9 +454,9 @@ export default function POSAnalytics() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-      
+
       console.log('✅ Analytics exported successfully')
-      
+
     } catch (error) {
       console.error('❌ Failed to export analytics:', {
         error: error.message,
@@ -441,7 +467,7 @@ export default function POSAnalytics() {
       setTimeout(() => setExportError(null), 5000)
     }
   }
-  
+
   // Handle period change
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period)
@@ -451,7 +477,7 @@ export default function POSAnalytics() {
       setShowCustomDatePicker(false)
     }
   }
-  
+
   // Handle custom date application
   const handleApplyCustomDate = () => {
     if (customStartDate && customEndDate) {
@@ -459,7 +485,7 @@ export default function POSAnalytics() {
       loadAnalytics()
     }
   }
-  
+
   if (loading && !analytics) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -473,7 +499,7 @@ export default function POSAnalytics() {
       </div>
     )
   }
-  
+
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -504,10 +530,10 @@ export default function POSAnalytics() {
       </div>
     )
   }
-  
+
   if (isEmpty) {
     const { startDate, endDate } = getDateRange()
-    
+
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-2xl px-4">
@@ -518,30 +544,30 @@ export default function POSAnalytics() {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             {t('pos.analytics.noData.message') || 'There are no sales recorded for the selected period. Start making sales to see analytics here.'}
           </p>
-          
+
           {/* Date Range Display */}
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
               <strong>{t('pos.analytics.empty.rangeLabel')}</strong>
             </p>
             <p className="text-sm text-gray-800 dark:text-gray-200">
-              {new Date(startDate).toLocaleDateString(i18n.language, { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })} 
+              {new Date(startDate).toLocaleDateString(i18n.language, {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
               {' → '}
-              {new Date(endDate).toLocaleDateString(i18n.language, { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              {new Date(endDate).toLocaleDateString(i18n.language, {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
               ({t(`pos.analytics.period.${selectedPeriod}`)})
             </p>
           </div>
-          
+
           {/* Helpful Suggestions */}
           <div className="text-left bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
             <p className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
@@ -553,7 +579,7 @@ export default function POSAnalytics() {
               <li>{t('pos.analytics.empty.suggestions.checkStatus')}</li>
             </ul>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex gap-2 justify-center">
             <button
@@ -578,7 +604,7 @@ export default function POSAnalytics() {
       </div>
     )
   }
-  
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header */}
@@ -590,7 +616,7 @@ export default function POSAnalytics() {
           {t('pos.analytics.subtitle')}
         </p>
       </div>
-      
+
       {/* Inline Loading Progress (for refreshes) */}
       {loading && analytics && loadingProgress && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 flex items-center">
@@ -598,7 +624,7 @@ export default function POSAnalytics() {
           <span className="text-sm text-blue-700 dark:text-blue-300">{loadingProgress}</span>
         </div>
       )}
-      
+
       {/* Failed Endpoints Warning Banner */}
       {failedEndpoints.length > 0 && !error && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
@@ -634,14 +660,14 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Filters Section */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <span>📊</span>
           {t('pos.analytics.filters.filtersHeader')}
         </h3>
-        
+
         {/* Period Selection */}
         <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -652,17 +678,16 @@ export default function POSAnalytics() {
               <button
                 key={period}
                 onClick={() => handlePeriodChange(period)}
-                className={`px-4 py-2 min-h-[44px] rounded-lg font-medium transition-colors ${
-                  selectedPeriod === period
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`px-4 py-2 min-h-[44px] rounded-lg font-medium transition-colors ${selectedPeriod === period
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 {t(`pos.analytics.period.${period}`)}
               </button>
             ))}
           </div>
-          
+
           {/* Inline Custom Date Picker */}
           {selectedPeriod === 'custom' && (
             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out">
@@ -702,7 +727,7 @@ export default function POSAnalytics() {
             </div>
           )}
         </div>
-        
+
         {/* Branch Filter */}
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -730,7 +755,7 @@ export default function POSAnalytics() {
           </select>
         </div>
       </div>
-      
+
       {/* Export Error Message */}
       {exportError && (
         <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -750,7 +775,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Export Action Bar */}
       <div className="flex justify-end mb-6">
         <button
@@ -761,7 +786,7 @@ export default function POSAnalytics() {
           {t('pos.analytics.export')}
         </button>
       </div>
-      
+
       {/* Summary Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         <WalletCard
@@ -791,7 +816,7 @@ export default function POSAnalytics() {
           color="purple"
         />
       </div>
-      
+
       {/* Payment Method Breakdown */}
       {analytics?.paymentBreakdown && analytics.paymentBreakdown.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
@@ -833,7 +858,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Top Selling Products */}
       {analytics?.topProducts && analytics.topProducts.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
@@ -875,7 +900,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Category Performance - Hidden for debugging */}
       {false && analytics?.categories && analytics.categories.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
@@ -887,42 +912,43 @@ export default function POSAnalytics() {
             {analytics.categories.map((category, idx) => {
               const isUncategorized = category.categoryId === 'uncategorized' || category.categoryId === null
               return (
-              <div key={idx} className={`flex items-center justify-between p-4 rounded-xl ${isUncategorized ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-700'}`}>
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg">{isUncategorized ? '⚠️' : '📦'}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-gray-900 dark:text-white block truncate flex items-center gap-2">
-                      {i18n.language === 'ar' && category.categoryNameAr ? category.categoryNameAr : category.categoryName}
-                      {isUncategorized && (
-                        <span className="text-xs text-yellow-600 dark:text-yellow-400" title={t('products.card.noCategory')}>
-                          ({t('products.card.noCategory')})
-                        </span>
-                      )}
-                    </span>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatNumber(category.totalQuantity)} {t('pos.analytics.items')} • {formatPercentage(category.percentage)}%
+                <div key={idx} className={`flex items-center justify-between p-4 rounded-xl ${isUncategorized ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-700'}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg">{isUncategorized ? '⚠️' : '📦'}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900 dark:text-white block truncate flex items-center gap-2">
+                        {i18n.language === 'ar' && category.categoryNameAr ? category.categoryNameAr : category.categoryName}
+                        {isUncategorized && (
+                          <span className="text-xs text-yellow-600 dark:text-yellow-400" title={t('products.card.noCategory')}>
+                            ({t('products.card.noCategory')})
+                          </span>
+                        )}
+                      </span>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {formatNumber(category.totalQuantity)} {t('pos.analytics.items')} • {formatPercentage(category.percentage)}%
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-32 bg-gray-200 dark:bg-gray-600 rounded-full h-2 hidden sm:block">
-                    <div
-                      className="h-2 rounded-full bg-green-600 transition-all duration-300"
-                      style={{ width: `${category.percentage}%` }}
-                    ></div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 bg-gray-200 dark:bg-gray-600 rounded-full h-2 hidden sm:block">
+                      <div
+                        className="h-2 rounded-full bg-green-600 transition-all duration-300"
+                        style={{ width: `${category.percentage}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                      {formatCurrency(category.totalRevenue)} {t('common.sar')}
+                    </span>
                   </div>
-                  <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                    {formatCurrency(category.totalRevenue)} {t('common.sar')}
-                  </span>
                 </div>
-              </div>
-            )})}
+              )
+            })}
           </div>
         </div>
       )}
-      
+
       {/* Sales Trends Chart */}
       {analytics?.trends && analytics.trends.length > 0 && (
         <div className="mb-8">
@@ -931,12 +957,12 @@ export default function POSAnalytics() {
             {t('pos.analytics.salesTrends')}
           </h3>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <MonthlyChart 
+            <MonthlyChart
               dataSeries={analytics.trends.map(trend => {
                 const trendDate = new Date(trend.period)
-                const label = trendDate.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { 
-                  month: 'short', 
-                  day: 'numeric' 
+                const label = trendDate.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
+                  month: 'short',
+                  day: 'numeric'
                 })
                 return {
                   month: label,
@@ -948,7 +974,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Hourly Distribution Chart */}
       {analytics?.hourlyDistribution && analytics.hourlyDistribution.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
@@ -964,7 +990,7 @@ export default function POSAnalytics() {
               {analytics.hourlyDistribution.map((data, idx) => {
                 const maxRevenue = Math.max(...analytics.hourlyDistribution.map(d => d.totalRevenue), 1)
                 const height = (data.totalRevenue / maxRevenue) * 100
-                
+
                 return (
                   <div key={idx} className="flex-1 flex flex-col items-center group">
                     {/* Bar */}
@@ -983,7 +1009,7 @@ export default function POSAnalytics() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Hour Label */}
                     <span className="text-xs text-gray-600 dark:text-gray-400">
                       {data.hour}
@@ -992,7 +1018,7 @@ export default function POSAnalytics() {
                 )
               })}
             </div>
-            
+
             {/* Peak hours indicator */}
             <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -1003,7 +1029,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Branch Comparison Section */}
       {!selectedBranch && branches.length > 1 && analytics?.branchBreakdown?.length > 0 && (
         <div className="mb-8">
@@ -1019,7 +1045,7 @@ export default function POSAnalytics() {
                 </p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {analytics.branchBreakdown
                 .sort((a, b) => b.total - a.total)
@@ -1027,16 +1053,15 @@ export default function POSAnalytics() {
                   const isTopPerforming = index === 0
                   const totalRevenue = analytics.summary?.totalRevenue || 0
                   const contribution = totalRevenue > 0 ? (branch.total / totalRevenue) * 100 : 0
-                  
+
                   return (
                     <div
                       key={branch.branchId}
                       onClick={() => setSelectedBranch(branch.branchId)}
-                      className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${
-                        isTopPerforming 
-                          ? 'border-2 border-green-500 dark:border-green-400' 
-                          : 'border border-gray-200 dark:border-gray-700'
-                      }`}
+                      className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg hover:scale-105 ${isTopPerforming
+                        ? 'border-2 border-green-500 dark:border-green-400'
+                        : 'border border-gray-200 dark:border-gray-700'
+                        }`}
                     >
                       {isTopPerforming && (
                         <div className="flex items-center gap-1 text-xs font-bold text-green-600 dark:text-green-400 mb-2">
@@ -1044,11 +1069,11 @@ export default function POSAnalytics() {
                           <span>{t('pos.analytics.filters.topPerforming')}</span>
                         </div>
                       )}
-                      
+
                       <h4 className="font-bold text-gray-900 dark:text-white mb-3 text-lg">
                         {i18n.language === 'ar' && branch.branchNameAr ? branch.branchNameAr : branch.branchName}
                       </h4>
-                      
+
                       <div className="space-y-2 mb-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600 dark:text-gray-400">
@@ -1067,7 +1092,7 @@ export default function POSAnalytics() {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Contribution Bar */}
                       <div className="mb-2">
                         <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -1080,7 +1105,7 @@ export default function POSAnalytics() {
                           />
                         </div>
                       </div>
-                      
+
                       <p className="text-xs text-blue-600 dark:text-blue-400 text-center mt-2">
                         {t('pos.analytics.filters.clickToFilter')}
                       </p>
@@ -1091,7 +1116,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Branch Performance (always show when branch breakdown exists) */}
       {branches.length > 1 && analytics?.branchBreakdown && analytics.branchBreakdown.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
@@ -1106,15 +1131,14 @@ export default function POSAnalytics() {
                 const isSelected = selectedBranch === branch.branchId
                 const totalRevenue = analytics.summary?.totalRevenue || 0
                 const contribution = totalRevenue > 0 ? (branch.total / totalRevenue) * 100 : 0
-                
+
                 return (
-                  <div 
-                    key={idx} 
-                    className={`p-4 rounded-lg transition-all ${
-                      isSelected 
-                        ? 'bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500' 
-                        : 'bg-gray-50 dark:bg-gray-700 border-2 border-transparent'
-                    }`}
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-lg transition-all ${isSelected
+                      ? 'bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500'
+                      : 'bg-gray-50 dark:bg-gray-700 border-2 border-transparent'
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium text-gray-900 dark:text-white">
@@ -1134,7 +1158,7 @@ export default function POSAnalytics() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Contribution Progress Bar */}
                     <div className="mt-2">
                       <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -1142,9 +1166,8 @@ export default function POSAnalytics() {
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${
-                            isSelected ? 'bg-blue-600' : 'bg-gray-400 dark:bg-gray-500'
-                          }`}
+                          className={`h-2 rounded-full transition-all ${isSelected ? 'bg-blue-600' : 'bg-gray-400 dark:bg-gray-500'
+                            }`}
                           style={{ width: `${contribution}%` }}
                         />
                       </div>
@@ -1155,7 +1178,7 @@ export default function POSAnalytics() {
           </div>
         </div>
       )}
-      
+
       {/* Insights & Tips Section */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-6 mb-8">
         <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-4 flex items-center">

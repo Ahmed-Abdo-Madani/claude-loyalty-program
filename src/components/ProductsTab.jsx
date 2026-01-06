@@ -7,14 +7,14 @@ import StatusBadge from './StatusBadge'
 import QRCodeModal from './QRCodeModal'
 import { getSecureBusinessId } from '../utils/secureAuth'
 
-export default function ProductsTab() {
+export default function ProductsTab({ demoData, onAddProduct }) {
   const { t, i18n } = useTranslation('dashboard')
-  
+
   // State Management
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState(demoData || [])
   const [categories, setCategories] = useState([])
   const [branches, setBranches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!demoData)
   const [error, setError] = useState(null)
   const [showProductModal, setShowProductModal] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -42,7 +42,7 @@ export default function ProductsTab() {
       else if (width < 1024) setViewMode('tablet')
       else setViewMode('desktop')
     }
-    
+
     updateViewMode()
     window.addEventListener('resize', updateViewMode)
     return () => window.removeEventListener('resize', updateViewMode)
@@ -58,19 +58,26 @@ export default function ProductsTab() {
 
   // Data Loading Functions
   useEffect(() => {
-    loadCategories()
-    loadBranches()
-  }, [])
+    if (!demoData) {
+      loadCategories()
+      loadBranches()
+    } else {
+      setCategories([{ public_id: 'demo-cat', name: 'General (Demo)', product_count: (demoData?.length || 0) }])
+      setBranches([{ public_id: 'demo-branch', name: 'Main Branch (Demo)' }])
+    }
+  }, [demoData])
 
   // Load products when filters change (using debounced search)
   useEffect(() => {
-    loadProducts()
-  }, [filters.status, filters.categoryId, filters.branchId, debouncedSearch])
+    if (!demoData) {
+      loadProducts()
+    }
+  }, [filters.status, filters.categoryId, filters.branchId, debouncedSearch, demoData])
 
   const loadProducts = async () => {
     try {
       setLoading(true)
-      
+
       // Build query params from filters (omit 'all' values)
       const params = new URLSearchParams()
       if (filters.status !== 'all') params.append('status', filters.status)
@@ -83,10 +90,10 @@ export default function ProductsTab() {
         }
       }
       if (debouncedSearch) params.append('search', debouncedSearch)
-      
+
       const queryString = params.toString()
       const url = queryString ? `${endpoints.posProducts}?${queryString}` : endpoints.posProducts
-      
+
       const res = await secureApi.get(url)
       const response = await res.json()
       if (response.success) {
@@ -133,10 +140,10 @@ export default function ProductsTab() {
   const handleSaveProduct = async (productData) => {
     try {
       const isEdit = !!productData.public_id
-      const endpoint = isEdit 
+      const endpoint = isEdit
         ? endpoints.posProductUpdate(productData.public_id)
         : endpoints.posProducts
-      
+
       const res = isEdit
         ? await secureApi.put(endpoint, productData)
         : await secureApi.post(endpoint, productData)
@@ -160,13 +167,13 @@ export default function ProductsTab() {
 
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return
-    
+
     try {
       const res = await secureApi.delete(
         endpoints.posProductDelete(selectedProduct.public_id)
       )
       const response = await res.json()
-      
+
       if (response.success) {
         console.log('✅ Product deleted')
         await loadProducts()
@@ -190,11 +197,11 @@ export default function ProductsTab() {
         { status: newStatus }
       )
       const response = await res.json()
-      
+
       if (response.success) {
         console.log('✅ Status updated')
         // Optimistic update
-        setProducts(products.map(p => 
+        setProducts(products.map(p =>
           p.public_id === productId ? { ...p, status: newStatus } : p
         ))
       } else {
@@ -223,7 +230,7 @@ export default function ProductsTab() {
       const endpoint = isEdit
         ? endpoints.posCategoryUpdate(categoryData.public_id)
         : endpoints.posCategories
-      
+
       const res = isEdit
         ? await secureApi.put(endpoint, categoryData)
         : await secureApi.post(endpoint, categoryData)
@@ -243,13 +250,13 @@ export default function ProductsTab() {
 
   const handleDeleteCategory = async (categoryId) => {
     if (!confirm(t('products.categories.deleteConfirm'))) return
-    
+
     try {
       const res = await secureApi.delete(
         endpoints.posCategoryDelete(categoryId)
       )
       const response = await res.json()
-      
+
       if (response.success) {
         console.log('✅ Category deleted')
         await loadCategories()
@@ -268,12 +275,12 @@ export default function ProductsTab() {
     if (filters.status !== 'all' && product.status !== filters.status) {
       return false
     }
-    
+
     // Category filter
     if (filters.categoryId !== 'all' && product.category_id !== filters.categoryId) {
       return false
     }
-    
+
     // Branch filter
     if (filters.branchId !== 'all') {
       if (filters.branchId === null) {
@@ -286,26 +293,26 @@ export default function ProductsTab() {
         }
       }
     }
-    
+
     // Search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
       const matchesName = product.name?.toLowerCase().includes(searchLower)
       const matchesNameAr = product.name_ar?.toLowerCase().includes(searchLower)
       const matchesSku = product.sku?.toLowerCase().includes(searchLower)
-      
+
       if (!matchesName && !matchesNameAr && !matchesSku) {
         return false
       }
     }
-    
+
     return true
   })
 
   // Sorting Logic
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     let aValue, bValue
-    
+
     switch (sortColumn) {
       case 'name':
         aValue = a.name?.toLowerCase() || ''
@@ -333,7 +340,7 @@ export default function ProductsTab() {
         aValue = a[sortColumn] || ''
         bValue = b[sortColumn] || ''
     }
-    
+
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
     return 0
@@ -417,8 +424,12 @@ export default function ProductsTab() {
           </button>
           <button
             onClick={() => {
-              setSelectedProduct(null)
-              setShowProductModal(true)
+              if (onAddProduct) {
+                onAddProduct()
+              } else {
+                setSelectedProduct(null)
+                setShowProductModal(true)
+              }
             }}
             className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors"
           >
@@ -445,7 +456,7 @@ export default function ProductsTab() {
           </div>
 
           {/* Status Filter */}
-                    <select
+          <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
@@ -473,9 +484,9 @@ export default function ProductsTab() {
           {/* Branch Filter */}
           <select
             value={filters.branchId === null ? 'null' : filters.branchId}
-            onChange={(e) => setFilters({ 
-              ...filters, 
-              branchId: e.target.value === 'null' ? null : e.target.value 
+            onChange={(e) => setFilters({
+              ...filters,
+              branchId: e.target.value === 'null' ? null : e.target.value
             })}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
           >
@@ -563,8 +574,8 @@ export default function ProductsTab() {
                   <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('products.table.columns.image')}
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                     onClick={() => handleSort('name')}
                   >
@@ -576,8 +587,8 @@ export default function ProductsTab() {
                     </div>
                   </th>
                   {viewMode === 'desktop' && (
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                       onClick={() => handleSort('sku')}
                     >
@@ -589,8 +600,8 @@ export default function ProductsTab() {
                       </div>
                     </th>
                   )}
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                     onClick={() => handleSort('price')}
                   >
@@ -601,8 +612,8 @@ export default function ProductsTab() {
                       )}
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                     onClick={() => handleSort('category')}
                   >
@@ -621,8 +632,8 @@ export default function ProductsTab() {
                       {t('products.table.columns.tax')}
                     </th>
                   )}
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
                     onClick={() => handleSort('status')}
                   >
@@ -724,13 +735,13 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
   const category = categories.find(c => c.public_id === product.category_id)
   const branch = branches.find(b => b.public_id === product.branch_id)
   const [showActionsMenu, setShowActionsMenu] = useState(false)
-  
+
   // Mobile View - Compact List with Expandable Details
   if (viewMode === 'mobile') {
     return (
       <div className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
         {/* Compact Row */}
-        <div 
+        <div
           className="flex items-center gap-3 p-3 cursor-pointer min-h-[80px]"
           onClick={onToggleExpand}
           role="button"
@@ -740,8 +751,8 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
           {/* Product Image Thumbnail */}
           <div className="w-12 h-12 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
             {product.image_url ? (
-              <img 
-                src={product.image_url} 
+              <img
+                src={product.image_url}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -749,7 +760,7 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
               <span className="text-2xl">🛍️</span>
             )}
           </div>
-          
+
           {/* Product Info */}
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-gray-900 dark:text-white truncate">
@@ -759,8 +770,8 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
               <span className="text-sm font-semibold text-primary">
                 {parseFloat(product.price).toFixed(2)} {t('common.sar')}
               </span>
-              <StatusBadge 
-                status={product.status} 
+              <StatusBadge
+                status={product.status}
                 statusLabels={{
                   active: t('products.filters.active'),
                   inactive: t('products.filters.inactive'),
@@ -769,9 +780,9 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
               />
             </div>
           </div>
-          
+
           {/* Expand Icon */}
-          <button 
+          <button
             className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
             aria-label={isExpanded ? t('products.table.collapseDetails') : t('products.table.expandDetails')}
           >
@@ -780,7 +791,7 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
             </span>
           </button>
         </div>
-        
+
         {/* Expanded Details & Actions */}
         {isExpanded && (
           <div className="px-3 pb-3 space-y-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
@@ -809,7 +820,7 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
                 </span>
               </div>
             </div>
-            
+
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -826,11 +837,10 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onToggleStatus(); }}
-                className={`min-h-[44px] px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  product.status === 'active'
-                    ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50'
-                    : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
-                }`}
+                className={`min-h-[44px] px-3 py-2 text-sm font-medium rounded-lg transition-colors ${product.status === 'active'
+                  ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                  : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                  }`}
               >
                 {product.status === 'active' ? '⏸️ ' + t('products.card.deactivate') : '▶️ ' + t('products.card.activate')}
               </button>
@@ -846,7 +856,7 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
       </div>
     )
   }
-  
+
   // Tablet/Desktop View - Table Row
   return (
     <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" role="row">
@@ -854,8 +864,8 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
       <td className="px-3 py-4 whitespace-nowrap" role="cell">
         <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
           {product.image_url ? (
-            <img 
-              src={product.image_url} 
+            <img
+              src={product.image_url}
               alt={product.name}
               className="w-full h-full object-cover"
             />
@@ -864,7 +874,7 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
           )}
         </div>
       </td>
-      
+
       {/* Name */}
       <td className="px-3 py-4" role="cell">
         <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -876,42 +886,42 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
           </div>
         )}
       </td>
-      
+
       {/* SKU (Desktop only) */}
       {viewMode === 'desktop' && (
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
           {product.sku || '-'}
         </td>
       )}
-      
+
       {/* Price */}
       <td className="px-3 py-4 whitespace-nowrap" role="cell">
         <div className="text-sm font-semibold text-primary">
           {parseFloat(product.price).toFixed(2)} {t('common.sar')}
         </div>
       </td>
-      
+
       {/* Category */}
       <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
         {category ? (i18n.language === 'ar' && category.name_ar ? category.name_ar : category.name) : '-'}
       </td>
-      
+
       {/* Branch */}
       <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
         {branch ? (i18n.language === 'ar' && branch.name_ar ? branch.name_ar : branch.name) : t('products.card.allBranches')}
       </td>
-      
+
       {/* Tax (Desktop only) */}
       {viewMode === 'desktop' && (
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400" role="cell">
           {product.tax_rate}%
         </td>
       )}
-      
+
       {/* Status */}
       <td className="px-3 py-4 whitespace-nowrap" role="cell">
-        <StatusBadge 
-          status={product.status} 
+        <StatusBadge
+          status={product.status}
           statusLabels={{
             active: t('products.filters.active'),
             inactive: t('products.filters.inactive'),
@@ -919,7 +929,7 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
           }}
         />
       </td>
-      
+
       {/* Actions */}
       <td className="px-3 py-4 whitespace-nowrap text-right text-sm" role="cell">
         {viewMode === 'desktop' ? (
@@ -934,11 +944,10 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
             </button>
             <button
               onClick={onToggleStatus}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                product.status === 'active'
-                  ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200'
-                  : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${product.status === 'active'
+                ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200'
+                : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200'
+                }`}
               title={product.status === 'active' ? t('products.card.deactivate') : t('products.card.activate')}
             >
               {product.status === 'active' ? '⏸️' : '▶️'}
@@ -970,11 +979,10 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
             </button>
             <button
               onClick={onToggleStatus}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                product.status === 'active'
-                  ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200'
-                  : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${product.status === 'active'
+                ? 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200'
+                : 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200'
+                }`}
               title={product.status === 'active' ? t('products.card.deactivate') : t('products.card.activate')}
             >
               {product.status === 'active' ? '⏸️' : '▶️'}
