@@ -6,11 +6,11 @@ import SEO from '../components/SEO'
 
 function TermsOfServicePage() {
   const { t } = useTranslation('landing')
-  
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 rtl:font-cairo">
       <SEO titleKey="pages.terms.title" descriptionKey="pages.terms.description" />
-      
+
       {/* Background Gradient Mesh */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[100px] animate-pulse" />
@@ -124,6 +124,13 @@ function TermsOfServicePage() {
                 <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white rtl:leading-[1.5]">{t('terms.section14.title')}</h2>
                 <p className="mb-4 text-gray-600 dark:text-gray-300">
                   {t('terms.section14.content')}
+                </p>
+              </section>
+
+              <section className="mb-8">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white rtl:leading-[1.5]">{t('terms.section15.title')}</h2>
+                <p className="mb-4 text-gray-600 dark:text-gray-300">
+                  {t('terms.section15.content')}
                 </p>
               </section>
             </div>
