@@ -58,7 +58,7 @@ function Footer() {
               <li><Link to="/contact" className="hover:text-primary dark:hover:text-white transition-colors">{t('footer.contactUs')}</Link></li>
               <li><Link to="/privacy" className="hover:text-primary dark:hover:text-white transition-colors">{t('footer.privacyPolicy')}</Link></li>
               <li><Link to="/terms" className="hover:text-primary dark:hover:text-white transition-colors">{t('footer.termsOfService')}</Link></li>
-              <li><Link to="/refund-policy" className="hover:text-primary dark:hover:text-white transition-colors">{t('terms.section5.title')}</Link></li>
+              <li><Link to="/refund-policy" className="hover:text-primary dark:hover:text-white transition-colors">{t('footer.refundPolicy')}</Link></li>
             </ul>
           </div>
         </div>
@@ -77,7 +77,7 @@ function Footer() {
               {t('footer.termsOfService')}
             </Link>
             <Link to="/refund-policy" className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white text-sm transition-colors">
-              {t('terms.section5.title')}
+              {t('footer.refundPolicy')}
             </Link>
           </div>
         </div>
