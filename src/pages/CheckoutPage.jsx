@@ -27,16 +27,16 @@ export default function CheckoutPage() {
   const isPaymentMethodUpdate = searchParams.get('update_payment') === 'true'
   const planFromQuery = searchParams.get('plan')
   const locationsFromQuery = parseInt(searchParams.get('locations')) || 1
-  
+
   const planDetails = location.state || {}
   const planType = planFromQuery || planDetails.planType
   const locationCount = locationsFromQuery || planDetails.locationCount || 1
   const currentPlan = planDetails.currentPlan
-  
+
   // Check if this is a retry attempt
   const isRetry = searchParams.get('retry') === 'true'
   const [showRetryBanner, setShowRetryBanner] = useState(isRetry)
-  
+
   // State for test card helper and debug info
   const [copiedCard, setCopiedCard] = useState(null)
   const [debugInfoCopied, setDebugInfoCopied] = useState(false)
@@ -46,7 +46,7 @@ export default function CheckoutPage() {
     let pollAttempts = 0
     const maxPollAttempts = 50 // 10 seconds (50 * 200ms)
     const pollInterval = 200 // ms
-    
+
     const checkMoyasar = () => {
       if (window.Moyasar) {
         console.log('✅ Moyasar loaded from static script')
@@ -56,16 +56,16 @@ export default function CheckoutPage() {
       }
       return false
     }
-    
+
     // Check immediately
     if (checkMoyasar()) {
       return
     }
-    
+
     // Poll for Moyasar availability
     const pollTimer = setInterval(() => {
       pollAttempts++
-      
+
       if (checkMoyasar()) {
         clearInterval(pollTimer)
       } else if (pollAttempts >= maxPollAttempts) {
@@ -76,7 +76,7 @@ export default function CheckoutPage() {
         setIsGatewayLoading(false)
       }
     }, pollInterval)
-    
+
     // Cleanup on unmount
     return () => {
       clearInterval(pollTimer)
@@ -86,7 +86,7 @@ export default function CheckoutPage() {
   // Check authentication and plan details
   useEffect(() => {
     const authData = getAuthData()
-    
+
     if (!authData.isAuthenticated) {
       navigate('/auth?mode=signin')
       return
@@ -110,23 +110,23 @@ export default function CheckoutPage() {
       // For payment method updates, fetch current subscription details first
       let effectivePlanType = planType
       let effectiveLocationCount = locationCount
-      
+
       if (isPaymentMethodUpdate) {
         const subResponse = await secureApi.get(endpoints.subscriptionDetails)
         if (!subResponse.ok) {
           throw new Error('Failed to fetch subscription details')
         }
         const subData = await subResponse.json()
-        
+
         // Validate response shape and subscription existence
         if (!subData.success || !subData.data?.subscription) {
           setError(t('checkout.noActiveSubscription'))
           setLoading(false)
           return
         }
-        
+
         // Extract plan details from correct response shape (data.data.subscription)
-        effectivePlanType = subData.data.subscription.plan_type || 'professional'
+        effectivePlanType = subData.data.subscription.plan_type || 'loyalty'
         effectiveLocationCount = subData.data.subscription.location_count || 1
       }
 
@@ -143,13 +143,13 @@ export default function CheckoutPage() {
       }
 
       const data = await response.json()
-      
+
       setPaymentData({
         amount: data.amount,
         currency: data.currency,
         description: data.description
       })
-      
+
       // Store resolved plan metadata in checkout session for Moyasar initialization
       setCheckoutSession({
         ...data,
@@ -170,7 +170,7 @@ export default function CheckoutPage() {
     setCopiedCard(cardNumber)
     setTimeout(() => setCopiedCard(null), 2000)
   }
-  
+
   // Copy debug info to clipboard
   const copyDebugInfo = () => {
     const debugInfo = {
@@ -210,7 +210,7 @@ export default function CheckoutPage() {
       try {
         // Show loading spinner while initializing
         setProcessing(true)
-        
+
         // Validate required config values
         if (!checkoutSession.publishableKey) {
           const configError = new Error('Publishable key missing')
@@ -222,7 +222,7 @@ export default function CheckoutPage() {
           configError.code = 'CONFIG_ERROR'
           throw configError
         }
-        
+
         // Validate publishable key format (prefix only, matching backend validation)
         // Only checks pk_test_ or pk_live_ prefix to stay consistent with backend
         const keyFormatValid = /^pk_(test|live)_/.test(checkoutSession.publishableKey)
@@ -232,9 +232,9 @@ export default function CheckoutPage() {
           configError.code = 'CONFIG_ERROR'
           throw configError
         }
-        
+
         console.log('✅ Publishable key format valid:', checkoutSession.publishableKey.substring(0, 15) + '...')
-        
+
         // Convert amount to halalas and validate
         const amountInHalalas = Math.round(checkoutSession.amount * 100)
         if (amountInHalalas < 100) {
@@ -242,10 +242,10 @@ export default function CheckoutPage() {
           configError.code = 'CONFIG_ERROR'
           throw configError
         }
-        
+
         // Set flag that initialization is in progress
         initializationInProgressRef.current = true
-        
+
         console.log('💳 Initializing Moyasar form:', {
           amount: checkoutSession.amount,
           amountInHalalas,
@@ -253,7 +253,7 @@ export default function CheckoutPage() {
           language: i18n.language,
           keyValid: keyFormatValid
         })
-        
+
         // Build callback URL with reactivation or update_payment flags
         let callbackUrl = checkoutSession.callbackUrl
         if (isReactivation) {
@@ -261,14 +261,14 @@ export default function CheckoutPage() {
         } else if (isPaymentMethodUpdate) {
           callbackUrl = `${callbackUrl}?update_payment=true`
         }
-        
+
         // Initialize Moyasar embedded form
         moyasarInstance = window.Moyasar.init({
           element: moyasarFormRef.current,
           language: i18n.language === 'ar' ? 'ar' : 'en',
           amount: amountInHalalas,
           currency: checkoutSession.currency,
-          description: isReactivation 
+          description: isReactivation
             ? `Account Reactivation - ${checkoutSession.description}`
             : checkoutSession.description,
           publishable_api_key: checkoutSession.publishableKey,
@@ -285,17 +285,17 @@ export default function CheckoutPage() {
             is_payment_method_update: isPaymentMethodUpdate,
             location_count: checkoutSession.resolvedLocationCount || locationCount
           },
-          on_completed: function(payment) {
+          on_completed: function (payment) {
             console.log('✅ Payment completed:', payment)
             // Moyasar will redirect to callback URL
           },
-          on_failure: function(error) {
+          on_failure: function (error) {
             console.error('❌ Payment failed:', error)
-            
+
             // Check for configuration errors
             const errorMsg = error.message || ''
-            if (errorMsg.toLowerCase().includes('publishable') || 
-                errorMsg.toLowerCase().includes('api key')) {
+            if (errorMsg.toLowerCase().includes('publishable') ||
+              errorMsg.toLowerCase().includes('api key')) {
               setError('Payment gateway configuration error. Please verify MOYASAR_PUBLISHABLE_KEY in .env file.')
             } else if (errorMsg.toLowerCase().includes('amount')) {
               setError('Payment amount error. Amount must be at least 1 SAR (100 halalas).')
@@ -306,7 +306,7 @@ export default function CheckoutPage() {
             } else {
               setError(errorMsg || 'Payment failed. Please try again.')
             }
-            
+
             setProcessing(false)
           }
         })
@@ -317,14 +317,14 @@ export default function CheckoutPage() {
       } catch (err) {
         console.error('❌ Failed to initialize Moyasar form:', err)
         initializationInProgressRef.current = false
-        
+
         // Distinguish configuration errors from generic runtime errors
         if (err.code === 'CONFIG_ERROR') {
           setError(t('checkout.configurationError'))
         } else {
           setError(t('checkout.initializationError'))
         }
-        
+
         setProcessing(false)
       }
     }, 100)
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8" dir={i18n.dir()}>
       <SEO titleKey="checkout.title" noindex={true} />
-      
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
             {isPaymentMethodUpdate ? t('checkout.updatePaymentMethodDescription') : (isReactivation ? t('checkout.reactivationDescription') : t('checkout.subtitle'))}
           </p>
         </div>
-        
+
         {/* Reactivation Notice Banner */}
         {isReactivation && (
           <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
@@ -402,7 +402,7 @@ export default function CheckoutPage() {
             </div>
           </div>
         )}
-        
+
         {/* Payment Method Update Notice Banner */}
         {isPaymentMethodUpdate && (
           <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -419,7 +419,7 @@ export default function CheckoutPage() {
             </div>
           </div>
         )}
-        
+
         {/* Retry Banner */}
         {showRetryBanner && (
           <div className="mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex items-start justify-between">
@@ -447,18 +447,18 @@ export default function CheckoutPage() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                 {t('checkout.planLabel')}
               </h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     {t('checkout.planLabel')}
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
-                    {t(`plans.${checkoutSession?.resolvedPlanType || planType || 'professional'}.name`)}
+                    {t(`plans.${checkoutSession?.resolvedPlanType || planType || 'loyalty'}.name`)}
                   </p>
                 </div>
 
-                {planType === 'enterprise' && locationCount > 1 && (
+                {planType === 'pos' && locationCount > 1 && (
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       {t('currentPlan.locations')}
@@ -480,7 +480,7 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                      {t('plans.professional.period')}
+                      {t('plans.loyalty.period')}
                     </p>
                   </div>
                 )}
@@ -536,7 +536,7 @@ export default function CheckoutPage() {
                   </p>
                 </div>
               )}
-              
+
 
 
               {/* Moyasar Form Container */}
@@ -547,7 +547,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Fallback UI if Moyasar definitively fails */}
               {!moyasarLoaded && !isGatewayLoading && error && (
                 <div className="mt-6 p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -579,7 +579,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               )}
-              
+
               {/* Debug Info (Development Only) */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs">
@@ -598,7 +598,7 @@ export default function CheckoutPage() {
                       </>
                     )}
                   </div>
-                  
+
                   {/* Common Issues Section */}
                   <div className="border-t border-gray-300 dark:border-gray-600 pt-3 mb-3">
                     <h5 className="font-semibold text-gray-900 dark:text-white mb-2">
@@ -619,7 +619,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Copy Debug Info Button */}
                   <button
                     onClick={copyDebugInfo}
@@ -642,11 +642,11 @@ export default function CheckoutPage() {
                     {t('checkout.testModeActive')}
                   </span>
                 </div>
-                
+
                 <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
                   {t('checkout.testCardsDescription')}
                 </p>
-                
+
                 <div className="space-y-3 mb-4">
                   {[
                     { name: t('checkout.madaSuccess'), number: '4201320111111010', result: t('checkout.paymentSucceeds') },
@@ -671,13 +671,13 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="bg-amber-100 dark:bg-amber-900/30 rounded p-3 mb-3">
                   <p className="text-xs text-amber-900 dark:text-amber-100 mb-2">
                     {t('checkout.testCardInstructions')}
                   </p>
                 </div>
-                
+
                 <a
                   href="https://docs.moyasar.com/guides/card-payments/test-cards/"
                   target="_blank"

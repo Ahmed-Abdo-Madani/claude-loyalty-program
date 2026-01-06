@@ -21,31 +21,29 @@ const SubscriptionPlansPage = () => {
       price: 0,
       period: t('plans.free.period'),
       description: t('plans.free.description'),
-      features: Array.isArray(t('plans.free.features', { returnObjects: true })) 
+      features: Array.isArray(t('plans.free.features', { returnObjects: true }))
         ? t('plans.free.features', { returnObjects: true })
         : [],
       icon: '🆓'
     },
-    professional: {
-      name: 'professional',
-      price: 210,
-      period: t('plans.professional.period'),
-      description: t('plans.professional.description'),
-      features: Array.isArray(t('plans.professional.features', { returnObjects: true }))
-        ? t('plans.professional.features', { returnObjects: true })
+    loyalty: {
+      name: 'loyalty',
+      price: 60,
+      period: t('plans.loyalty.period'),
+      description: t('plans.loyalty.description'),
+      features: Array.isArray(t('plans.loyalty.features', { returnObjects: true }))
+        ? t('plans.loyalty.features', { returnObjects: true })
         : [],
       icon: '💼',
       popular: true
     },
-    enterprise: {
-      name: 'enterprise',
-      basePrice: 570,
-      pricePerLocation: 180,
-      period: t('plans.enterprise.period'),
-      description: t('plans.enterprise.description'),
-      priceNote: t('plans.enterprise.priceNote'),
-      features: Array.isArray(t('plans.enterprise.features', { returnObjects: true }))
-        ? t('plans.enterprise.features', { returnObjects: true })
+    pos: {
+      name: 'pos',
+      price: 210,
+      period: t('plans.pos.period'),
+      description: t('plans.pos.description'),
+      features: Array.isArray(t('plans.pos.features', { returnObjects: true }))
+        ? t('plans.pos.features', { returnObjects: true })
         : [],
       icon: '🏢'
     }
@@ -93,9 +91,9 @@ const SubscriptionPlansPage = () => {
     }
 
     setSelectedPlan(planType)
-    
+
     // Determine if upgrade or downgrade
-    const planOrder = { free: 0, professional: 1, enterprise: 2 }
+    const planOrder = { free: 0, loyalty: 1, pos: 2 }
     const currentOrder = planOrder[subscriptionData?.current_plan || 'free']
     const newOrder = planOrder[planType]
 
@@ -178,7 +176,7 @@ const SubscriptionPlansPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir={i18n.dir()}>
       <SEO titleKey="page.title" descriptionKey="page.subtitle" noindex={true} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-12">
@@ -203,13 +201,12 @@ const SubscriptionPlansPage = () => {
 
         {/* Trial Status Banner */}
         {subscriptionData?.trial_info && subscriptionData.subscription_status === 'trial' && (
-          <div className={`mb-8 p-4 rounded-lg border ${
-            subscriptionData.trial_info.days_remaining > 3
-              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-              : subscriptionData.trial_info.days_remaining > 0
+          <div className={`mb-8 p-4 rounded-lg border ${subscriptionData.trial_info.days_remaining > 3
+            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+            : subscriptionData.trial_info.days_remaining > 0
               ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
               : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-          }`}>
+            }`}>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">
@@ -234,7 +231,7 @@ const SubscriptionPlansPage = () => {
                 </div>
               </div>
               <button
-                onClick={() => handlePlanSelect('professional')}
+                onClick={() => handlePlanSelect('loyalty')}
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-semibold whitespace-nowrap"
               >
                 {t('actions.upgradeNow')}
@@ -249,7 +246,7 @@ const SubscriptionPlansPage = () => {
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
               {t('currentPlan.title')}
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -263,13 +260,12 @@ const SubscriptionPlansPage = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                   {t('currentPlan.status')}
                 </p>
-                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${
-                  subscriptionData.subscription_status === 'active'
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                    : subscriptionData.subscription_status === 'trial'
+                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${subscriptionData.subscription_status === 'active'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                  : subscriptionData.subscription_status === 'trial'
                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                     : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                }`}>
+                  }`}>
                   {t(`status.${subscriptionData.subscription_status}`)}
                 </span>
               </div>
@@ -280,7 +276,7 @@ const SubscriptionPlansPage = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {t('currentPlan.usage')}
               </h3>
-              
+
               {/* Offers */}
               <div>
                 <div className="flex justify-between items-center mb-2">
@@ -291,7 +287,7 @@ const SubscriptionPlansPage = () => {
                     getUsagePercentage(subscriptionData.usage?.offers || 0, subscriptionData.limits?.offers || 0)
                   )}`}>
                     {subscriptionData.usage?.offers || 0} / {
-                      subscriptionData.limits?.offers === -1 
+                      subscriptionData.limits?.offers === -1
                         ? t('currentPlan.unlimited')
                         : subscriptionData.limits?.offers || 0
                     }
@@ -319,7 +315,7 @@ const SubscriptionPlansPage = () => {
                     getUsagePercentage(subscriptionData.usage?.customers || 0, subscriptionData.limits?.customers || 0)
                   )}`}>
                     {subscriptionData.usage?.customers || 0} / {
-                      subscriptionData.limits?.customers === -1 
+                      subscriptionData.limits?.customers === -1
                         ? t('currentPlan.unlimited')
                         : subscriptionData.limits?.customers || 0
                     }
@@ -347,7 +343,7 @@ const SubscriptionPlansPage = () => {
                     getUsagePercentage(subscriptionData.usage?.posOperations || 0, subscriptionData.limits?.posOperations || 0)
                   )}`}>
                     {subscriptionData.usage?.posOperations || 0} / {
-                      subscriptionData.limits?.posOperations === -1 
+                      subscriptionData.limits?.posOperations === -1
                         ? t('currentPlan.unlimited')
                         : subscriptionData.limits?.posOperations || 0
                     } {subscriptionData.limits?.posOperations !== -1 && t('currentPlan.perMonth')}
@@ -375,7 +371,7 @@ const SubscriptionPlansPage = () => {
                     getUsagePercentage(subscriptionData.usage?.locations || 0, subscriptionData.limits?.locations || 0)
                   )}`}>
                     {subscriptionData.usage?.locations || 0} / {
-                      subscriptionData.limits?.locations === -1 
+                      subscriptionData.limits?.locations === -1
                         ? t('currentPlan.unlimited')
                         : subscriptionData.limits?.locations || 0
                     }
@@ -403,15 +399,14 @@ const SubscriptionPlansPage = () => {
             return (
               <div
                 key={planKey}
-                className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all hover:scale-105 hover:shadow-xl ${
-                  isCurrentPlan ? 'border-2 border-primary' : 'border border-gray-200 dark:border-gray-700'
-                }`}
+                className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all hover:scale-105 hover:shadow-xl ${isCurrentPlan ? 'border-2 border-primary' : 'border border-gray-200 dark:border-gray-700'
+                  }`}
               >
                 {/* Popular Badge */}
                 {plan.popular && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                     <span className="bg-primary text-white px-4 py-1 rounded-full text-xs font-semibold">
-                      {t('plans.professional.popular')}
+                      {t('plans.loyalty.popular')}
                     </span>
                   </div>
                 )}
@@ -426,13 +421,12 @@ const SubscriptionPlansPage = () => {
 
                 {/* Price */}
                 <div className="text-center mb-4">
-                  {planKey === 'enterprise' ? (
+                  {planKey === 'pos' ? (
                     <>
                       <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {plan.basePrice} <span className="text-lg">SAR</span>
+                        {plan.price} <span className="text-lg">SAR</span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{plan.period}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{plan.priceNote}</p>
                     </>
                   ) : (
                     <>
@@ -463,11 +457,10 @@ const SubscriptionPlansPage = () => {
                 <button
                   onClick={() => handlePlanSelect(planKey)}
                   disabled={isCurrentPlan}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                    isCurrentPlan
-                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                      : 'bg-primary text-white hover:bg-primary-dark'
-                  }`}
+                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${isCurrentPlan
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    : 'bg-primary text-white hover:bg-primary-dark'
+                    }`}
                 >
                   {isCurrentPlan ? t('actions.currentPlan') : t('actions.selectPlan')}
                 </button>
@@ -484,7 +477,7 @@ const SubscriptionPlansPage = () => {
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               {t(`modal.${modalType}.title`, { plan: t(`plans.${selectedPlan}.name`) })}
             </h3>
-            
+
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {t(`modal.${modalType}.subtitle`, {
                 currentPlan: t(`plans.${subscriptionData?.current_plan}.name`),

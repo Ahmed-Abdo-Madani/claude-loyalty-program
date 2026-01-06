@@ -22,7 +22,9 @@ import branchManagerRoutes from './routes/branchManager.js'
 import autoEngagementRoutes from './routes/autoEngagement.js'
 import posRoutes from './routes/pos.js'
 import receiptsRoutes from './routes/receipts.js'
+
 import webhookRoutes from './routes/webhooks.js'
+import contactRoutes from './routes/contact.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
@@ -79,7 +81,7 @@ if (process.env.NODE_ENV === 'production') {
     console.error('🔴 FATAL: QR_JWT_SECRET is required for production')
     process.exit(1)
   }
-  
+
   if (process.env.QR_JWT_SECRET.length < 64) {
     console.error('🔴 FATAL: QR_JWT_SECRET must be at least 64 characters long for production')
     console.error('QR tokens require stronger security due to public exposure in QR codes')
@@ -124,20 +126,20 @@ process.on('uncaughtException', (error) => {
 // Configure CORS based on environment
 const corsOrigins = process.env.NODE_ENV === 'production'
   ? [
-      'https://app.madna.me',           // Production frontend
-      'https://madna.me',               // Main domain
-      'https://www.madna.me'            // WWW subdomain
-    ]
+    'https://app.madna.me',           // Production frontend
+    'https://madna.me',               // Main domain
+    'https://www.madna.me'            // WWW subdomain
+  ]
   : [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://192.168.8.114:3000',           // Network access
-      'http://192.168.8.114:5173',           // Network access for Vite dev
-      'https://f139ff85db6a.ngrok-free.app', // Your ngrok HTTPS tunnel
-      /^https:\/\/.*\.ngrok-free\.app$/,     // Allow any ngrok-free subdomain
-      /^https:\/\/.*\.ngrok\.io$/,           // Allow ngrok.io domains
-      /^https:\/\/.*\.ngrok\.app$/           // Allow ngrok.app domains
-    ]
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://192.168.8.114:3000',           // Network access
+    'http://192.168.8.114:5173',           // Network access for Vite dev
+    'https://f139ff85db6a.ngrok-free.app', // Your ngrok HTTPS tunnel
+    /^https:\/\/.*\.ngrok-free\.app$/,     // Allow any ngrok-free subdomain
+    /^https:\/\/.*\.ngrok\.io$/,           // Allow ngrok.io domains
+    /^https:\/\/.*\.ngrok\.app$/           // Allow ngrok.app domains
+  ]
 
 app.use(cors({
   origin: corsOrigins,
@@ -194,7 +196,7 @@ app.use(extractLanguage)
 // with route-specific meta tags instead of generic fallbacks
 if (process.env.PRERENDER_TOKEN) {
   prerender.set('prerenderToken', process.env.PRERENDER_TOKEN)
-  
+
   // Whitelist key pages that need social media previews
   prerender.set('whitelist', [
     '/',
@@ -209,12 +211,12 @@ if (process.env.PRERENDER_TOKEN) {
     '/integrations',
     '/api-docs'
   ])
-  
+
   // Don't cache responses (always get fresh meta tags)
   prerender.set('protocol', 'https')
-  
+
   app.use(prerender)
-  
+
   logger.info('✅ Prerender.io middleware enabled for social media crawlers')
 } else {
   logger.warn('⚠️  PRERENDER_TOKEN not set - social media previews will use fallback meta tags')
@@ -313,6 +315,7 @@ app.use('/api/branch-manager', branchManagerRoutes)
 app.use('/api/auto-engagement', autoEngagementRoutes)
 app.use('/api/pos', posRoutes)
 app.use('/api/receipts', receiptsRoutes)
+app.use('/api/contact', contactRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -351,7 +354,7 @@ async function initializeDatabase() {
 }
 
 // Start server with database initialization
-;(async () => {
+; (async () => {
   try {
     // Initialize database first
     await initializeDatabase()
@@ -360,22 +363,22 @@ async function initializeDatabase() {
     if (process.env.AUTO_MIGRATE !== 'false') {
       try {
         logger.info('🔄 Checking for pending database migrations...')
-        
+
         const lockTimeout = parseInt(process.env.MIGRATION_LOCK_TIMEOUT || '30000', 10)
         const stopOnError = process.env.MIGRATION_STOP_ON_ERROR !== 'false'
-        
+
         const migrationResult = await AutoMigrationRunner.runPendingMigrations({
           stopOnError,
           lockTimeout
         })
-        
+
         if (migrationResult.failed > 0) {
           logger.error('❌ CRITICAL: Migration failures detected', {
             total: migrationResult.total,
             applied: migrationResult.applied,
             failed: migrationResult.failed
           })
-          
+
           if (process.env.NODE_ENV === 'production') {
             logger.error('🛑 Exiting to prevent serving with incomplete schema')
             process.exit(1)
@@ -389,13 +392,13 @@ async function initializeDatabase() {
         } else {
           logger.info('✅ Database schema is up to date (no pending migrations)')
         }
-        
+
       } catch (error) {
         logger.error('❌ CRITICAL: Auto-migration system failed', {
           error: error.message,
           stack: error.stack
         })
-        
+
         if (process.env.NODE_ENV === 'production') {
           logger.error('🛑 Exiting to prevent serving with unknown schema state')
           process.exit(1)
@@ -420,7 +423,7 @@ async function initializeDatabase() {
         found: tables.map(t => t.tablename),
         expected: ['wallet_passes', 'schema_migrations']
       })
-      
+
       if (process.env.NODE_ENV === 'production') {
         logger.error('🛑 Auto-migrations should have created these tables')
         process.exit(1)
@@ -436,7 +439,7 @@ async function initializeDatabase() {
           logger.warn('   This should only be used during development!')
         } else {
           logger.info('🔍 Validating campaign_type schema...')
-          
+
           // Expected values from NotificationCampaign model
           const expectedValues = [
             'lifecycle',
@@ -446,7 +449,7 @@ async function initializeDatabase() {
             'custom_promotion',
             'seasonal_campaign'
           ].sort()
-        
+
           // Query database for ALL CHECK constraints on campaign_type (Comment 1)
           const [constraints] = await sequelize.query(`
             SELECT con.conname AS constraint_name, pg_get_constraintdef(con.oid) AS constraint_def
@@ -458,13 +461,13 @@ async function initializeDatabase() {
             AND con.contype = 'c'
             AND attr.attname = 'campaign_type'
           `)
-          
+
           if (constraints.length === 0) {
             logger.error('🔴 SCHEMA MISMATCH: No CHECK constraint found on campaign_type column')
             logger.error('   Expected constraint: check_campaign_type on notification_campaigns.campaign_type')
             logger.error('   Remediation: Run migration 20250131-add-notification-campaign-fields.js')
             logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
-            
+
             if (process.env.NODE_ENV === 'production') {
               logger.error('🛑 Exiting in production due to schema mismatch')
               process.exit(1)
@@ -478,7 +481,7 @@ async function initializeDatabase() {
             logger.error('   Only one CHECK constraint should exist')
             logger.error('   Remediation: Run migration 20250131-add-notification-campaign-fields.js to consolidate')
             logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
-            
+
             if (process.env.NODE_ENV === 'production') {
               logger.error('🛑 Exiting in production due to multiple constraints')
               process.exit(1)
@@ -489,18 +492,18 @@ async function initializeDatabase() {
             // Parse constraint definition using robust quoted token extractor (Comment 1)
             const constraintDef = constraints[0].constraint_def
             const constraintName = constraints[0].constraint_name
-            
+
             // Extract all quoted values using matchAll - handles Postgres casts like ::text, ::character varying
             const quotedMatches = [...constraintDef.matchAll(/'([^']+)'/g)]
             const dbValues = [...new Set(quotedMatches.map(match => match[1]))].sort()
-            
+
             if (dbValues.length === 0) {
               logger.warn('⚠️ Could not extract values from constraint definition')
               logger.warn(`   Constraint: ${constraintDef}`)
               logger.warn('   Schema validation skipped - manual verification recommended')
             } else {
               const isMatch = JSON.stringify(dbValues) === JSON.stringify(expectedValues)
-              
+
               if (isMatch) {
                 logger.info(`✅ campaign_type schema validated: ${dbValues.length} values match model definition`)
                 logger.info(`   Constraint name: ${constraintName}`)
@@ -511,7 +514,7 @@ async function initializeDatabase() {
                 logger.error(`   Constraint name: ${constraintName}`)
                 logger.error('   Remediation: Run migration 20250131-add-notification-campaign-fields.js')
                 logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
-                
+
                 if (process.env.NODE_ENV === 'production') {
                   logger.error('🛑 Exiting in production due to schema mismatch')
                   process.exit(1)
@@ -534,18 +537,18 @@ async function initializeDatabase() {
     if (process.env.SKIP_SCHEMA_VALIDATION !== 'true') {
       try {
         logger.info('🔍 Validating auto_engagement_configs table...')
-        
+
         const [tableCheck] = await sequelize.query(`
           SELECT table_name 
           FROM information_schema.tables 
           WHERE table_name = 'auto_engagement_configs'
         `)
-        
+
         if (tableCheck.length === 0) {
           logger.error('❌ CRITICAL: auto_engagement_configs table does not exist')
           logger.error('   The auto-engagement cron job will fail!')
           logger.error('   Run migration: node backend/run-migration.js 20250201-create-auto-engagement-configs-table.js')
-          
+
           if (process.env.NODE_ENV === 'production') {
             logger.error('🚨 Exiting to prevent runtime failures...')
             process.exit(1)
@@ -554,7 +557,7 @@ async function initializeDatabase() {
           }
         } else {
           logger.info('✅ auto_engagement_configs table validated')
-          
+
           // Verify critical columns exist
           const [columnCheck] = await sequelize.query(`
             SELECT column_name 
@@ -562,7 +565,7 @@ async function initializeDatabase() {
             WHERE table_name = 'auto_engagement_configs' 
             AND column_name IN ('config_id', 'business_id', 'enabled', 'inactivity_days', 'message_template')
           `)
-          
+
           if (columnCheck.length < 5) {
             logger.warn('⚠️  Some columns missing in auto_engagement_configs table', {
               found: columnCheck.length,
@@ -622,7 +625,7 @@ async function initializeDatabase() {
     try {
       const ApnsService = (await import('./services/ApnsService.js')).default
       const isReady = ApnsService.isReady()
-      
+
       if (isReady) {
         logger.info('✅ APNs Service initialized successfully', {
           topic: ApnsService.topic || 'N/A',
@@ -662,9 +665,9 @@ async function initializeDatabase() {
         console.log('📄 [Startup] Normalizing icons manifest...')
         console.log('📄 [Startup] Calling ManifestService.readManifest()...')
       }
-      
+
       const manifest = await ManifestService.readManifest()
-      
+
       if (process.env.NODE_ENV !== 'production') {
         console.log('📄 [Startup] Manifest received:', {
           version: manifest.version,
@@ -674,7 +677,7 @@ async function initializeDatabase() {
           lastUpdated: manifest.lastUpdated
         })
       }
-      
+
       if (manifest.lastUpdated) {
         const updatedDate = new Date(manifest.lastUpdated).toLocaleString()
         console.log(`✅ [Startup] Icons manifest auto-migrated to v${manifest.version || 1} (${updatedDate})`)

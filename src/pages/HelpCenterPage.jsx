@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import DarkModeToggle from '../components/DarkModeToggle'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SEO from '../components/SEO'
 
@@ -27,77 +28,87 @@ function HelpCenterPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 rtl:font-cairo">
       <SEO titleKey="pages.help.title" descriptionKey="pages.help.description" />
       
-      <DarkModeToggle />
+      {/* Background Gradient Mesh */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[100px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/5 blur-[100px] animate-pulse delay-1000" />
+      </div>
 
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <Link to="/" className="flex items-center">
-              <img src="/assets/images/madna-logo.svg" alt="Madna Logo" className="w-8 h-8 mr-3" />
-              <span className="text-2xl font-bold text-primary">{t('header.logoText')}</span>
-            </Link>
-            <nav className="flex gap-8">
-              <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-primary">{t('header.home')}</Link>
-              <Link to="/features" className="text-gray-600 dark:text-gray-300 hover:text-primary">{t('header.features')}</Link>
-              <Link to="/pricing" className="text-gray-600 dark:text-gray-300 hover:text-primary">{t('header.pricing')}</Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Header />
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-primary to-blue-700 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold mb-6">{t('help.title')}</h1>
-          <p className="text-xl mb-8 max-w-3xl mx-auto">
+      <main className="relative z-10 pt-32 pb-20">
+        {/* Hero Section */}
+        <section className="text-center px-4 sm:px-6 lg:px-8 mb-20">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6 rtl:leading-[1.5]">
+            {t('help.title')}
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-12">
             {t('help.subtitle')}
           </p>
 
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder={t('help.searchPlaceholder')}
-                className="w-full px-6 py-4 rounded-lg text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary to-blue-600 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+              <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+                <input
+                  type="text"
+                  placeholder={t('help.searchPlaceholder')}
+                  className="w-full px-6 py-4 pl-12 rtl:pl-6 rtl:pr-12 rounded-xl text-gray-900 dark:text-white bg-transparent focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder-gray-400 dark:placeholder-gray-500"
+                />
+                <MagnifyingGlassIcon className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Help Categories */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">{t('help.browseByCategory')}</h2>
+        {/* Help Categories */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white rtl:leading-[1.5]">
+            {t('help.browseByCategory')}
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {categories.map((category, index) => (
-              <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow">
-                <div className="flex items-center mb-6">
-                  <span className="text-3xl mr-4">{category.icon}</span>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t(`help.${category.key}.title`)}</h3>
+              <div 
+                key={index} 
+                className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-8 border border-gray-200 dark:border-gray-700 hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group cursor-pointer"
+              >
+                <div className="flex items-center mb-4">
+                  <span className="text-4xl mr-4 rtl:mr-0 rtl:ml-4 group-hover:scale-110 transition-transform duration-300">{category.icon}</span>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
+                    {t(`help.${category.key}.title`)}
+                  </h3>
                 </div>
+                {/* Placeholder for description if needed */}
+                <p className="text-gray-600 dark:text-gray-300">
+                  {t(`help.${category.key}.description`) || "Learn more about " + t(`help.${category.key}.title`)}
+                </p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQ Section */}
-      <section className="bg-gray-100 dark:bg-gray-800 py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">{t('help.faq.title')}</h2>
-        </div>
+        {/* FAQ Section */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-8 md:p-12 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white rtl:leading-[1.5]">
+              {t('help.faq.title')}
+            </h2>
+            {/* Add FAQ content here if available in the original file or JSON */}
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}
+
+export default HelpCenterPage
       </section>
 
       {/* Contact Support */}

@@ -1,8 +1,14 @@
 {
   "hero": {
-    "tagline": "Simple, Reliable, Loyalty Solutions",
+    "headline": "The All-in-One Loyalty & POS Platform",
+    "highlight": "Build lasting customer relationships.",
+    "description": "Empower your business with a modern loyalty program and cloud-based POS system. Simple to set up, powerful to use.",
     "getStarted": "Get Started",
-    "signIn": "Sign In"
+    "signIn": "Sign In",
+    "newBadge": "New: AI-Powered Insights",
+    "benefit1": "No credit card required",
+    "benefit2": "14-day free trial",
+    "dashboardPreview": "Interactive Dashboard Preview"
   },
   "header": {
     "logoText": "Loyalty Platform",
@@ -31,57 +37,87 @@
     "copyright": "© 2024 Madna Platform. All rights reserved."
   },
   "features": {
-    "title": "Powerful Features for Modern Loyalty",
-    "subtitle": "Everything you need to create, manage, and optimize customer loyalty programs that drive real business results.",
-    "smartTargeting": {
-      "title": "Smart Targeting",
-      "description": "Create targeted campaigns based on customer behavior, purchase history, and preferences."
+    "sectionTitle": "Everything You Need",
+    "sectionSubtitle": "A complete suite of tools to grow your business.",
+    "automatedEngagement": {
+      "title": "Automated Engagement",
+      "description": "Keep customers coming back with smart, automated campaigns."
     },
-    "mobileWallet": {
-      "title": "Mobile Wallet Integration",
-      "description": "Seamless integration with Apple Wallet and Google Pay for easy customer access."
+    "cloudPos": {
+      "title": "Cloud POS",
+      "description": "Manage sales and rewards from any device, anywhere."
     },
     "analytics": {
-      "title": "Real-time Analytics",
-      "description": "Monitor program performance with comprehensive analytics and reporting tools."
+      "title": "Smart Analytics",
+      "description": "Real-time insights into customer behavior and sales."
     },
-    "automated": {
-      "title": "Automated Campaigns",
-      "description": "Set up automated reward notifications and engagement campaigns."
+    "smartQr": {
+      "title": "Smart QR Scanning",
+      "description": "Secure and fast scanning for instant reward redemption."
     },
-    "multipleRewards": {
-      "title": "Multiple Reward Types",
-      "description": "Support stamps, points, cashback, and custom reward structures."
+    "globalReach": {
+      "title": "Multi-Language Support",
+      "description": "Full support for English and Arabic interfaces."
     },
     "security": {
-      "title": "Enterprise Security",
-      "description": "Bank-level security with encrypted data and secure authentication."
-    },
-    "cta": {
-      "title": "Ready to get started?",
-      "subtitle": "Join thousands of businesses already using Madna to build customer loyalty.",
-      "button": "Start Your Free Trial"
+      "title": "Secure Platform",
+      "description": "Enterprise-grade security to protect your business data."
     }
+  },
+  "trust": {
+    "title": "Built for Trust",
+    "description": "We prioritize the security and reliability of your business data above all else. Our platform is built on enterprise-grade infrastructure.",
+    "point1": "99.9% Uptime SLA",
+    "point2": "Bank-level Data Encryption",
+    "point3": "GDPR & CCPA Compliant",
+    "security": {
+      "title": "Secure by Design",
+      "desc": "Your data is protected with state-of-the-art encryption and security practices."
+    },
+    "reliability": {
+      "title": "Always On",
+      "desc": "Reliable infrastructure ensuring your business never stops."
+    },
+    "imagePlaceholder": "Platform Dashboard Preview"
+  },
+  "cta": {
+    "title": "Ready to Grow Your Business?",
+    "subtitle": "Join us and start building stronger customer relationships today.",
+    "button": "Get Started Now"
   },
   "pricing": {
     "title": "Simple, Transparent Pricing",
-    "subtitle": "Choose the plan that fits your business. All plans include core loyalty features and mobile wallet integration.",
-    "starter": {
-      "name": "Starter",
-      "price": "$29",
+    "subtitle": "Choose the plan that fits your business. All plans include core loyalty features.",
+    "free": {
+      "name": "Free Account",
+      "price": "Free",
       "period": "/month",
-      "description": "Perfect for small businesses getting started"
+      "description": "Perfect for trying out the platform"
     },
-    "professional": {
-      "name": "Professional",
-      "price": "$79",
-      "period": "/month",
-      "description": "Perfect for growing businesses"
+    "loyalty": {
+      "name": "Loyalty Program",
+      "price": "60 SAR",
+      "period": "/location/month",
+      "description": "For businesses focused on customer retention"
     },
-    "enterprise": {
-      "name": "Enterprise",
-      "price": "Custom",
-      "description": "For large organizations with custom needs"
+    "pos": {
+      "name": "POS Program",
+      "price": "210 SAR",
+      "period": "/location/month",
+      "description": "Complete solution with Point of Sale"
+    },
+    "features": {
+      "1_loyalty_offer": "1 Loyalty Offer",
+      "100_customers": "Up to 100 Customers",
+      "20_pos_operations": "20 POS Operations/mo",
+      "1_location": "1 Location",
+      "unlimited_loyalty_offers": "Unlimited Loyalty Offers",
+      "unlimited_customers": "Unlimited Customers",
+      "unlimited_pos_operations": "Unlimited POS Operations",
+      "unlimited_locations": "Unlimited Locations",
+      "no_pos_operations": "No POS Operations",
+      "basic_analytics": "Basic Analytics",
+      "full_analytics": "Full Analytics"
     },
     "mostPopular": "Most Popular",
     "startFreeTrial": "Start Free Trial",
@@ -175,19 +211,19 @@
     },
     "phoneSupport": {
       "title": "Phone Support",
-      "description": "Available Monday-Friday, 9am-6pm EST"
+      "description": "Call us at: (+966545983410)"
     },
     "liveChat": {
-      "title": "Live Chat",
-      "description": "Chat with our support team in real-time",
-      "action": "Start Live Chat"
+      "title": "WhatsApp Chat",
+      "description": "Chat with our support team on WhatsApp",
+      "action": "Start WhatsApp Chat"
     },
     "office": {
       "title": "Our Office",
-      "name": "Madna Platform Inc.",
-      "address1": "123 Innovation Drive",
-      "address2": "San Francisco, CA 94105",
-      "country": "United States"
+      "name": "Madna",
+      "address1": "Arkan Altayar Building, Office number 3",
+      "address2": "4671-4817 Makkah Al Mukarramah , 39956 , Hafr Al Batin",
+      "country": "Saudi Arabia"
     }
   },
   "privacy": {
@@ -198,8 +234,8 @@
       "intro": "We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support. This may include:",
       "item1": "Name, email address, and contact information",
       "item2": "Business information and details",
-      "item3": "Customer loyalty program data",
-      "item4": "Payment and billing information",
+      "item3": "Customer loyalty program data and transaction history",
+      "item4": "Payment, billing, and Point of Sale (POS) transaction information",
       "item5": "Communications with our support team"
     },
     "section2": {
@@ -252,7 +288,7 @@
     },
     "section2": {
       "title": "2. Description of Service",
-      "content": "Madna is a customer loyalty program management platform that provides businesses with tools to create, manage, and optimize loyalty programs."
+      "content": "Madna is a comprehensive platform providing customer loyalty program management and cloud-based Point of Sale (POS) services, enabling businesses to manage sales, rewards, and customer relationships."
     },
     "section3": {
       "title": "3. Account Registration",
@@ -263,8 +299,8 @@
       "content": "You agree to use the Service only for lawful purposes and legitimate business practices. Any unlawful, fraudulent, or harmful use is prohibited."
     },
     "section5": {
-      "title": "5. Fees and Payment",
-      "content": "Certain features of the Service are subject to subscription fees. All fees are non-refundable unless otherwise stated."
+      "title": "5. Fees, Payment, and Refunds",
+      "content": "Certain features of the Service are subject to subscription fees. We offer a 14-day free trial for new accounts. Once the trial period ends and a subscription is purchased, all fees are non-refundable. There will be no refunds or credits for partial months of service, upgrade/downgrade refunds, or refunds for months unused with an open account."
     },
     "section6": {
       "title": "6. Intellectual Property",

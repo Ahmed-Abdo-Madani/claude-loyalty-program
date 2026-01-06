@@ -112,9 +112,9 @@
   "subscriptions": {
     "title": "إدارة الاشتراكات",
     "planName": "اسم الخطة",
-    "basic": "أساسي",
-    "professional": "احترافي",
-    "enterprise": "مؤسسي",
+    "free": "مجاني",
+    "loyalty": "برنامج الولاء",
+    "pos": "نظام نقاط البيع",
     "price": "السعر",
     "duration": "المدة",
     "features": "الميزات",

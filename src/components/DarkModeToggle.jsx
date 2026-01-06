@@ -1,18 +1,18 @@
 import { useTheme } from '../contexts/ThemeContext'
 
-function DarkModeToggle() {
+function DarkModeToggle({ className = '' }) {
   const { isDark, toggleTheme } = useTheme()
 
   return (
     <button
       onClick={toggleTheme}
-      className="fixed top-6 right-6 z-50 p-3 rounded-full bg-gray-800/90 dark:bg-white/10 backdrop-blur-sm border border-gray-700 dark:border-white/20 hover:bg-gray-700 dark:hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-600 dark:focus:ring-white/50"
+      className={`p-2 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 ${className}`}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {isDark ? (
         // Sun icon for light mode
         <svg
-          className="w-6 h-6 text-white"
+          className="w-5 h-5 text-yellow-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -27,7 +27,7 @@ function DarkModeToggle() {
       ) : (
         // Moon icon for dark mode
         <svg
-          className="w-6 h-6 text-white"
+          className="w-5 h-5 text-slate-700 dark:text-slate-200"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

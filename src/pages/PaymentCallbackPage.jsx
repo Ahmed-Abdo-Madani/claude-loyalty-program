@@ -16,7 +16,7 @@ export default function PaymentCallbackPage() {
   const [countdown, setCountdown] = useState(3)
   const [pollAttempts, setPollAttempts] = useState(0)
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
-  
+
   // Refs for timer cleanup and polling
   const pollTimeoutRef = useRef(null)
   const countdownIntervalRef = useRef(null)
@@ -46,14 +46,14 @@ export default function PaymentCallbackPage() {
     console.log('Is reactivation flow:', isReactivation)
     console.log('Last processed payment ID:', lastPaymentIdRef.current)
     console.log('Current payment ID:', moyasarPaymentId)
-    
+
     // Prevent duplicate API calls for the same payment ID (React StrictMode, navigation, or refresh)
     // Allow verification if payment ID changes (legitimate new payment on same component instance)
     if (lastPaymentIdRef.current === moyasarPaymentId && moyasarPaymentId !== null) {
       console.log('Skipping duplicate verifyPayment call for same payment ID')
       return
     }
-    
+
     if (!moyasarPaymentId) {
       // Check if payment was declined without redirect
       if (status === 'failed') {
@@ -94,13 +94,13 @@ export default function PaymentCallbackPage() {
         requestBody = { moyasarPaymentId, status, message }
       }
 
-      const response = isPaymentMethodUpdate 
+      const response = isPaymentMethodUpdate
         ? await secureApi.put(endpoint, requestBody)
         : await secureApi.post(endpoint, requestBody)
 
       if (!response.ok) {
         const errorData = await response.json()
-        
+
         // Comment 3: Handle 404/500 from reactivation endpoint specifically
         if (isReactivation && (response.status === 404 || response.status === 500)) {
           setPaymentResult({
@@ -110,16 +110,16 @@ export default function PaymentCallbackPage() {
           setVerifying(false)
           return
         }
-        
+
         // Extract verification details and issues for error state
         const verificationDetails = errorData.verificationDetails
         const issues = errorData.issues || []
-        
+
         // Check error type using errorCode from backend (4xx errors only)
         if (response.status >= 400 && response.status < 500) {
           const errorCode = errorData.errorCode
           let errorMessage = errorData.message || 'Payment verification failed'
-          
+
           // Map backend error codes to localized messages
           // Branch on isPaymentMethodUpdate for payment-method-specific errors
           if (isPaymentMethodUpdate) {
@@ -160,14 +160,14 @@ export default function PaymentCallbackPage() {
               errorMessage = t('paymentCallback.currencyMismatch')
             } else if (errorCode === 'SESSION_LINKING_FAILED') {
               // FIXED: Use errorData.transactionId and moyasarPaymentId from query string
-              errorMessage = t('paymentCallback.sessionLinkingFailed', { 
-                transactionId: errorData.transactionId || moyasarPaymentId 
+              errorMessage = t('paymentCallback.sessionLinkingFailed', {
+                transactionId: errorData.transactionId || moyasarPaymentId
               })
             } else if (errorCode === 'MOYASAR_PAYMENT_NOT_FOUND') {
               errorMessage = t('paymentCallback.moyasarPaymentNotFound')
             }
           }
-          
+
           // Create error with verification details attached
           const error = new Error(errorMessage)
           error.verificationDetails = verificationDetails
@@ -175,7 +175,7 @@ export default function PaymentCallbackPage() {
           error.errorCode = errorCode
           throw error
         }
-        
+
         // Fallback to message if errorCode is missing or unrecognized
         const error = new Error(errorData.message || 'Payment verification failed')
         error.verificationDetails = verificationDetails
@@ -246,7 +246,7 @@ export default function PaymentCallbackPage() {
       setVerifying(false)
     } catch (err) {
       console.error('Payment verification failed:', err)
-      
+
       // If status is initiated or pending, poll backend using ref to avoid stale closure
       if ((status === 'initiated' || !status) && pollAttemptsRef.current < 10) {
         pollAttemptsRef.current += 1
@@ -276,7 +276,7 @@ export default function PaymentCallbackPage() {
 
   // Start countdown timer for auto-redirect
   const startCountdown = () => {
-      countdownIntervalRef.current = setInterval(() => {
+    countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownIntervalRef.current)
@@ -292,7 +292,7 @@ export default function PaymentCallbackPage() {
       })
     }, 1000)
   }
-  
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
@@ -308,12 +308,12 @@ export default function PaymentCallbackPage() {
   // Handle retry payment
   const handleRetry = () => {
     const planDetails = {
-      planType: paymentResult?.subscription?.plan_type || 'professional',
+      planType: paymentResult?.subscription?.plan_type || 'loyalty',
       locationCount: 1
     }
     navigate('/subscription/checkout?retry=true', { state: planDetails })
   }
-  
+
   // Copy error details to clipboard
   const copyErrorDetails = () => {
     const errorDetails = {
@@ -340,7 +340,7 @@ export default function PaymentCallbackPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" dir={i18n.dir()}>
         <SEO titleKey="pages.paymentCallback.verifying.title" noindex={true} />
-        
+
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-6"></div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -358,7 +358,7 @@ export default function PaymentCallbackPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12" dir={i18n.dir()}>
         <SEO titleKey="pages.paymentCallback.success.title" noindex={true} />
-        
+
         <div className="max-w-md mx-auto px-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
             {/* Success Icon */}
@@ -370,14 +370,14 @@ export default function PaymentCallbackPage() {
 
             {/* Success Message */}
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
-              {paymentResult.isPaymentMethodUpdate 
-                ? t('paymentCallback.paymentMethodUpdated') 
+              {paymentResult.isPaymentMethodUpdate
+                ? t('paymentCallback.paymentMethodUpdated')
                 : (paymentResult.isReactivation ? t('reactivation.success') : t('paymentCallback.success'))}
             </h1>
-            
+
             <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
-              {paymentResult.isPaymentMethodUpdate 
-                ? t('paymentCallback.paymentMethodUpdatedMessage') 
+              {paymentResult.isPaymentMethodUpdate
+                ? t('paymentCallback.paymentMethodUpdatedMessage')
                 : (paymentResult.isReactivation ? t('reactivation.redirecting') : t('paymentCallback.successMessage'))}
             </p>
 
@@ -412,7 +412,7 @@ export default function PaymentCallbackPage() {
                       {paymentResult.paymentMethod?.brand || 'N/A'}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       {t('paymentCallback.lastFourDigits')}
@@ -421,7 +421,7 @@ export default function PaymentCallbackPage() {
                       •••• {paymentResult.paymentMethod?.last4 || '****'}
                     </span>
                   </div>
-                  
+
                   {moyasarPaymentId && (
                     <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
                       <span className="text-xs text-gray-500 dark:text-gray-500">
@@ -444,7 +444,7 @@ export default function PaymentCallbackPage() {
                       {t(`plans.${paymentResult.planName}.name`)}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       {t('checkout.amountLabel')}
@@ -453,7 +453,7 @@ export default function PaymentCallbackPage() {
                       {paymentResult.amount} SAR
                     </span>
                   </div>
-                  
+
                   {paymentResult.nextBillingDate && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -464,7 +464,7 @@ export default function PaymentCallbackPage() {
                       </span>
                     </div>
                   )}
-                  
+
                   {moyasarPaymentId && (
                     <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
                       <span className="text-xs text-gray-500 dark:text-gray-500">
@@ -503,7 +503,7 @@ export default function PaymentCallbackPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12" dir={i18n.dir()}>
       <SEO titleKey="pages.paymentCallback.failure.title" noindex={true} />
-      
+
       <div className="max-w-md mx-auto px-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
           {/* Error Icon */}
@@ -517,7 +517,7 @@ export default function PaymentCallbackPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
             {t('paymentCallback.failure')}
           </h1>
-          
+
           <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
             {t('paymentCallback.failureMessage')}
           </p>
@@ -528,7 +528,7 @@ export default function PaymentCallbackPage() {
               <p className="text-sm text-red-900 dark:text-red-100">
                 {paymentResult.error}
               </p>
-              
+
               {/* Verification Issues List */}
               {paymentResult.issues && paymentResult.issues.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-700">
@@ -542,7 +542,7 @@ export default function PaymentCallbackPage() {
                   </ul>
                 </div>
               )}
-              
+
               {/* Suggest wait and retry for transient issues */}
               {(status === 'initiated' || status === 'pending') && (
                 <p className="mt-3 text-xs text-red-800 dark:text-red-200">
@@ -568,7 +568,7 @@ export default function PaymentCallbackPage() {
             >
               {t('paymentCallback.retryButton')}
             </button>
-            
+
             <button
               onClick={handleContinue}
               className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
@@ -583,7 +583,7 @@ export default function PaymentCallbackPage() {
               {t('checkout.supportText')}
             </p>
           </div>
-          
+
           {/* View Technical Details Button (Development Only) */}
           {process.env.NODE_ENV === 'development' && paymentResult?.verificationDetails && (
             <div className="mt-6">
@@ -592,22 +592,22 @@ export default function PaymentCallbackPage() {
                 className="w-full py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
               >
                 {showTechnicalDetails ? t('paymentCallback.hideTechnicalDetails') : t('paymentCallback.viewTechnicalDetails')}
-                <svg 
+                <svg
                   className={`w-4 h-4 transition-transform ${showTechnicalDetails ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              
+
               {showTechnicalDetails && (
                 <div className="mt-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
                     {t('paymentCallback.verificationIssues')}
                   </h4>
-                  
+
                   {/* Verification Details */}
                   <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                     <div className="flex items-center justify-between">
@@ -622,7 +622,7 @@ export default function PaymentCallbackPage() {
                       <span>{t('paymentCallback.currencyMismatch')}:</span>
                       <span>{paymentResult.verificationDetails.currencyMatch ? '✅' : '❌'}</span>
                     </div>
-                    
+
                     {/* Amount Details */}
                     {!paymentResult.verificationDetails.amountMatch && (
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -632,7 +632,7 @@ export default function PaymentCallbackPage() {
                         <p>Difference: {paymentResult.verificationDetails.amountDifference?.toFixed(2)} SAR</p>
                       </div>
                     )}
-                    
+
                     {/* Raw Verification Data */}
                     <details className="mt-3">
                       <summary className="cursor-pointer font-semibold text-gray-900 dark:text-white">
@@ -647,7 +647,7 @@ export default function PaymentCallbackPage() {
               )}
             </div>
           )}
-          
+
           {/* Debug Panel for Development */}
           {process.env.NODE_ENV === 'development' && (
             <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">

@@ -31,7 +31,7 @@ export default function SubscriptionManagementPage() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await secureApi.get(endpoints.subscriptionDetails)
       const data = await response.json()
 
@@ -54,9 +54,9 @@ export default function SubscriptionManagementPage() {
 
     try {
       setProcessing(true)
-      
+
       const hasPaymentMethod = subscriptionDetails?.subscription?.payment_method?.has_token
-      
+
       if (hasPaymentMethod) {
         // Process upgrade with stored payment method
         const response = await secureApi.put(endpoints.subscriptionUpgrade, {
@@ -64,21 +64,21 @@ export default function SubscriptionManagementPage() {
           locationCount: 1,
           useStoredPayment: true
         })
-        
+
         const data = await response.json()
-        
+
         if (data.success) {
           // Capture prorated amount from response
           if (data.payment?.amount) {
             setProratedAmount(data.payment.amount)
           }
-          
+
           // Update localStorage with new subscription data
           setSubscriptionData(data.subscription)
-          
+
           // Refresh subscription details
           await fetchSubscriptionDetails()
-          
+
           setShowUpgradeModal(false)
           alert(t('subscription:management.upgradeSuccess'))
         } else {
@@ -102,19 +102,19 @@ export default function SubscriptionManagementPage() {
 
     try {
       setProcessing(true)
-      
+
       const response = await secureApi.put(endpoints.subscriptionDowngrade, {
         newPlanType: selectedPlan
       })
-      
+
       const data = await response.json()
-      
+
       if (data.success) {
         // Capture credit amount from response
         if (data.data?.credit_amount) {
           setCreditAmount(data.data.credit_amount)
         }
-        
+
         // Update localStorage
         const currentData = getSubscriptionData()
         setSubscriptionData({
@@ -124,17 +124,17 @@ export default function SubscriptionManagementPage() {
             effective_date: data.data.effective_date
           }
         })
-        
+
         // Refresh subscription details
         await fetchSubscriptionDetails()
-        
+
         setShowDowngradeModal(false)
-        
+
         // Show credit note if available
-        const message = data.data?.credit_amount 
+        const message = data.data?.credit_amount
           ? t('subscription:modal.downgrade.creditNote', { amount: data.data.credit_amount }) + '\n' + t('subscription:management.downgradeScheduled', { date: new Date(data.data.effective_date).toLocaleDateString(i18n.language) })
           : t('subscription:management.downgradeScheduled', { date: new Date(data.data.effective_date).toLocaleDateString(i18n.language) })
-        
+
         alert(message)
       } else {
         alert(data.message || t('subscription:errors.downgradeFailed'))
@@ -151,13 +151,13 @@ export default function SubscriptionManagementPage() {
   const handleCancel = async () => {
     try {
       setProcessing(true)
-      
+
       const response = await secureApi.put(endpoints.subscriptionCancel, {
         reason: cancellationReason
       })
-      
+
       const data = await response.json()
-      
+
       if (data.success) {
         // Update localStorage
         const currentData = getSubscriptionData()
@@ -166,10 +166,10 @@ export default function SubscriptionManagementPage() {
           subscription_status: 'cancelled',
           access_until: data.data.access_until
         })
-        
+
         // Refresh subscription details
         await fetchSubscriptionDetails()
-        
+
         setShowCancelModal(false)
         alert(t('subscription:cancel.cancelledMessage', { date: new Date(data.data.access_until).toLocaleDateString(i18n.language) }))
       } else {
@@ -191,10 +191,10 @@ export default function SubscriptionManagementPage() {
 
     try {
       setProcessing(true)
-      
+
       const response = await secureApi.delete(endpoints.subscriptionPaymentMethod)
       const data = await response.json()
-      
+
       if (data.success) {
         // Refresh subscription details
         await fetchSubscriptionDetails()
@@ -255,7 +255,7 @@ export default function SubscriptionManagementPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6" dir={i18n.dir()}>
       <SEO titleKey="subscription:management.title" noindex={true} />
-      
+
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -272,7 +272,7 @@ export default function SubscriptionManagementPage() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
             {t('subscription:management.currentSubscription')}
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Plan Details */}
             <div>
@@ -284,12 +284,11 @@ export default function SubscriptionManagementPage() {
                   <span className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
                     {t(`subscription:plans.${subscription?.plan_type}.name`)}
                   </span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    subscription?.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                    subscription?.status === 'trial' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                    subscription?.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${subscription?.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                      subscription?.status === 'trial' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                        subscription?.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                    }`}>
                     {t(`subscription:status.${subscription?.status}`)}
                   </span>
                 </div>
@@ -379,7 +378,7 @@ export default function SubscriptionManagementPage() {
                   >
                     {subscription?.payment_method?.last4 ? t('subscription:management.updatePaymentMethod') : t('subscription:management.addPaymentMethod')}
                   </button>
-                  
+
                   {subscription?.payment_method?.last4 && (
                     <button
                       onClick={handleDeletePaymentMethod}
@@ -400,12 +399,12 @@ export default function SubscriptionManagementPage() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
             {t('subscription:management.subscriptionActions')}
           </h2>
-          
+
           <div className="flex flex-wrap gap-4">
-            {subscription?.plan_type !== 'enterprise' && (
+            {subscription?.plan_type !== 'pos' && (
               <button
                 onClick={() => {
-                  setSelectedPlan(subscription?.plan_type === 'free' ? 'professional' : 'enterprise')
+                  setSelectedPlan(subscription?.plan_type === 'free' ? 'loyalty' : 'pos')
                   setShowUpgradeModal(true)
                 }}
                 className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-semibold"
@@ -417,7 +416,7 @@ export default function SubscriptionManagementPage() {
             {subscription?.plan_type !== 'free' && subscription?.status !== 'cancelled' && (
               <button
                 onClick={() => {
-                  setSelectedPlan(subscription?.plan_type === 'enterprise' ? 'professional' : 'free')
+                  setSelectedPlan(subscription?.plan_type === 'pos' ? 'loyalty' : 'free')
                   setShowDowngradeModal(true)
                 }}
                 className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
@@ -449,7 +448,7 @@ export default function SubscriptionManagementPage() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
             {t('subscription:usage.title')}
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Offers */}
             <div>
@@ -461,7 +460,7 @@ export default function SubscriptionManagementPage() {
               </div>
               {limits?.offers !== null && (
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div 
+                  <div
                     className={`h-2 rounded-full transition-all ${getProgressColor((usage?.offers || 0) / limits.offers * 100)}`}
                     style={{ width: `${Math.min((usage?.offers || 0) / limits.offers * 100, 100)}%` }}
                   />
@@ -479,7 +478,7 @@ export default function SubscriptionManagementPage() {
               </div>
               {limits?.customers !== null && (
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div 
+                  <div
                     className={`h-2 rounded-full transition-all ${getProgressColor((usage?.customers || 0) / limits.customers * 100)}`}
                     style={{ width: `${Math.min((usage?.customers || 0) / limits.customers * 100, 100)}%` }}
                   />
@@ -497,7 +496,7 @@ export default function SubscriptionManagementPage() {
               </div>
               {limits?.locations !== null && (
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div 
+                  <div
                     className={`h-2 rounded-full transition-all ${getProgressColor((usage?.locations || 0) / limits.locations * 100)}`}
                     style={{ width: `${Math.min((usage?.locations || 0) / limits.locations * 100, 100)}%` }}
                   />
@@ -515,7 +514,7 @@ export default function SubscriptionManagementPage() {
               </div>
               {limits?.pos_operations !== null && (
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div 
+                  <div
                     className={`h-2 rounded-full transition-all ${getProgressColor((usage?.pos_operations || 0) / limits.pos_operations * 100)}`}
                     style={{ width: `${Math.min((usage?.pos_operations || 0) / limits.pos_operations * 100, 100)}%` }}
                   />
@@ -531,7 +530,7 @@ export default function SubscriptionManagementPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               {t('subscription:management.billingHistory')}
             </h2>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -551,11 +550,10 @@ export default function SubscriptionManagementPage() {
                         {payment.amount} {payment.currency || 'SAR'}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          payment.status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          payment.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${payment.status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            payment.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
                           {t(`subscription:billingHistory.${payment.status}`)}
                         </span>
                       </td>
@@ -605,8 +603,8 @@ export default function SubscriptionManagementPage() {
                   disabled={processing}
                   className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
                 >
-                  {processing ? t('subscription:actions.processing') : 
-                   subscription?.payment_method?.has_token ? t('subscription:modal.upgrade.withStoredPayment') : t('subscription:modal.upgrade.withoutStoredPayment')}
+                  {processing ? t('subscription:actions.processing') :
+                    subscription?.payment_method?.has_token ? t('subscription:modal.upgrade.withStoredPayment') : t('subscription:modal.upgrade.withoutStoredPayment')}
                 </button>
               </div>
             </div>
@@ -644,13 +642,13 @@ export default function SubscriptionManagementPage() {
                     {t('subscription:modal.downgrade.featuresLost')}
                   </p>
                   <ul className="text-xs text-red-800 dark:text-red-200 list-disc list-inside space-y-1">
-                    {selectedPlan === 'free' && 
+                    {selectedPlan === 'free' &&
                       t('subscription:modal.downgrade.featureLoss.free', { returnObjects: true }).map((feature, index) => (
                         <li key={index}>{feature}</li>
                       ))
                     }
 
-                    {selectedPlan === 'professional' && 
+                    {selectedPlan === 'professional' &&
                       t('subscription:modal.downgrade.featureLoss.professional', { returnObjects: true }).map((feature, index) => (
                         <li key={index}>{feature}</li>
                       ))

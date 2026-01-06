@@ -28,12 +28,10 @@ const SubscriptionPlansPage = lazy(() => import('./pages/SubscriptionPlansPage')
 // Lazy load marketing/info pages
 const FeaturesPage = lazy(() => import('./pages/FeaturesPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
-const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage'))
-const ApiDocsPage = lazy(() => import('./pages/ApiDocsPage'))
-const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+const RefundPolicyPage = lazy(() => import('./pages/RefundPolicyPage'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -55,24 +53,24 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
-            
+
             {/* Branch Manager Routes */}
             <Route path="/branch-manager-login" element={<BranchManagerLogin />} />
-            <Route 
-              path="/branch-scanner" 
+            <Route
+              path="/branch-scanner"
               element={
                 <ManagerProtectedRoute>
                   <BranchScanner />
                 </ManagerProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/branch-pos" 
+            <Route
+              path="/branch-pos"
               element={
                 <ManagerProtectedRoute>
                   <BranchPOS />
                 </ManagerProtectedRoute>
-              } 
+              }
             />
 
             {/* Heavy pages - lazy loaded */}
@@ -93,12 +91,10 @@ function App() {
             {/* Marketing pages - lazy loaded */}
             <Route path="/features" element={<FeaturesPage />} />
             <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/integrations" element={<IntegrationsPage />} />
-            <Route path="/api-docs" element={<ApiDocsPage />} />
-            <Route path="/help" element={<HelpCenterPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
+            <Route path="/refund-policy" element={<RefundPolicyPage />} />
           </Routes>
         </Suspense>
       </div>

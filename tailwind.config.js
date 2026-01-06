@@ -14,6 +14,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        cairo: ['Cairo', 'sans-serif'],
       },
       spacing: {
         '18': '4.5rem',  // 72px - Custom spacing for mobile touch targets

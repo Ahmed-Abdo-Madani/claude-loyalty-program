@@ -42,35 +42,34 @@
         "Email support"
       ]
     },
-    "professional": {
-      "name": "Professional",
-      "price": "210 SAR",
-      "period": "per month",
-      "description": "For growing businesses",
+    "loyalty": {
+      "name": "Loyalty Program",
+      "price": "60 SAR",
+      "period": "per location/month",
+      "description": "For businesses focused on customer retention",
       "popular": "Most Popular",
       "features": [
         "Unlimited loyalty offers",
-        "Up to 1,000 customers",
-        "Unlimited POS operations",
-        "1 location",
-        "Advanced analytics",
+        "Unlimited customers",
+        "No POS operations",
+        "Unlimited locations",
+        "Basic analytics",
         "Mobile wallet integration",
         "API access",
         "Priority support"
       ]
     },
-    "enterprise": {
-      "name": "Enterprise",
-      "price": "570 SAR",
-      "period": "base price",
-      "priceNote": "570 SAR for first 3 locations, +180 SAR per additional location",
-      "description": "For multi-location businesses",
+    "pos": {
+      "name": "POS Program",
+      "price": "210 SAR",
+      "period": "per location/month",
+      "description": "Complete solution with Point of Sale",
       "features": [
         "Unlimited loyalty offers",
         "Unlimited customers",
         "Unlimited POS operations",
         "Unlimited locations",
-        "Advanced analytics",
+        "Full analytics",
         "Mobile wallet integration",
         "API access",
         "Dedicated account manager",

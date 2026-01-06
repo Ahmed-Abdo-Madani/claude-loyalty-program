@@ -112,9 +112,9 @@
   "subscriptions": {
     "title": "Subscription Management",
     "planName": "Plan Name",
-    "basic": "Basic",
-    "professional": "Professional",
-    "enterprise": "Enterprise",
+    "free": "Free",
+    "loyalty": "Loyalty Program",
+    "pos": "POS Program",
     "price": "Price",
     "duration": "Duration",
     "features": "Features",
