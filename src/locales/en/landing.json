@@ -36,7 +36,7 @@
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
     "refundPolicy": "Fees, Payment, and Refunds",
-    "copyright": "© 2024 Madna Platform. All rights reserved."
+    "copyright": "© 2026 Madna Platform. All rights reserved."
   },
   "features": {
     "sectionTitle": "Everything You Need",
@@ -230,7 +230,7 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "lastUpdated": "Last updated: December 1, 2024",
+    "lastUpdated": "Last updated: January 8, 2026",
     "section1": {
       "title": "1. Information We Collect",
       "intro": "We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support. This may include:",
@@ -284,7 +284,7 @@
   },
   "terms": {
     "title": "Terms of Service",
-    "lastUpdated": "Last updated: December 1, 2024",
+    "lastUpdated": "Last updated: January 8, 2026",
     "section1": {
       "title": "1. Acceptance of Terms",
       "content": "By accessing and using the Madna Platform (\"Service\"), you accept and agree to be bound by the terms and conditions of this agreement. If you do not agree to abide by the above, please do not use this service."
@@ -306,8 +306,8 @@
       "content": "You agree to use the Service only for lawful purposes and legitimate business practices. Any unlawful, fraudulent, or harmful use is prohibited."
     },
     "section6": {
-      "title": "6. Fees, Payment, and Refunds",
-      "content": "Certain features of the Service are subject to subscription fees. We offer a 14-day free trial for new accounts. Once the trial period ends and a subscription is purchased, all fees are non-refundable. There will be no refunds or credits for partial months of service, upgrade/downgrade refunds, or refunds for months unused with an open account."
+      "title": "Fees, Payment, and Refunds",
+      "content": "Certain features of the Service are subject to subscription fees. We offer a 14-day free trial for new accounts. If you are not satisfied with your subscription for any reason, you may request a full refund within 14 days of your initial purchase. After the 14-day refund period, all fees are non-refundable. There will be no refunds or credits for partial months of service, upgrade/downgrade refunds, or refunds for months unused with an open account. To request a refund, please contact our support team at support@madna.me."
     },
     "section7": {
       "title": "7. Intellectual Property",
