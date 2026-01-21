@@ -43,6 +43,12 @@ class LemonSqueezyService {
             // BUT api/v1/customers/{id} response contains "attributes.urls.customer_portal"
             return response.data.data.attributes.urls.customer_portal;
         } catch (error) {
+            // Handle 404 gracefully in development for dummy data
+            if (error.response?.status === 404 && process.env.NODE_ENV === 'development') {
+                logger.warn(`Lemon Squeezy Customer ${customerId} not found. Using fallback portal URL for development.`);
+                return 'https://app.lemonsqueezy.com/my-billing';
+            }
+
             logger.error('Failed to get customer portal URL:', error.response?.data || error.message);
             throw new Error('Failed to generate portal URL');
         }

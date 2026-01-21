@@ -100,6 +100,7 @@
   "actions": {
     "currentPlan": "Current Plan",
     "selectPlan": "Select Plan",
+    "manageBilling": "Manage Subscription",
     "upgrade": "Upgrade",
     "upgradeFromFree": "Upgrade to Professional",
     "downgrade": "Downgrade",
@@ -313,6 +314,8 @@
     "noBillingHistory": "No payment history yet",
     "subscriptionActions": "Subscription Actions",
     "manageSubscription": "Manage Subscription",
+    "renewalDate": "Next Billing",
+    "currentPlan": "Current Plan",
     "upgradeSuccess": "Subscription upgraded successfully!",
     "downgradeScheduled": "Downgrade scheduled for {{date}}"
   },

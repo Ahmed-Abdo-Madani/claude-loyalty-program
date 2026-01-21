@@ -161,7 +161,8 @@ export const getPortalUrl = async (req, res) => {
     try {
         const business = req.business;
         const subscription = await Subscription.findOne({
-            where: { business_id: business.public_id }
+            where: { business_id: business.public_id, status: ['active', 'trial', 'past_due'] },
+            order: [['created_at', 'DESC']]
         });
 
         if (!subscription || !subscription.lemon_squeezy_customer_id) {

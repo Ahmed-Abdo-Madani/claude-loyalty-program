@@ -1,0 +1,45 @@
+# Task: Lemon Squeezy Integration
+
+- [x] **Preparation** <!-- id: 0 -->
+    - [x] Install necessary dependencies (axios) <!-- id: 1 -->
+    - [x] Add env variables to `.env.example` <!-- id: 2 -->
+- [x] **Database Layer** <!-- id: 3 -->
+    - [x] Create migration for `Subscription` table updates <!-- id: 4 -->
+    - [x] Run migration <!-- id: 5 -->
+    - [x] Update `backend/models/Subscription.js` <!-- id: 6 -->
+    - [x] Create `SubscriptionController.js` and routes
+    - [x] Fix `getSubscriptionDetails` (Sequelize alias fix)
+    - [x] Implement multi-branch billing logic in `business.js`
+    - [x] Secure `POST /api/subscriptions/webhook` with signature verification
+    - [x] Refactor `generateCheckout` for Lemon Squeezy and case-insensitivity
+- [x] Frontend Integration
+    - [x] Refactor `CheckoutPage.jsx` for Lemon Squeezy redirection
+    - [x] Update `SubscriptionManagementPage.jsx` for new data structure
+    - [x] Add missing localization keys in `subscription.json` (EN/AR)
+- [x] **Backend Implementation (Completed)**
+    - [x] Create `LemonSqueezyService.js`
+    - [x] Create `SubscriptionController.js` and routes
+    - [x] Verify Webhook Signature Logic
+    - [x] Refactor `generateCheckout`
+- [x] **Portal-First Redesign**
+    - [x] **Backend**: Implement `getCustomerPortalUrl` in Service and Controller
+    - [x] **Phase 1: Diagnosis**
+        - [x] Analyze `SubscriptionManagementPage.jsx` logic
+        - [x] Inspect browser behavior and console logs
+        - [x] Verify translation keys and i18next hook usage
+        - [x] Verify database records (Identified ordering issue)
+    - [x] **Phase 2: Fix Implementation**
+        - [x] Fix "Manage Subscription" button interaction (Added DESC order)
+        - [x] Fix Static Title localization (Added missing EN keys)
+        - [x] Verify plan key mapping consistency
+    - [x] **Frontend**: Refactor `SubscriptionManagementPage.jsx`
+        - [x] Remove legacy billing history and edit forms
+        - [x] **Phase 3: Implementation**
+    - [x] Refactor layout using more dynamic patterns (Avoiding simple bento/split)
+    - [x] Enhance animations and micro-interactions
+    - [x] Implement bilingual support (EN/AR) for new UI elements
+- [/] **Phase 4: Verification**
+    - [/] Verify responsiveness
+    - [ ] Run UX audit script
+    - [ ] Final walkthroughify Mobile Responsiveness
+    - [x] Fix JSON Syntax Error (Arabic Locale)
