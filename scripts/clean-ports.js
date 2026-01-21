@@ -2,46 +2,47 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import os from 'os';
 
 const execAsync = promisify(exec);
+const isWindows = os.platform() === 'win32';
 
 console.log('🧹 Cleaning ports 3000 and 3001...');
 
 async function killProcessOnPort(port) {
   try {
-    // Find processes using the port
-    const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
+    let command;
+    if (isWindows) {
+      command = `netstat -ano | findstr :${port}`;
+    } else {
+      command = `lsof -i :${port} -t`;
+    }
+
+    const { stdout } = await execAsync(command);
 
     if (!stdout.trim()) {
       console.log(`✅ Port ${port} is already free`);
       return;
     }
 
-    // Extract PIDs from netstat output
-    const lines = stdout.trim().split('\n');
-    const pids = new Set();
+    const pids = new Set(stdout.trim().split(/\s+/).filter(pid => pid && pid !== '0' && !isNaN(pid)));
 
-    lines.forEach(line => {
-      const parts = line.trim().split(/\s+/);
-      const pid = parts[parts.length - 1];
-      if (pid && pid !== '0' && !isNaN(pid)) {
-        pids.add(pid);
-      }
-    });
-
-    // Kill each process
     for (const pid of pids) {
       try {
-        await execAsync(`taskkill /F /PID ${pid}`);
+        if (isWindows) {
+          await execAsync(`taskkill /F /PID ${pid}`);
+        } else {
+          await execAsync(`kill -9 ${pid}`);
+        }
         console.log(`🔄 Killed process ${pid} on port ${port}`);
       } catch (error) {
-        // Process might already be dead, ignore
         console.log(`⚠️  Process ${pid} could not be killed (might already be stopped)`);
       }
     }
 
     console.log(`✅ Port ${port} cleaned`);
   } catch (error) {
+    // If command fails (e.g. lsof returns nothing), port is likely free
     console.log(`✅ Port ${port} is free (or already cleaned)`);
   }
 }

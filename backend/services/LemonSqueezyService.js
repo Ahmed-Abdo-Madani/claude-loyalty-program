@@ -8,18 +8,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_Key = process.env.LEMONSQUEEZY_API_KEY;
-const STORE_ID = process.env.LEMONSQUEEZY_STORE_ID;
-const WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
-
-const api = axios.create({
-    baseURL: 'https://api.lemonsqueezy.com/v1',
-    headers: {
-        'Accept': 'application/vnd.api+json',
-        'Content-Type': 'application/vnd.api+json',
-        'Authorization': `Bearer ${API_Key}`
-    }
+const getLSConfig = () => ({
+    apiKey: process.env.LEMONSQUEEZY_API_KEY,
+    storeId: process.env.LEMONSQUEEZY_STORE_ID,
+    webhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET
 });
+
+const getApi = () => {
+    const { apiKey } = getLSConfig();
+    return axios.create({
+        baseURL: 'https://api.lemonsqueezy.com/v1',
+        headers: {
+            'Accept': 'application/vnd.api+json',
+            'Content-Type': 'application/vnd.api+json',
+            'Authorization': `Bearer ${apiKey}`
+        }
+    });
+};
 
 class LemonSqueezyService {
     /**
@@ -36,6 +41,7 @@ class LemonSqueezyService {
      */
     async getCustomerPortalUrl(customerId) {
         try {
+            const api = getApi();
             const response = await api.get(`/customers/${customerId}`);
             // The portal URL is usually in links.self or we generate it via the API if available
             // Actually, Lemon Squeezy Customer Portal is accessed via: 
@@ -63,6 +69,8 @@ class LemonSqueezyService {
      */
     async createCheckout(businessId, variantId, userEmail) {
         try {
+            const { storeId } = getLSConfig();
+            const api = getApi();
             const payload = {
                 data: {
                     type: "checkouts",
@@ -78,7 +86,7 @@ class LemonSqueezyService {
                         store: {
                             data: {
                                 type: "stores",
-                                id: STORE_ID
+                                id: storeId
                             }
                         },
                         variant: {
@@ -106,7 +114,8 @@ class LemonSqueezyService {
      * @returns {boolean}
      */
     verifyWebhook(signature, body) {
-        const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
+        const { webhookSecret } = getLSConfig();
+        const hmac = crypto.createHmac('sha256', webhookSecret);
         const digest = Buffer.from(hmac.update(JSON.stringify(body)).digest('hex'), 'utf8');
         const signatureBuffer = Buffer.from(signature || '', 'utf8');
 
@@ -223,6 +232,7 @@ class LemonSqueezyService {
      */
     async updateSubscriptionQuantity(subscriptionId, quantity) {
         try {
+            const api = getApi();
             const payload = {
                 data: {
                     type: "subscriptions",

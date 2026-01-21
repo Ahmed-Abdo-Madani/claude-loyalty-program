@@ -25,7 +25,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 class AutoMigrationRunner {
-  
+
   /**
    * Main entry point - Run all pending migrations
    * 
@@ -41,36 +41,36 @@ class AutoMigrationRunner {
       stopOnError = true,
       lockTimeout = 30000
     } = options
-    
+
     let lockAcquired = false
     let lockId = null
     let connection = null
     const startTime = Date.now()
-    
+
     try {
       // Step 1: Acquire dedicated connection for advisory lock
       connection = await sequelize.connectionManager.getConnection({ type: 'WRITE' })
       logger.info('🔒 Acquiring migration advisory lock...')
-      
+
       const lockHash = this.hashString('schema_migrations')
-      
+
       // Comment 1 & 2 fix: Use positional parameters and destructure { rows }
       const { rows: lockRows } = await connection.query(
         'SELECT pg_try_advisory_lock($1) as locked',
         [lockHash]
       )
-      
+
       lockAcquired = Boolean(lockRows?.[0]?.locked)
-      
+
       if (!lockAcquired) {
         logger.warn('⚠️  Could not acquire migration lock - another instance is running migrations')
         logger.warn('   Waiting for lock or timeout...')
-        
+
         // Wait for lock with timeout
         const waitStart = Date.now()
         while (!lockAcquired && (Date.now() - waitStart) < lockTimeout) {
           await this.sleep(1000)
-          
+
           // Comment 1 & 2 fix: Use positional parameters and destructure { rows }
           const { rows: retryRows } = await connection.query(
             'SELECT pg_try_advisory_lock($1) as locked',
@@ -78,33 +78,33 @@ class AutoMigrationRunner {
           )
           lockAcquired = Boolean(retryRows?.[0]?.locked)
         }
-        
+
         if (!lockAcquired) {
           throw new Error('Migration lock timeout - another instance may be running migrations')
         }
       }
-      
+
       lockId = lockHash
       logger.info('   ✅ Lock acquired')
-      
+
       // Step 2: Ensure tracking table exists
       await this.ensureTrackingTableExists()
-      
+
       // Step 3: Get applied migrations
       const appliedMigrations = await this.getAppliedMigrations()
       logger.info(`   📋 Applied migrations: ${appliedMigrations.length}`)
-      
+
       // Step 4: Scan migration files
       const allMigrationFiles = await this.scanMigrationFiles()
       logger.info(`   📂 Total migration files: ${allMigrationFiles.length}`)
-      
+
       // Step 5: Identify pending migrations
       const pendingMigrations = allMigrationFiles.filter(
         file => !appliedMigrations.includes(this.getMigrationName(file))
       )
-      
+
       logger.info(`   🔄 Pending migrations: ${pendingMigrations.length}`)
-      
+
       if (pendingMigrations.length === 0) {
         logger.info('✅ No pending migrations - database schema is up to date')
         return {
@@ -116,7 +116,7 @@ class AutoMigrationRunner {
           totalExecutionTime: Date.now() - startTime
         }
       }
-      
+
       if (dryRun) {
         logger.info('🧪 DRY RUN MODE - Showing what would execute:')
         pendingMigrations.forEach((file, index) => {
@@ -131,23 +131,23 @@ class AutoMigrationRunner {
           totalExecutionTime: Date.now() - startTime
         }
       }
-      
+
       // Step 6: Execute pending migrations
       logger.info(`🔧 Executing ${pendingMigrations.length} pending migrations...`)
-      
+
       const results = []
       let appliedCount = 0
       let failedCount = 0
-      
+
       for (const file of pendingMigrations) {
         const migrationName = this.getMigrationName(file)
         const migrationPath = path.join(__dirname, '../migrations', file)
-        
+
         try {
           logger.info(`   🔧 Running migration: ${migrationName}`)
-          
+
           const migrationStart = Date.now()
-          
+
           // Comment 4 fix: Use Sequelize for DML (supports replacements properly)
           // Insert record with status='running' (UPSERT to handle re-runs of failed migrations)
           await sequelize.query(
@@ -159,24 +159,24 @@ class AutoMigrationRunner {
               replacements: { name: migrationName }
             }
           )
-          
+
           // Calculate checksum
           const checksum = this.calculateChecksum(migrationPath)
-          
+
           // Import and execute migration (use file URL for cross-platform compatibility)
           const migration = await import(pathToFileURL(migrationPath).href)
           const upFunction = migration.up || migration.default?.up
-          
+
           if (!upFunction) {
             throw new Error(`Migration ${migrationName} does not export an 'up' function`)
           }
-          
+
           // Execute migration (it should handle its own transaction)
           // Pass both queryInterface and Sequelize for migrations that need Sequelize.literal() etc.
           await upFunction(sequelize.getQueryInterface(), sequelize.Sequelize)
-          
+
           const executionTime = Date.now() - migrationStart
-          
+
           // Comment 4 fix: Use Sequelize for DML (supports replacements properly)
           // Update record with success status
           await sequelize.query(
@@ -187,29 +187,29 @@ class AutoMigrationRunner {
                  applied_at = NOW()
              WHERE migration_name = :name`,
             {
-              replacements: { 
-                name: migrationName, 
+              replacements: {
+                name: migrationName,
                 time: executionTime,
-                checksum 
+                checksum
               }
             }
           )
-          
+
           logger.info(`      ✅ Completed in ${executionTime}ms`)
-          
+
           appliedCount++
           results.push({
             migration: migrationName,
             status: 'success',
             executionTime
           })
-          
+
         } catch (error) {
           failedCount++
-          
+
           logger.error(`      ❌ Migration failed: ${error.message}`)
           logger.error(`      Stack: ${error.stack}`)
-          
+
           // Comment 4 fix: Use Sequelize for DML (supports replacements properly)
           // Update record with failed status
           try {
@@ -220,32 +220,32 @@ class AutoMigrationRunner {
                    applied_at = NOW()
                WHERE migration_name = :name`,
               {
-                replacements: { 
-                  name: migrationName, 
-                  error: error.message 
+                replacements: {
+                  name: migrationName,
+                  error: error.message
                 }
               }
             )
           } catch (updateError) {
             logger.error(`      ⚠️  Could not update migration status: ${updateError.message}`)
           }
-          
+
           results.push({
             migration: migrationName,
             status: 'failed',
             error: error.message
           })
-          
+
           if (stopOnError) {
             logger.error('🛑 Stopping migration execution due to error')
             break
           }
         }
       }
-      
+
       // Step 7: Summary
       const totalTime = Date.now() - startTime
-      
+
       if (failedCount > 0) {
         logger.error(`❌ Migration execution completed with ${failedCount} failure(s)`)
         logger.error(`   Applied: ${appliedCount}, Failed: ${failedCount}, Total: ${allMigrationFiles.length}`)
@@ -254,7 +254,7 @@ class AutoMigrationRunner {
         logger.info(`   Applied: ${appliedCount}, Total: ${allMigrationFiles.length}`)
         logger.info(`   ⏱️  Total execution time: ${totalTime}ms`)
       }
-      
+
       return {
         total: allMigrationFiles.length,
         applied: appliedCount,
@@ -263,12 +263,12 @@ class AutoMigrationRunner {
         results,
         totalExecutionTime: totalTime
       }
-      
+
     } catch (error) {
       logger.error('❌ CRITICAL: Auto-migration system error:', error.message)
       logger.error('   Stack:', error.stack)
       throw error
-      
+
     } finally {
       // Always release lock and connection
       if (lockAcquired && lockId !== null && connection) {
@@ -280,7 +280,7 @@ class AutoMigrationRunner {
           logger.error('⚠️  Failed to release migration lock:', unlockError.message)
         }
       }
-      
+
       if (connection) {
         try {
           await sequelize.connectionManager.releaseConnection(connection)
@@ -290,7 +290,7 @@ class AutoMigrationRunner {
       }
     }
   }
-  
+
   /**
    * Get list of successfully applied migrations
    * @returns {Array<String>} Array of migration names
@@ -299,16 +299,16 @@ class AutoMigrationRunner {
     try {
       // Ensure tracking table exists before querying
       await this.ensureTrackingTableExists()
-      
+
       const [results] = await sequelize.query(
         `SELECT migration_name 
          FROM schema_migrations 
          WHERE status = 'success' 
          ORDER BY applied_at ASC`
       )
-      
+
       return results.map(row => row.migration_name)
-      
+
     } catch (error) {
       // Table might not exist yet (fallback safety)
       if (error.message.includes('does not exist')) {
@@ -317,7 +317,7 @@ class AutoMigrationRunner {
       throw error
     }
   }
-  
+
   /**
    * Get list of migrations that haven't been applied
    * @returns {Array<String>} Array of pending migration filenames
@@ -325,12 +325,12 @@ class AutoMigrationRunner {
   static async getPendingMigrations() {
     const applied = await this.getAppliedMigrations()
     const allFiles = await this.scanMigrationFiles()
-    
+
     return allFiles.filter(
       file => !applied.includes(this.getMigrationName(file))
     )
   }
-  
+
   /**
    * Get detailed status of all migrations
    * @returns {Object} Comprehensive migration status
@@ -339,17 +339,17 @@ class AutoMigrationRunner {
     try {
       // Ensure tracking table exists before querying
       await this.ensureTrackingTableExists()
-      
+
       const allFiles = await this.scanMigrationFiles()
       const [appliedResults] = await sequelize.query(
         `SELECT migration_name, applied_at, execution_time_ms, status, error_message
          FROM schema_migrations 
          ORDER BY applied_at DESC`
       )
-      
+
       const successfulMap = new Map()
       const failedMigrations = []
-      
+
       appliedResults.forEach(row => {
         if (row.status === 'success') {
           successfulMap.set(row.migration_name, row)
@@ -357,10 +357,10 @@ class AutoMigrationRunner {
           failedMigrations.push(row)
         }
       })
-      
+
       const appliedMigrations = []
       const pendingMigrations = []
-      
+
       allFiles.forEach(file => {
         const name = this.getMigrationName(file)
         if (successfulMap.has(name)) {
@@ -370,7 +370,7 @@ class AutoMigrationRunner {
           pendingMigrations.push(name)
         }
       })
-      
+
       return {
         total: allFiles.length,
         applied: appliedMigrations.length,
@@ -380,7 +380,7 @@ class AutoMigrationRunner {
         pendingMigrations,
         failedMigrations
       }
-      
+
     } catch (error) {
       if (error.message.includes('does not exist')) {
         const allFiles = await this.scanMigrationFiles()
@@ -398,7 +398,7 @@ class AutoMigrationRunner {
       throw error
     }
   }
-  
+
   /**
    * Calculate SHA-256 checksum of migration file
    * @param {String} filePath - Path to migration file
@@ -408,7 +408,7 @@ class AutoMigrationRunner {
     const content = fs.readFileSync(filePath, 'utf8')
     return crypto.createHash('sha256').update(content).digest('hex')
   }
-  
+
   /**
    * Validate that applied migrations haven't been modified
    * @returns {Object} Validation results
@@ -417,19 +417,19 @@ class AutoMigrationRunner {
     try {
       // Ensure tracking table exists before querying
       await this.ensureTrackingTableExists()
-      
+
       const [appliedMigrations] = await sequelize.query(
         `SELECT migration_name, checksum 
          FROM schema_migrations 
          WHERE status = 'success' AND checksum IS NOT NULL`
       )
-      
+
       const mismatches = []
       const migrationsDir = path.join(__dirname, '../migrations')
-      
+
       for (const migration of appliedMigrations) {
         const filePath = path.join(migrationsDir, `${migration.migration_name}.js`)
-        
+
         if (!fs.existsSync(filePath)) {
           mismatches.push({
             migration: migration.migration_name,
@@ -438,9 +438,9 @@ class AutoMigrationRunner {
           })
           continue
         }
-        
+
         const currentChecksum = this.calculateChecksum(filePath)
-        
+
         if (currentChecksum !== migration.checksum) {
           mismatches.push({
             migration: migration.migration_name,
@@ -451,7 +451,7 @@ class AutoMigrationRunner {
           })
         }
       }
-      
+
       if (mismatches.length > 0) {
         logger.warn(`⚠️  Migration integrity validation found ${mismatches.length} issue(s):`)
         mismatches.forEach(m => {
@@ -460,19 +460,19 @@ class AutoMigrationRunner {
       } else {
         logger.info('✅ All migrations passed integrity validation')
       }
-      
+
       return {
         valid: mismatches.length === 0,
         totalChecked: appliedMigrations.length,
         mismatches
       }
-      
+
     } catch (error) {
       logger.error('❌ Migration integrity validation failed:', error.message)
       throw error
     }
   }
-  
+
   /**
    * Ensure schema_migrations tracking table exists
    * @private
@@ -485,21 +485,21 @@ class AutoMigrationRunner {
          WHERE schemaname = 'public' 
          AND tablename = 'schema_migrations'`
       )
-      
+
       if (tables.length === 0) {
         logger.info('   📋 schema_migrations table not found, creating...')
-        
+
         // Import and run the tracking table migration (use file URL for cross-platform compatibility)
         const trackingMigrationPath = path.join(
-          __dirname, 
+          __dirname,
           '../migrations/19990101-create-schema-migrations-table.js'
         )
-        
+
         const trackingMigration = await import(pathToFileURL(trackingMigrationPath).href)
         await trackingMigration.up(sequelize.getQueryInterface())
-        
+
         logger.info('   ✅ Tracking table created')
-        
+
         // Record the tracking table migration itself as applied
         await sequelize.query(
           `INSERT INTO schema_migrations (migration_name, applied_at, execution_time_ms, status, checksum) 
@@ -507,13 +507,13 @@ class AutoMigrationRunner {
         )
         logger.info('   ✅ Tracking migration recorded')
       }
-      
+
     } catch (error) {
       logger.error('❌ Failed to ensure tracking table exists:', error.message)
       throw error
     }
   }
-  
+
   /**
    * Scan migrations directory for migration files
    * 
@@ -535,62 +535,30 @@ class AutoMigrationRunner {
   static async scanMigrationFiles() {
     const migrationsDir = path.join(__dirname, '../migrations')
     const files = fs.readdirSync(migrationsDir)
-    
+
     // Helper to check if filename follows YYYYMMDD- format
     const isDated = (filename) => /^\d{8}-/.test(filename)
-    
-    // Migrations that should NEVER run automatically (manual only)
-    const excludedMigrations = [
-      // Legacy standalone migrations - already applied manually, don't follow { up, down } pattern
-      '20000102-add-secure-ids-cautious.js',
-      '20000103-simplify-branch-location-fields.js',
-      '20000104-create-offer-card-designs-table.js',
-      '20000105-aggressive-security-migration.js',
-      
-      // Core migrations - already applied in production
-      '19990101-create-schema-migrations-table.js',
-      '20000101-create-wallet-passes-table.js',
-      '20250113-add-customer-name-fields.js',
-      '20250114-add-wallet-notification-tracking.js',
-      '20250119-add-stamp-display-type.js',
-      '20250120-add-apple-web-service-tables.js',
-      '20250121-cleanup-old-apple-wallet-passes.js',
-      '20250122-add-manifest-etag-to-wallet-passes.js',
-      '20250125-fix-last-updated-tag-nullable.js',
-      '20250126-add-gender-to-customers.js',
-      '20250127-add-branch-manager-auth.js',
-      '20250127-add-device-logs-table.js',
-      '20250127-add-pass-lifecycle-fields.js',
-      '20250128-fix-pass-status-constraint.js',
-      '20250129-add-loyalty-tiers-to-offers.js',
-      
-      // ONLY ALLOW THESE TO RUN:
-      // - 20250131-add-notification-campaign-fields.js
-      // - 20250201-create-auto-engagement-configs-table.js
-      // - 20250202-create-or-sync-business-sessions.js
-    ]
-    
+
     return files
       .filter(file => file.endsWith('.js'))
       .filter(file => file !== 'README.md')
       .filter(file => !file.includes('.test.'))
-      .filter(file => !excludedMigrations.includes(file)) // Exclude dangerous migrations
       .filter(file => isDated(file)) // Exclude non-dated files (utility scripts)
       .sort((a, b) => {
         // Extract dates from filenames (YYYYMMDD format)
         const dateA = a.substring(0, 8)
         const dateB = b.substring(0, 8)
-        
+
         // Compare by date first
         if (dateA !== dateB) {
           return dateA.localeCompare(dateB)
         }
-        
+
         // If dates are equal, compare full filenames
         return a.localeCompare(b)
       })
   }
-  
+
   /**
    * Get migration name from filename (strip .js extension)
    * @private
@@ -598,7 +566,7 @@ class AutoMigrationRunner {
   static getMigrationName(filename) {
     return filename.replace(/\.js$/, '')
   }
-  
+
   /**
    * Hash a string to integer for advisory locks
    * @private
@@ -612,7 +580,7 @@ class AutoMigrationRunner {
     }
     return Math.abs(hash)
   }
-  
+
   /**
    * Sleep utility
    * @private
