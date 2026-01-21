@@ -146,6 +146,16 @@ const SubscriptionPlansPage = () => {
     }).format(new Date(dateString))
   }
 
+  // Map internal database plan keys to frontend plan keys
+  const mapPlanKey = (dbKey) => {
+    const mapping = {
+      'professional': 'loyalty',
+      'enterprise': 'pos',
+      'free': 'free'
+    };
+    return mapping[dbKey] || dbKey;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -174,311 +184,139 @@ const SubscriptionPlansPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir={i18n.dir()}>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-500 mesh-gradient-bg" dir={i18n.dir()}>
       <SEO titleKey="page.title" descriptionKey="page.subtitle" noindex={true} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
+        {/* Hero Section - Bold Modern */}
+        <div className="text-center mb-16 sm:mb-24 reveal-stagger">
+          <h1 className="text-display text-5xl sm:text-7xl lg:text-8xl text-slate-900 dark:text-white mb-6 leading-none">
             {t('page.title')}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-400 max-w-prose mx-auto">
             {t('page.subtitle')}
           </p>
         </div>
 
-        {/* Back Navigation Button */}
-        <div className="flex items-center gap-2 mb-4">
+        {/* Back Navigation - Modern Minimal */}
+        <div className="flex justify-center mb-12 sm:mb-16 reveal-stagger" style={{ animationDelay: '200ms' }}>
           <button
             onClick={() => navigate('/dashboard?tab=billing-subscription')}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-2"
+            className="group flex items-center gap-2 px-8 py-4 rounded-full bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-300/50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 transition-all text-sm font-bold uppercase tracking-widest min-h-[44px]"
           >
-            <span className={i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}>←</span>
+            <span className={`transform transition-transform group-hover:-translate-x-1 ${i18n.dir() === 'rtl' ? 'rotate-180' : ''}`}>←</span>
             {t('actions.backToBilling')}
           </button>
         </div>
 
-        {/* Trial Status Banner */}
-        {subscriptionData?.trial_info && subscriptionData.subscription_status === 'trial' && (
-          <div className={`mb-8 p-4 rounded-lg border ${subscriptionData.trial_info.days_remaining > 3
-            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-            : subscriptionData.trial_info.days_remaining > 0
-              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-            }`}>
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">
-                  {subscriptionData.trial_info.days_remaining > 0 ? '⏰' : '⚠️'}
-                </span>
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {subscriptionData.trial_info.days_remaining > 0
-                      ? t('trial.ending')
-                      : t('trial.expired')}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {subscriptionData.trial_info.days_remaining > 0
-                      ? t('trial.daysRemaining', { days: subscriptionData.trial_info.days_remaining })
-                      : t('trial.upgradePrompt')}
-                    {subscriptionData.trial_info.trial_ends_at && (
-                      <span className="mx-2">•</span>
-                    )}
-                    {subscriptionData.trial_info.trial_ends_at &&
-                      t('trial.endsOn', { date: formatDate(subscriptionData.trial_info.trial_ends_at) })}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => handlePlanSelect('loyalty')}
-                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-semibold whitespace-nowrap"
-              >
-                {t('actions.upgradeNow')}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Dynamic & Asymmetric Pricing Layout */}
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {Object.entries(plans).map(([planKey, plan], index) => {
+            const mappedCurrentPlan = mapPlanKey(subscriptionData?.current_plan);
+            const isCurrentPlan = mappedCurrentPlan === planKey;
+            const isProfessional = planKey === 'loyalty';
 
-        {/* Current Plan Section */}
-        {subscriptionData && (
-          <div className="mb-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              {t('currentPlan.title')}
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  {t('currentPlan.plan')}
-                </p>
-                <p className="text-xl font-semibold text-gray-900 dark:text-white capitalize">
-                  {t(`plans.${subscriptionData.current_plan}.name`)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  {t('currentPlan.status')}
-                </p>
-                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${subscriptionData.subscription_status === 'active'
-                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                  : subscriptionData.subscription_status === 'trial'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                    : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                  }`}>
-                  {t(`status.${subscriptionData.subscription_status}`)}
-                </span>
-              </div>
-            </div>
-
-            {/* Usage Statistics */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('currentPlan.usage')}
-              </h3>
-
-              {/* Offers */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('currentPlan.offers')}
-                  </span>
-                  <span className={`text-sm font-semibold ${getUsageColor(
-                    getUsagePercentage(subscriptionData.usage?.offers || 0, subscriptionData.limits?.offers || 0)
-                  )}`}>
-                    {subscriptionData.usage?.offers || 0} / {
-                      subscriptionData.limits?.offers === -1
-                        ? t('currentPlan.unlimited')
-                        : subscriptionData.limits?.offers || 0
-                    }
-                  </span>
-                </div>
-                {subscriptionData.limits?.offers !== -1 && (
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${getProgressBarColor(
-                        getUsagePercentage(subscriptionData.usage?.offers || 0, subscriptionData.limits?.offers || 0)
-                      )}`}
-                      style={{ width: `${getUsagePercentage(subscriptionData.usage?.offers || 0, subscriptionData.limits?.offers || 0)}%` }}
-                    ></div>
-                  </div>
-                )}
-              </div>
-
-              {/* Customers */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('currentPlan.customers')}
-                  </span>
-                  <span className={`text-sm font-semibold ${getUsageColor(
-                    getUsagePercentage(subscriptionData.usage?.customers || 0, subscriptionData.limits?.customers || 0)
-                  )}`}>
-                    {subscriptionData.usage?.customers || 0} / {
-                      subscriptionData.limits?.customers === -1
-                        ? t('currentPlan.unlimited')
-                        : subscriptionData.limits?.customers || 0
-                    }
-                  </span>
-                </div>
-                {subscriptionData.limits?.customers !== -1 && (
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${getProgressBarColor(
-                        getUsagePercentage(subscriptionData.usage?.customers || 0, subscriptionData.limits?.customers || 0)
-                      )}`}
-                      style={{ width: `${getUsagePercentage(subscriptionData.usage?.customers || 0, subscriptionData.limits?.customers || 0)}%` }}
-                    ></div>
-                  </div>
-                )}
-              </div>
-
-              {/* POS Operations */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('currentPlan.posOperations')}
-                  </span>
-                  <span className={`text-sm font-semibold ${getUsageColor(
-                    getUsagePercentage(subscriptionData.usage?.posOperations || 0, subscriptionData.limits?.posOperations || 0)
-                  )}`}>
-                    {subscriptionData.usage?.posOperations || 0} / {
-                      subscriptionData.limits?.posOperations === -1
-                        ? t('currentPlan.unlimited')
-                        : subscriptionData.limits?.posOperations || 0
-                    } {subscriptionData.limits?.posOperations !== -1 && t('currentPlan.perMonth')}
-                  </span>
-                </div>
-                {subscriptionData.limits?.posOperations !== -1 && (
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${getProgressBarColor(
-                        getUsagePercentage(subscriptionData.usage?.posOperations || 0, subscriptionData.limits?.posOperations || 0)
-                      )}`}
-                      style={{ width: `${getUsagePercentage(subscriptionData.usage?.posOperations || 0, subscriptionData.limits?.posOperations || 0)}%` }}
-                    ></div>
-                  </div>
-                )}
-              </div>
-
-              {/* Locations */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('currentPlan.locations')}
-                  </span>
-                  <span className={`text-sm font-semibold ${getUsageColor(
-                    getUsagePercentage(subscriptionData.usage?.locations || 0, subscriptionData.limits?.locations || 0)
-                  )}`}>
-                    {subscriptionData.usage?.locations || 0} / {
-                      subscriptionData.limits?.locations === -1
-                        ? t('currentPlan.unlimited')
-                        : subscriptionData.limits?.locations || 0
-                    }
-                  </span>
-                </div>
-                {subscriptionData.limits?.locations !== -1 && (
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${getProgressBarColor(
-                        getUsagePercentage(subscriptionData.usage?.locations || 0, subscriptionData.limits?.locations || 0)
-                      )}`}
-                      style={{ width: `${getUsagePercentage(subscriptionData.usage?.locations || 0, subscriptionData.limits?.locations || 0)}%` }}
-                    ></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Plans Comparison Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {Object.entries(plans).map(([planKey, plan]) => {
-            const isCurrentPlan = subscriptionData?.current_plan === planKey
             return (
               <div
                 key={planKey}
-                className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transition-all hover:scale-105 hover:shadow-xl ${isCurrentPlan ? 'border-2 border-primary' : 'border border-gray-200 dark:border-gray-700'
+                className={`reveal-stagger lg:col-span-4 ${isProfessional
+                  ? 'lg:col-span-4 lg:order-2 lg:scale-110 z-20'
+                  : planKey === 'free' ? 'lg:order-1' : 'lg:order-3'
                   }`}
+                style={{ animationDelay: `${(index + 3) * 150}ms` }}
               >
-                {/* Popular Badge */}
-                {plan.popular && (
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <span className="bg-primary text-white px-4 py-1 rounded-full text-xs font-semibold">
-                      {t('plans.loyalty.popular')}
-                    </span>
-                  </div>
-                )}
-
-                {/* Plan Icon */}
-                <div className="text-4xl mb-4 text-center">{plan.icon}</div>
-
-                {/* Plan Name */}
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">
-                  {t(`plans.${planKey}.name`)}
-                </h3>
-
-                {/* Price */}
-                <div className="text-center mb-4">
-                  {planKey === 'pos' ? (
-                    <>
-                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {plan.price} <span className="text-lg">SAR</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{plan.period}</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {plan.price} <span className="text-lg">SAR</span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{plan.period}</p>
-                    </>
-                  )}
-                </div>
-
-                {/* Description */}
-                <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
-                  {plan.description}
-                </p>
-
-                {/* Features List */}
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-green-500 mt-1">✓</span>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Action Button */}
-                <button
-                  onClick={() => handlePlanSelect(planKey)}
-                  disabled={isCurrentPlan}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${isCurrentPlan
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:bg-primary-dark'
+                <div
+                  className={`relative glass-card p-8 sm:p-10 transition-all duration-500 flex flex-col h-full overflow-hidden ${isProfessional
+                    ? 'border-2 border-[hsl(var(--electric-indigo))] dark:border-[hsl(var(--neon-teal))] indigo-glow dark:teal-glow'
+                    : 'hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-2xl'
                     }`}
                 >
-                  {isCurrentPlan ? t('actions.currentPlan') : t('actions.selectPlan')}
-                </button>
+                  {/* Plan Accent */}
+                  {plan.popular && (
+                    <div className="absolute top-0 right-0">
+                      <div className="bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 text-[10px] font-black uppercase tracking-tighter px-6 py-1 rotate-45 translate-x-4 translate-y-2">
+                        {t('plans.loyalty.popular')}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Plan Content */}
+                  <div className="mb-10 text-center sm:text-left">
+                    <div className="text-4xl mb-6 flex justify-center sm:justify-start">
+                      <span className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
+                        {plan.icon}
+                      </span>
+                    </div>
+                    <h2 className="text-display text-3xl sm:text-4xl text-slate-900 dark:text-white mb-2">
+                      {t(`plans.${planKey}.name`)}
+                    </h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                      {plan.description}
+                    </p>
+                  </div>
+
+                  {/* Price - The Focus Point (Sticky on Mobile) */}
+                  <div className="mb-10 text-center sm:text-left sticky top-0 sm:relative bg-inherit py-4 sm:py-0 z-10 -mx-8 sm:mx-0 px-8 sm:px-0 border-b border-transparent sm:border-0 dark:data-[sticky=true]:bg-slate-900 data-[sticky=true]:border-slate-200 dark:data-[sticky=true]:border-slate-800 transition-colors">
+                    <div className="flex items-baseline justify-center sm:justify-start gap-1">
+                      <span className="text-display text-5xl sm:text-6xl text-slate-900 dark:text-white">
+                        {plan.price}
+                      </span>
+                      <span className="text-xl font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+                        SAR
+                      </span>
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-tighter text-slate-400 dark:text-slate-600 mt-2">
+                      {plan.period}
+                    </p>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="space-y-5 mb-12 flex-grow">
+                    {plan.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-3 group">
+                        <div className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] transition-colors group-hover:bg-[hsl(var(--electric-indigo))] dark:group-hover:bg-[hsl(var(--neon-teal))] group-hover:text-white dark:group-hover:text-slate-950">
+                          ✓
+                        </div>
+                        <span className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-tight">
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={() => handlePlanSelect(planKey)}
+                    disabled={isCurrentPlan}
+                    className={`w-full py-5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all transform active:scale-95 ${isCurrentPlan
+                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-transparent'
+                      : isProfessional
+                        ? 'bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 hover:shadow-indigo-500/50 dark:hover:shadow-teal-500/50 hover:shadow-2xl'
+                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-200 hover:shadow-xl'
+                      }`}
+                  >
+                    {isCurrentPlan ? t('actions.currentPlan') : t('actions.selectPlan')}
+                  </button>
+                </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
 
-      {/* Upgrade/Downgrade Modal */}
+      {/* Modal - Glassmorphic Redesign */}
       {showModal && selectedPlan && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="fixed inset-0 flex items-center justify-center z-[100] p-4">
+          <div
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            onClick={closeModal}
+          ></div>
+          <div className="relative glass-card max-w-md w-full p-10 reveal-stagger" style={{ animationDelay: '0ms' }}>
+            <h3 className="text-display text-4xl text-slate-900 dark:text-white mb-6">
               {t(`modal.${modalType}.title`, { plan: t(`plans.${selectedPlan}.name`) })}
             </h3>
 
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-slate-600 dark:text-slate-400 mb-8 font-medium">
               {t(`modal.${modalType}.subtitle`, {
                 currentPlan: t(`plans.${subscriptionData?.current_plan}.name`),
                 newPlan: t(`plans.${selectedPlan}.name`)
@@ -486,54 +324,33 @@ const SubscriptionPlansPage = () => {
             </p>
 
             {modalType === 'downgrade' && (
-              <>
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                    {t('modal.downgrade.warning')}
-                  </p>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  {t('modal.downgrade.effectiveDate')}
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 mb-8">
+                <p className="text-sm font-bold text-amber-600 dark:text-amber-400 leading-relaxed">
+                  ⚠️ {t('modal.downgrade.warning')}
                 </p>
-              </>
+              </div>
             )}
 
-            {/* Downgrade Actions */}
-            {modalType === 'downgrade' && (
-              <>
-                {/* Coming Soon Message for Downgrade */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                    {t('modal.downgrade.comingSoon')}
-                  </p>
-                  <p className="text-xs text-blue-800 dark:text-blue-400">
-                    {t('modal.downgrade.comingSoonMessage')}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={closeModal}
-                    className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
-                  >
-                    {t('actions.cancel')}
-                  </button>
-                  <button
-                    disabled
-                    className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 rounded-lg cursor-not-allowed font-semibold"
-                    title={t('modal.downgrade.comingSoon')}
-                  >
-                    {t('actions.confirm')}
-                  </button>
-                </div>
-              </>
-            )}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={closeModal}
+                className="flex-1 px-8 py-4 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition-all hover:bg-slate-300 dark:hover:bg-slate-700"
+              >
+                {t('actions.cancel')}
+              </button>
+              <button
+                disabled
+                className="flex-1 px-8 py-4 rounded-xl bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 font-bold cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {t('actions.confirm')}
+                <span className="text-[10px] bg-slate-400 dark:bg-slate-600 text-white dark:text-slate-800 px-2 py-0.5 rounded-full">{t('actions.soon')}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default SubscriptionPlansPage
+export default SubscriptionPlansPage;

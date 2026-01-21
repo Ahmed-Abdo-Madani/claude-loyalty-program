@@ -114,7 +114,8 @@
     "invalidPublishableKeyFormat": "تنسيق مفتاح Moyasar العام غير صالح. يجب أن يبدأ بـ pk_test_ أو pk_live_.",
     "testKeyInProduction": "تحذير: استخدام مفتاح دفع تجريبي في بيئة الإنتاج.",
     "subscriptionUpdateFailed": "فشل تحديث الاشتراك. يرجى المحاولة مرة أخرى.",
-    "reactivationFailed": "فشلت إعادة تفعيل الحساب. يرجى المحاولة مرة أخرى أو الاتصال بالدعم."
+    "reactivationFailed": "فشلت إعادة تفعيل الحساب. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.",
+    "detailsFailed": "فشل استرداد تفاصيل الاشتراك. يرجى تحديث الصفحة أو الاتصال بالدعم."
   },
   "customer": {
     "registrationSuccess": "تم تسجيل العميل بنجاح",

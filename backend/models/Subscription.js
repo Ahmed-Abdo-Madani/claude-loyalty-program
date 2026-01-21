@@ -56,6 +56,26 @@ const Subscription = sequelize.define('Subscription', {
     defaultValue: 'SAR',
     comment: 'Currency code (ISO 4217)'
   },
+  lemon_squeezy_subscription_id: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Subscription ID from Lemon Squeezy'
+  },
+  lemon_squeezy_customer_id: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Customer ID from Lemon Squeezy'
+  },
+  lemon_squeezy_variant_id: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Variant ID representing the plan'
+  },
+  lemon_squeezy_status: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Raw status from Lemon Squeezy'
+  },
   moyasar_token: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -117,67 +137,67 @@ const Subscription = sequelize.define('Subscription', {
 })
 
 // Instance Methods
-Subscription.prototype.isActive = function() {
+Subscription.prototype.isActive = function () {
   return this.status === 'active' || this.status === 'trial'
 }
 
-Subscription.prototype.isTrial = function() {
+Subscription.prototype.isTrial = function () {
   return this.status === 'trial' && this.trial_end_date && new Date(this.trial_end_date) > new Date()
 }
 
-Subscription.prototype.isExpired = function() {
+Subscription.prototype.isExpired = function () {
   if (this.status === 'trial' && this.trial_end_date) {
     return new Date(this.trial_end_date) < new Date()
   }
   return this.status === 'expired'
 }
 
-Subscription.prototype.canUpgrade = function() {
+Subscription.prototype.canUpgrade = function () {
   if (this.plan_type === 'enterprise') return false
   return this.isActive()
 }
 
-Subscription.prototype.canDowngrade = function() {
+Subscription.prototype.canDowngrade = function () {
   if (this.plan_type === 'free') return false
   return this.isActive()
 }
 
-Subscription.prototype.calculateProration = function(newPlanAmount) {
+Subscription.prototype.calculateProration = function (newPlanAmount) {
   // Guard against missing billing dates
   if (!this.billing_cycle_start || !this.next_billing_date) return 0
-  
+
   const now = new Date()
   const cycleStart = new Date(this.billing_cycle_start)
   const cycleEnd = new Date(this.next_billing_date)
-  
+
   // Guard against invalid date ranges
   if (cycleEnd <= cycleStart) return 0
-  
+
   const totalDays = Math.ceil((cycleEnd - cycleStart) / (1000 * 60 * 60 * 24))
-  
+
   // Guard against zero or negative day cycles
   if (totalDays <= 0) return 0
-  
+
   const remainingDays = Math.max(0, Math.ceil((cycleEnd - now) / (1000 * 60 * 60 * 24)))
-  
+
   // Normalize and validate current amount
   const currentAmount = parseFloat(this.amount)
   if (isNaN(currentAmount)) return 0
-  
+
   // Normalize and validate new plan amount
   const normalizedNewAmount = parseFloat(newPlanAmount)
   if (isNaN(normalizedNewAmount)) return 0
-  
+
   const currentPlanDailyRate = currentAmount / totalDays
   const newPlanDailyRate = normalizedNewAmount / totalDays
-  
+
   const unusedCredit = currentPlanDailyRate * remainingDays
   const newPlanCost = newPlanDailyRate * remainingDays
-  
+
   return Math.max(0, newPlanCost - unusedCredit)
 }
 
-Subscription.prototype.markAsCancelled = async function(reason = null) {
+Subscription.prototype.markAsCancelled = async function (reason = null) {
   this.status = 'cancelled'
   this.cancelled_at = new Date()
   if (reason) {

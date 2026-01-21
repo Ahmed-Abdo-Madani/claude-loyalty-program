@@ -11,6 +11,7 @@ import CustomerService from '../services/CustomerService.js'
 import SubscriptionService from '../services/SubscriptionService.js'
 import MoyasarService from '../services/MoyasarService.js'
 import InvoiceService from '../services/InvoiceService.js'
+import LemonSqueezyService from '../services/LemonSqueezyService.js'
 import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice } from '../models/index.js'
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
@@ -25,16 +26,16 @@ const router = express.Router()
 // Validation helper for loyalty_tiers
 function validateLoyaltyTiers(tierConfig) {
   if (!tierConfig) return null // null/undefined is valid (tiers disabled)
-  
+
   // Handle both formats: { enabled: true, tiers: [...] } or just [...]
   let tiersArray
   let enabled = true
-  
+
   if (typeof tierConfig === 'object' && !Array.isArray(tierConfig)) {
     // Frontend sends { enabled: true, tiers: [...] }
     enabled = tierConfig.enabled !== false
     tiersArray = tierConfig.tiers || []
-    
+
     if (!enabled) {
       logger.debug('Tier system disabled, skipping validation')
       return tierConfig // Return as-is if disabled
@@ -45,31 +46,31 @@ function validateLoyaltyTiers(tierConfig) {
   } else {
     throw new Error('loyalty_tiers must be an array or object with tiers property')
   }
-  
+
   if (!Array.isArray(tiersArray)) {
     throw new Error('loyalty_tiers.tiers must be an array')
   }
-  
+
   if (tiersArray.length < 2 || tiersArray.length > 5) {
     throw new Error('loyalty_tiers must have between 2 and 5 tiers')
   }
-  
+
   logger.debug(`Validating ${tiersArray.length} tiers:`, tiersArray.map(t => ({ name: t.name, minRewards: t.minRewards, maxRewards: t.maxRewards })))
-  
+
   for (let i = 0; i < tiersArray.length; i++) {
     const tier = tiersArray[i]
     const tierLabel = `Tier ${i + 1} (${tier.name || 'unnamed'})`
-    
+
     // Required fields
     if (!tier.name || typeof tier.name !== 'string' || tier.name.trim() === '') {
       throw new Error(`${tierLabel}: name is required and must be a non-empty string`)
     }
-    
+
     // Optional nameAr validation (Arabic name)
     if (tier.nameAr !== undefined && typeof tier.nameAr !== 'string') {
       throw new Error(`${tierLabel}: nameAr must be a string`)
     }
-    
+
     // Validate minRewards (required)
     // First tier can start at 0 (for "New Member" tier) or 1
     const minAllowedValue = (i === 0) ? 0 : 1
@@ -80,7 +81,7 @@ function validateLoyaltyTiers(tierConfig) {
         throw new Error(`${tierLabel}: minRewards is required and must be a positive number (>= 1). Got: ${tier.minRewards}`)
       }
     }
-    
+
     // Validate maxRewards (required, can be null for unlimited)
     if (tier.maxRewards !== null && tier.maxRewards !== undefined) {
       if (typeof tier.maxRewards !== 'number') {
@@ -90,61 +91,61 @@ function validateLoyaltyTiers(tierConfig) {
         throw new Error(`${tierLabel}: maxRewards (${tier.maxRewards}) must be >= minRewards (${tier.minRewards})`)
       }
     }
-    
+
     // Only the last tier can have maxRewards = null (unlimited)
     if (tier.maxRewards === null && i !== tiersArray.length - 1) {
       throw new Error(`${tierLabel}: Only the last tier can have maxRewards = null (unlimited). Non-last tiers must have a specific maxRewards value.`)
     }
-    
+
     if (!tier.color || typeof tier.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(tier.color)) {
       throw new Error(`${tierLabel}: color is required and must be a valid hex color (e.g., #FFD700). Got: ${tier.color}`)
     }
-    
+
     if (!tier.icon || typeof tier.icon !== 'string' || tier.icon.trim() === '') {
       throw new Error(`${tierLabel}: icon is required and must be a non-empty string (emoji)`)
     }
-    
+
     // Optional reward boost must be between 0 and 1
     if (tier.rewardBoost !== undefined) {
       if (typeof tier.rewardBoost !== 'number' || tier.rewardBoost < 0 || tier.rewardBoost > 1) {
         throw new Error(`${tierLabel}: rewardBoost must be a number between 0 and 1. Got: ${tier.rewardBoost}`)
       }
     }
-    
+
     // Optional iconUrl validation
     if (tier.iconUrl !== undefined && typeof tier.iconUrl !== 'string') {
       throw new Error(`${tierLabel}: iconUrl must be a string (URL)`)
     }
-    
+
     // Ensure tiers are in ascending order
     if (i > 0) {
       const prevTier = tiersArray[i - 1]
-      
+
       if (tier.minRewards <= prevTier.minRewards) {
         throw new Error(`${tierLabel}: minRewards (${tier.minRewards}) must be greater than previous tier's minRewards (${prevTier.minRewards})`)
       }
-      
+
       // Check for gaps (optional - could allow gaps if business wants)
       if (prevTier.maxRewards !== null && tier.minRewards !== prevTier.maxRewards + 1) {
         logger.warn(`${tierLabel}: Gap detected between tier ranges. Previous tier maxRewards: ${prevTier.maxRewards}, current minRewards: ${tier.minRewards}`)
       }
     }
   }
-  
+
   // First tier must start at 0 or 1
   // 0 = explicit "New Member" tier, 1 = synthetic New Member tier generated by backend
   if (tiersArray[0].minRewards !== 0 && tiersArray[0].minRewards !== 1) {
     throw new Error(`First tier must have minRewards = 0 (explicit New Member tier) or 1 (backend generates New Member tier). Got: ${tiersArray[0].minRewards}`)
   }
-  
+
   // Last tier MUST have maxRewards = null (unlimited) - ENFORCE, not warn
   const lastTier = tiersArray[tiersArray.length - 1]
   if (lastTier.maxRewards !== null) {
     throw new Error(`Last tier "${lastTier.name}" must have maxRewards = null (unlimited). Leave the max empty for unlimited rewards. Got: ${lastTier.maxRewards}`)
   }
-  
+
   logger.debug('✅ Tier validation passed')
-  
+
   return tierConfig // Return validated config (preserves { enabled, tiers } structure)
 }
 
@@ -974,7 +975,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
 
     // Fetch first active offer's card design
     let cardDesign = null
-    
+
     try {
       const firstOffer = await Offer.findOne({
         where: {
@@ -1372,7 +1373,89 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
   }
 })
 
+
+// Create new branch - SECURE VERSION
+router.post('/my/branches', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+    const business = req.business
+
+    // Check plan limits
+    const currentBranchCount = await Branch.count({ where: { business_id: businessId } })
+    const limits = business.getPlanLimits()
+
+    if (currentBranchCount >= limits.locations && limits.locations !== Infinity) {
+      return res.status(403).json({
+        success: false,
+        message: getLocalizedMessage('permissions.upgradeRequired', req.locale || 'ar'),
+        error: 'Plan limit reached'
+      })
+    }
+
+    // Handle POS (Enterprise) Billing
+    if (business.current_plan === 'enterprise') {
+      const sub = await Subscription.findOne({ where: { business_id: businessId, status: 'active' } });
+      if (sub && sub.lemon_squeezy_subscription_id) {
+        // For POS, we bill per branch. Quantity = Number of Branches.
+        // If we are adding the 2nd branch (current is 1), quantity becomes 2.
+        const newQuantity = currentBranchCount + 1;
+        try {
+          // Update quantity in Lemon Squeezy (charges immediately if prorated)
+          logger.info(`Updating Lemon Squeezy subscription ${sub.lemon_squeezy_subscription_id} to quantity ${newQuantity}`);
+          await LemonSqueezyService.updateSubscriptionQuantity(sub.lemon_squeezy_subscription_id, newQuantity);
+        } catch (billingError) {
+          logger.error('Billing update failed:', billingError);
+          return res.status(402).json({
+            success: false,
+            message: getLocalizedMessage('errors.billingFailed', req.locale || 'ar'),
+            error: 'Failed to update subscription quantity'
+          });
+        }
+      }
+    }
+
+    // Create branch
+    // Note: User input might contain location data
+    const { name, address, city, region, district, phone, email, manager_name, isMain, location_id, location_type, location_hierarchy } = req.body
+
+    const newBranch = await Branch.create({
+      business_id: businessId,
+      name,
+      address,
+      city,
+      region,
+      district,
+      phone,
+      email,
+      manager_name,
+      location_id,
+      location_type,
+      location_hierarchy,
+      status: 'active', // Default to active
+      isMain: isMain || false, // Should handle main branch logic if needed (only one main)
+      country: 'Saudi Arabia'
+    })
+
+    // Update business total checks
+    await business.update({ total_branches: currentBranchCount + 1 });
+
+    res.status(201).json({
+      success: true,
+      data: newBranch,
+      message: getLocalizedMessage('success.branchCreated', req.locale || 'ar')
+    })
+  } catch (error) {
+    logger.error('Create branch error:', error)
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.internalError', req.locale || 'ar'),
+      error: error.message
+    })
+  }
+})
+
 // Update branch details
+
 router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
   try {
     const { id } = req.params
@@ -1395,7 +1478,7 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
 
     // Allowed fields to update
     const allowedFields = [
-      'name', 'address', 'city', 'region', 'district', 
+      'name', 'address', 'city', 'region', 'district',
       'phone', 'email', 'manager_name', 'manager_pin_enabled',
       'status', 'operating_hours', 'location_id', 'location_type', 'location_hierarchy'
     ]
@@ -1655,7 +1738,7 @@ router.post('/login', async (req, res) => {
     let subscriptionData = null
     try {
       const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(business.public_id)
-      
+
       // Calculate trial days remaining
       let trialDaysRemaining = null
       if (business.trial_ends_at) {
@@ -1663,7 +1746,7 @@ router.post('/login', async (req, res) => {
         const trialEnd = new Date(business.trial_ends_at)
         trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)))
       }
-      
+
       // Comment 1 & 4: Include complete subscription metadata with retry/grace fields
       subscriptionData = {
         current_plan: subscriptionStatus.current_plan,
@@ -1677,7 +1760,7 @@ router.post('/login', async (req, res) => {
         grace_period_end: subscriptionStatus.grace_period_end,
         next_retry_date: subscriptionStatus.next_retry_date
       }
-      
+
       logger.debug('Subscription data included in login', {
         business_id: business.public_id,
         plan: subscriptionStatus.current_plan
@@ -1733,20 +1816,20 @@ router.post('/login', async (req, res) => {
 // Helper function to normalize and validate Saudi phone numbers
 const normalizeAndValidateSaudiPhone = (phone) => {
   if (!phone) return null
-  
+
   let normalizedPhone = phone.trim()
-  
+
   // Normalize 05xxxxxxxx format to +9665xxxxxxxx
   if (normalizedPhone.startsWith('05')) {
     normalizedPhone = '+9665' + normalizedPhone.substring(2)
   }
-  
+
   // Validate Saudi mobile numbers (start with 5, followed by 8 digits)
   const phonePattern = /^\+966[5][0-9]{8}$/
   if (!phonePattern.test(normalizedPhone)) {
     throw new Error('Invalid Saudi phone format')
   }
-  
+
   return normalizedPhone
 }
 
@@ -1760,9 +1843,9 @@ router.post('/register', async (req, res) => {
     const missingFields = requiredFields.filter(field => !businessData[field])
 
     // Check if location is provided (either old format or new location_data)
-    const hasLocation = businessData.region || 
-                       businessData.city || 
-                       (businessData.location_data && businessData.location_data.type)
+    const hasLocation = businessData.region ||
+      businessData.city ||
+      (businessData.location_data && businessData.location_data.type)
 
     if (!hasLocation) {
       missingFields.push('location')
@@ -1834,10 +1917,10 @@ router.post('/register', async (req, res) => {
     // This sets subscription_status, trial_ends_at, and current_plan on the Business record
     try {
       await SubscriptionService.initializeTrialPeriod(newBusiness.public_id, 7)
-      
+
       // Reload business to get updated subscription fields
       await newBusiness.reload()
-      
+
       logger.info('Trial period activated', {
         business_id: newBusiness.public_id,
         trial_ends_at: newBusiness.trial_ends_at,
@@ -2226,7 +2309,7 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
       // Legacy token-only format: Auto-detect offer
       console.log('🔍 Legacy QR detected - attempting auto-offer selection')
       const activeOffers = businessOffers.filter(offer => offer.status === 'active')
-      
+
       if (activeOffers.length === 1) {
         targetOffer = activeOffers[0]
         console.log(`✅ Auto-selected single active offer for legacy QR: ${targetOffer.public_id}`)
@@ -2258,25 +2341,25 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
       }
     }
 
-    console.log('✅ Scanner: Valid scan detected', { 
-      customerId, 
-      offerId: targetOffer.public_id, 
-      offerTitle: targetOffer.title 
+    console.log('✅ Scanner: Valid scan detected', {
+      customerId,
+      offerId: targetOffer.public_id,
+      offerTitle: targetOffer.title
     })
 
     // Get or create customer progress
     let progress = await CustomerService.findCustomerProgress(customerId, targetOffer.public_id)
     if (!progress) {
       progress = await CustomerService.createCustomerProgress(customerId, targetOffer.public_id, businessId)
-      
+
       // For new customers, also create Google Wallet object if it doesn't exist
       try {
         const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
         const objectId = `${googleWalletController.issuerId}.${customerId}_${targetOffer.public_id}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
-        
+
         const authClient = await googleWalletController.auth.getClient()
         const accessToken = await authClient.getAccessToken()
-        
+
         // Check if Google Wallet object exists
         const checkResponse = await fetch(`${googleWalletController.baseUrl}/loyaltyObject/${objectId}`, {
           method: 'GET',
@@ -2285,16 +2368,16 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
             'Content-Type': 'application/json'
           }
         })
-        
+
         if (!checkResponse.ok && checkResponse.status === 404) {
           console.log('🔧 Creating Google Wallet object for new customer...')
-          
+
           const customerData = {
             customerId: customerId,
             firstName: 'Customer',
             lastName: 'User'
           }
-          
+
           const offerData = {
             offerId: targetOffer.public_id,
             businessName: req.business.business_name,
@@ -2302,17 +2385,17 @@ router.post('/scan/progress/:customerToken/:offerHash?', requireBusinessAuth, as
             description: targetOffer.description,
             stamps_required: targetOffer.stamps_required
           }
-          
+
           const progressData = {
             current_stamps: progress.current_stamps,
             max_stamps: progress.max_stamps,
             is_completed: progress.is_completed
           }
-          
+
           // Create loyalty class and object
           await googleWalletController.createOrUpdateLoyaltyClass(authClient, offerData)
           const loyaltyObject = await googleWalletController.createLoyaltyObject(authClient, customerData, offerData, progressData)
-          
+
           console.log('✅ Google Wallet object created for new customer:', loyaltyObject.id)
         }
       } catch (walletCreationError) {
@@ -2535,10 +2618,10 @@ router.post('/scan/confirm-prize/:customerId/:offerId', requireBusinessAuth, asy
     // Calculate customer tier AFTER claimReward (uses fresh rewards_claimed from database)
     const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
     const tierNameAfter = tierData?.currentTier?.name || null
-    
+
     // Detect tier upgrade by comparing tier names
     const tierUpgrade = tierNameBefore !== null && tierNameAfter !== null && tierNameBefore !== tierNameAfter
-    
+
     if (tierData) {
       console.log('🏆 Customer tier after claim:', tierData)
       if (tierUpgrade) {
@@ -2653,7 +2736,7 @@ router.get('/scan/verify/:customerToken/:offerHash?', requireBusinessAuth, async
 
     for (const offer of businessOffers) {
       const expectedHash = CustomerService.generateOfferHash(offer.public_id, businessId)
-      
+
       if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
         targetOffer = offer
         console.log(`✅ Found matching offer: ${offer.public_id}`)
@@ -2844,12 +2927,12 @@ router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, asy
     // Try to fetch Google Wallet object
     const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
     const objectId = `${googleWalletController.issuerId}.${customerId}_${offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
-    
+
     let walletStatus = null
     try {
       const authClient = await googleWalletController.auth.getClient()
       const accessToken = await authClient.getAccessToken()
-      
+
       const response = await fetch(`${googleWalletController.baseUrl}/loyaltyObject/${objectId}`, {
         method: 'GET',
         headers: {
@@ -2857,7 +2940,7 @@ router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, asy
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (!response.ok && response.status === 404) {
         walletStatus = {
           exists: false,
@@ -2897,8 +2980,8 @@ router.get('/debug/wallet-object/:customerId/:offerId', requireBusinessAuth, asy
           last_scan_date: dbProgress.last_scan_date
         } : null,
         wallet: walletStatus,
-        synced: dbProgress && walletStatus.exists ? 
-          walletStatus.balance === `${dbProgress.current_stamps}/${dbProgress.max_stamps}` : 
+        synced: dbProgress && walletStatus.exists ?
+          walletStatus.balance === `${dbProgress.current_stamps}/${dbProgress.max_stamps}` :
           false
       }
     })
@@ -2936,13 +3019,13 @@ router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessA
 
     // Create Google Wallet object
     const googleWalletController = (await import('../controllers/realGoogleWalletController.js')).default
-    
+
     const customerData = {
       customerId: customerId,
       firstName: 'Customer',
       lastName: 'User'
     }
-    
+
     const offerData = {
       offerId: offer.id,
       businessName: req.business.business_name,
@@ -2950,7 +3033,7 @@ router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessA
       description: offer.description,
       stamps_required: offer.stamps_required
     }
-    
+
     const progressData = {
       current_stamps: dbProgress.current_stamps,
       max_stamps: dbProgress.max_stamps,
@@ -2964,10 +3047,10 @@ router.post('/debug/create-wallet-object/:customerId/:offerId', requireBusinessA
     })
 
     const authClient = await googleWalletController.auth.getClient()
-    
+
     // Create loyalty class first
     const loyaltyClass = await googleWalletController.createOrUpdateLoyaltyClass(authClient, offerData)
-    
+
     // Create loyalty object
     const loyaltyObject = await googleWalletController.createLoyaltyObject(authClient, customerData, offerData, progressData)
 
@@ -3030,7 +3113,7 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
     // Validate publishable key format using MoyasarService helper
     const publishableKey = process.env.MOYASAR_PUBLISHABLE_KEY
     const { valid, environment } = MoyasarService.validatePublishableKey(publishableKey)
-    
+
     if (!valid) {
       logger.error('Invalid publishable key format', {
         keyPrefix: publishableKey.substring(0, 15) + '...'
@@ -3052,13 +3135,13 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
 
     // Calculate plan price
     let amount = SubscriptionService.calculatePlanPrice(planType, locationCount)
-    
+
     // If updating payment method, use minimal amount for verification (1 SAR)
     if (isPaymentMethodUpdate) {
       amount = 1.00
       logger.info('Using minimal amount for payment method update', { businessId, amount })
     }
-    
+
     // Validate calculated amount
     if (amount < 1 || amount > 100000) {
       logger.error('Invalid subscription amount', { planType, locationCount, amount })
@@ -3072,9 +3155,9 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
     const sessionId = crypto.randomUUID()
 
     // Construct and validate callback URL
-    const callbackUrl = process.env.MOYASAR_CALLBACK_URL || 
-                       `${process.env.FRONTEND_URL}/subscription/payment-callback`
-    
+    const callbackUrl = process.env.MOYASAR_CALLBACK_URL ||
+      `${process.env.FRONTEND_URL}/subscription/payment-callback`
+
     if (!callbackUrl.startsWith('http')) {
       logger.error('Invalid callback URL', { callbackUrl })
       return res.status(500).json({
@@ -3082,13 +3165,13 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
         message: 'Payment callback URL not configured'
       })
     }
-    
+
     logger.debug('Checkout callback URL', { callbackUrl })
 
     // Check for existing pending payment to prevent duplicates (within last 10 minutes)
     const { Sequelize } = await import('sequelize')
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-    
+
     const existingPendingPayment = await Payment.findOne({
       where: {
         business_id: businessId,
@@ -3116,7 +3199,7 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
         createdAt: existingPendingPayment.created_at
       })
       payment = existingPendingPayment
-      
+
       // Update session ID for the reused payment
       await payment.update({
         metadata: {
@@ -3162,8 +3245,8 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
       success: true,
       amount,
       currency: 'SAR',
-      description: isPaymentMethodUpdate 
-        ? 'Payment Method Verification' 
+      description: isPaymentMethodUpdate
+        ? 'Payment Method Verification'
         : `Subscription to ${planType} Plan`,
       publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY,
       callbackUrl,
@@ -3172,7 +3255,7 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
       paymentId: payment.public_id,
       businessName: business?.business_name || 'Business'
     }
-    
+
     // Log response (mask sensitive data)
     logger.debug('Checkout session response', {
       ...responseData,
@@ -3205,19 +3288,19 @@ router.post('/subscription/checkout', requireBusinessAuth, async (req, res) => {
  */
 router.post('/subscription/payment-callback', requireBusinessAuth, async (req, res) => {
   const startTime = Date.now()
-  
+
   try {
     const { moyasarPaymentId, status, message } = req.body
     const businessId = req.businessId
 
-    logger.info('Payment callback received', { 
-      businessId, 
-      moyasarPaymentId, 
+    logger.info('Payment callback received', {
+      businessId,
+      moyasarPaymentId,
       status,
       message,
       requestBody: req.body
     })
-    
+
     logger.debug('Callback headers', {
       authorization: req.headers.authorization ? 'present' : 'missing',
       businessId: req.headers['x-business-id']
@@ -3231,7 +3314,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
         message,
         possibleCause: 'Payment may not have been initiated or redirect failed'
       })
-      
+
       return res.status(400).json({
         success: false,
         message: getLocalizedMessage('validation.paymentIdRequired', req.locale),
@@ -3325,8 +3408,8 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
     // Step 2: Extract session ID from Moyasar payment metadata
     // FIXED: Check session_id first (matches checkout metadata key), then sessionId as fallback
     const sessionId = moyasarPayment.metadata?.session_id || moyasarPayment.metadata?.sessionId
-    logger.debug('Extracted session ID from Moyasar metadata', { 
-      moyasarPaymentId, 
+    logger.debug('Extracted session ID from Moyasar metadata', {
+      moyasarPaymentId,
       sessionId,
       hasMetadata: !!moyasarPayment.metadata,
       usedKey: moyasarPayment.metadata?.session_id ? 'session_id' : 'sessionId'
@@ -3380,7 +3463,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
       moyasarPaymentId,
       previousMoyasarId: payment.moyasar_payment_id
     })
-    
+
     await payment.update({
       moyasar_payment_id: moyasarPaymentId
     })
@@ -3422,7 +3505,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
         amountMatch: verificationResult.verificationDetails?.amountMatch,
         currencyMatch: verificationResult.verificationDetails?.currencyMatch
       })
-      
+
       // Special handling: Check if Moyasar says paid but verification failed
       if (verificationResult.moyasarPayment?.status === 'paid' && !verificationResult.verified) {
         logger.error('CRITICAL WARNING: Moyasar confirmed payment as PAID but verification failed', {
@@ -3442,7 +3525,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
           message || verificationResult.issues.join(', ')
         )
       }
-      
+
       // Build specific error message based on errorCode
       let specificMessage = getLocalizedMessage('payment.verificationFailed', req.locale)
       if (errorCode === 'STATUS_MISMATCH' && verificationResult.verificationDetails) {
@@ -3466,7 +3549,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
         issues: verificationResult.issues,
         error: message || 'Payment verification failed'
       }
-      
+
       // Include verification details in development mode for debugging
       if (process.env.NODE_ENV === 'development') {
         errorResponse.verificationDetails = verificationResult.verificationDetails
@@ -3651,7 +3734,7 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
       const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(businessId)
 
       const processingTimeMs = Date.now() - startTime
-      
+
       logger.info('Payment callback completed successfully', {
         businessId,
         moyasarPaymentId,
@@ -3676,14 +3759,14 @@ router.post('/subscription/payment-callback', requireBusinessAuth, async (req, r
     } catch (error) {
       // Rollback transaction on error
       await transaction.rollback()
-      
+
       logger.error('Transaction rolled back', {
         businessId,
         moyasarPaymentId,
         error: error.message,
         stack: error.stack
       })
-      
+
       throw error
     }
 
@@ -3743,7 +3826,7 @@ router.get('/subscription/details', requireBusinessAuth, async (req, res) => {
 
     // Fetch last 3 payments - only show successful payments
     const recentPayments = await Payment.findAll({
-      where: { 
+      where: {
         business_id: businessId,
         status: 'paid' // Only show paid payments to avoid duplicates
       },
@@ -3808,7 +3891,7 @@ router.get('/subscription/details', requireBusinessAuth, async (req, res) => {
  */
 router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const { moyasarPaymentId, planType, locationCount } = req.body
     const businessId = req.businessId
@@ -3827,7 +3910,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
         businessId,
         currentStatus: business.status
       })
-      
+
       await transaction.rollback()
       return res.status(400).json({
         success: false,
@@ -3849,7 +3932,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
 
     // Step 2: Verify Payment with Moyasar
     logger.info('Verifying payment with Moyasar', { moyasarPaymentId })
-    
+
     let moyasarPayment
     try {
       moyasarPayment = await MoyasarService.fetchPaymentFromMoyasar(moyasarPaymentId)
@@ -3864,14 +3947,14 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
     }
 
     const verificationResult = await MoyasarService.verifyPayment(moyasarPaymentId)
-    
+
     if (!verificationResult.verified) {
       logger.error('Payment verification failed for reactivation', {
         businessId,
         moyasarPaymentId,
         issues: verificationResult.issues
       })
-      
+
       await transaction.rollback()
       return res.status(400).json({
         success: false,
@@ -3915,7 +3998,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
 
     // Step 4: Create Payment Record
     logger.info('Creating payment record', { businessId, amount: paymentAmount })
-    
+
     const payment = await Payment.create({
       business_id: businessId,
       subscription_id: subscription.public_id,
@@ -3959,7 +4042,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
         fromPlan: subscription.plan_type,
         toPlan: planType
       })
-      
+
       await subscription.update({
         plan_type: planType
       }, { transaction })
@@ -3987,10 +4070,10 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
 
     // Step 7: Generate Invoice
     const { Counter } = await import('../models/index.js')
-    
+
     const year = new Date().getFullYear()
     const invoiceNumber = await Counter.getNextValue('invoice', year, { transaction })
-    
+
     const invoice = await Invoice.create({
       business_id: businessId,
       subscription_id: subscription.id,
@@ -4021,7 +4104,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
     try {
       const NotificationService = (await import('../services/NotificationService.js')).default
       const notificationService = new NotificationService()
-      
+
       await notificationService.sendReactivationSuccessNotification(businessId, {
         plan_type: subscription.plan_type,
         amount: paymentAmount,
@@ -4065,7 +4148,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
 
   } catch (error) {
     await transaction.rollback()
-    
+
     logger.error('Reactivation failed', {
       businessId: req.businessId,
       error: error.message,
@@ -4174,7 +4257,7 @@ router.put('/subscription/upgrade', requireBusinessAuth, async (req, res) => {
 
       if (!paymentResult.success) {
         await payment.markAsFailed(paymentResult.error || 'Payment failed')
-        
+
         return res.status(400).json({
           success: false,
           message: getLocalizedMessage('payment.tokenizationFailed', req.locale),
@@ -4261,9 +4344,9 @@ router.put('/subscription/upgrade', requireBusinessAuth, async (req, res) => {
         businessId,
         error: paymentError.message
       })
-      
+
       await payment.markAsFailed(paymentError.message)
-      
+
       throw paymentError
     }
 
@@ -4367,8 +4450,8 @@ router.put('/subscription/cancel', requireBusinessAuth, async (req, res) => {
       data: {
         cancelled_at: result.cancelled_at,
         access_until: result.access_until,
-        message: getLocalizedMessage('subscription.accessRetained', req.locale, { 
-          date: new Date(result.access_until).toLocaleDateString() 
+        message: getLocalizedMessage('subscription.accessRetained', req.locale, {
+          date: new Date(result.access_until).toLocaleDateString()
         })
       }
     })
@@ -4475,7 +4558,7 @@ router.put('/subscription/payment-method', requireBusinessAuth, async (req, res)
       }
     })
 
- 
+
   } catch (error) {
     logger.error('Payment method update failed', {
       businessId: req.businessId,
@@ -4652,7 +4735,7 @@ router.get('/payments', requireBusinessAuth, async (req, res) => {
       try {
         const fromDate = new Date(dateFrom)
         const toDate = new Date(dateTo)
-        
+
         if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
           return res.status(400).json({
             success: false,
@@ -4674,7 +4757,7 @@ router.get('/payments', requireBusinessAuth, async (req, res) => {
     // Amount range filter
     if (minAmount || maxAmount) {
       whereClause.amount = {}
-      
+
       if (minAmount) {
         const min = parseFloat(minAmount)
         if (isNaN(min)) {

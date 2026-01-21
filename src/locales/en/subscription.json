@@ -15,16 +15,29 @@
     "customers": "Customers",
     "posOperations": "POS Operations",
     "locations": "Locations",
+    "upgradeSuccess": "Subscription upgraded successfully!",
+    "downgradeScheduled": "Downgrade scheduled for {{date}}",
+    "currentPlan": "Current Plan",
+    "renewalDate": "Next Billing",
+    "loading": "Loading subscription details...",
     "unlimited": "Unlimited",
     "perMonth": "per month"
   },
+  "lifetime": "Lifetime Access",
   "trial": {
+    "title": "FREE TRIAL",
+    "days": "Days Left",
+    "remainingDescription": "Upgrade before your trial ends to keep your data safe.",
     "active": "Trial Active",
     "ending": "Trial Ending Soon",
     "expired": "Trial Expired",
     "daysRemaining": "{{days}} days remaining",
     "endsOn": "Ends on {{date}}",
     "upgradePrompt": "Upgrade now to continue using all features"
+  },
+  "active": {
+    "title": "Active Subscription",
+    "description": "Your account is in good standing."
   },
   "plans": {
     "free": {
@@ -76,6 +89,12 @@
         "Custom integrations",
         "24/7 priority support"
       ]
+    },
+    "professional": {
+      "name": "Loyalty Program"
+    },
+    "enterprise": {
+      "name": "POS Program"
     }
   },
   "actions": {
@@ -93,7 +112,8 @@
     "viewPlans": "View All Plans",
     "processing": "Processing...",
     "retry": "Retry",
-    "backToBilling": "Back to Billing & Subscription"
+    "backToBilling": "Back to Billing & Subscription",
+    "soon": "COMING SOON"
   },
   "banner": {
     "trialEnding": "Your trial ends in {{days}} days",
@@ -111,8 +131,13 @@
     "title": "Checkout",
     "subtitle": "Complete your subscription payment",
     "planLabel": "Selected Plan",
+    "total": "Total",
+    "locations": "Locations",
     "amountLabel": "Amount",
     "paymentMethodLabel": "Payment Method",
+    "orderSummary": "Order Summary",
+    "proceedButton": "Proceed to Payment →",
+    "secureNote": "Payments are processed securely by Lemon Squeezy. We do not store your card details.",
     "securityNote": "Your payment is secure and encrypted",
     "processingNote": "Do not close this page during payment",
     "backButton": "Back to Plans",
@@ -447,7 +472,8 @@
     "fetchFailed": "Failed to load subscription details. Please try again.",
     "upgradeFailed": "Failed to upgrade subscription. Please try again.",
     "downgradeFailed": "Failed to downgrade subscription. Please try again.",
-    "cancelFailed": "Failed to cancel subscription. Please try again."
+    "cancelFailed": "Failed to cancel subscription. Please try again.",
+    "portalFailed": "Failed to redirect to billing portal. Please try again."
   },
   "planLabel": "Plan",
   "usage": {

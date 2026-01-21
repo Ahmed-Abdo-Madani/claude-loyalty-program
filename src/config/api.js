@@ -76,7 +76,7 @@ export const endpoints = {
 
   // Test APIs
   testDualQRFlow: `${API_BASE_URL}/api/business/test/dual-qr-flow`,
-  
+
   // Debug APIs
   debugWalletObject: `${API_BASE_URL}/api/business/debug/wallet-object`,
   createWalletObject: `${API_BASE_URL}/api/business/debug/create-wallet-object`,
@@ -182,15 +182,16 @@ export const endpoints = {
   getBranchAnalytics: (branchId) => `${API_BASE_URL}/api/business/my/branches/${branchId}/analytics`,
 
   // Subscription management endpoints for plan changes and billing
-  subscriptionCheckout: `${API_BASE_URL}/api/business/subscription/checkout`,
-  subscriptionPaymentCallback: `${API_BASE_URL}/api/business/subscription/payment-callback`,
-  subscriptionReactivate: `${API_BASE_URL}/api/business/subscription/reactivate`,
-  subscriptionStatus: `${API_BASE_URL}/api/business/subscription/status`,
-  subscriptionDetails: `${API_BASE_URL}/api/business/subscription/details`,
-  subscriptionUpgrade: `${API_BASE_URL}/api/business/subscription/upgrade`,
-  subscriptionDowngrade: `${API_BASE_URL}/api/business/subscription/downgrade`,
-  subscriptionCancel: `${API_BASE_URL}/api/business/subscription/cancel`,
-  subscriptionPaymentMethod: `${API_BASE_URL}/api/business/subscription/payment-method`,
+  subscriptionCheckout: `${API_BASE_URL}/api/subscriptions/checkout`,
+  subscriptionPaymentCallback: `${API_BASE_URL}/api/subscriptions/payment-callback`,
+  subscriptionReactivate: `${API_BASE_URL}/api/subscriptions/reactivate`,
+  subscriptionStatus: `${API_BASE_URL}/api/subscriptions/status`,
+  subscriptionDetails: `${API_BASE_URL}/api/subscriptions/details`, // Updated
+  subscriptionUpgrade: `${API_BASE_URL}/api/subscriptions/upgrade`,
+  subscriptionDowngrade: `${API_BASE_URL}/api/subscriptions/downgrade`,
+  subscriptionCancel: `${API_BASE_URL}/api/subscriptions/cancel`,
+  subscriptionPortal: `${API_BASE_URL}/api/subscriptions/portal`,
+  subscriptionPaymentMethod: `${API_BASE_URL}/api/subscriptions/payment-method`,
 
   // Payment History & Invoice Management
   businessPayments: `${API_BASE_URL}/api/business/payments`,
@@ -215,7 +216,7 @@ export const secureApi = {
   // PUT request with secure authentication
   async put(endpoint, data) {
     return await secureApiRequest(endpoint, {
-      method: 'PUT', 
+      method: 'PUT',
       body: JSON.stringify(data)
     })
   },
@@ -244,13 +245,13 @@ export const publicApi = {
       'Accept-Language': i18n.language || 'ar',
       ...(options.headers || {})
     }
-    
+
     const response = await fetch(endpoint, {
       method: 'GET',
       ...options,
       headers
     })
-    
+
     return response
   },
 
@@ -261,14 +262,14 @@ export const publicApi = {
       'Accept-Language': i18n.language || 'ar',
       ...(options.headers || {})
     }
-    
+
     const response = await fetch(endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
       ...options,
       headers
     })
-    
+
     return response
   }
 }

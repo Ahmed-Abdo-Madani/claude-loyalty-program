@@ -22,6 +22,7 @@ import branchManagerRoutes from './routes/branchManager.js'
 import autoEngagementRoutes from './routes/autoEngagement.js'
 import posRoutes from './routes/pos.js'
 import receiptsRoutes from './routes/receipts.js'
+import subscriptionRoutes from './routes/subscriptionRoutes.js'
 
 import webhookRoutes from './routes/webhooks.js'
 import contactRoutes from './routes/contact.js'
@@ -315,6 +316,7 @@ app.use('/api/branch-manager', branchManagerRoutes)
 app.use('/api/auto-engagement', autoEngagementRoutes)
 app.use('/api/pos', posRoutes)
 app.use('/api/receipts', receiptsRoutes)
+app.use('/api/subscriptions', subscriptionRoutes)
 app.use('/api/contact', contactRoutes)
 
 // Error handling middleware
