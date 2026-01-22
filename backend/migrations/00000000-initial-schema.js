@@ -1,38 +1,96 @@
-
-import { exec } from 'child_process'
-import util from 'util'
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-const execAsync = util.promisify(exec)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 export async function up(queryInterface, Sequelize) {
-    console.log('🔄 Executing initial schema dump via psql pipe...')
+    console.log('🔄 Executing initial schema dump with robust statement splitting...')
 
     const sqlPath = path.join(__dirname, '00000000-initial-schema.sql')
 
-    // Command to filter and pipe SQL to dockerized psql
-    const command = `sed -e '/^\\\\/d' -e '/schema_migrations/d' "${sqlPath}" | docker exec -i loyalty_postgres psql -U loyalty_user -d loyalty_program`
+    if (!fs.existsSync(sqlPath)) {
+        throw new Error(`Migration SQL file not found: ${sqlPath}`)
+    }
 
-    try {
-        const { stdout, stderr } = await execAsync(command, { maxBuffer: 1024 * 1024 * 10 }) // 10MB buffer
+    const sqlContent = fs.readFileSync(sqlPath, 'utf8')
+    const lines = sqlContent.split(/\r?\n/)
 
-        // Log output sparingly
-        if (stderr) {
-            // psql prints notices to stderr, which is fine
-            console.log('📝 psql output/notices:')
-            console.log(stderr.split('\n').slice(0, 5).join('\n') + '...')
+    const statements = []
+    let currentStatement = ''
+    let inDollarBlock = false
+    let dollarTag = ''
+
+    for (let line of lines) {
+        let trimmed = line.trim()
+
+        // Skip psql meta-commands and comments if not in block
+        if (!inDollarBlock && (trimmed.startsWith('\\') || trimmed.startsWith('--'))) continue
+
+        // Skip OWNER TO statements entirely (Portability)
+        if (!inDollarBlock && trimmed.toUpperCase().includes('OWNER TO')) continue
+
+        // Skip search_path reset
+        if (!inDollarBlock && trimmed.includes("set_config('search_path', '', false)")) continue
+
+        if (!trimmed && !inDollarBlock) continue
+
+        currentStatement += line + '\n'
+
+        // Check for dollar blocks
+        if (!inDollarBlock) {
+            const match = trimmed.match(/\$[a-zA-Z0-9_]*\$/)
+            if (match) {
+                inDollarBlock = true
+                dollarTag = match[0]
+            }
+        } else {
+            if (trimmed.includes(dollarTag)) {
+                inDollarBlock = false
+                dollarTag = ''
+            }
         }
 
-        console.log('✅ Initial schema applied successfully via psql')
-    } catch (error) {
-        console.error('❌ Failed to execute psql command:', error)
-        if (error.stdout) console.log(error.stdout)
-        if (error.stderr) console.error(error.stderr)
-        throw error
+        // End of statement
+        if (!inDollarBlock && trimmed.endsWith(';')) {
+            const stmt = currentStatement.trim()
+            if (stmt && stmt !== ';') {
+                // SKIP if it contains schema_migrations (handled by AutoMigrationRunner)
+                if (!stmt.toLowerCase().includes('schema_migrations')) {
+                    statements.push(stmt)
+                } else {
+                    console.log(`   ⏭️ Skipping schema_migrations related statement`)
+                }
+            }
+            currentStatement = ''
+        }
     }
+
+    if (currentStatement.trim() && currentStatement.trim() !== ';') {
+        if (!currentStatement.toLowerCase().includes('schema_migrations')) {
+            statements.push(currentStatement.trim())
+        }
+    }
+
+    console.log(`📋 Executing ${statements.length} SQL statements...`)
+
+    for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i]
+        try {
+            await queryInterface.sequelize.query(statement)
+            if (i % 100 === 0 && i > 0) {
+                console.log(`   ⏳ Progress: ${i}/${statements.length} statements...`)
+            }
+        } catch (error) {
+            console.error(`❌ Failure in statement ${i}:`)
+            console.error(statement.substring(0, 500) + '...')
+            console.error(`Error: ${error.message}`)
+            throw error
+        }
+    }
+
+    console.log('✅ Initial schema applied successfully')
 }
 
 export async function down(queryInterface, Sequelize) {

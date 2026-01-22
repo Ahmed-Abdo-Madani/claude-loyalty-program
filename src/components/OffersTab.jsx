@@ -110,11 +110,11 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
         ))
         console.log('🔒 Offer status updated successfully')
       } else {
-        alert(t('offers.statusUpdateFailed'))
+        alert(data.message || t('offers.statusUpdateFailed'))
       }
     } catch (err) {
       console.error('Error updating offer status:', err)
-      alert(t('offers.statusUpdateFailed'))
+      alert(err.message || t('offers.statusUpdateFailed'))
     }
   }
 
@@ -258,8 +258,8 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
           <button
             onClick={() => { setStatusFilter('all'); setBranchFilter('all'); setTypeFilter('all'); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === 'all' && branchFilter === 'all' && typeFilter === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
             {t('offers.all')}
@@ -267,8 +267,8 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
           <button
             onClick={() => setStatusFilter('active')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === 'active'
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
             {t('offers.active')}
@@ -276,8 +276,8 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
           <button
             onClick={() => setStatusFilter('inactive')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${statusFilter === 'inactive'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-yellow-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
             {t('offers.inactive')}

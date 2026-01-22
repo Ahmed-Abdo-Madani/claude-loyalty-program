@@ -24,6 +24,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage'))
 const SuspendedAccountPage = lazy(() => import('./pages/SuspendedAccountPage'))
 const SubscriptionPlansPage = lazy(() => import('./pages/SubscriptionPlansPage'))
+const CompleteProfilePage = lazy(() => import('./pages/CompleteProfilePage'))
 
 // Lazy load marketing/info pages
 const FeaturesPage = lazy(() => import('./pages/FeaturesPage'))
@@ -89,6 +90,7 @@ function App() {
             <Route path="/subscription/payment-callback" element={<PaymentCallbackPage />} />
             <Route path="/subscription/suspended" element={<SuspendedAccountPage />} />
             <Route path="/subscription/plans" element={<SubscriptionPlansPage />} />
+            <Route path="/complete-profile" element={<CompleteProfilePage />} />
 
             {/* Marketing pages - lazy loaded */}
             <Route path="/features" element={<FeaturesPage />} />

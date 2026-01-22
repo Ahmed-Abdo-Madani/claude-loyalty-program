@@ -21,16 +21,16 @@ import SEO from '../components/SEO'
 const SubscriptionManagementPage = lazy(() => import('./SubscriptionManagementPage'))
 
 function Dashboard() {
-  const { t } = useTranslation('dashboard')
+  const { t, i18n } = useTranslation('dashboard')
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
-  
+
   // Initialize activeTab from URL query parameter (default to 'overview')
   const [activeTab, setActiveTab] = useState(() => {
     return searchParams.get('tab') || 'overview'
   })
-  
+
   const [user, setUser] = useState(null)
   const [analytics, setAnalytics] = useState(null)
   const [recentActivity, setRecentActivity] = useState([])
@@ -58,14 +58,14 @@ function Dashboard() {
 
     // Get user info from secure auth data
     const authData = getAuthData()
-    
+
     // Comment 2: Redirect suspended businesses to suspended account page
     if (authData.businessStatus === 'suspended') {
       console.warn('🚫 Business is suspended - redirecting to suspended page')
       navigate('/subscription/suspended')
       return
     }
-    
+
     setUser({
       businessName: authData.businessName,
       userEmail: authData.userEmail,
@@ -95,13 +95,15 @@ function Dashboard() {
         // Fetch customer analytics to get VIP count
         const customerAnalyticsResponse = await secureApi.get(endpoints.customerAnalytics)
         const customerAnalyticsData = await customerAnalyticsResponse.json()
-        
-        // Add VIP customers to analytics data
+
+        // Add VIP customers and verification status to analytics data
         const enrichedAnalytics = {
           ...analyticsData.data,
-          vipCustomers: customerAnalyticsData.success ? (customerAnalyticsData.data.vip_customers || 0) : 0
+          vipCustomers: customerAnalyticsData.success ? (customerAnalyticsData.data.vip_customers || 0) : 0,
+          isVerified: analyticsData.data.is_verified,
+          profileCompletion: analyticsData.data.profile_completion
         }
-        
+
         setAnalytics(enrichedAnalytics)
       }
 
@@ -174,7 +176,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 pb-20 lg:pb-0">
       <SEO titleKey="pages.dashboard.title" descriptionKey="pages.dashboard.description" noindex={true} />
-      
+
       {/* Sidebar Navigation - Desktop Only */}
       <DashboardSidebar
         activeTab={activeTab}
@@ -214,13 +216,12 @@ function Dashboard() {
                     key={tab.id}
                     onClick={() => !tab.disabled && handleTabChange(tab.id)}
                     disabled={tab.disabled}
-                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors duration-200 flex items-center touch-target min-h-[44px] ${
-                      tab.disabled
-                        ? 'border-transparent text-gray-400 cursor-not-allowed opacity-50'
-                        : activeTab === tab.id
-                          ? 'border-primary text-primary'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
+                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors duration-200 flex items-center touch-target min-h-[44px] ${tab.disabled
+                      ? 'border-transparent text-gray-400 cursor-not-allowed opacity-50'
+                      : activeTab === tab.id
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
                   >
                     <span className="mr-2">{tab.icon}</span>
                     <span>{tab.label}</span>
@@ -238,9 +239,44 @@ function Dashboard() {
             <div className="p-3 sm:p-5">
               {activeTab === 'overview' && (
                 <div className="space-y-6">
+                  {/* Profile Completion Prompt */}
+                  {analytics && analytics.profileCompletion < 100 && (
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
+                            <span>🚀</span> {i18n.language === 'ar' ? 'أكمل ملفك الشخصي' : 'Complete Your Profile'}
+                          </h3>
+                          <p className="text-blue-100/90 text-sm max-w-2xl">
+                            {i18n.language === 'ar'
+                              ? 'نشاطك التجاري الآن في وضع البدء السريع. أكمل بياناتك (رقم السجل التجاري، الهوية الوطنية) لتتمكن من نشر العروض وتفعيل برنامج الولاء بشكل كامل.'
+                              : 'Your business is in Quick Start mode. Complete your details (CR Number, National ID) to publish offers and fully activate your loyalty program.'}
+                          </p>
+                          <div className="mt-4 w-full max-w-xs bg-white/20 rounded-full h-2">
+                            <div
+                              className="bg-white h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${analytics.profileCompletion}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-blue-100 mt-1 block">
+                            {analytics.profileCompletion}% {i18n.language === 'ar' ? 'مكتمل' : 'completed'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => navigate('/complete-profile')}
+                          className="px-6 py-2.5 bg-white text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap"
+                        >
+                          {i18n.language === 'ar' ? 'أكمل الآن' : 'Complete Now'}
+                        </button>
+                      </div>
+                      {/* Decorative background element */}
+                      <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                    </div>
+                  )}
+
                   {/* Today's Snapshot - Real-time POS Metrics */}
                   <TodaysSnapshot />
-                  
+
                   {/* Quick Actions - Expanded to 7 Actions */}
                   <QuickActions
                     onNewOffer={handleNewOffer}

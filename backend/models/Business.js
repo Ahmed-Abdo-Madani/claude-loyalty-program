@@ -101,6 +101,20 @@ const Business = sequelize.define('Business', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  is_verified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  },
+  profile_completion: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false,
+    validate: {
+      min: 0,
+      max: 100
+    }
+  },
   status: {
     type: DataTypes.ENUM('active', 'pending', 'suspended', 'inactive'),
     defaultValue: 'pending'
@@ -197,7 +211,7 @@ const Business = sequelize.define('Business', {
 })
 
 // Instance methods for secure business management
-Business.prototype.updateStatus = async function(status, reason = null, adminId = null) {
+Business.prototype.updateStatus = async function (status, reason = null, adminId = null) {
   this.status = status
   this.last_activity_at = new Date()
 
@@ -218,7 +232,7 @@ Business.prototype.updateStatus = async function(status, reason = null, adminId 
 }
 
 // Calculate business analytics with secure associations
-Business.prototype.getAnalytics = async function() {
+Business.prototype.getAnalytics = async function () {
   // These associations will work with secure IDs
   const offers = await this.getOffers()
   const branches = await this.getBranches()
@@ -235,36 +249,36 @@ Business.prototype.getAnalytics = async function() {
 }
 
 // New method for conversion rate calculation
-Business.prototype.calculateOverallConversionRate = function() {
+Business.prototype.calculateOverallConversionRate = function () {
   if (this.total_customers === 0) return 0
   return ((this.total_redemptions / this.total_customers) * 100).toFixed(2)
 }
 
 // Subscription management methods
-Business.prototype.isOnTrial = function() {
+Business.prototype.isOnTrial = function () {
   return this.subscription_status === 'trial' && this.trial_ends_at && new Date(this.trial_ends_at) > new Date()
 }
 
-Business.prototype.isTrialExpired = function() {
+Business.prototype.isTrialExpired = function () {
   return this.trial_ends_at && new Date(this.trial_ends_at) < new Date()
 }
 
-Business.prototype.hasActiveSubscription = function() {
+Business.prototype.hasActiveSubscription = function () {
   return this.subscription_status === 'active'
 }
 
-Business.prototype.canAccessFeature = function(feature) {
+Business.prototype.canAccessFeature = function (feature) {
   const featureAccess = {
     free: ['basic_offers'],
     professional: ['basic_offers', 'unlimited_offers', 'api_access'],
     enterprise: ['basic_offers', 'unlimited_offers', 'multiple_locations', 'api_access', 'advanced_analytics']
   }
-  
+
   const allowedFeatures = featureAccess[this.current_plan] || []
   return allowedFeatures.includes(feature)
 }
 
-Business.prototype.getRemainingTrialDays = function() {
+Business.prototype.getRemainingTrialDays = function () {
   if (!this.trial_ends_at) return 0
   const now = new Date()
   const trialEnd = new Date(this.trial_ends_at)
@@ -273,7 +287,7 @@ Business.prototype.getRemainingTrialDays = function() {
   return Math.max(0, diffDays)
 }
 
-Business.prototype.getPlanLimits = function() {
+Business.prototype.getPlanLimits = function () {
   const limits = {
     free: {
       offers: 1,
@@ -294,7 +308,7 @@ Business.prototype.getPlanLimits = function() {
       locations: Infinity
     }
   }
-  
+
   return limits[this.current_plan] || limits.free
 }
 

@@ -148,5 +148,18 @@
     "downloadMenuQR": "Download Menu QR",
     "shareMenu": "Share Menu",
     "menuQRGenerated": "Menu QR code generated successfully"
+  },
+  "registration": {
+    "smartFill": {
+      "title": "Smart Fill",
+      "subtitle": "Search for your business to auto-fill details",
+      "searchPlaceholder": "Search business name (e.g. Al-Amal Restaurant)",
+      "or": "OR"
+    },
+    "manualEntry": {
+      "title": "Manual Entry",
+      "subtitle": "Fill in details manually if not found",
+      "manualDetails": "Manual Business Details"
+    }
   }
 }

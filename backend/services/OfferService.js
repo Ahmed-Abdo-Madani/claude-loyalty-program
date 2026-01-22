@@ -30,6 +30,14 @@ class OfferService {
       throw new Error(`Business with ID ${offerData.business_id} not found`)
     }
 
+    // Business verification check
+    if (!business.is_verified || business.profile_completion < 100) {
+      const error = new Error('Business must be verified and profile 100% complete to create offers')
+      error.status = 403
+      error.code = 'VERIFICATION_REQUIRED'
+      throw error
+    }
+
     // Generate public ID for the offer
     const publicId = Offer.generatePublicId(offerData.title, offerData.business_id)
 
@@ -37,10 +45,10 @@ class OfferService {
       ...offerData,
       public_id: publicId
     })
-    
+
     // Update business offer counts
     await business.increment(['total_offers', 'active_offers'])
-    
+
     return offer
   }
 
@@ -56,7 +64,7 @@ class OfferService {
     const offer = await Offer.findByPk(id, {
       include: ['business']
     })
-    
+
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
@@ -76,12 +84,23 @@ class OfferService {
     const offer = await Offer.findByPk(id, {
       include: ['business']
     })
-    
+
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
 
     const newStatus = offer.status === 'active' ? 'paused' : 'active'
+
+    // Business verification check when activating (publishing) an offer
+    if (newStatus === 'active' && offer.business) {
+      if (!offer.business.is_verified || offer.business.profile_completion < 100) {
+        const error = new Error('Business must be verified and profile 100% complete to activate offers')
+        error.status = 403
+        error.code = 'VERIFICATION_REQUIRED'
+        throw error
+      }
+    }
+
     await offer.update({ status: newStatus })
 
     // Update business active offer count

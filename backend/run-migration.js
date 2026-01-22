@@ -15,7 +15,7 @@
 import sequelize from './config/database.js'
 import logger from './config/logger.js'
 import path from 'path'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import fs from 'fs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -83,7 +83,7 @@ async function runMigration() {
 
     // Import migration
     logger.info(`\n📦 Loading migration: ${migrationFile}`)
-    const migration = await import(migrationPath)
+    const migration = await import(pathToFileURL(migrationPath).href)
 
     // Handle both default export and named exports
     const upFunction = migration.default?.up || migration.up
@@ -95,16 +95,16 @@ async function runMigration() {
 
     // Run migration
     logger.info('\n🚀 Running migration UP...')
-    await upFunction()
+    await upFunction(sequelize.getQueryInterface(), sequelize.Sequelize)
 
     logger.info('\n🎉 Migration completed successfully!')
 
   } catch (error) {
-    logger.error('\n❌ Migration failed:', error.message)
-    if (error.message.includes('does not exist')) {
+    logger.error('\n❌ Migration failed:', error)
+    if (error.message && error.message.includes('does not exist')) {
       logger.error('💡 Hint: Check table/column names in the migration')
     }
-    if (error.message.includes('already exists')) {
+    if (error.message && error.message.includes('already exists')) {
       logger.error('💡 Hint: Column/index may already exist - check database schema')
     }
     logger.error('Stack trace:', error.stack)
@@ -155,7 +155,7 @@ if (process.argv.includes('--rollback')) {
   sequelize.authenticate()
     .then(async () => {
       logger.info(`\n📦 Loading migration: ${migrationFile}`)
-      const migration = await import(migrationPath)
+      const migration = await import(pathToFileURL(migrationPath).href)
 
       // Handle both default export and named exports
       const downFunction = migration.default?.down || migration.down
@@ -165,7 +165,7 @@ if (process.argv.includes('--rollback')) {
         process.exit(1)
       }
 
-      return downFunction()
+      return downFunction(sequelize.getQueryInterface(), sequelize.Sequelize)
     })
     .then(() => {
       logger.info('\n✅ Migration rolled back successfully')

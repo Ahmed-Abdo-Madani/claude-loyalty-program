@@ -62,6 +62,8 @@ export const endpoints = {
   myBranches: `${API_BASE_URL}/api/business/my/branches`,
   myAnalytics: `${API_BASE_URL}/api/business/my/analytics`,
   myActivity: `${API_BASE_URL}/api/business/my/activity`,
+  businessProfile: `${API_BASE_URL}/api/business/my/profile`,
+  businessUpdateProfile: `${API_BASE_URL}/api/business/my/profile`,
 
   // Public Customer APIs
   publicOffer: `${API_BASE_URL}/api/business/public/offer`,

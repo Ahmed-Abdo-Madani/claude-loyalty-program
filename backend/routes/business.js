@@ -1347,6 +1347,76 @@ router.get('/my/offers', requireBusinessAuthLocal, async (req, res) => {
   }
 })
 
+// Create new offer - SECURE VERSION
+router.post('/my/offers', requireBusinessAuthLocal, async (req, res) => {
+  try {
+    const businessId = req.business.public_id
+
+    // Create offer via service (verification checks are inside the service)
+    const offer = await OfferService.createOffer({
+      ...req.body,
+      business_id: businessId
+    })
+
+    res.status(201).json({
+      success: true,
+      data: offer,
+      message: getLocalizedMessage('success.offerCreated', req.locale || 'ar')
+    })
+  } catch (error) {
+    console.error('Create offer error:', error)
+    const statusCode = error.status || 500
+    res.status(statusCode).json({
+      success: false,
+      message: error.status === 403 ? error.message : getLocalizedMessage('server.failedToCreateOffer', req.locale),
+      error: error.message,
+      code: error.code
+    })
+  }
+})
+
+// Update offer status - SECURE VERSION
+router.patch('/my/offers/:id/status', requireBusinessAuthLocal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const businessId = req.business.public_id
+
+    // Verify ownership before toggling
+    const offer = await Offer.findOne({
+      where: {
+        public_id: id,
+        business_id: businessId
+      },
+      include: ['business']
+    })
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('errors.notFound', req.locale)
+      })
+    }
+
+    // Toggle status via service (verification checks are inside the service)
+    const updatedOffer = await OfferService.toggleOfferStatus(offer.id)
+
+    res.json({
+      success: true,
+      data: updatedOffer,
+      message: getLocalizedMessage('success.statusUpdated', req.locale || 'ar')
+    })
+  } catch (error) {
+    console.error('Update offer status error:', error)
+    const statusCode = error.status || 500
+    res.status(statusCode).json({
+      success: false,
+      message: error.status === 403 ? error.message : getLocalizedMessage('server.failedToUpdateStatus', req.locale),
+      error: error.message,
+      code: error.code
+    })
+  }
+})
+
 // Get business-specific branches - SECURE VERSION
 router.get('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
@@ -1593,7 +1663,9 @@ router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
       growthPercentage: scanAnalytics.totalCustomers > 0 ? `+${Math.round(scanAnalytics.averageProgress)}%` : '+0%',
       totalOffers: businessOffers.length,
       totalBranches: 1, // TODO: Implement branches when Branch model is created
-      monthlyRevenue: businessOffers.reduce((sum, offer) => sum + (offer.base_reward_value || 0), 0) // Placeholder calculation
+      monthlyRevenue: businessOffers.reduce((sum, offer) => sum + (offer.base_reward_value || 0), 0), // Placeholder calculation
+      is_verified: req.business.is_verified,
+      profile_completion: req.business.profile_completion
     }
 
     res.json({
@@ -1669,6 +1741,76 @@ router.get('/my/activity', requireBusinessAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get activity'
+    })
+  }
+})
+
+// Get current business profile
+router.get('/my/profile', requireBusinessAuth, async (req, res) => {
+  try {
+    // req.business is already populated by requireBusinessAuth
+    res.json({
+      success: true,
+      data: req.business
+    })
+  } catch (error) {
+    console.error('Get business profile error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get profile'
+    })
+  }
+})
+
+// Update business profile (deferred data collection)
+router.put('/my/profile', requireBusinessAuth, async (req, res) => {
+  try {
+    const business = req.business
+    const updateData = req.body
+
+    // Allow updating specific fields
+    const allowedFields = [
+      'business_name', 'business_name_ar', 'business_type', 'description',
+      'license_number', 'owner_id', 'phone', 'region', 'city', 'district', 'address'
+    ]
+
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        business[field] = updateData[field]
+      }
+    })
+
+    // Recalculate profile completion
+    let completion = 30; // base: name, email, password
+    if (business.license_number) completion += 20;
+    if (business.owner_id) completion += 20;
+    if (business.phone) completion += 10;
+    if (business.address) completion += 10;
+    if (business.city) completion += 10;
+    if (business.region) completion += 5;
+
+    business.profile_completion = Math.min(completion, 100)
+
+    // Auto-verify if profile is 100% complete (optional design choice)
+    if (business.profile_completion === 100) {
+      business.is_verified = true
+    }
+
+    await business.save()
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        profile_completion: business.profile_completion,
+        is_verified: business.is_verified
+      }
+    })
+  } catch (error) {
+    console.error('Update business profile error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile'
     })
   }
 })
@@ -1838,18 +1980,9 @@ router.post('/register', async (req, res) => {
   try {
     const businessData = req.body
 
-    // Validate required fields - Updated for new location system
-    const requiredFields = ['business_name', 'email', 'phone', 'owner_name', 'business_type']
+    // Validate required fields - Updated for "Essentials First" minimal registration
+    const requiredFields = ['business_name', 'email', 'password']
     const missingFields = requiredFields.filter(field => !businessData[field])
-
-    // Check if location is provided (either old format or new location_data)
-    const hasLocation = businessData.region ||
-      businessData.city ||
-      (businessData.location_data && businessData.location_data.type)
-
-    if (!hasLocation) {
-      missingFields.push('location')
-    }
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -1883,8 +2016,17 @@ router.post('/register', async (req, res) => {
     }
 
     // Hash the password for secure storage
-    const tempPassword = businessData.password || 'TempPass123!'
-    const hashedPassword = bcrypt.hashSync(tempPassword, 10)
+    const hashedPassword = bcrypt.hashSync(businessData.password, 10)
+
+    // Calculate initial profile completion
+    // Fields: name (10), email (10), password (10), phone (10), owner_name (10), business_type (10), location (20), CR (10), ID (10)
+    let profileCompletion = 30; // name, email, password are provided
+    if (businessData.phone) profileCompletion += 10;
+    if (businessData.owner_name) profileCompletion += 10;
+    if (businessData.business_type) profileCompletion += 10;
+    if (businessData.city || businessData.location_data) profileCompletion += 20;
+    if (businessData.license_number) profileCompletion += 10;
+    if (businessData.owner_id) profileCompletion += 10;
 
     // Create business using PostgreSQL with location data
     // Note: subscription_status, trial_ends_at, and current_plan are set by SubscriptionService.initializeTrialPeriod
@@ -1895,6 +2037,8 @@ router.post('/register', async (req, res) => {
       location_type: businessData.location_data?.type || null,
       location_hierarchy: businessData.location_data?.hierarchy || null,
       status: 'pending', // New registrations start as pending
+      is_verified: false,
+      profile_completion: profileCompletion,
       password_hash: hashedPassword  // Use hashed password
     })
 
