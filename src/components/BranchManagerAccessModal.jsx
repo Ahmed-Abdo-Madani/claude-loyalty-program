@@ -7,7 +7,7 @@ import QRCodeGenerator from '../utils/qrCodeGenerator'
 
 function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   const { t } = useTranslation('dashboard')
-  
+
   // State management
   const [showPin, setShowPin] = useState(false)
   const [pinValidated, setPinValidated] = useState(false)
@@ -28,7 +28,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     } else {
       document.body.style.overflow = 'unset'
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset'
     }
@@ -105,11 +105,11 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     if (managerPin && /^\d{4,6}$/.test(managerPin)) {
       setPinSaving(true)
       setPinSaveError(null)
-      
+
       const result = await updateBranchManagerPin(branch.public_id, managerPin)
-      
+
       setPinSaving(false)
-      
+
       if (result.success) {
         setPinValidated(true)
         setPinSavedSuccessfully(true)
@@ -154,7 +154,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     // Optimistically update UI immediately
     setManagerPinEnabled(enabled)
     setToggleSaving(true)
-    
+
     try {
       const response = await secureApiRequest(`${endpoints.myBranches}/${branch.public_id}`, {
         method: 'PUT',
@@ -200,11 +200,11 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   if (!isOpen) return null
 
   return createPortal(
-    <div 
+    <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
       onClick={handleBackdropClick}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]"
         onClick={handleModalContentClick}
       >
@@ -256,6 +256,15 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                 <div className="space-y-4 mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
                   {/* PIN Input */}
                   <div>
+                    {/* Hidden username field to prevent browser autofill on parent search bar */}
+                    <input
+                      type="text"
+                      autoComplete="username"
+                      value={branch?.name || "admin"}
+                      readOnly
+                      style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none', zIndex: -1 }}
+                      aria-hidden="true"
+                    />
                     <label className="block text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
                       📱 {t('branches.managerPin')}
                     </label>
@@ -282,28 +291,27 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                         type="button"
                         onClick={handleSavePin}
                         disabled={!managerPin || !/^\d{4,6}$/.test(managerPin) || pinSaving}
-                        className={`px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md disabled:opacity-50 whitespace-nowrap ${
-                          pinSavedSuccessfully 
-                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                        className={`px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md disabled:opacity-50 whitespace-nowrap ${pinSavedSuccessfully
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
                             : pinSaveError
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-95'
-                        }`}
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-95'
+                          }`}
                       >
-                        {pinSaving ? '⏳ ' + t('branches.savingPin') : 
-                         pinSavedSuccessfully ? '✓ ' + t('branches.pinSaved') : 
-                         pinSaveError ? '❌ ' + t('branches.retryPin') :
-                         '💾 ' + t('branches.savePin')}
+                        {pinSaving ? '⏳ ' + t('branches.savingPin') :
+                          pinSavedSuccessfully ? '✓ ' + t('branches.pinSaved') :
+                            pinSaveError ? '❌ ' + t('branches.retryPin') :
+                              '💾 ' + t('branches.savePin')}
                       </button>
                     </div>
                     <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">
                       {pinSavedSuccessfully
                         ? `✓ ${t('branches.pinSavedAndEncrypted')}`
                         : pinSaveError
-                        ? `❌ ${pinSaveError}`
-                        : managerPin && /^\d{4,6}$/.test(managerPin)
-                        ? `✓ ${t('branches.enterPinAndClickSave')}`
-                        : t('branches.pinValidation')}
+                          ? `❌ ${pinSaveError}`
+                          : managerPin && /^\d{4,6}$/.test(managerPin)
+                            ? `✓ ${t('branches.enterPinAndClickSave')}`
+                            : t('branches.pinValidation')}
                     </p>
                   </div>
 

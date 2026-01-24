@@ -1,145 +1,177 @@
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
-import LanguageSwitcher from './LanguageSwitcher'
+import {
+  HomeIcon,
+  GiftIcon,
+  MapPinIcon,
+  ShoppingBagIcon,
+  ChartBarIcon,
+  CreditCardIcon,
+  SunIcon,
+  MoonIcon,
+  ChevronDoubleLeftIcon
+} from '@heroicons/react/24/outline'
 
-function DashboardSidebar({ activeTab, setActiveTab, user, onSignOut }) {
+function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut }) {
   const { t } = useTranslation('dashboard')
   const { isDark, toggleTheme } = useTheme()
 
-  // Navigation items with icons - preserving exact existing functionality
+  // Navigation items with Heroicons
   const navigationItems = [
-    { id: 'overview', label: t('sidebar.overview'), icon: '🏠' },
-    { id: 'offers', label: t('sidebar.myOffers'), icon: '🎁' },
-    // { id: 'scanner', label: t('sidebar.qrScanner'), icon: '📱' },
-    { id: 'branches', label: t('sidebar.branches'), icon: '📍' },
-    // Temporarily hidden for future development
-    // { id: 'customers', label: t('sidebar.customers'), icon: '👥', disabled: true, comingSoon: true },
-    // { id: 'wallet', label: t('sidebar.mobileWallets'), icon: '💳' },
-    { id: 'analytics', label: t('sidebar.analytics'), icon: '📊' },
-    { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: '💳' }
+    { id: 'overview', label: t('sidebar.overview'), icon: HomeIcon },
+    { id: 'offers', label: t('sidebar.myOffers'), icon: GiftIcon },
+    { id: 'branches', label: t('sidebar.branches'), icon: MapPinIcon },
+    { id: 'products', label: t('sidebar.products'), icon: ShoppingBagIcon },
+    { id: 'analytics', label: t('sidebar.analytics'), icon: ChartBarIcon },
+    { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: CreditCardIcon }
   ]
 
   const handleTabClick = (tabId) => {
-    // Check if the tab is disabled
     const item = navigationItems.find(item => item.id === tabId)
-    if (item && item.disabled) {
-      return // Don't navigate to disabled tabs
-    }
-
-    setActiveTab(tabId) // Preserve existing state management
+    if (item && item.disabled) return
+    setActiveTab(tabId)
   }
 
+  // Calculate if any limit is approaching (>= 80%)
+  const approachingLimits = []
+  if (analytics?.planLimits) {
+    const { offers, locations } = analytics.planLimits
+    if (offers !== Infinity && (analytics.totalOffers / offers) >= 0.8) {
+      approachingLimits.push({ type: 'offers', label: t('sidebar.myOffers') })
+    }
+    if (locations !== Infinity && (analytics.totalBranches / locations) >= 0.8) {
+      approachingLimits.push({ type: 'branches', label: t('sidebar.branches') })
+    }
+  }
+
+  const isApproaching = approachingLimits.length > 0
+
   return (
-    <>
-      {/* Sidebar - Desktop Only (hidden on mobile, bottom nav used instead) */}
-      <aside className={`
-        hidden lg:block
-        fixed left-0 top-0 z-40 h-screen w-64
-        bg-gradient-to-b from-primary via-blue-600 to-purple-700
-        dark:from-purple-900 dark:via-purple-800 dark:to-indigo-900
-        flex flex-col overflow-y-auto
-      `}>
+    <aside className={`
+      hidden lg:flex
+      fixed left-0 top-0 z-40 h-screen w-64
+      flex-col
+      bg-gradient-to-br from-slate-900 via-[#1e293b] to-slate-950
+      dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#020617]
+      border-r border-white/5 shadow-2xl
+      overflow-hidden
+    `}>
+      {/* Sidebar Header */}
+      <div className="p-6 border-b border-white/10 glass-card">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-tr from-primary to-blue-400 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-white font-bold text-lg tracking-tight">
+              {user?.businessName || 'Business'}
+            </h1>
+            <p className="text-white/40 text-[10px] font-bold tracking-[0.2em] uppercase">Control Center</p>
+          </div>
+        </div>
+      </div>
 
-        {/* Sidebar Header */}
-        <div className="p-6 border-b border-white/20">
-          <div className="flex items-center space-x-3">
-            {/* App Icon */}
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-8 overflow-y-auto custom-scrollbar">
+        <div className="space-y-1">
+          {navigationItems.map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
 
-            {/* Business Name */}
-            <div>
-              <h1 className="text-white font-bold text-lg">
-                {user?.businessName || 'Business'}
-              </h1>
-              <p className="text-white/70 text-sm">DASHBOARD</p>
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleTabClick(item.id)}
+                disabled={item.disabled}
+                className={`
+                  w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 relative group
+                  ${item.disabled
+                    ? 'opacity-40 cursor-not-allowed'
+                    : isActive
+                      ? 'bg-white/10 text-white shadow-[0_0_20px_rgba(255,255,255,0.05)]'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }
+                `}
+              >
+                {isActive && (
+                  <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full shadow-[0_0_8px_white]" />
+                )}
+                <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                <span className="font-medium text-sm tracking-wide">{item.label}</span>
+
+                {item.comingSoon && (
+                  <span className="ml-auto text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full border border-white/10">
+                    SOON
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Upgrade Nudge */}
+      {isApproaching && (
+        <div className="px-4 mb-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-primary/20 relative overflow-hidden group">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🚀</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">{t('subscription.upgradeRequired', 'Upgrade Required')}</span>
+              </div>
+              <p className="text-[11px] text-white/70 mb-3 leading-relaxed">
+                {t('sidebar.approachingLimit', 'You are approaching your plan limits. Upgrade now to unlock more.')}
+              </p>
+              <button
+                onClick={() => setActiveTab('billing-subscription')}
+                className="w-full py-2 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-primary/20 active:scale-95"
+              >
+                {t('sidebar.viewPlans', 'View Plans')}
+              </button>
             </div>
+            {/* Animated background pulse */}
+            <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
+          </div>
+        </div>
+      )}
+
+      {/* Sidebar Footer */}
+      <div className="p-4 mt-auto border-t border-white/10 bg-black/20">
+        {/* User Card */}
+        <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 mb-4 group cursor-pointer hover:bg-white/10 transition-colors">
+          <div className="w-9 h-9 bg-gradient-to-tr from-slate-700 to-slate-600 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white/10">
+            <span className="text-white font-bold text-xs">
+              {user?.businessName?.charAt(0)?.toUpperCase()}
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-white font-semibold text-xs truncate group-hover:text-primary-light transition-colors">{user?.businessName}</p>
+            <p className="text-white/40 text-[10px] truncate">{user?.userEmail}</p>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-6">
-          <ul className="space-y-2">
-            {navigationItems.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => handleTabClick(item.id)}
-                  disabled={item.disabled}
-                  className={`
-                    w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 relative
-                    ${item.disabled
-                      ? 'text-white/40 cursor-not-allowed'
-                      : activeTab === item.id
-                        ? 'bg-white/20 text-white border-l-4 border-white'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }
-                  `}
-                >
-                  <span className="text-xl flex-shrink-0">{item.icon}</span>
-                  <div className="font-medium flex items-center gap-2">
-                    <span>{item.label}</span>
-                    {item.comingSoon && (
-                      <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30">
-                        {t('tabs.comingSoon')}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+            title={isDark ? t('sidebar.lightMode') : t('sidebar.darkMode')}
+          >
+            {isDark ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+          </button>
 
-        {/* Sidebar Footer */}
-        <div className="p-6 border-t border-white/20">
-          {/* User Profile */}
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-semibold">
-                {user?.businessName?.charAt(0)?.toUpperCase() || 'B'}
-              </span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-white font-medium truncate">{user?.businessName}</p>
-              <p className="text-white/70 text-sm truncate">{user?.userEmail}</p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            {/* Language Switcher */}
-            <div className="px-4 py-2">
-              <LanguageSwitcher variant="tabs" showLabels={true} className="w-full" />
-            </div>
-
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-            >
-              <span className="text-lg flex-shrink-0">
-                {isDark ? '☀️' : '🌙'}
-              </span>
-              <span className="font-medium">
-                {isDark ? t('sidebar.lightMode') : t('sidebar.darkMode')}
-              </span>
-            </button>
-
-            {/* Sign Out */}
-            <button
-              onClick={onSignOut}
-              className="w-full flex items-center gap-3 p-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-            >
-              <span className="text-lg flex-shrink-0">🚪</span>
-              <span className="font-medium">{t('sidebar.signOut')}</span>
-            </button>
-          </div>
+          <button
+            onClick={onSignOut}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/5 text-rose-400/60 hover:text-rose-400 hover:bg-rose-400/10 transition-all active:scale-95"
+            title={t('sidebar.signOut')}
+          >
+            <ChevronDoubleLeftIcon className="w-5 h-5" />
+          </button>
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   )
 }
 

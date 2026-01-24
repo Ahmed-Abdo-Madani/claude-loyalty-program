@@ -45,7 +45,9 @@
     "lightMode": "الوضع الفاتح",
     "darkMode": "الوضع الداكن",
     "signOut": "تسجيل الخروج",
-    "billingSubscription": "الفواتير والاشتراك"
+    "billingSubscription": "الفواتير والاشتراك",
+    "approachingLimit": "لقد اقتربت من حدود خطتك. قم بالترقية الآن لفتح المزيد.",
+    "viewPlans": "عرض الخطط"
   },
   "mobileNav": {
     "overview": "عام",
@@ -293,7 +295,8 @@
       "avgStampsPerCustomer": "متوسط الطوابع لكل عميل",
       "avgVisitsPerCustomer": "متوسط الزيارات لكل عميل",
       "avgDaysToComplete": "متوسط الأيام للإكمال"
-    }
+    },
+    "createNewOffer": "إنشاء عرض جديد"
   },
   "branches": {
     "title": "إدارة الفروع",
@@ -343,7 +346,7 @@
     "phonePlaceholder": "+966 XX XXX XXXX",
     "email": "البريد الإلكتروني",
     "emailPlaceholder": "branch@example.com",
-    "managerAccess": "🔐 وصول المدير",
+    "managerAccess": "وصول المدير",
     "enableManagerAccess": "تفعيل وصول مدير الفرع",
     "managerAccessDesc": "السماح لمدير الفرع بمسح رموز QR للعملاء باستخدام رمز PIN",
     "managerPin": "رمز PIN للمدير (4-6 أرقام)",
@@ -972,5 +975,30 @@
     },
     "bannerText": "أنت تستكشف النسخة التجريبية من مدنا. هل أنت مستعد لتنمية عملك؟",
     "startTrial": "ابدأ التجربة المجانية"
+  },
+  "planLimits": {
+    "offersLimitReached": "تم الوصول لحد العروض",
+    "offersLimitDesc": "لقد وصلت للحد الأقصى من العروض في خطتك الحالية.",
+    "createMoreOffers": "أنشئ عروضاً غير محدودة",
+    "branchesLimitReached": "تم الوصول لحد الفروع",
+    "branchesLimitDesc": "لقد وصلت للحد الأقصى من المواقع في خطتك الحالية.",
+    "addMoreBranches": "أضف المزيد من المواقع",
+    "customersLimitReached": "تم الوصول لحد العملاء",
+    "customersLimitDesc": "لقد وصلت للحد الأقصى من العملاء في خطتك الحالية.",
+    "growCustomerBase": "وسّع قاعدة عملائك",
+    "posLimitReached": "تم الوصول لحد عمليات نقاط البيع",
+    "posLimitDesc": "لقد استخدمت جميع عمليات نقاط البيع الخاصة بك لهذا الشهر.",
+    "unlimitedPos": "افتح عمليات نقاط البيع غير المحدودة",
+    "planLimitReached": "تم الوصول لحد الخطة",
+    "generalLimitDesc": "لقد وصلت لحد في خطتك الحالية.",
+    "upgradeForMore": "قم بالترقية للحصول على المزيد من الميزات",
+    "currentUsage": "الاستخدام الحالي",
+    "onPlan": "أنت على خطة",
+    "plan": "",
+    "upgradeTo": "الترقية إلى",
+    "maybeLater": "ربما لاحقاً"
+  },
+  "usage": {
+    "offers": "العروض"
   }
 }

@@ -38,7 +38,9 @@
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
     "subscription": "Subscription",
-    "billingSubscription": "Billing & Subscription"
+    "billingSubscription": "Billing & Subscription",
+    "approachingLimit": "You are approaching your plan limits. Upgrade now to unlock more.",
+    "viewPlans": "View Plans"
   },
   "mobileNav": {
     "overview": "Overview",
@@ -286,7 +288,8 @@
       "avgStampsPerCustomer": "Avg Stamps per Customer",
       "avgVisitsPerCustomer": "Avg Visits per Customer",
       "avgDaysToComplete": "Avg Days to Complete"
-    }
+    },
+    "createNewOffer": "Create New Offer"
   },
   "branches": {
     "title": "Branch Management",
@@ -336,7 +339,7 @@
     "phonePlaceholder": "+966 XX XXX XXXX",
     "email": "Email",
     "emailPlaceholder": "branch@example.com",
-    "managerAccess": "🔐 Manager Access",
+    "managerAccess": "Manager Access",
     "enableManagerAccess": "Enable Branch Manager Access",
     "managerAccessDesc": "Allow branch manager to scan customer QR codes using a PIN",
     "managerPin": "Manager PIN (4-6 digits)",
@@ -965,5 +968,30 @@
     },
     "bannerText": "You are exploring the Madna Demo. Ready to grow your business?",
     "startTrial": "Start Free Trial"
+  },
+  "planLimits": {
+    "offersLimitReached": "Offer Limit Reached",
+    "offersLimitDesc": "You've reached the maximum number of offers for your current plan.",
+    "createMoreOffers": "Create unlimited offers",
+    "branchesLimitReached": "Branch Limit Reached",
+    "branchesLimitDesc": "You've reached the maximum number of locations for your current plan.",
+    "addMoreBranches": "Add more locations",
+    "customersLimitReached": "Customer Limit Reached",
+    "customersLimitDesc": "You've reached the maximum number of customers for your current plan.",
+    "growCustomerBase": "Grow your customer base",
+    "posLimitReached": "POS Operations Limit Reached",
+    "posLimitDesc": "You've used all your POS operations for this month.",
+    "unlimitedPos": "Unlock unlimited POS",
+    "planLimitReached": "Plan Limit Reached",
+    "generalLimitDesc": "You've reached a limit on your current plan.",
+    "upgradeForMore": "Upgrade for more features",
+    "currentUsage": "Current Usage",
+    "onPlan": "You're on the",
+    "plan": "plan",
+    "upgradeTo": "Upgrade to",
+    "maybeLater": "Maybe Later"
+  },
+  "usage": {
+    "offers": "Offers"
   }
 }

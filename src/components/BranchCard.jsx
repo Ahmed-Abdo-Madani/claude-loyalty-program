@@ -1,5 +1,17 @@
 import { useTranslation } from 'react-i18next'
 import StatusBadge from './StatusBadge'
+import {
+  BuildingStorefrontIcon,
+  HomeModernIcon,
+  MapPinIcon,
+  PhoneIcon,
+  UserIcon,
+  PauseCircleIcon,
+  PlayCircleIcon,
+  TrashIcon,
+  PencilSquareIcon,
+  KeyIcon
+} from '@heroicons/react/24/outline'
 
 function BranchCard({
   branch,
@@ -10,7 +22,7 @@ function BranchCard({
   onManagerAccess
 }) {
   const { t } = useTranslation('dashboard')
-  
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-SA', {
       style: 'currency',
@@ -18,17 +30,19 @@ function BranchCard({
     }).format(amount)
   }
 
-  const getBranchTypeIcon = (isMain) => {
-    return isMain ? '🏠' : '🏪'
-  }
+  const isActive = branch.status === 'active'
 
   return (
     <div className="card-compact bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
       {/* Header with Branch Name and Actions */}
       <div className="flex items-start justify-between card-header-compact">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-1.5 mb-1">
-            <span className="text-base">{getBranchTypeIcon(branch.isMain)}</span>
+          <div className="flex items-center space-x-2 mb-1">
+            {branch.isMain ? (
+              <HomeModernIcon className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            ) : (
+              <BuildingStorefrontIcon className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            )}
             <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
               {branch.name}
             </h3>
@@ -42,19 +56,15 @@ function BranchCard({
           <StatusBadge status={branch.status} />
         </div>
 
-        {/* Action Buttons - Compact */}
+        {/* Action Buttons - Edit and Delete only */}
         <div className="flex items-center space-x-1 ml-2">
           <button
             type="button"
-            onClick={() => onToggleStatus(branch.public_id || branch.id, branch.status)}
-            className={`p-2 rounded-lg transition-colors duration-200 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center touch-manipulation ${
-              branch.status === 'active'
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:hover:bg-yellow-900/30'
-                : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30'
-            }`}
-            title={branch.status === 'active' ? t('branches.deactivateBranch') : t('branches.activateBranch')}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(branch); }}
+            className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors duration-200 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center touch-manipulation"
+            title={t('branches.editBranch')}
           >
-            {branch.status === 'active' ? '⏸️' : '▶️'}
+            <PencilSquareIcon className="w-4 h-4" />
           </button>
           {!branch.isMain && (
             <button
@@ -63,18 +73,16 @@ function BranchCard({
               className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-200 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center touch-manipulation"
               title={t('branches.deleteBranch')}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <TrashIcon className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Branch Details - Compact */}
-      <div className="space-y-1.5 mb-3">
-        <div className="flex items-start space-x-1.5">
-          <span className="text-gray-400 dark:text-gray-500 mt-0.5 text-sm">📍</span>
+      {/* Branch Details - Enhanced with Heroicons */}
+      <div className="space-y-2 mb-3">
+        <div className="flex items-start space-x-2">
+          <MapPinIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
           <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex-1 line-clamp-2">
             {branch.address}
             {branch.city && `, ${branch.city}`}
@@ -84,48 +92,62 @@ function BranchCard({
         </div>
 
         {branch.phone && (
-          <div className="flex items-center space-x-1.5">
-            <span className="text-gray-400 dark:text-gray-500 text-sm">📞</span>
+          <div className="flex items-center space-x-2">
+            <PhoneIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{branch.phone}</span>
           </div>
         )}
 
         {branch.manager_name && (
-          <div className="flex items-center space-x-1.5">
-            <span className="text-gray-400 dark:text-gray-500 text-sm">👤</span>
+          <div className="flex items-center space-x-2">
+            <UserIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{branch.manager_name}</span>
           </div>
         )}
       </div>
 
-      {/* Action Bar - Compact */}
+      {/* Action Bar - Redesigned with status toggle on left, actions on right */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-        {/* Manager Access Button */}
+        {/* Status Toggle Button */}
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.nativeEvent) {
-              e.nativeEvent.stopImmediatePropagation();
-            }
-            onManagerAccess(branch);
-          }}
-          className="px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 min-h-[36px] sm:min-h-[40px] bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30"
-          title={t('branches.managerAccess')}
+          onClick={() => onToggleStatus(branch.public_id || branch.id, branch.status)}
+          className="flex items-center space-x-1.5 px-2 sm:px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
+          title={isActive ? t('branches.deactivateBranch') : t('branches.activateBranch')}
         >
-          🔐 {t('branches.managerAccess')}
+          {isActive ? (
+            <>
+              <PauseCircleIcon className="w-4 h-4" />
+              <span className="font-medium">{t('offers.pause')}</span>
+            </>
+          ) : (
+            <>
+              <PlayCircleIcon className="w-4 h-4" />
+              <span className="font-medium">{t('offers.activate')}</span>
+            </>
+          )}
         </button>
-        
-        {/* Edit Button - Compact */}
-        <button
-          type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(branch); }}
-          className="px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 min-h-[36px] sm:min-h-[40px] bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30"
-          title={t('branches.editBranch')}
-        >
-          ✏️ {t('common.edit')}
-        </button>
+
+        {/* Action Button Group */}
+        <div className="flex items-center space-x-2">
+          {/* Manager Access Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (e.nativeEvent) {
+                e.nativeEvent.stopImmediatePropagation();
+              }
+              onManagerAccess(branch);
+            }}
+            className="flex items-center space-x-1.5 px-2 sm:px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
+            title={t('branches.managerAccess')}
+          >
+            <KeyIcon className="w-4 h-4" />
+            <span className="font-medium">{t('branches.managerAccess')}</span>
+          </button>
+        </div>
       </div>
     </div>
   )

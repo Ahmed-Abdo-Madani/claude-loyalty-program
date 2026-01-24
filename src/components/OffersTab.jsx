@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import QRCodeModal from './QRCodeModal'
 import OfferGrid from './OfferGrid'
-import CompactStatsBar from './CompactStatsBar'
+
 import { endpoints, secureApi } from '../config/api'
 import { CardDesignProvider } from '../contexts/CardDesignContext'
 import CardDesignEditor from './cardDesign/CardDesignEditor'
 import OfferAnalyticsModal from './OfferAnalyticsModal'
+import PlanLimitModal from './PlanLimitModal'
+import UsageIndicator from './UsageIndicator'
 
 function OffersTab({ analytics, demoData, onAddOffer }) {
   const { t } = useTranslation('dashboard')
@@ -22,6 +24,10 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
   const [showCardDesigner, setShowCardDesigner] = useState(null)
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
   const [selectedOfferForAnalytics, setSelectedOfferForAnalytics] = useState(null)
+
+  // Plan limit modal state
+  const [showPlanLimitModal, setShowPlanLimitModal] = useState(false)
+  const [planLimitInfo, setPlanLimitInfo] = useState(null)
 
   // Filter states - use internal constants, not translated strings
   const [statusFilter, setStatusFilter] = useState('all')
@@ -193,8 +199,7 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
 
   return (
     <div className="compact-spacing">
-      {/* Compact Stats Bar - Space-efficient metrics */}
-      {analytics && <CompactStatsBar analytics={analytics} />}
+
 
       {/* Header Section - Mobile-first: Stack vertically */}
       <div className="flex flex-col space-y-3 compact-header">
@@ -212,6 +217,16 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
           <span>{t('offers.createOffer')}</span>
         </button>
       </div>
+
+      {/* Plan Usage Indicator */}
+      {analytics?.planLimits && analytics.planLimits.offers !== Infinity && (
+        <UsageIndicator
+          label={t('dashboard:usage.offers', 'Offers')}
+          current={analytics.totalOffers || offers.length}
+          max={analytics.planLimits.offers}
+          type="offers"
+        />
+      )}
 
       {/* Error Display */}
       {error && (
@@ -415,6 +430,26 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
                 const data = await response.json()
 
                 if (!data.success) {
+                  // Check for plan limit error in response
+                  if (data.code === 'PLAN_LIMIT_REACHED' && data.limits) {
+                    setPlanLimitInfo({
+                      limitType: data.limitType || 'offers',
+                      currentUsage: data.limits.current,
+                      planLimit: data.limits.max,
+                      currentPlan: data.limits.plan,
+                      suggestedPlan: data.limits.suggestedPlan
+                    })
+                    setShowPlanLimitModal(true)
+                    setShowCreateModal(false)
+                    return
+                  }
+
+                  // Verification required check
+                  if (data.code === 'VERIFICATION_REQUIRED') {
+                    setError(t('offers.verificationRequired', 'Please complete your business profile to create offers'))
+                    return
+                  }
+
                   throw new Error(data.message || t('offers.saveFailed'))
                 }
                 console.log('✅ Offer created successfully:', data.data?.public_id)
@@ -429,6 +464,21 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
                 data: err.response?.data,
                 status: err.response?.status
               })
+
+              // Check if this is a plan limit error - detect from error message (fallback)
+              if (err.message?.includes('Plan limit')) {
+                setPlanLimitInfo({
+                  limitType: 'offers',
+                  currentUsage: offers.length,
+                  planLimit: offers.length,
+                  currentPlan: 'free',
+                  suggestedPlan: 'professional'
+                })
+                setShowPlanLimitModal(true)
+                setShowCreateModal(false)
+                return
+              }
+
               setError(err.message || t('offers.saveFailed'))
             }
           }}
@@ -468,6 +518,22 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
             setSelectedOfferForAnalytics(null)
           }}
           offer={selectedOfferForAnalytics}
+        />
+      )}
+
+      {/* Plan Limit Modal */}
+      {showPlanLimitModal && planLimitInfo && (
+        <PlanLimitModal
+          isOpen={showPlanLimitModal}
+          onClose={() => {
+            setShowPlanLimitModal(false)
+            setPlanLimitInfo(null)
+          }}
+          limitType={planLimitInfo.limitType}
+          currentUsage={planLimitInfo.currentUsage}
+          planLimit={planLimitInfo.planLimit}
+          currentPlan={planLimitInfo.currentPlan}
+          suggestedPlan={planLimitInfo.suggestedPlan}
         />
       )}
     </div>
@@ -556,7 +622,10 @@ function CreateOfferModal({ offer, branches, onClose, onSave }) {
     // Include tier configuration in form data
     const dataToSave = {
       ...formData,
-      loyalty_tiers: tiersEnabled ? { enabled: true, tiers } : null
+      loyalty_tiers: tiersEnabled ? { enabled: true, tiers } : null,
+      // Sanitize date fields - convert empty strings to null
+      start_date: formData.is_time_limited && formData.start_date ? formData.start_date : null,
+      end_date: formData.is_time_limited && formData.end_date ? formData.end_date : null
     }
 
     onSave(dataToSave)

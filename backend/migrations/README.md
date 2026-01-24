@@ -706,3 +706,41 @@ await sequelize.query(`
 - Review Sequelize documentation: https://sequelize.org/docs/v6/other-topics/migrations/
 - Review PostgreSQL ALTER TABLE docs: https://www.postgresql.org/docs/current/sql-altertable.html
 - Ask team members who have written migrations before
+
+## Database Integrity Rules (AI Protocol)
+
+> **MANDATORY**: Follow these rules when managing database schema.
+
+### 1. Schema Consistency
+- **Rule:** Before creating ANY new migration, check `backend/migrations/00000000-initial-schema.sql`.
+- **Enforcement:**
+  - If the change adds a NEW table: Append it to `00000000-initial-schema.sql` AND create a migration file.
+  - If the change modifies a table: Create a migration file. Do NOT modify the initial schema unless it's a consolidation task.
+- **Goal:** Ensure fresh deployments (`initial-schema.js`) always match the latest production state.
+
+### 2. Archive Protocol
+- **Rule:** Once a migration has been successfully applied and verified in production/dev:
+  1. Determine if it can be consolidated into `00000000-initial-schema.sql` (e.g., creating a missing table).
+  2. If consolidated, move the migration script to `backend/migrations/archive/`.
+  3. If NOT consolidated (e.g., data transformation), keep it in `backend/migrations/`.
+- **Reason:** Keeps the active migration folder clean and reduces "relation already exists" errors during re-initialization.
+
+### 3. Environment Awareness
+- **Rule:** NEVER rely on default `postgres` user.
+- **Action:** Always explicitly load environment variables from `backend/.env` when running scripts.
+- **Command Template:**
+  ```bash
+  export DB_USER=... DB_PASSWORD=... && node backend/migrations/your-script.js
+  ```
+
+### 4. Verification Mandate
+- **Rule:** After running a migration, you MUST verify the database state.
+- **Methods:**
+  - `\dt table_name` (Table existence)
+  - `\d table_name` (Column existence)
+  - `SELECT * FROM ... LIMIT 1` (Data integrity)
+- **Zero Assumption:** Never assume a migration worked just because the script exited with code 0.
+
+### 5. Model-DB Sync
+- **Rule:** When modifying Sequelize models (`backend/models/*.js`), IMMEDIATElY check if the database schema matches.
+- **Check:** mismatched columns (e.g., `stamp_display_type`) cause runtime crashes. Add migrations for every model change.

@@ -3,9 +3,15 @@ import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
 const Offer = sequelize.define('Offer', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   public_id: {
     type: DataTypes.STRING(50),
-    primaryKey: true,
+    allowNull: false,
+    unique: true,
     defaultValue: () => SecureIDGenerator.generateOfferID()
   },
   business_id: {
@@ -24,14 +30,24 @@ const Offer = sequelize.define('Offer', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  reward_description: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
   branch: {
     type: DataTypes.STRING(255),
     allowNull: true,
     defaultValue: 'All Branches'
   },
   type: {
-    type: DataTypes.ENUM('stamps', 'points', 'discount'),
-    defaultValue: 'stamps'
+    type: DataTypes.STRING(20),
+    defaultValue: 'stamps',
+    validate: {
+      isIn: {
+        args: [['stamps', 'points', 'discount']],
+        msg: 'Offer type must be one of: stamps, points, discount'
+      }
+    }
   },
   stamps_required: {
     type: DataTypes.INTEGER,
@@ -42,8 +58,14 @@ const Offer = sequelize.define('Offer', {
     }
   },
   status: {
-    type: DataTypes.ENUM('active', 'paused', 'inactive', 'expired'),
-    defaultValue: 'active'
+    type: DataTypes.STRING(20),
+    defaultValue: 'active',
+    validate: {
+      isIn: {
+        args: [['active', 'paused', 'inactive', 'expired']],
+        msg: 'Status must be one of: active, paused, inactive, expired'
+      }
+    }
   },
   is_time_limited: {
     type: DataTypes.BOOLEAN,
@@ -92,16 +114,28 @@ const Offer = sequelize.define('Offer', {
     comment: 'Customizable tier/medal system configuration for perpetual loyalty passes'
   },
   barcode_preference: {
-    type: DataTypes.ENUM('QR_CODE', 'PDF417'),
+    type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'PDF417',
-    comment: 'Barcode format for wallet passes (QR_CODE or PDF417)'
+    comment: 'Barcode format for wallet passes (QR_CODE or PDF417)',
+    validate: {
+      isIn: {
+        args: [['QR_CODE', 'PDF417']],
+        msg: 'Barcode preference must be QR_CODE or PDF417'
+      }
+    }
   },
   apple_pass_type: {
-    type: DataTypes.ENUM('storeCard', 'generic'),
+    type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'storeCard',
-    comment: 'Apple Wallet pass style: storeCard (strip image, classic loyalty card) or generic (thumbnail image, modern layout with PDF417 benefits)'
+    comment: 'Apple Wallet pass style: storeCard (strip image, classic loyalty card) or generic (thumbnail image, modern layout with PDF417 benefits)',
+    validate: {
+      isIn: {
+        args: [['storeCard', 'generic']],
+        msg: 'Apple pass type must be storeCard or generic'
+      }
+    }
   }
 }, {
   tableName: 'offers',
@@ -112,24 +146,24 @@ const Offer = sequelize.define('Offer', {
 })
 
 // Instance methods for secure offers
-Offer.prototype.incrementCustomers = async function() {
+Offer.prototype.incrementCustomers = async function () {
   this.customers = (this.customers || 0) + 1
   await this.save()
   return this
 }
 
-Offer.prototype.incrementRedemptions = async function() {
+Offer.prototype.incrementRedemptions = async function () {
   this.redeemed = (this.redeemed || 0) + 1
   await this.save()
   return this
 }
 
-Offer.prototype.calculateConversionRate = function() {
+Offer.prototype.calculateConversionRate = function () {
   if (this.customers === 0) return 0
   return ((this.redeemed / this.customers) * 100).toFixed(2)
 }
 
-Offer.prototype.isActive = function() {
+Offer.prototype.isActive = function () {
   if (this.status !== 'active') return false
 
   if (this.is_time_limited) {
@@ -141,7 +175,7 @@ Offer.prototype.isActive = function() {
   return true
 }
 
-Offer.prototype.isExpired = function() {
+Offer.prototype.isExpired = function () {
   if (!this.is_time_limited || !this.end_date) return false
   return new Date() > this.end_date
 }

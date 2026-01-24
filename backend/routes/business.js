@@ -467,9 +467,16 @@ router.put('/offers/:id', (req, res) => {
       })
     }
 
+    // Sanitize date fields
+    const sanitizedData = {
+      ...req.body,
+      startDate: req.body.startDate && req.body.startDate.trim() !== '' ? req.body.startDate : null,
+      endDate: req.body.endDate && req.body.endDate.trim() !== '' ? req.body.endDate : null
+    }
+
     offers[offerIndex] = {
       ...offers[offerIndex],
-      ...req.body
+      ...sanitizedData
     }
 
     res.json({
@@ -977,30 +984,43 @@ router.get('/public/menu/:identifier', async (req, res) => {
     let cardDesign = null
 
     try {
-      const firstOffer = await Offer.findOne({
-        where: {
-          business_id: businessId,
-          status: 'active'
-        },
-        include: [{
-          model: OfferCardDesign,
-          as: 'cardDesign',
-          attributes: ['background_color', 'foreground_color', 'label_color', 'stamp_icon', 'logo_url']
-        }],
-        order: [['created_at', 'DESC']]
-      })
+      // Check if offer_card_designs table exists first
+      const [tableExists] = await sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'offer_card_designs'
+        );
+      `)
 
-      if (firstOffer && firstOffer.cardDesign) {
-        cardDesign = {
-          background_color: firstOffer.cardDesign.background_color,
-          foreground_color: firstOffer.cardDesign.foreground_color,
-          label_color: firstOffer.cardDesign.label_color,
-          stamp_icon: firstOffer.cardDesign.stamp_icon,
-          logo_url: firstOffer.cardDesign.logo_url
+      if (tableExists[0].exists) {
+        const firstOffer = await Offer.findOne({
+          where: {
+            business_id: businessId,
+            status: 'active'
+          },
+          include: [{
+            model: OfferCardDesign,
+            as: 'cardDesign',
+            attributes: ['background_color', 'foreground_color', 'label_color', 'stamp_icon', 'logo_url'],
+            required: false // Make it optional
+          }],
+          order: [['created_at', 'DESC']]
+        })
+
+        if (firstOffer && firstOffer.cardDesign) {
+          cardDesign = {
+            background_color: firstOffer.cardDesign.background_color,
+            foreground_color: firstOffer.cardDesign.foreground_color,
+            label_color: firstOffer.cardDesign.label_color,
+            stamp_icon: firstOffer.cardDesign.stamp_icon,
+            logo_url: firstOffer.cardDesign.logo_url
+          }
         }
       }
     } catch (error) {
       logger.error('Error fetching card design for menu:', error)
+      // Continue without card design - will use fallback
     }
 
     // Use professional_default template as fallback if no card design found
@@ -1352,9 +1372,16 @@ router.post('/my/offers', requireBusinessAuthLocal, async (req, res) => {
   try {
     const businessId = req.business.public_id
 
+    // Sanitize date fields - convert empty strings to null
+    const sanitizedData = {
+      ...req.body,
+      start_date: req.body.start_date && typeof req.body.start_date === 'string' && req.body.start_date.trim() !== '' ? req.body.start_date : null,
+      end_date: req.body.end_date && typeof req.body.end_date === 'string' && req.body.end_date.trim() !== '' ? req.body.end_date : null
+    }
+
     // Create offer via service (verification checks are inside the service)
     const offer = await OfferService.createOffer({
-      ...req.body,
+      ...sanitizedData,
       business_id: businessId
     })
 
@@ -1368,9 +1395,70 @@ router.post('/my/offers', requireBusinessAuthLocal, async (req, res) => {
     const statusCode = error.status || 500
     res.status(statusCode).json({
       success: false,
+      code: error.code || 'UNKNOWN_ERROR',
+      limitType: error.limitType,
       message: error.status === 403 ? error.message : getLocalizedMessage('server.failedToCreateOffer', req.locale),
       error: error.message,
-      code: error.code
+      limits: error.limits
+    })
+  }
+})
+
+// Update existing offer - SECURE VERSION
+router.put('/my/offers/:id', requireBusinessAuthLocal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const businessId = req.business.public_id
+
+    // Verify ownership before updating
+    const offer = await Offer.findOne({
+      where: {
+        public_id: id,
+        business_id: businessId
+      }
+    })
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('errors.notFound', req.locale)
+      })
+    }
+
+    // Sanitize date fields - only override when present in request or when is_time_limited is false
+    const sanitizedData = { ...req.body }
+
+    // Only update start_date if explicitly provided or if is_time_limited is false
+    if (req.body.hasOwnProperty('start_date')) {
+      sanitizedData.start_date = req.body.start_date && typeof req.body.start_date === 'string' && req.body.start_date.trim() !== '' ? req.body.start_date : null
+    }
+
+    // Only update end_date if explicitly provided or if is_time_limited is false
+    if (req.body.hasOwnProperty('end_date')) {
+      sanitizedData.end_date = req.body.end_date && typeof req.body.end_date === 'string' && req.body.end_date.trim() !== '' ? req.body.end_date : null
+    }
+
+    // If is_time_limited is explicitly set to false, clear the dates
+    if (req.body.hasOwnProperty('is_time_limited') && req.body.is_time_limited === false) {
+      sanitizedData.start_date = null
+      sanitizedData.end_date = null
+    }
+
+    // Update offer via service
+    const updatedOffer = await OfferService.updateOffer(offer.id, sanitizedData)
+
+    res.json({
+      success: true,
+      data: updatedOffer,
+      message: getLocalizedMessage('success.offerUpdated', req.locale || 'ar')
+    })
+  } catch (error) {
+    console.error('Update offer error:', error)
+    const statusCode = error.status || 500
+    res.status(statusCode).json({
+      success: false,
+      message: getLocalizedMessage('server.failedToUpdateOffer', req.locale),
+      error: error.message
     })
   }
 })
@@ -1417,6 +1505,184 @@ router.patch('/my/offers/:id/status', requireBusinessAuthLocal, async (req, res)
   }
 })
 
+// Get offer analytics - SECURE VERSION
+router.get('/my/offers/:id/analytics', requireBusinessAuthLocal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const businessId = req.business.public_id
+    const { period = '30d' } = req.query
+
+    // Verify ownership
+    const offer = await Offer.findOne({
+      where: {
+        public_id: id,
+        business_id: businessId
+      }
+    })
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('errors.notFound', req.locale)
+      })
+    }
+
+    // Calculate date range based on period
+    const now = new Date()
+    let startDate = new Date()
+
+    switch (period) {
+      case '7d':
+        startDate.setDate(now.getDate() - 7)
+        break
+      case '30d':
+        startDate.setDate(now.getDate() - 30)
+        break
+      case '90d':
+        startDate.setDate(now.getDate() - 90)
+        break
+      case 'all':
+        startDate = new Date(0) // Beginning of time
+        break
+      default:
+        startDate.setDate(now.getDate() - 30)
+    }
+
+    // Fetch customer progress data for this offer
+    const progressRecords = await CustomerProgress.findAll({
+      where: {
+        offer_id: id,
+        created_at: {
+          [Op.gte]: startDate
+        }
+      },
+      include: [{
+        model: Customer,
+        as: 'customer',
+        attributes: ['customer_id', 'first_name', 'last_name', 'phone']
+      }],
+      order: [['created_at', 'DESC']]
+    })
+
+    // Calculate analytics metrics
+    const totalSignups = progressRecords.length
+    const totalScans = progressRecords.reduce((sum, p) => sum + (p.total_scans || 0), 0)
+    const completedRewards = progressRecords.filter(p => p.is_completed).length
+    const activeCustomers = progressRecords.filter(p => !p.is_completed && p.current_stamps > 0).length
+
+    const conversionRate = totalSignups > 0 ? ((completedRewards / totalSignups) * 100).toFixed(2) : 0
+    const redemptionRate = completedRewards > 0 ? ((offer.redeemed / completedRewards) * 100).toFixed(2) : 0
+
+    // Build trends data (daily aggregation)
+    const trendsMap = new Map()
+    progressRecords.forEach(record => {
+      const date = record.created_at.toISOString().split('T')[0]
+      if (!trendsMap.has(date)) {
+        trendsMap.set(date, { signups: 0, scans: 0 })
+      }
+      const dayData = trendsMap.get(date)
+      dayData.signups += 1
+      dayData.scans += record.total_scans || 0
+    })
+
+    const sortedDates = Array.from(trendsMap.keys()).sort()
+    const signupsTrend = sortedDates.map(date => trendsMap.get(date).signups)
+    const scansTrend = sortedDates.map(date => trendsMap.get(date).scans)
+
+    // Top customers
+    const topCustomers = progressRecords
+      .filter(p => p.customer)
+      .sort((a, b) => b.current_stamps - a.current_stamps)
+      .slice(0, 5)
+      .map(p => ({
+        name: `${p.customer.first_name} ${p.customer.last_name}`.trim() || 'Guest',
+        stamps: p.current_stamps
+      }))
+
+    // Recent signups
+    const recentSignups = progressRecords
+      .filter(p => p.customer)
+      .slice(0, 5)
+      .map(p => ({
+        name: `${p.customer.first_name} ${p.customer.last_name}`.trim() || 'Guest',
+        date: p.created_at
+      }))
+
+    // Close to reward
+    const closeToReward = progressRecords
+      .filter(p => !p.is_completed && p.customer)
+      .map(p => ({
+        name: `${p.customer.first_name} ${p.customer.last_name}`.trim() || 'Guest',
+        remaining: offer.stamps_required - p.current_stamps
+      }))
+      .filter(p => p.remaining > 0 && p.remaining <= 3)
+      .sort((a, b) => a.remaining - b.remaining)
+      .slice(0, 5)
+
+    // Source breakdown
+    const sources = {}
+    progressRecords.forEach(p => {
+      const source = p.source || 'other'
+      sources[source] = (sources[source] || 0) + 1
+    })
+
+    // Performance metrics
+    const avgStampsPerCustomer = totalSignups > 0 ? (totalScans / totalSignups).toFixed(1) : 0
+    const avgVisitsPerCustomer = avgStampsPerCustomer // Same as stamps for now
+
+    // Calculate average days to complete
+    const completedRecords = progressRecords.filter(p => p.is_completed && p.completed_at)
+    const avgDaysToComplete = completedRecords.length > 0
+      ? completedRecords.reduce((sum, p) => {
+        const days = Math.floor((p.completed_at - p.created_at) / (1000 * 60 * 60 * 24))
+        return sum + days
+      }, 0) / completedRecords.length
+      : 0
+
+    const engagementRate = totalSignups > 0 ? ((activeCustomers / totalSignups) * 100).toFixed(2) : 0
+    const churnRate = totalSignups > 0 ? (((totalSignups - activeCustomers - completedRewards) / totalSignups) * 100).toFixed(2) : 0
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          totalScans,
+          totalSignups,
+          conversionRate: parseFloat(conversionRate),
+          activeCustomers,
+          completedRewards,
+          redemptionRate: parseFloat(redemptionRate)
+        },
+        trends: {
+          signups: signupsTrend,
+          scans: scansTrend,
+          dates: sortedDates
+        },
+        customers: {
+          topCustomers,
+          recentSignups,
+          closeToReward
+        },
+        sources,
+        performance: {
+          engagementRate: parseFloat(engagementRate),
+          churnRate: parseFloat(churnRate),
+          avgStampsPerCustomer: parseFloat(avgStampsPerCustomer),
+          avgVisitsPerCustomer: parseFloat(avgVisitsPerCustomer),
+          avgDaysToComplete: parseFloat(avgDaysToComplete.toFixed(0))
+        }
+      }
+    })
+  } catch (error) {
+    logger.error('Get offer analytics error:', error)
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.failedToGetAnalytics', req.locale),
+      error: error.message
+    })
+  }
+})
+
 // Get business-specific branches - SECURE VERSION
 router.get('/my/branches', requireBusinessAuth, async (req, res) => {
   try {
@@ -1457,8 +1723,16 @@ router.post('/my/branches', requireBusinessAuth, async (req, res) => {
     if (currentBranchCount >= limits.locations && limits.locations !== Infinity) {
       return res.status(403).json({
         success: false,
+        code: 'PLAN_LIMIT_REACHED',
+        limitType: 'branches',
         message: getLocalizedMessage('permissions.upgradeRequired', req.locale || 'ar'),
-        error: 'Plan limit reached'
+        error: 'Plan limit reached',
+        limits: {
+          current: currentBranchCount,
+          max: limits.locations,
+          plan: business.current_plan,
+          suggestedPlan: business.current_plan === 'free' ? 'professional' : 'enterprise'
+        }
       })
     }
 
@@ -1656,16 +1930,20 @@ router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
     // Get analytics from CustomerService
     const scanAnalytics = await CustomerService.getScanAnalytics(businessId)
 
+    // Get branch count
+    const totalBranches = await Branch.count({ where: { business_id: businessId } })
+
     const analytics = {
       totalCustomers: scanAnalytics.totalCustomers,
       cardsIssued: businessOffers.reduce((sum, offer) => sum + (offer.customers || 0), 0),
       rewardsRedeemed: scanAnalytics.totalRedemptions,
       growthPercentage: scanAnalytics.totalCustomers > 0 ? `+${Math.round(scanAnalytics.averageProgress)}%` : '+0%',
       totalOffers: businessOffers.length,
-      totalBranches: 1, // TODO: Implement branches when Branch model is created
-      monthlyRevenue: businessOffers.reduce((sum, offer) => sum + (offer.base_reward_value || 0), 0), // Placeholder calculation
+      totalBranches: totalBranches,
       is_verified: req.business.is_verified,
-      profile_completion: req.business.profile_completion
+      profile_completion: req.business.profile_completion,
+      planLimits: req.business.getPlanLimits(),
+      currentPlan: req.business.current_plan
     }
 
     res.json({

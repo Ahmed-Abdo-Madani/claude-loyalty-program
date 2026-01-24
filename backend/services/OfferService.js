@@ -30,21 +30,48 @@ class OfferService {
       throw new Error(`Business with ID ${offerData.business_id} not found`)
     }
 
-    // Business verification check
-    if (!business.is_verified || business.profile_completion < 100) {
+    // Business verification check - Relaxed for development
+    const isProduction = process.env.NODE_ENV === 'production'
+    const isProfileComplete = business.is_verified && business.profile_completion >= 100
+
+    if (isProduction && !isProfileComplete) {
       const error = new Error('Business must be verified and profile 100% complete to create offers')
       error.status = 403
       error.code = 'VERIFICATION_REQUIRED'
       throw error
     }
 
-    // Generate public ID for the offer
-    const publicId = Offer.generatePublicId(offerData.title, offerData.business_id)
+    // Ensure reward_description is present (mandatory in DB)
+    if (!offerData.reward_description) {
+      offerData.reward_description = offerData.description || offerData.title || 'Special Reward'
+    }
 
-    const offer = await Offer.create({
+    // Sanitize date fields - convert empty strings or invalid values to null
+    const sanitizedOfferData = {
       ...offerData,
-      public_id: publicId
-    })
+      start_date: offerData.start_date && typeof offerData.start_date === 'string' && offerData.start_date.trim() !== '' ? offerData.start_date : null,
+      end_date: offerData.end_date && typeof offerData.end_date === 'string' && offerData.end_date.trim() !== '' ? offerData.end_date : null
+    }
+
+    // Check offer plan limits
+    const limits = business.getPlanLimits()
+    const currentOfferCount = await Offer.count({ where: { business_id: offerData.business_id } })
+
+    if (currentOfferCount >= limits.offers && limits.offers !== Infinity) {
+      const error = new Error('Offer limit reached for your current plan')
+      error.status = 403
+      error.code = 'PLAN_LIMIT_REACHED'
+      error.limitType = 'offers'
+      error.limits = {
+        current: currentOfferCount,
+        max: limits.offers,
+        plan: business.current_plan,
+        suggestedPlan: business.current_plan === 'free' ? 'professional' : 'enterprise'
+      }
+      throw error
+    }
+
+    const offer = await Offer.create(sanitizedOfferData)
 
     // Update business offer counts
     await business.increment(['total_offers', 'active_offers'])
@@ -204,6 +231,7 @@ class OfferService {
     }
 
     if (offerData.is_time_limited) {
+      // Check for null or empty after sanitization
       if (!offerData.start_date || !offerData.end_date) {
         errors.push('Start and end dates are required for time-limited offers')
       } else if (new Date(offerData.end_date) <= new Date(offerData.start_date)) {

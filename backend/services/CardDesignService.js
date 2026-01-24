@@ -24,7 +24,7 @@ class CardDesignService {
       logger.info(`🎨 Creating card design for offer: ${offerId}`)
 
       // Validate offer exists
-      const offer = await Offer.findByPk(offerId)
+      const offer = await Offer.findOne({ where: { public_id: offerId } })
       if (!offer) {
         throw new Error(`Offer ${offerId} not found`)
       }
@@ -61,7 +61,7 @@ class CardDesignService {
       })
 
       logger.info(`✅ Card design created: ID ${design.id} for offer ${offerId}`)
-      
+
       // Add barcode_preference and apple_pass_type to returned object
       const result = design.toJSON()
       result.barcode_preference = barcodePreference || offer.barcode_preference
@@ -134,12 +134,13 @@ class CardDesignService {
       await design.update(finalDesignUpdates)
 
       // Fetch updated offer to get current barcode_preference and apple_pass_type
-      const offer = await Offer.findByPk(offerId, {
+      const offer = await Offer.findOne({
+        where: { public_id: offerId },
         attributes: ['barcode_preference', 'apple_pass_type']
       })
 
       logger.info(`✅ Card design updated: ID ${design.id}`)
-      
+
       // Add barcode_preference and apple_pass_type to returned object
       const result = design.toJSON()
       result.barcode_preference = barcodePreference !== null ? barcodePreference : offer.barcode_preference
@@ -183,27 +184,28 @@ class CardDesignService {
 
       if (design) {
         logger.info(`✅ Found card design for offer ${offerId}`)
-        
+
         // Fetch barcode_preference and apple_pass_type from the Offer model
         let barcodePreference
         let applePassType
-        
+
         if (includeRelations && design.offer) {
           // Use eager-loaded preferences
           barcodePreference = design.offer.barcode_preference || 'QR_CODE'
           applePassType = design.offer.apple_pass_type || 'storeCard'
         } else {
           // Fall back to separate query if not eager-loaded
-          const offer = await Offer.findByPk(offerId, {
+          const offer = await Offer.findOne({
+            where: { public_id: offerId },
             attributes: ['barcode_preference', 'apple_pass_type']
           })
           barcodePreference = offer?.barcode_preference || 'QR_CODE'
           applePassType = offer?.apple_pass_type || 'storeCard'
         }
-        
+
         logger.info(`📱 Barcode preference for offer ${offerId}: ${barcodePreference}`)
         logger.info(`🍎 Apple pass type for offer ${offerId}: ${applePassType}`)
-        
+
         // Add barcode_preference and apple_pass_type as virtual properties
         const result = design.toJSON()
         result.barcode_preference = barcodePreference
@@ -309,7 +311,7 @@ class CardDesignService {
     try {
       logger.info(`🎨 Applying template ${templateId} to offer ${offerId}`)
 
-      const offer = await Offer.findByPk(offerId)
+      const offer = await Offer.findOne({ where: { public_id: offerId } })
       if (!offer) {
         throw new Error(`Offer ${offerId} not found`)
       }
@@ -369,7 +371,8 @@ class CardDesignService {
       // Return default design (not saved to DB)
       logger.info(`ℹ️ Returning default design for offer ${offerId} (not saved)`)
 
-      const offer = await Offer.findByPk(offerId, {
+      const offer = await Offer.findOne({
+        where: { public_id: offerId },
         attributes: ['barcode_preference', 'apple_pass_type'],
         include: [{
           model: Business,
@@ -428,7 +431,7 @@ class CardDesignService {
 
       await design.markAsApplied()
       logger.info(`✅ Marked design as applied for offer ${offerId}`)
-      
+
       // Return plain object for consistency
       return design.toJSON()
 
@@ -536,7 +539,7 @@ class CardDesignService {
         throw new Error(`No design found for source offer ${sourceOfferId}`)
       }
 
-      const targetOffer = await Offer.findByPk(targetOfferId)
+      const targetOffer = await Offer.findOne({ where: { public_id: targetOfferId } })
       if (!targetOffer) {
         throw new Error(`Target offer ${targetOfferId} not found`)
       }
@@ -549,7 +552,7 @@ class CardDesignService {
       } else {
         designData = { ...sourceDesign }
       }
-      
+
       delete designData.id
       delete designData.offer_id
       delete designData.last_applied_at

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import BranchGrid from './BranchGrid'
 import LocationAutocomplete from './LocationAutocomplete'
-import CompactStatsBar from './CompactStatsBar'
+
 import BranchManagerAccessModal from './BranchManagerAccessModal'
+import PlanLimitModal from './PlanLimitModal'
+import UsageIndicator from './UsageIndicator'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
 
@@ -22,6 +24,10 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
   const [searchFilter, setSearchFilter] = useState('')
+
+  // Plan limit modal state
+  const [showPlanLimitModal, setShowPlanLimitModal] = useState(false)
+  const [planLimitInfo, setPlanLimitInfo] = useState(null)
 
   // Load branches on component mount
   useEffect(() => {
@@ -134,9 +140,9 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
     const statusMatch = statusFilter === 'all' || branch.status === statusFilter
     const cityMatch = cityFilter === 'all' || branch.city === cityFilter
     const searchMatch = searchFilter === '' ||
-      branch.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      branch.manager_name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      branch.address.toLowerCase().includes(searchFilter.toLowerCase())
+      (branch.name || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+      (branch.manager_name || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+      (branch.address || '').toLowerCase().includes(searchFilter.toLowerCase())
 
     return statusMatch && cityMatch && searchMatch
   })
@@ -152,8 +158,7 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
 
   return (
     <div className="compact-spacing">
-      {/* Compact Stats Bar - Space-efficient metrics */}
-      {analytics && <CompactStatsBar analytics={analytics} />}
+
 
       {/* Header Section - Mobile-first: Stack vertically */}
       <div className="flex flex-col space-y-4 compact-header">
@@ -171,6 +176,16 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
           <span>{t('branches.addBranch')}</span>
         </button>
       </div>
+
+      {/* Plan Usage Indicator */}
+      {analytics?.planLimits && analytics.planLimits.locations !== Infinity && (
+        <UsageIndicator
+          label={t('dashboard:usage.locations', 'Locations')}
+          current={analytics.totalBranches || branches.length}
+          max={analytics.planLimits.locations}
+          type="branches"
+        />
+      )}
 
       {/* Error Display */}
       {error && (
@@ -217,8 +232,8 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
           <button
             onClick={() => { setStatusFilter('all'); setCityFilter('all'); }}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${statusFilter === 'all' && cityFilter === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
             {t('branches.all')}
@@ -226,8 +241,8 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
           <button
             onClick={() => setStatusFilter('active')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${statusFilter === 'active'
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-green-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
             {t('branches.active')}
@@ -235,8 +250,8 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
           <button
             onClick={() => setStatusFilter('inactive')}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] touch-manipulation ${statusFilter === 'inactive'
-                ? 'bg-red-500 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              ? 'bg-red-500 text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
           >
             {t('branches.inactive')}
@@ -330,7 +345,20 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
                 const response = await secureApi.post(endpoints.myBranches, branchData)
                 const data = await response.json()
 
+                // Check for plan limit error in response
                 if (!data.success) {
+                  if (data.code === 'PLAN_LIMIT_REACHED' && data.limits) {
+                    setPlanLimitInfo({
+                      limitType: data.limitType || 'branches',
+                      currentUsage: data.limits.current,
+                      planLimit: data.limits.max,
+                      currentPlan: data.limits.plan,
+                      suggestedPlan: data.limits.suggestedPlan
+                    })
+                    setShowPlanLimitModal(true)
+                    setShowCreateModal(false)
+                    return
+                  }
                   throw new Error(data.message || 'Failed to create branch')
                 }
                 console.log('✅ Branch created successfully:', data.data?.public_id)
@@ -339,6 +367,19 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
               setShowCreateModal(false)
               setShowEditModal(null)
             } catch (err) {
+              // Check if this is a plan limit error by message (fallback)
+              if (err.message?.includes('permissions.upgradeRequired') || err.message?.includes('Plan limit')) {
+                setPlanLimitInfo({
+                  limitType: 'branches',
+                  currentUsage: branches.length,
+                  planLimit: branches.length,
+                  currentPlan: 'free',
+                  suggestedPlan: 'professional'
+                })
+                setShowPlanLimitModal(true)
+                setShowCreateModal(false)
+                return
+              }
               setError(err.message || 'Failed to save branch')
               console.error('Error saving branch:', err)
             }
@@ -353,6 +394,22 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
           isOpen={!!showManagerAccessModal}
           onClose={() => setShowManagerAccessModal(null)}
           onSuccess={loadBranches}
+        />
+      )}
+
+      {/* Plan Limit Modal */}
+      {showPlanLimitModal && planLimitInfo && (
+        <PlanLimitModal
+          isOpen={showPlanLimitModal}
+          onClose={() => {
+            setShowPlanLimitModal(false)
+            setPlanLimitInfo(null)
+          }}
+          limitType={planLimitInfo.limitType}
+          currentUsage={planLimitInfo.currentUsage}
+          planLimit={planLimitInfo.planLimit}
+          currentPlan={planLimitInfo.currentPlan}
+          suggestedPlan={planLimitInfo.suggestedPlan}
         />
       )}
     </div>
@@ -621,7 +678,7 @@ function BranchModal({ branch, onClose, onSave }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    🏪 {t('branches.branchName')} *
+                    {t('branches.branchName')}
                   </label>
                   <input
                     type="text"
@@ -634,7 +691,7 @@ function BranchModal({ branch, onClose, onSave }) {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    👤 {t('branches.manager')}
+                    {t('branches.manager')}
                   </label>
                   <input
                     type="text"
@@ -656,7 +713,7 @@ function BranchModal({ branch, onClose, onSave }) {
                     type="tel"
                     name="branch-phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     autoComplete="off"
                     className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                     placeholder={t('branches.phonePlaceholder')}
@@ -670,7 +727,7 @@ function BranchModal({ branch, onClose, onSave }) {
                     type="email"
                     name="branch-email"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     autoComplete="off"
                     className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
                     placeholder={t('branches.emailPlaceholder')}
@@ -685,7 +742,7 @@ function BranchModal({ branch, onClose, onSave }) {
                     type="checkbox"
                     id="isMain"
                     checked={formData.isMain}
-                    onChange={(e) => setFormData({...formData, isMain: e.target.checked})}
+                    onChange={(e) => setFormData({ ...formData, isMain: e.target.checked })}
                     className="h-5 w-5 min-h-[20px] min-w-[20px] text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                   />
                   <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
@@ -789,50 +846,7 @@ function BranchModal({ branch, onClose, onSave }) {
                 </p>
               </div>
 
-              {/* Contact Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    📞 {t('branches.phoneNumber')}
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                    placeholder={t('branches.phonePlaceholder')}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    📧 {t('branches.email')}
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all touch-target"
-                    placeholder={t('branches.emailPlaceholder')}
-                  />
-                </div>
-              </div>
 
-              {/* Main Branch Setting */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="isMain"
-                    checked={formData.isMain}
-                    onChange={(e) => setFormData({ ...formData, isMain: e.target.checked })}
-                    className="h-5 w-5 min-h-[20px] min-w-[20px] text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                  />
-                  <label htmlFor="isMain" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
-                    ⭐ Set as main branch
-                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Primary location)</span>
-                  </label>
-                </div>
-              </div>
             </div>
           </form>
         </div>

@@ -22,14 +22,6 @@ SET row_security = off;
 -- Name: apple_pass_type_enum; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.apple_pass_type_enum AS ENUM (
-    'storeCard',
-    'generic'
-);
-
-
-ALTER TYPE public.apple_pass_type_enum OWNER TO loyalty_user;
-
 --
 -- Name: enum_businesses_current_plan; Type: TYPE; Schema: public; Owner: loyalty_user
 --
@@ -219,14 +211,6 @@ ALTER TYPE public.enum_notification_campaigns_type OWNER TO loyalty_user;
 --
 -- Name: enum_offers_barcode_preference; Type: TYPE; Schema: public; Owner: loyalty_user
 --
-
-CREATE TYPE public.enum_offers_barcode_preference AS ENUM (
-    'QR_CODE',
-    'PDF417'
-);
-
-
-ALTER TYPE public.enum_offers_barcode_preference OWNER TO loyalty_user;
 
 --
 -- Name: enum_payments_payment_method; Type: TYPE; Schema: public; Owner: loyalty_user
@@ -532,10 +516,10 @@ CREATE TABLE public.branches (
     id integer NOT NULL,
     business_id character varying(50),
     name character varying(255) NOT NULL,
-    address text NOT NULL,
-    city character varying(100) NOT NULL,
-    state character varying(50) NOT NULL,
-    zip_code character varying(20) NOT NULL,
+    address text,
+    city character varying(100),
+    state character varying(50),
+    zip_code character varying(20),
     phone character varying(20),
     email character varying(255),
     manager_name character varying(255),
@@ -611,6 +595,8 @@ CREATE TABLE public.businesses (
     logo_url character varying(500),
     logo_uploaded_at timestamp with time zone,
     logo_file_size integer,
+    is_verified boolean DEFAULT false,
+    profile_completion integer DEFAULT 0,
     location_type character varying(50)
 );
 
@@ -640,8 +626,8 @@ CREATE TABLE public.offers (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     public_id character varying(50),
-    barcode_preference public.enum_offers_barcode_preference DEFAULT 'QR_CODE'::public.enum_offers_barcode_preference NOT NULL,
-    apple_pass_type public.apple_pass_type_enum DEFAULT 'storeCard'::public.apple_pass_type_enum NOT NULL,
+    barcode_preference VARCHAR(20) DEFAULT 'PDF417' NOT NULL CHECK (barcode_preference IN ('QR_CODE', 'PDF417')),
+    apple_pass_type VARCHAR(20) DEFAULT 'storeCard' NOT NULL CHECK (apple_pass_type IN ('storeCard', 'generic')),
     branch character varying(255) DEFAULT 'All Branches'::character varying,
     max_redemptions_per_customer integer,
     terms_conditions text,
@@ -3667,4 +3653,241 @@ ALTER TABLE ONLY public.webhook_logs
 --
 
 \unrestrict t9r5yi6bdEZltuho1a0xppcBjxzj8EEUg096NK0qwlBEFjVRdsWtiv1hVdz9YcG
+
+
+--
+-- Name: offer_card_designs; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.offer_card_designs (
+    id SERIAL PRIMARY KEY,
+    offer_id VARCHAR(50) NOT NULL,
+    business_id VARCHAR(50) NOT NULL,
+    logo_url VARCHAR(500),
+    logo_google_url VARCHAR(500),
+    logo_apple_url VARCHAR(500),
+    hero_image_url VARCHAR(500),
+    background_color VARCHAR(7) DEFAULT '#3B82F6' NOT NULL,
+    foreground_color VARCHAR(7) DEFAULT '#FFFFFF' NOT NULL,
+    label_color VARCHAR(7) DEFAULT '#E0F2FE' NOT NULL,
+    stamp_icon VARCHAR(10) DEFAULT '⭐',
+    stamp_display_type VARCHAR(10) DEFAULT 'icon' CHECK (stamp_display_type IN ('icon', 'logo')),
+    progress_display_style VARCHAR(20) DEFAULT 'bar',
+    field_labels JSONB DEFAULT '{}',
+    google_wallet_config JSONB DEFAULT '{}',
+    apple_wallet_config JSONB DEFAULT '{}',
+    template_id VARCHAR(50),
+    is_custom BOOLEAN DEFAULT false,
+    version INTEGER DEFAULT 1,
+    contrast_score DECIMAL(4,2),
+    validation_status VARCHAR(20) DEFAULT 'pending',
+    validation_errors JSONB DEFAULT '[]',
+    logo_file_size INTEGER,
+    hero_file_size INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_applied_at TIMESTAMP,
+    CONSTRAINT offer_card_designs_progress_display_style_check CHECK (progress_display_style IN ('bar', 'grid', 'circular')),
+    CONSTRAINT offer_card_designs_validation_status_check CHECK (validation_status IN ('valid', 'warning', 'error', 'pending')),
+    CONSTRAINT unique_offer_design UNIQUE (offer_id)
+);
+
+
+ALTER TABLE public.offer_card_designs OWNER TO loyalty_user;
+
+--
+-- Name: idx_offer_card_designs_business; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_offer_card_designs_business ON public.offer_card_designs USING btree (business_id);
+
+
+--
+-- Name: idx_offer_card_designs_template; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_offer_card_designs_template ON public.offer_card_designs USING btree (template_id);
+
+
+--
+-- Name: idx_offer_card_designs_validation; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_offer_card_designs_validation ON public.offer_card_designs USING btree (validation_status);
+
+
+--
+-- Name: idx_offer_card_designs_created; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_offer_card_designs_created ON public.offer_card_designs USING btree (created_at DESC);
+
+
+--
+-- Name: offer_card_designs fk_offer_card_designs_business; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
+--
+
+ALTER TABLE ONLY public.offer_card_designs
+    ADD CONSTRAINT fk_offer_card_designs_business FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
+
+
+--
+-- Name: offer_card_designs fk_offer_card_designs_offer; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
+--
+
+ALTER TABLE ONLY public.offer_card_designs
+    ADD CONSTRAINT fk_offer_card_designs_offer FOREIGN KEY (offer_id) REFERENCES public.offers(public_id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_categories; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.product_categories (
+    public_id VARCHAR(50) PRIMARY KEY,
+    business_id VARCHAR(50) NOT NULL REFERENCES public.businesses(public_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    name_ar VARCHAR(255),
+    description TEXT,
+    display_order INTEGER DEFAULT 0 NOT NULL,
+    status VARCHAR(20) DEFAULT 'active' NOT NULL CHECK (status IN ('active', 'inactive')),
+    product_count INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE public.product_categories OWNER TO loyalty_user;
+
+CREATE INDEX idx_product_categories_business ON public.product_categories(business_id);
+CREATE INDEX idx_product_categories_status ON public.product_categories(status);
+CREATE INDEX idx_product_categories_order ON public.product_categories(display_order);
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.products (
+    public_id VARCHAR(50) PRIMARY KEY,
+    business_id VARCHAR(50) NOT NULL REFERENCES public.businesses(public_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    branch_id VARCHAR(50) REFERENCES public.branches(public_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    category_id VARCHAR(50) REFERENCES public.product_categories(public_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    name_ar VARCHAR(255),
+    description TEXT,
+    sku VARCHAR(100),
+    price DECIMAL(10, 2) NOT NULL,
+    cost DECIMAL(10, 2),
+    tax_rate DECIMAL(5, 2) DEFAULT 15.00 NOT NULL,
+    tax_included BOOLEAN DEFAULT false NOT NULL,
+    status VARCHAR(20) DEFAULT 'active' NOT NULL CHECK (status IN ('active', 'inactive', 'out_of_stock')),
+    image_url VARCHAR(500),
+    display_order INTEGER DEFAULT 0 NOT NULL,
+    total_sold INTEGER DEFAULT 0 NOT NULL,
+    total_revenue DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE public.products OWNER TO loyalty_user;
+
+CREATE INDEX idx_products_business ON public.products(business_id);
+CREATE INDEX idx_products_branch ON public.products(branch_id);
+CREATE INDEX idx_products_category ON public.products(category_id);
+CREATE INDEX idx_products_status ON public.products(status);
+CREATE INDEX idx_products_sku ON public.products(sku);
+CREATE UNIQUE INDEX unique_business_sku ON public.products (business_id, sku) WHERE sku IS NOT NULL;
+
+
+--
+-- Name: sales; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.sales (
+    public_id VARCHAR(50) PRIMARY KEY,
+    sale_number VARCHAR(50) NOT NULL,
+    business_id VARCHAR(50) NOT NULL REFERENCES public.businesses(public_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    branch_id VARCHAR(50) NOT NULL REFERENCES public.branches(public_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    customer_id VARCHAR(50) REFERENCES public.customers(customer_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    tax_amount DECIMAL(10, 2) NOT NULL,
+    discount_amount DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    payment_method VARCHAR(20) NOT NULL CHECK (payment_method IN ('cash', 'card', 'gift_offer', 'mixed')),
+    payment_details JSONB,
+    status VARCHAR(20) DEFAULT 'completed' NOT NULL CHECK (status IN ('completed', 'cancelled', 'refunded')),
+    sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    notes TEXT,
+    loyalty_discount_amount DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
+    loyalty_redeemed BOOLEAN DEFAULT false NOT NULL,
+    created_by_manager VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT unique_business_sale_number UNIQUE (business_id, sale_number)
+);
+
+ALTER TABLE public.sales OWNER TO loyalty_user;
+
+CREATE INDEX idx_sales_business ON public.sales(business_id);
+CREATE INDEX idx_sales_branch ON public.sales(branch_id);
+CREATE INDEX idx_sales_customer ON public.sales(customer_id);
+CREATE INDEX idx_sales_date ON public.sales(sale_date);
+CREATE INDEX idx_sales_status ON public.sales(status);
+CREATE INDEX idx_sales_payment ON public.sales(payment_method);
+CREATE INDEX idx_sales_number ON public.sales(sale_number);
+CREATE INDEX business_sale_date_idx ON public.sales(business_id, sale_date);
+
+
+--
+-- Name: sale_items; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.sale_items (
+    id SERIAL PRIMARY KEY,
+    sale_id VARCHAR(50) NOT NULL REFERENCES public.sales(public_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    product_id VARCHAR(50) NOT NULL REFERENCES public.products(public_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    product_name VARCHAR(255) NOT NULL,
+    product_sku VARCHAR(100),
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    tax_rate DECIMAL(5, 2) NOT NULL,
+    tax_amount DECIMAL(10, 2) NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    total DECIMAL(10, 2) NOT NULL,
+    discount_amount DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE public.sale_items OWNER TO loyalty_user;
+
+CREATE INDEX idx_sale_items_sale ON public.sale_items(sale_id);
+CREATE INDEX idx_sale_items_product ON public.sale_items(product_id);
+CREATE INDEX sale_product_idx ON public.sale_items(sale_id, product_id);
+
+
+--
+-- Name: receipts; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.receipts (
+    id SERIAL PRIMARY KEY,
+    sale_id VARCHAR(50) NOT NULL UNIQUE REFERENCES public.sales(public_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    receipt_number VARCHAR(50) NOT NULL UNIQUE,
+    format VARCHAR(20) NOT NULL CHECK (format IN ('thermal', 'a4', 'digital')),
+    content_json JSONB NOT NULL,
+    printed_at TIMESTAMP,
+    emailed_at TIMESTAMP,
+    email_recipient VARCHAR(255),
+    print_count INTEGER DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE public.receipts OWNER TO loyalty_user;
+
+CREATE INDEX idx_receipts_sale ON public.receipts(sale_id);
+CREATE INDEX idx_receipts_number ON public.receipts(receipt_number);
+CREATE INDEX idx_receipts_printed ON public.receipts(printed_at);
 

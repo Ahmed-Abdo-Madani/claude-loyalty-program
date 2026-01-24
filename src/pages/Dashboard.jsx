@@ -182,6 +182,7 @@ function Dashboard() {
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         user={user}
+        analytics={analytics}
         onSignOut={handleSignOut}
       />
 
@@ -195,46 +196,7 @@ function Dashboard() {
 
         {/* Dashboard Content */}
         <main className="p-3 sm:p-6">
-          {/* Tab Content */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-colors duration-300">
-            {/* Tab Navigation - Hidden on mobile (use bottom nav), visible on tablet+ */}
-            <div className="hidden sm:block border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide">
-              <nav className="flex gap-4 sm:gap-8 px-4 sm:px-6">
-                {[
-                  { id: 'overview', label: t('tabs.overview'), icon: '📊' },
-                  { id: 'offers', label: t('tabs.myOffers'), icon: '🎯' },
-                  // { id: 'scanner', label: t('tabs.qrScanner'), icon: '📱' },
-                  { id: 'branches', label: t('tabs.branches'), icon: '🏪' },
-                  { id: 'products', label: t('tabs.products'), icon: '🛍️' },
-                  // Temporarily hidden - can be re-enabled in future
-                  // { id: 'customers', label: t('tabs.customers'), icon: '👥' },
-                  // { id: 'wallet', label: t('tabs.mobileWallets'), icon: '📱' },
-                  { id: 'analytics', label: t('tabs.analytics'), icon: '📈' },
-                  { id: 'billing-subscription', label: t('tabs.billingSubscription'), icon: '💳' }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => !tab.disabled && handleTabChange(tab.id)}
-                    disabled={tab.disabled}
-                    className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors duration-200 flex items-center touch-target min-h-[44px] ${tab.disabled
-                      ? 'border-transparent text-gray-400 cursor-not-allowed opacity-50'
-                      : activeTab === tab.id
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                  >
-                    <span className="mr-2">{tab.icon}</span>
-                    <span>{tab.label}</span>
-                    {tab.comingSoon && (
-                      <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-300 dark:border-yellow-700">
-                        {t('tabs.comingSoon')}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
             {/* Tab Content */}
             <div className="p-3 sm:p-5">
               {activeTab === 'overview' && (
@@ -325,18 +287,20 @@ function Dashboard() {
             </div>
           </div>
         </main>
-      </div>
+      </div >
 
       {/* Menu QR Code Modal */}
-      {showMenuQRModal && user && (
-        <QRCodeModal
-          type="menu"
-          identifier={user.businessId}
-          options={{ type: 'business' }}
-          onClose={() => setShowMenuQRModal(false)}
-        />
-      )}
-    </div>
+      {
+        showMenuQRModal && user && (
+          <QRCodeModal
+            type="menu"
+            identifier={user.businessId}
+            options={{ type: 'business' }}
+            onClose={() => setShowMenuQRModal(false)}
+          />
+        )
+      }
+    </div >
   )
 }
 

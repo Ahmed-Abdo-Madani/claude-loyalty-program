@@ -293,13 +293,13 @@ Business.prototype.getPlanLimits = function () {
       offers: 1,
       customers: 100,
       posOperations: 20,
-      locations: 1
+      locations: 5
     },
     professional: {
       offers: Infinity,
       customers: 1000,
       posOperations: Infinity,
-      locations: 1
+      locations: 10
     },
     enterprise: {
       offers: Infinity,
