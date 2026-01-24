@@ -9,7 +9,9 @@ import { Op } from 'sequelize'
 class BusinessService {
   // Get business by ID
   static async findById(businessId) {
-    return await Business.findByPk(businessId)
+    return await Business.findOne({
+      where: { public_id: businessId }
+    })
   }
 
   // Get all businesses with filtering options
@@ -42,7 +44,9 @@ class BusinessService {
 
   // Update business status
   static async updateBusinessStatus(businessId, status, reason = null, adminId = null) {
-    const business = await Business.findByPk(businessId)
+    const business = await Business.findOne({
+      where: { public_id: businessId }
+    })
 
     if (!business) {
       throw new Error('Business not found')
@@ -84,7 +88,9 @@ class BusinessService {
   static async getBusinessAnalytics(businessId = null) {
     if (businessId) {
       // Single business analytics
-      const business = await Business.findByPk(businessId)
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
       if (!business) {
         throw new Error('Business not found')
       }

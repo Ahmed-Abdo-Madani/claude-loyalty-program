@@ -83,17 +83,17 @@ class RealGoogleWalletController {
           error: 'Google Wallet service unavailable',
           message: 'Google Wallet credentials not configured',
           mock: true
-      })
-    }
+        })
+      }
 
-    let { customerData, offerData, progressData } = req.body
+      let { customerData, offerData, progressData } = req.body
 
-    // Debug logging for stamp values (keeping this for Google Wallet debugging)
-    console.log('🔍 Google Wallet: Generating pass', {
-      customer: customerData.customerId,
-      offer: offerData.offerId,
-      stamps_required: offerData?.stamps_required
-    })      // Validate required data
+      // Debug logging for stamp values (keeping this for Google Wallet debugging)
+      console.log('🔍 Google Wallet: Generating pass', {
+        customer: customerData.customerId,
+        offer: offerData.offerId,
+        stamps_required: offerData?.stamps_required
+      })      // Validate required data
       if (!customerData?.customerId || !offerData?.offerId || !offerData?.businessName) {
         return res.status(400).json({
           error: 'Missing required data',
@@ -216,8 +216,8 @@ class RealGoogleWalletController {
 
       // Check if error is related to last_updated_tag constraint
       const isConstraintError = error.message?.includes('last_updated_tag') ||
-                               error.message?.includes('not-null constraint') ||
-                               error.original?.column === 'last_updated_tag'
+        error.message?.includes('not-null constraint') ||
+        error.original?.column === 'last_updated_tag'
 
       const errorResponse = {
         error: 'Failed to generate Google Wallet pass',
@@ -413,9 +413,9 @@ class RealGoogleWalletController {
     const loyaltyObject = {
       id: objectId,
       classId: classId,
-      state: existingPass && existingPass.pass_status === 'completed' ? 'COMPLETED' : 
-             existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked') ? 'EXPIRED' : 
-             'ACTIVE',
+      state: existingPass && existingPass.pass_status === 'completed' ? 'COMPLETED' :
+        existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked') ? 'EXPIRED' :
+          'ACTIVE',
 
       // Account information
       accountName: `${customerData.firstName} ${customerData.lastName}`,
@@ -480,7 +480,7 @@ class RealGoogleWalletController {
     // Default to QR_CODE if preference is not set for backward compatibility
     let barcodePreference = offerData.barcode_preference || 'QR_CODE'
     let barcodeType = barcodePreference === 'PDF417' ? 'PDF_417' : 'QR_CODE'
-    
+
     // Calculate barcode value to check size
     const barcodeValue = JSON.stringify({
       customerId: customerData.customerId,
@@ -488,7 +488,7 @@ class RealGoogleWalletController {
       businessId: offerData.businessId,
       timestamp: new Date().toISOString()
     })
-    
+
     // PDF417 size guard: PDF417 typically supports ~1850 alphanumeric characters
     // QR codes support up to ~4296 alphanumeric characters
     const PDF417_MAX_LENGTH = 1850
@@ -501,9 +501,9 @@ class RealGoogleWalletController {
       barcodePreference = 'QR_CODE'
       barcodeType = 'QR_CODE'
     }
-    
-    logger.info('📊 Google Wallet: Barcode format selection:', { 
-      preference: barcodePreference, 
+
+    logger.info('📊 Google Wallet: Barcode format selection:', {
+      preference: barcodePreference,
       googleType: barcodeType,
       valueLength: barcodeValue.length
     })
@@ -936,7 +936,7 @@ class RealGoogleWalletController {
       // Calculate customer tier
       const CustomerService = (await import('../services/CustomerService.js')).default
       const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
-      
+
       // FIX 3: Defensive fallback for tier calculation
       if (tierData) {
         console.log('🏆 Customer tier calculated successfully:', tierData)
@@ -970,7 +970,7 @@ class RealGoogleWalletController {
       // First verify object exists before attempting update
       const authClient = await this.auth.getClient()
       const accessToken = await authClient.getAccessToken()
-      
+
       const checkResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
         method: 'GET',
         headers: {
@@ -978,7 +978,7 @@ class RealGoogleWalletController {
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (!checkResponse.ok) {
         const error = await checkResponse.text()
         console.error('❌ Object verification failed:', {
@@ -987,16 +987,18 @@ class RealGoogleWalletController {
           error: error,
           objectId: objectId
         })
-        
+
         // If object doesn't exist, we need to create it first
         if (checkResponse.status === 404) {
           console.log('🔧 Object not found, attempting to create it first...')
-          
+
           try {
             // Get offer data to create the missing object
             const { Offer } = await import('../models/index.js')
-            const offer = await Offer.findByPk(offerId)
-            
+            const offer = await Offer.findOne({
+              where: { public_id: offerId }
+            })
+
             if (!offer) {
               throw new Error(`Offer ${offerId} not found in database`)
             }
@@ -1007,7 +1009,7 @@ class RealGoogleWalletController {
               firstName: 'Customer', // Default values for scanning
               lastName: 'User'
             }
-            
+
             const offerData = {
               offerId: offerId,  // Use secure public ID, not integer id
               businessName: offer.business?.business_name || 'Business',
@@ -1015,7 +1017,7 @@ class RealGoogleWalletController {
               description: offer.description,
               stamps_required: offer.stamps_required
             }
-            
+
             const defaultProgressData = {
               current_stamps: 0,
               max_stamps: offer.stamps_required,
@@ -1029,14 +1031,14 @@ class RealGoogleWalletController {
 
             // Create loyalty class first
             await this.createOrUpdateLoyaltyClass(authClient, offerData)
-            
+
             // Create loyalty object
             const createdObject = await this.createLoyaltyObject(authClient, customerData, offerData, defaultProgressData)
-            
+
             console.log('✅ Missing object created successfully:', createdObject.id)
-            
+
             // Now proceed with the update using the actual progress data
-            
+
           } catch (createError) {
             console.error('❌ Failed to create missing object:', createError.message)
             throw new Error(`Object ${objectId} not found and creation failed: ${createError.message}`)
@@ -1096,7 +1098,7 @@ class RealGoogleWalletController {
           updateData.loyaltyPoints.balance.int = tierCompletions
         }
         updateData.loyaltyPoints.balance.int = progressData.tierData.rewardsClaimed || 0
-        
+
         updateData.textModulesData.push({
           id: 'tier',
           header: 'Loyalty Tier',
@@ -1126,7 +1128,7 @@ class RealGoogleWalletController {
 
       // Update the loyalty object in Google Wallet
       const result = await this.updateLoyaltyObject(objectId, updateData)
-      
+
       console.log('📱 Update response received:', result)
 
       // FIX 5: Enhanced verification logging
@@ -1138,13 +1140,13 @@ class RealGoogleWalletController {
           'Content-Type': 'application/json'
         }
       })
-      
+
       if (verifyResponse.ok) {
         const updatedObject = await verifyResponse.json()
         const currentBalance = updatedObject.loyaltyPoints?.balance?.int
         // Comment 2: Use the coerced completions value for verification
         const expectedBalance = completions
-        
+
         console.log('🔍 Verification results:', {
           expected: expectedBalance,
           actual: currentBalance,

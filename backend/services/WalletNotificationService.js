@@ -39,7 +39,9 @@ class WalletNotificationService {
   static async sendCustomMessage(walletPassId, messageData, messageType = 'custom') {
     try {
       // Find wallet pass
-      const walletPass = await WalletPass.findByPk(walletPassId)
+      const walletPass = await WalletPass.findOne({
+        where: { public_id: walletPassId }
+      })
 
       if (!walletPass) {
         return {
@@ -346,7 +348,9 @@ class WalletNotificationService {
         where: { customer_id: customerId }
       })
 
-      const business = await Business.findByPk(businessId)
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
 
       if (!customer || !business) {
         return {
@@ -514,7 +518,9 @@ class WalletNotificationService {
         where: { customer_id: customerId }
       })
 
-      const business = await Business.findByPk(businessId)
+      const business = await Business.findOne({
+        where: { public_id: businessId }
+      })
 
       if (!customer || !business) {
         return {

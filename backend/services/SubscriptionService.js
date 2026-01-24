@@ -68,7 +68,7 @@ class SubscriptionService {
    */
   static getPlanDefinition(planType) {
     const plan = this.PLAN_DEFINITIONS[planType?.toLowerCase()];
-    
+
     if (!plan) {
       const error = new Error(`Invalid plan type: ${planType}. Valid plans: free, professional, enterprise`);
       logger.error('Invalid plan type requested', { planType });
@@ -96,7 +96,7 @@ class SubscriptionService {
       } else {
         const extraLocations = locationCount - 3;
         const totalPrice = plan.basePrice + (extraLocations * plan.pricePerLocation);
-        
+
         logger.debug('Enterprise plan price calculated', {
           locationCount,
           extraLocations,
@@ -104,7 +104,7 @@ class SubscriptionService {
           pricePerLocation: plan.pricePerLocation,
           totalPrice
         });
-        
+
         return totalPrice;
       }
     }
@@ -295,7 +295,7 @@ class SubscriptionService {
         const now = new Date();
         const trialEnd = new Date(business.trial_ends_at);
         const daysRemaining = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
-        
+
         trialInfo = {
           is_trial: true,
           trial_ends_at: business.trial_ends_at,
@@ -419,12 +419,12 @@ class SubscriptionService {
 
       const currentPlan = business.current_plan;
       const newPlan = this.getPlanDefinition(newPlanType);
-      
+
       // Validate upgrade path (can't downgrade)
       const planHierarchy = ['free', 'professional', 'enterprise'];
       const currentIndex = planHierarchy.indexOf(currentPlan);
       const newIndex = planHierarchy.indexOf(newPlanType);
-      
+
       if (newIndex <= currentIndex) {
         throw new Error(`Cannot upgrade from ${currentPlan} to ${newPlanType}. Use downgradeSubscription instead.`);
       }
@@ -526,12 +526,12 @@ class SubscriptionService {
 
       const currentPlan = business.current_plan;
       const newPlan = this.getPlanDefinition(newPlanType);
-      
+
       // Validate downgrade path
       const planHierarchy = ['free', 'professional', 'enterprise'];
       const currentIndex = planHierarchy.indexOf(currentPlan);
       const newIndex = planHierarchy.indexOf(newPlanType);
-      
+
       if (newIndex >= currentIndex) {
         throw new Error(`Cannot downgrade from ${currentPlan} to ${newPlanType}. Use upgradeSubscription instead.`);
       }
@@ -711,14 +711,14 @@ class SubscriptionService {
       // Count POS operations (sales) in current month
       const now = new Date();
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
+
       logger.debug('Counting POS operations for current month', {
         businessId,
         firstDayOfMonth: firstDayOfMonth.toISOString(),
         currentMonth: now.getMonth() + 1,
         currentYear: now.getFullYear()
       });
-      
+
       const posOperationCount = await Sale.count({
         where: {
           business_id: businessId,
@@ -740,8 +740,8 @@ class SubscriptionService {
         locations: locationCount
       };
 
-      logger.debug('Usage calculated', { 
-        businessId, 
+      logger.debug('Usage calculated', {
+        businessId,
         usage,
         posOperationsMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
       });
@@ -954,7 +954,9 @@ class SubscriptionService {
       });
 
       // Fetch business and count locations for enterprise pricing
-      const business = await Business.findByPk(subscription.business_id);
+      const business = await Business.findOne({
+        where: { public_id: subscription.business_id }
+      });
       if (!business) {
         throw new Error(`Business not found: ${subscription.business_id}`);
       }
@@ -1075,7 +1077,10 @@ class SubscriptionService {
       }, { transaction });
 
       // Update business subscription status
-      const business = await Business.findByPk(subscription.business_id, { transaction });
+      const business = await Business.findOne({
+        where: { public_id: subscription.business_id },
+        transaction
+      });
       await business.update({
         subscription_status: 'active',
         subscription_started_at: business.subscription_started_at || new Date()
@@ -1171,21 +1176,21 @@ class SubscriptionService {
         try {
           const NotificationService = (await import('./NotificationService.js')).default
           const notificationService = new NotificationService()
-          
+
           const paymentDetails = {
             amount: subscription.amount || 0,
             currency: subscription.currency || 'SAR',
             plan_type: subscription.plan_type,
             failure_reason: error
           }
-          
+
           const retryInfo = {
             retry_count: newRetryCount,
             max_retries: 3,
             next_retry_date: nextRetryDate,
             grace_period_end: null
           }
-          
+
           await notificationService.sendPaymentFailureNotification(
             subscription.business_id,
             paymentDetails,
@@ -1226,7 +1231,7 @@ class SubscriptionService {
         try {
           const NotificationService = (await import('./NotificationService.js')).default
           const notificationService = new NotificationService()
-          
+
           await notificationService.sendGracePeriodNotification(
             subscription.business_id,
             gracePeriodEnd
@@ -1328,7 +1333,10 @@ class SubscriptionService {
       });
 
       // Fetch business
-      const business = await Business.findByPk(businessId, { transaction });
+      const business = await Business.findOne({
+        where: { public_id: businessId },
+        transaction
+      });
       if (!business) {
         throw new Error(`Business not found: ${businessId}`);
       }
@@ -1346,17 +1354,17 @@ class SubscriptionService {
         businessName: business.business_name,
         reason
       });
-      
+
       // Send suspension notification (non-blocking)
       try {
         const NotificationService = (await import('./NotificationService.js')).default;
         const notificationService = new NotificationService();
-        
+
         await notificationService.sendAccountSuspensionNotification(
           businessId,
           reason
         );
-        
+
         logger.info('Account suspension notification sent', { businessId });
       } catch (notificationError) {
         logger.error('Failed to send suspension notification', {
@@ -1392,7 +1400,10 @@ class SubscriptionService {
       });
 
       // Find associated subscription
-      const subscription = await Subscription.findByPk(payment.subscription_id, { transaction });
+      const subscription = await Subscription.findOne({
+        where: { public_id: payment.subscription_id },
+        transaction
+      });
 
       if (!subscription) {
         logger.warn('⚠️ No subscription found for payment', {
@@ -1424,7 +1435,10 @@ class SubscriptionService {
       }, { transaction });
 
       // Update business subscription status
-      const business = await Business.findByPk(subscription.business_id, { transaction });
+      const business = await Business.findOne({
+        where: { public_id: subscription.business_id },
+        transaction
+      });
       if (business) {
         await business.update({
           subscription_status: 'active',
@@ -1495,7 +1509,10 @@ class SubscriptionService {
       });
 
       // Find associated subscription
-      const subscription = await Subscription.findByPk(payment.subscription_id, { transaction });
+      const subscription = await Subscription.findOne({
+        where: { public_id: payment.subscription_id },
+        transaction
+      });
 
       if (!subscription) {
         logger.warn('⚠️ No subscription found for failed payment', {
@@ -1533,27 +1550,27 @@ class SubscriptionService {
         try {
           const NotificationService = (await import('./NotificationService.js')).default;
           const notificationService = new NotificationService();
-          
+
           const paymentDetails = {
             amount: payment.amount,
             currency: payment.currency,
             plan_type: subscription.plan_type,
             failure_reason: failureReason
           };
-          
+
           const retryInfo = {
             retry_count: newRetryCount,
             max_retries: 3,
             next_retry_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
             grace_period_end: newRetryCount === 3 ? gracePeriodEnd : null
           };
-          
+
           await notificationService.sendPaymentFailureNotification(
             subscription.business_id,
             paymentDetails,
             retryInfo
           );
-          
+
           logger.info('Payment failure notification sent', {
             businessId: subscription.business_id,
             retryCount: newRetryCount
@@ -1582,7 +1599,7 @@ class SubscriptionService {
         // Max retries exceeded - set grace period
         const gracePeriodEnd = new Date();
         gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
-        
+
         await subscription.update({
           status: 'expired',
           cancelled_at: new Date(),
@@ -1591,24 +1608,27 @@ class SubscriptionService {
         }, { transaction });
 
         // Update business subscription status
-        const business = await Business.findByPk(subscription.business_id, { transaction });
+        const business = await Business.findOne({
+          where: { public_id: subscription.business_id },
+          transaction
+        });
         if (business) {
           await business.update({
             subscription_status: 'past_due'
           }, { transaction });
-          
+
           await transaction.commit();
-          
+
           // Send grace period notification (non-blocking)
           try {
             const NotificationService = (await import('./NotificationService.js')).default;
             const notificationService = new NotificationService();
-            
+
             await notificationService.sendGracePeriodNotification(
               business.public_id,
               gracePeriodEnd
             );
-            
+
             logger.info('Grace period notification sent', {
               businessId: business.public_id,
               gracePeriodEnd
@@ -1679,7 +1699,10 @@ class SubscriptionService {
       }, { transaction });
 
       // Find associated subscription
-      const subscription = await Subscription.findByPk(payment.subscription_id, { transaction });
+      const subscription = await Subscription.findOne({
+        where: { public_id: payment.subscription_id },
+        transaction
+      });
 
       if (!subscription) {
         logger.info('ℹ️ No subscription found for refund (may be one-time payment)', {
@@ -1705,7 +1728,10 @@ class SubscriptionService {
         }, { transaction });
 
         // Update business subscription status
-        const business = await Business.findByPk(subscription.business_id, { transaction });
+        const business = await Business.findOne({
+          where: { public_id: subscription.business_id },
+          transaction
+        });
         if (business) {
           await business.update({
             subscription_status: 'cancelled'

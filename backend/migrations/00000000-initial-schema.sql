@@ -639,6 +639,73 @@ CREATE TABLE public.offers (
 
 ALTER TABLE public.offers OWNER TO loyalty_user;
 
+
+--
+-- Name: wallet_passes; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.wallet_passes (
+    id SERIAL PRIMARY KEY,
+    customer_id character varying(50) NOT NULL,
+    progress_id integer NOT NULL,
+    business_id character varying(50) NOT NULL,
+    offer_id character varying(50) NOT NULL,
+    wallet_type character varying(20) NOT NULL,
+    wallet_serial character varying(100) UNIQUE,
+    wallet_object_id character varying(200) UNIQUE,
+    pass_status character varying(20) DEFAULT 'active'::character varying,
+    device_info jsonb DEFAULT '{}'::jsonb,
+    last_updated_at timestamp without time zone,
+    notification_count integer DEFAULT 0,
+    last_notification_date timestamp with time zone,
+    notification_history jsonb DEFAULT '[]'::jsonb,
+    authentication_token character varying(64) UNIQUE,
+    last_updated_tag character varying(50),
+    manifest_etag character varying(32),
+    pass_data_json jsonb,
+    scheduled_expiration_at timestamp with time zone,
+    expiration_notified boolean DEFAULT false,
+    deleted_at timestamp with time zone,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT wallet_passes_pass_status_check CHECK (((pass_status)::text = ANY (ARRAY[('active'::character varying)::text, ('expired'::character varying)::text, ('revoked'::character varying)::text, ('deleted'::character varying)::text, ('completed'::character varying)::text]))),
+    CONSTRAINT wallet_passes_wallet_type_check CHECK (((wallet_type)::text = ANY (ARRAY[('apple'::character varying)::text, ('google'::character varying)::text]))),
+    CONSTRAINT unique_customer_offer_wallet UNIQUE (customer_id, offer_id, wallet_type)
+);
+
+ALTER TABLE public.wallet_passes OWNER TO loyalty_user;
+
+--
+-- Name: devices; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.devices (
+    id SERIAL PRIMARY KEY,
+    device_library_identifier character varying(100) NOT NULL UNIQUE,
+    push_token character varying(200) NOT NULL,
+    device_info jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE public.devices OWNER TO loyalty_user;
+
+--
+-- Name: device_registrations; Type: TABLE; Schema: public; Owner: loyalty_user
+--
+
+CREATE TABLE public.device_registrations (
+    id SERIAL PRIMARY KEY,
+    device_id integer NOT NULL,
+    wallet_pass_id integer NOT NULL,
+    registered_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    last_checked_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (device_id, wallet_pass_id)
+);
+
+ALTER TABLE public.device_registrations OWNER TO loyalty_user;
+
 --
 -- Name: COLUMN offers.barcode_preference; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
@@ -3890,4 +3957,59 @@ ALTER TABLE public.receipts OWNER TO loyalty_user;
 CREATE INDEX idx_receipts_sale ON public.receipts(sale_id);
 CREATE INDEX idx_receipts_number ON public.receipts(receipt_number);
 CREATE INDEX idx_receipts_printed ON public.receipts(printed_at);
+
+
+--
+-- Name: wallet_passes_indexes; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_wallet_passes_customer ON public.wallet_passes(customer_id);
+CREATE INDEX idx_wallet_passes_progress ON public.wallet_passes(progress_id);
+CREATE INDEX idx_wallet_passes_business ON public.wallet_passes(business_id);
+CREATE INDEX idx_wallet_passes_wallet_type ON public.wallet_passes(wallet_type);
+CREATE INDEX idx_wallet_passes_status ON public.wallet_passes(pass_status);
+CREATE INDEX idx_wallet_passes_auth_token ON public.wallet_passes(authentication_token);
+CREATE INDEX idx_wallet_passes_updated_tag ON public.wallet_passes(last_updated_tag);
+
+--
+-- Name: devices_indexes; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_devices_library_id ON public.devices(device_library_identifier);
+CREATE INDEX idx_devices_push_token ON public.devices(push_token);
+
+--
+-- Name: device_registrations_indexes; Type: INDEX; Schema: public; Owner: loyalty_user
+--
+
+CREATE INDEX idx_device_registrations_device ON public.device_registrations(device_id);
+CREATE INDEX idx_device_registrations_wallet_pass ON public.device_registrations(wallet_pass_id);
+
+
+--
+-- Name: wallet_passes_fks; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
+--
+
+ALTER TABLE ONLY public.wallet_passes
+    ADD CONSTRAINT fk_wallet_passes_customer FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.wallet_passes
+    ADD CONSTRAINT fk_wallet_passes_progress FOREIGN KEY (progress_id) REFERENCES public.customer_progress(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.wallet_passes
+    ADD CONSTRAINT fk_wallet_passes_business FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.wallet_passes
+    ADD CONSTRAINT fk_wallet_passes_offer FOREIGN KEY (offer_id) REFERENCES public.offers(public_id) ON DELETE CASCADE;
+
+
+--
+-- Name: device_registrations_fks; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
+--
+
+ALTER TABLE ONLY public.device_registrations
+    ADD CONSTRAINT fk_device_registrations_device FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.device_registrations
+    ADD CONSTRAINT fk_device_registrations_wallet_pass FOREIGN KEY (wallet_pass_id) REFERENCES public.wallet_passes(id) ON DELETE CASCADE;
 

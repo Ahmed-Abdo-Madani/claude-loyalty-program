@@ -12,7 +12,7 @@ import logger from './config/logger.js'
 async function testSecureModels() {
   try {
     console.log('🔒 SECURE MODEL INTEGRATION TEST')
-    console.log('=' .repeat(50))
+    console.log('='.repeat(50))
 
     // Test 1: Secure ID Generation
     console.log('\n📝 Test 1: Secure ID Generation')
@@ -91,7 +91,8 @@ async function testSecureModels() {
     console.log(`✅ Business has ${businessWithBranches.branches.length} branches`)
 
     // Test offer -> business relationship
-    const offerWithBusiness = await Offer.findByPk(offer.public_id, {
+    const offerWithBusiness = await Offer.findOne({
+      where: { public_id: offer.public_id },
       include: [{ model: Business, as: 'business' }]
     })
     console.log(`✅ Offer belongs to: ${offerWithBusiness.business.business_name}`)
@@ -108,12 +109,12 @@ async function testSecureModels() {
 
     // Test 5: Secure ID Validation
     console.log('\n🛡️  Test 5: Secure ID Validation')
-    
+
     const validBizId = SecureIDGenerator.validateSecureID('BIZ_1234567890ABCDEF1234', 'business')
     const validOfferId = SecureIDGenerator.validateSecureID('OFF_1234567890ABCDEF1234', 'offer')
     const validBranchId = SecureIDGenerator.validateSecureID('BCH_1234567890ABCDEF1234', 'branch')
     const validCustomerId = SecureIDGenerator.validateSecureID('CUST_1234567890ABCDEF1234', 'customer')
-    
+
     console.log(`✅ Business ID validation: ${validBizId}`)
     console.log(`✅ Offer ID validation: ${validOfferId}`)
     console.log(`✅ Branch ID validation: ${validBranchId}`)
@@ -122,7 +123,7 @@ async function testSecureModels() {
     // Test 6: Performance Test
     console.log('\n⚡ Test 6: Performance Test - Batch Operations')
     const startTime = Date.now()
-    
+
     const batchBusinesses = []
     for (let i = 0; i < 10; i++) {
       const biz = await Business.create({
@@ -134,14 +135,14 @@ async function testSecureModels() {
       })
       batchBusinesses.push(biz)
     }
-    
+
     const batchTime = Date.now() - startTime
-    console.log(`✅ Created 10 businesses in ${batchTime}ms (avg: ${batchTime/10}ms per business)`)
+    console.log(`✅ Created 10 businesses in ${batchTime}ms (avg: ${batchTime / 10}ms per business)`)
 
     // Test 7: Complex Query with Secure IDs
     console.log('\n🔍 Test 7: Complex Query Performance')
     const queryStart = Date.now()
-    
+
     const businessesWithEverything = await Business.findAll({
       include: [
         { model: Offer, as: 'offers' },
@@ -150,13 +151,13 @@ async function testSecureModels() {
       ],
       limit: 5
     })
-    
+
     const queryTime = Date.now() - queryStart
     console.log(`✅ Complex query for ${businessesWithEverything.length} businesses in ${queryTime}ms`)
 
     console.log('\n🎉 SECURE MODEL INTEGRATION TEST COMPLETED')
     console.log('All tests passed! Ready for aggressive migration.')
-    
+
     process.exit(0)
 
   } catch (error) {

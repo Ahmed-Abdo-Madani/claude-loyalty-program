@@ -128,7 +128,9 @@ class CustomerService {
       const customer = await this.findOrCreateCustomer(customerId, businessId, customerData)
 
       // STEP 2: Get offer details
-      const offer = await Offer.findByPk(offerId)
+      const offer = await Offer.findOne({
+        where: { public_id: offerId }
+      })
       if (!offer) {
         throw new Error(`Offer with ID ${offerId} not found`)
       }
@@ -196,12 +198,12 @@ class CustomerService {
     }
 
     await progress.claimReward()
-    
+
     // Increment offer redemption count
     if (progress.offer) {
       await progress.offer.increment('redeemed')
     }
-    
+
     return progress
   }
 
@@ -209,7 +211,7 @@ class CustomerService {
   static encodeCustomerToken(customerId, businessId, timestamp = Date.now()) {
     const tokenData = `${customerId}:${businessId}:${timestamp}`
     const encoded = Buffer.from(tokenData).toString('base64')
-    
+
     // Validate that encoded token is ASCII-safe (for QR code compatibility)
     if (!this.isAsciiSafe(encoded)) {
       logger.error('❌ Encoded customer token contains non-ASCII characters:', {
@@ -219,7 +221,7 @@ class CustomerService {
       })
       throw new Error('Customer token encoding produced non-ASCII result')
     }
-    
+
     return encoded
   }
 
@@ -227,7 +229,7 @@ class CustomerService {
     try {
       const decoded = Buffer.from(customerToken, 'base64').toString('utf8')
       const [customerId, businessId, timestamp] = decoded.split(':')
-      
+
       return {
         customerId: customerId,
         businessId: businessId, // Keep as string for secure business IDs
@@ -249,7 +251,7 @@ class CustomerService {
   static generateOfferHash(offerId, businessId) {
     const data = `${offerId}:${businessId}:loyalty-platform`
     const hash = crypto.createHash('md5').update(data).digest('hex').substring(0, 8)
-    
+
     // Validate that hash is ASCII-safe (hex is always ASCII-safe, but verify)
     if (!this.isAsciiSafe(hash)) {
       logger.error('❌ Offer hash contains non-ASCII characters:', {
@@ -259,7 +261,7 @@ class CustomerService {
       })
       throw new Error('Offer hash generation produced non-ASCII result')
     }
-    
+
     return hash
   }
 
@@ -271,7 +273,7 @@ class CustomerService {
    */
   static isAsciiSafe(str) {
     if (typeof str !== 'string') return false
-    
+
     // Check if all characters are in ASCII range (0-127)
     for (let i = 0; i < str.length; i++) {
       const code = str.charCodeAt(i)
@@ -285,7 +287,7 @@ class CustomerService {
         return false
       }
     }
-    
+
     return true
   }
 
@@ -295,7 +297,7 @@ class CustomerService {
     if (providedHash === null || providedHash === undefined) {
       return false
     }
-    
+
     const expectedHash = this.generateOfferHash(offerId, businessId)
     return expectedHash === providedHash
   }
@@ -315,7 +317,7 @@ class CustomerService {
   static async findOfferByHash(offerHash, businessId) {
     try {
       logger.debug('Finding offer by hash for business:', businessId)
-      
+
       // Fetch all offers for the business (no status filter, matching business.js)
       const businessOffers = await Offer.findAll({
         where: {
@@ -357,7 +359,7 @@ class CustomerService {
   static async findOfferForBusiness(businessId) {
     try {
       logger.debug('Auto-detecting single active offer for business:', businessId)
-      
+
       // Fetch all active offers for the business
       const activeOffers = await Offer.findAll({
         where: {
@@ -393,10 +395,10 @@ class CustomerService {
       timestamp: new Date(),
       metadata
     }
-    
+
     // You could store this in a separate table or log file
     logger.debug('📊 Scan recorded', scanData)
-    
+
     return scanData
   }
 
@@ -441,8 +443,8 @@ class CustomerService {
       completedRewards: progress.filter(p => p.is_completed).length,
       totalScans: progress.reduce((sum, p) => sum + (p.total_scans || 0), 0),
       totalRedemptions: progress.reduce((sum, p) => sum + (p.rewards_claimed || 0), 0),
-      averageProgress: progress.length > 0 
-        ? progress.reduce((sum, p) => sum + p.getProgressPercentage(), 0) / progress.length 
+      averageProgress: progress.length > 0
+        ? progress.reduce((sum, p) => sum + p.getProgressPercentage(), 0) / progress.length
         : 0
     }
 
@@ -652,12 +654,12 @@ class CustomerService {
       // Handle customers with 0 completions
       if (rewardsClaimed === 0) {
         const firstTier = tiers[0]
-        
+
         // Check if first tier starts at 0 (includes new members)
         if (firstTier.minRewards === 0) {
           // First tier includes new members, assign them to it
           logger.info('🏆 Matched tier:', { tierId: firstTier.id, tierName: firstTier.name, rewardsClaimed: 0, note: 'New member in first tier' })
-          
+
           // Calculate next tier
           let nextTier = null
           let rewardsToNextTier = null
@@ -665,7 +667,7 @@ class CustomerService {
             nextTier = tiers[1]
             rewardsToNextTier = nextTier.minRewards - 0
           }
-          
+
           return {
             currentTier: {
               id: firstTier.id,
@@ -688,7 +690,7 @@ class CustomerService {
         } else {
           // First tier starts at 1, show "New Member" tier for 0 completions
           logger.info('🏆 Matched tier:', { tierId: 'new', tierName: 'New Member', rewardsClaimed: 0, note: 'First-time customer' })
-          
+
           const newMemberTier = {
             currentTier: {
               id: 'new',
@@ -708,9 +710,9 @@ class CustomerService {
             },
             isTopTier: false
           }
-          
+
           logger.info('📈 Tier progression:', { currentTier: 'New Member', nextTier: firstTier.name, rewardsToNext: firstTier.minRewards, isTopTier: false })
-          
+
           return newMemberTier
         }
       }

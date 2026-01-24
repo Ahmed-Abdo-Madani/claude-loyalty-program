@@ -795,12 +795,13 @@ router.get('/public/offer/:id', async (req, res) => {
 
     // Find offer by secure public_id with business relationship including logo info
     // ALSO include OfferCardDesign to get card design logo
-    const offer = await Offer.findByPk(offerId, {
+    const offer = await Offer.findOne({
+      where: { public_id: offerId },
       include: [
         {
           model: Business,
           as: 'business',
-          attributes: ['business_name', 'business_name_ar', 'phone', 'city', 'district', 'region', 'address', 'location_hierarchy', 'logo_filename', 'logo_url']
+          attributes: ['public_id', 'business_name', 'business_name_ar', 'phone', 'city', 'district', 'region', 'address', 'location_hierarchy', 'logo_filename', 'logo_url']
         },
         {
           model: OfferCardDesign,

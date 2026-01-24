@@ -3,7 +3,8 @@ import { Offer, Business, CustomerProgress } from '../models/index.js'
 class OfferService {
   // Offer CRUD operations
   static async findById(id) {
-    return await Offer.findByPk(id, {
+    return await Offer.findOne({
+      where: { public_id: id },
       include: ['business']
     })
   }
@@ -25,7 +26,9 @@ class OfferService {
 
   static async createOffer(offerData) {
     // Verify business exists
-    const business = await Business.findByPk(offerData.business_id)
+    const business = await Business.findOne({
+      where: { public_id: offerData.business_id }
+    })
     if (!business) {
       throw new Error(`Business with ID ${offerData.business_id} not found`)
     }
@@ -80,7 +83,9 @@ class OfferService {
   }
 
   static async updateOffer(id, updateData) {
-    const offer = await Offer.findByPk(id)
+    const offer = await Offer.findOne({
+      where: { public_id: id }
+    })
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
@@ -88,7 +93,8 @@ class OfferService {
   }
 
   static async deleteOffer(id) {
-    const offer = await Offer.findByPk(id, {
+    const offer = await Offer.findOne({
+      where: { public_id: id },
       include: ['business']
     })
 
@@ -108,7 +114,8 @@ class OfferService {
   }
 
   static async toggleOfferStatus(id) {
-    const offer = await Offer.findByPk(id, {
+    const offer = await Offer.findOne({
+      where: { public_id: id },
       include: ['business']
     })
 
@@ -144,7 +151,9 @@ class OfferService {
 
   // Offer analytics and statistics
   static async getOfferAnalytics(id) {
-    const offer = await Offer.findByPk(id)
+    const offer = await Offer.findOne({
+      where: { public_id: id }
+    })
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
@@ -163,7 +172,9 @@ class OfferService {
   }
 
   static async incrementOfferCustomers(id, incrementBy = 1) {
-    const offer = await Offer.findByPk(id)
+    const offer = await Offer.findOne({
+      where: { public_id: id }
+    })
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
@@ -171,7 +182,9 @@ class OfferService {
   }
 
   static async incrementOfferRedemptions(id, incrementBy = 1) {
-    const offer = await Offer.findByPk(id)
+    const offer = await Offer.findOne({
+      where: { public_id: id }
+    })
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
@@ -179,7 +192,9 @@ class OfferService {
   }
 
   static async updateOfferConversionRate(id) {
-    const offer = await Offer.findByPk(id)
+    const offer = await Offer.findOne({
+      where: { public_id: id }
+    })
     if (!offer) {
       throw new Error(`Offer with ID ${id} not found`)
     }
