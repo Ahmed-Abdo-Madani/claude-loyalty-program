@@ -20,6 +20,8 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   const [isMounted, setIsMounted] = useState(false)
   const [managerQrData, setManagerQrData] = useState(null)
   const [managerQrLoading, setManagerQrLoading] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [copyError, setCopyError] = useState(null)
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -114,9 +116,6 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
         setPinValidated(true)
         setPinSavedSuccessfully(true)
         setPinSaveError(null)
-        if (onSuccess) {
-          onSuccess()
-        }
       } else {
         setPinValidated(false)
         setPinSavedSuccessfully(false)
@@ -185,6 +184,26 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     }
   }
 
+  // Handle copying the login link
+  const handleCopyLoginLink = async () => {
+    if (!branch?.public_id) return
+
+    try {
+      const loginUrl = `${import.meta.env.VITE_BASE_URL || 'https://app.madna.me'}/branch-manager-login?branch=${branch.public_id}`
+      await navigator.clipboard.writeText(loginUrl)
+
+      setLinkCopied(true)
+      setCopyError(null)
+
+      // Reset success state after 3 seconds
+      setTimeout(() => setLinkCopied(false), 3000)
+    } catch (err) {
+      console.error('Failed to copy link:', err)
+      setCopyError(t('branches.loginLinkCopyFailed'))
+      setTimeout(() => setCopyError(null), 3000)
+    }
+  }
+
   // Backdrop click handler - only close if clicking directly on backdrop
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -212,10 +231,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
         <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-              🔐 {t('branches.managerAccess')}
+              🔐 {t('branches.posAccess')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {branch?.name || 'Branch'} - {t('branches.managerAccessDesc')}
+              {branch?.name || 'Branch'} - {t('branches.posAccessDesc')}
             </p>
           </div>
           <button
@@ -236,10 +255,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
-                    🔐 {t('branches.enableManagerAccess')}
+                    🔐 {t('branches.enablePosAccess')}
                   </h3>
                   <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                    {t('branches.managerAccessDesc')}
+                    {t('branches.posAccessDesc')}
                   </p>
                 </div>
                 <input
@@ -266,7 +285,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                       aria-hidden="true"
                     />
                     <label className="block text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                      📱 {t('branches.managerPin')}
+                      📱 {t('branches.posPin')}
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -277,7 +296,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                           maxLength={6}
                           pattern="[0-9]{4,6}"
                           className="w-full px-4 py-3 min-h-[44px] border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all touch-target font-mono text-lg tracking-widest"
-                          placeholder={t('branches.pinPlaceholder')}
+                          placeholder={t('branches.posPinPlaceholder')}
                         />
                         <button
                           type="button"
@@ -292,10 +311,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                         onClick={handleSavePin}
                         disabled={!managerPin || !/^\d{4,6}$/.test(managerPin) || pinSaving}
                         className={`px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md disabled:opacity-50 whitespace-nowrap ${pinSavedSuccessfully
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : pinSaveError
-                              ? 'bg-red-600 hover:bg-red-700 text-white'
-                              : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-95'
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : pinSaveError
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-purple-600 hover:bg-purple-700 text-white active:scale-95'
                           }`}
                       >
                         {pinSaving ? '⏳ ' + t('branches.savingPin') :
@@ -319,7 +338,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                   {branch?.public_id && (
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
                       <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                        📱 {t('branches.managerLoginQR')}
+                        📱 {t('branches.posLoginQR')}
                       </h4>
                       <div className="flex items-center gap-4">
                         <div className="bg-white p-2 rounded-lg border border-gray-200">
@@ -330,7 +349,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                           ) : managerQrData ? (
                             <img
                               src={managerQrData.qrCodeDataUrl}
-                              alt={t('branches.managerLoginQRAlt')}
+                              alt={t('branches.posLoginQRAlt')}
                               className="w-[120px] h-[120px]"
                             />
                           ) : (
@@ -343,7 +362,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                         </div>
                         <div className="flex-1">
                           <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
-                            {t('branches.managerLoginQRDesc')}
+                            {t('branches.posLoginQRDesc')}
                           </p>
                           <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
                             <code className="text-xs text-purple-900 dark:text-purple-200 break-all">
@@ -351,6 +370,40 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                             </code>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Share Link Button */}
+                      <div className="mt-4 pt-4 border-t border-purple-100 dark:border-purple-900/50">
+                        <button
+                          type="button"
+                          onClick={handleCopyLoginLink}
+                          disabled={!branch?.public_id || linkCopied}
+                          aria-label={t('branches.sharePosLoginLink')}
+                          className={`w-full px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md flex items-center justify-center gap-2 ${linkCopied
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                            } active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {linkCopied ? (
+                            <>
+                              <span>✓</span>
+                              <span>{t('branches.loginLinkCopied')}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🔗</span>
+                              <span>{t('branches.copyLoginLink')}</span>
+                            </>
+                          )}
+                        </button>
+                        {copyError && (
+                          <p className="text-xs text-red-500 mt-2 text-center">
+                            {copyError}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 text-center">
+                          {t('branches.sharePosLoginLinkDesc')}
+                        </p>
                       </div>
                     </div>
                   )}

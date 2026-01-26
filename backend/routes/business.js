@@ -1446,7 +1446,7 @@ router.put('/my/offers/:id', requireBusinessAuthLocal, async (req, res) => {
     }
 
     // Update offer via service
-    const updatedOffer = await OfferService.updateOffer(offer.id, sanitizedData)
+    const updatedOffer = await OfferService.updateOffer(offer.public_id, sanitizedData);
 
     res.json({
       success: true,
@@ -1487,7 +1487,7 @@ router.patch('/my/offers/:id/status', requireBusinessAuthLocal, async (req, res)
     }
 
     // Toggle status via service (verification checks are inside the service)
-    const updatedOffer = await OfferService.toggleOfferStatus(offer.id)
+    const updatedOffer = await OfferService.toggleOfferStatus(offer.public_id);
 
     res.json({
       success: true,
@@ -2121,6 +2121,8 @@ router.post('/login', async (req, res) => {
     }
 
     // Check if business is approved/active (allow suspended to login for reactivation flow)
+    // Check if business is approved/active (allow suspended to login for reactivation flow)
+    // Note: Pending status is no longer used for new registrations but kept for legacy/manual suspension
     if (business.status === 'pending') {
       return res.status(401).json({
         success: false,
@@ -2315,8 +2317,10 @@ router.post('/register', async (req, res) => {
       location_id: businessData.location_data?.id || null,
       location_type: businessData.location_data?.type || null,
       location_hierarchy: businessData.location_data?.hierarchy || null,
-      status: 'pending', // New registrations start as pending
-      is_verified: false,
+      status: 'active', // AUTO-APPROVAL: New registrations start as active
+      is_verified: true, // Auto-verified for immediate use
+      approved_at: new Date(),
+      approved_by: 'system_auto_approval',
       profile_completion: profileCompletion,
       password_hash: hashedPassword  // Use hashed password
     })
@@ -2358,14 +2362,67 @@ router.post('/register', async (req, res) => {
       // Continue with registration even if subscription initialization fails
     }
 
+    // Generate simple session token for immediate login
+    const sessionToken = Date.now().toString() + Math.random().toString(36)
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30) // 30-day session
+
+    await BusinessSession.create({
+      business_id: newBusiness.public_id,
+      session_token: sessionToken,
+      expires_at: expiresAt,
+      is_active: true,
+      last_used_at: new Date()
+    })
+
+    // Fetch subscription status for response
+    let subscriptionData = null
+    try {
+      const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(newBusiness.public_id)
+
+      // Calculate trial days remaining
+      let trialDaysRemaining = null
+      if (newBusiness.trial_ends_at) {
+        const now = new Date()
+        const trialEnd = new Date(newBusiness.trial_ends_at)
+        trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)))
+      }
+
+      subscriptionData = {
+        current_plan: subscriptionStatus.current_plan,
+        subscription_status: subscriptionStatus.subscription_status,
+        trial_ends_at: newBusiness.trial_ends_at,
+        trial_days_remaining: trialDaysRemaining,
+        limits: subscriptionStatus.limits,
+        usage: subscriptionStatus.usage,
+        features: subscriptionStatus.features
+      }
+    } catch (subscriptionError) {
+      logger.error('Failed to include subscription status in registration response', {
+        business_id: newBusiness.public_id,
+        error: subscriptionError.message
+      })
+    }
+
     // Remove password_hash from response for security
     const businessObj = newBusiness.toJSON()
     const { password_hash: _, ...businessResponse } = businessObj
 
     res.status(201).json({
       success: true,
-      data: businessResponse,
-      message: getLocalizedMessage('auth.registrationSuccess', req.locale)
+      message: getLocalizedMessage('auth.registrationSuccess', req.locale),
+      data: {
+        business: {
+          ...businessResponse,
+          business_name: businessResponse.business_name,
+          owner_name: businessResponse.owner_name
+        },
+        session_token: sessionToken,
+        business_id: newBusiness.public_id,
+        subscription: subscriptionData,
+        status: newBusiness.status,
+        subscription_status: newBusiness.subscription_status
+      }
     })
 
   } catch (error) {

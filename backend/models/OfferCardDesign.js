@@ -87,9 +87,9 @@ const OfferCardDesign = sequelize.define('OfferCardDesign', {
     comment: 'Emoji or symbol representing each stamp'
   },
   stamp_display_type: {
-    type: DataTypes.ENUM('icon', 'logo'),
-    defaultValue: 'icon',
-    comment: 'Whether to use emoji icon or business logo for stamps'
+    type: DataTypes.ENUM('svg', 'logo'),
+    defaultValue: 'logo',
+    comment: 'Whether to use SVG icon or business logo for stamps'
   },
   progress_display_style: {
     type: DataTypes.ENUM('bar', 'grid', 'circular'),
@@ -207,7 +207,7 @@ const OfferCardDesign = sequelize.define('OfferCardDesign', {
  * Check if design is valid and ready to use
  * @returns {boolean}
  */
-OfferCardDesign.prototype.isValid = function() {
+OfferCardDesign.prototype.isValid = function () {
   return this.validation_status === 'valid'
 }
 
@@ -215,7 +215,7 @@ OfferCardDesign.prototype.isValid = function() {
  * Check if design has warnings but is still usable
  * @returns {boolean}
  */
-OfferCardDesign.prototype.hasWarnings = function() {
+OfferCardDesign.prototype.hasWarnings = function () {
   return this.validation_status === 'warning'
 }
 
@@ -223,14 +223,14 @@ OfferCardDesign.prototype.hasWarnings = function() {
  * Check if design has critical errors
  * @returns {boolean}
  */
-OfferCardDesign.prototype.hasErrors = function() {
+OfferCardDesign.prototype.hasErrors = function () {
   return this.validation_status === 'error'
 }
 
 /**
  * Mark design as applied (update last_applied_at timestamp)
  */
-OfferCardDesign.prototype.markAsApplied = async function() {
+OfferCardDesign.prototype.markAsApplied = async function () {
   this.last_applied_at = new Date()
   await this.save()
   return this
@@ -239,7 +239,7 @@ OfferCardDesign.prototype.markAsApplied = async function() {
 /**
  * Increment version number (call when significant changes are made)
  */
-OfferCardDesign.prototype.incrementVersion = async function() {
+OfferCardDesign.prototype.incrementVersion = async function () {
   this.version = (this.version || 1) + 1
   await this.save()
   return this
@@ -249,7 +249,7 @@ OfferCardDesign.prototype.incrementVersion = async function() {
  * Check if design has any uploaded images
  * @returns {boolean}
  */
-OfferCardDesign.prototype.hasImages = function() {
+OfferCardDesign.prototype.hasImages = function () {
   return !!(this.logo_url || this.hero_image_url)
 }
 
@@ -257,7 +257,7 @@ OfferCardDesign.prototype.hasImages = function() {
  * Check if design uses a template
  * @returns {boolean}
  */
-OfferCardDesign.prototype.isFromTemplate = function() {
+OfferCardDesign.prototype.isFromTemplate = function () {
   return !!this.template_id
 }
 
@@ -265,7 +265,7 @@ OfferCardDesign.prototype.isFromTemplate = function() {
  * Get validation summary
  * @returns {object} { isValid, hasWarnings, hasErrors, errorCount }
  */
-OfferCardDesign.prototype.getValidationSummary = function() {
+OfferCardDesign.prototype.getValidationSummary = function () {
   return {
     isValid: this.isValid(),
     hasWarnings: this.hasWarnings(),
@@ -280,7 +280,7 @@ OfferCardDesign.prototype.getValidationSummary = function() {
  * @param {string} hexColor - Hex color (e.g., '#3B82F6')
  * @returns {string} RGB format (e.g., 'rgb(59, 130, 246)')
  */
-OfferCardDesign.prototype.hexToRgb = function(hexColor) {
+OfferCardDesign.prototype.hexToRgb = function (hexColor) {
   const hex = hexColor.replace('#', '')
   const r = parseInt(hex.substring(0, 2), 16)
   const g = parseInt(hex.substring(2, 4), 16)
@@ -292,7 +292,7 @@ OfferCardDesign.prototype.hexToRgb = function(hexColor) {
  * Get colors formatted for Apple Wallet (RGB)
  * @returns {object} { backgroundColor, foregroundColor, labelColor }
  */
-OfferCardDesign.prototype.getAppleWalletColors = function() {
+OfferCardDesign.prototype.getAppleWalletColors = function () {
   return {
     backgroundColor: this.hexToRgb(this.background_color),
     foregroundColor: this.hexToRgb(this.foreground_color),
@@ -304,7 +304,7 @@ OfferCardDesign.prototype.getAppleWalletColors = function() {
  * Get colors formatted for Google Wallet (Hex)
  * @returns {object} { hexBackgroundColor }
  */
-OfferCardDesign.prototype.getGoogleWalletColors = function() {
+OfferCardDesign.prototype.getGoogleWalletColors = function () {
   return {
     hexBackgroundColor: this.background_color
   }
@@ -319,7 +319,7 @@ OfferCardDesign.prototype.getGoogleWalletColors = function() {
  * @param {string} offerId - Offer public ID (off_*)
  * @returns {Promise<OfferCardDesign|null>}
  */
-OfferCardDesign.findByOfferId = async function(offerId) {
+OfferCardDesign.findByOfferId = async function (offerId) {
   return await this.findOne({
     where: { offer_id: offerId }
   })
@@ -330,7 +330,7 @@ OfferCardDesign.findByOfferId = async function(offerId) {
  * @param {string} businessId - Business public ID (biz_*)
  * @returns {Promise<OfferCardDesign[]>}
  */
-OfferCardDesign.findByBusinessId = async function(businessId) {
+OfferCardDesign.findByBusinessId = async function (businessId) {
   return await this.findAll({
     where: { business_id: businessId },
     order: [['created_at', 'DESC']]
@@ -342,7 +342,7 @@ OfferCardDesign.findByBusinessId = async function(businessId) {
  * @param {string} templateId - Template ID
  * @returns {Promise<OfferCardDesign[]>}
  */
-OfferCardDesign.findByTemplate = async function(templateId) {
+OfferCardDesign.findByTemplate = async function (templateId) {
   return await this.findAll({
     where: { template_id: templateId },
     order: [['created_at', 'DESC']]
@@ -354,7 +354,7 @@ OfferCardDesign.findByTemplate = async function(templateId) {
  * @param {string} businessId - Business public ID (optional)
  * @returns {Promise<object>} { valid, warning, error, pending }
  */
-OfferCardDesign.countByValidationStatus = async function(businessId = null) {
+OfferCardDesign.countByValidationStatus = async function (businessId = null) {
   const where = businessId ? { business_id: businessId } : {}
 
   const counts = await this.findAll({
@@ -380,7 +380,7 @@ OfferCardDesign.countByValidationStatus = async function(businessId = null) {
  * @param {string} businessId - Business public ID
  * @returns {Promise<object>}
  */
-OfferCardDesign.getBusinessStats = async function(businessId) {
+OfferCardDesign.getBusinessStats = async function (businessId) {
   const totalDesigns = await this.count({
     where: { business_id: businessId }
   })

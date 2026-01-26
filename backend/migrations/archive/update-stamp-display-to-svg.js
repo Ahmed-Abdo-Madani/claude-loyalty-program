@@ -24,7 +24,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Load environment variables
-dotenv.config({ path: join(__dirname, '..', '.env') })
+dotenv.config({ path: join(__dirname, '..', '..', '.env') })
 
 const { Pool } = pg
 
@@ -33,16 +33,16 @@ const { Pool } = pg
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DB_SSL !== 'false' ? { rejectUnauthorized: false } : false
-      }
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DB_SSL !== 'false' ? { rejectUnauthorized: false } : false
+    }
     : {
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
-        database: process.env.DB_NAME || 'loyalty_platform',
-        user: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
-      }
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'loyalty_platform',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+    }
 )
 
 async function runMigration() {

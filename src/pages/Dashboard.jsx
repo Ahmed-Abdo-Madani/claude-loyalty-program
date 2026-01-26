@@ -252,7 +252,7 @@ function Dashboard() {
               )}
 
               {activeTab === 'offers' && (
-                <OffersTab analytics={analytics} />
+                <OffersTab analytics={analytics} user={user} />
               )}
 
               {activeTab === 'scanner' && (

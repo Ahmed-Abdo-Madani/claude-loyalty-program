@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { endpoints } from '../config/api'
 import DarkModeToggle from '../components/DarkModeToggle'
 import SEO from '../components/SEO'
-import GooglePlacesAutocomplete from '../components/GooglePlacesAutocomplete'
-import ManualEntryForm from '../components/ManualEntryForm'
+import { setAuthData } from '../utils/secureAuth'
 
 // Saudi business categories
 const businessCategories = [
@@ -22,7 +21,6 @@ function BusinessRegistrationPage() {
   const isRTL = i18n.language === 'ar'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showManualEntry, setShowManualEntry] = useState(false)
 
   const [formData, setFormData] = useState({
     business_name: '',
@@ -50,15 +48,6 @@ function BusinessRegistrationPage() {
     setError('')
   }
 
-  const handlePlaceSelect = (placeData) => {
-    setFormData(prev => ({
-      ...prev,
-      ...placeData,
-      // If we got a name from Google, use it as primary
-      business_name: placeData.business_name || prev.business_name
-    }))
-    // We don't auto-show manual entry, but the fields are now filled
-  }
 
   const validateForm = () => {
     if (!formData.business_name || !formData.email || !formData.password) {
@@ -95,10 +84,20 @@ function BusinessRegistrationPage() {
         body: JSON.stringify(payload)
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        navigate('/registration-success')
+        // Registration response now includes session data - no need for extra login call
+        setAuthData({
+          sessionToken: data.data.session_token,
+          businessId: data.data.business_id,
+          businessName: data.data.business.business_name,
+          userEmail: data.data.business.email,
+          businessStatus: data.data.status,
+          subscriptionStatus: data.data.subscription_status
+        })
+        navigate('/dashboard')
       } else {
-        const data = await response.json()
         setError(data.message || 'Registration failed')
       }
     } catch (err) {
@@ -198,44 +197,89 @@ function BusinessRegistrationPage() {
               </div>
             </div>
 
-            {/* Smart Fill Section */}
-            <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">✨</span>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('registration.smartFill.title', { ns: 'common' })}</h3>
+            {/* Business Details Section - Integrated */}
+            <div className="pt-6 border-t border-gray-100 dark:border-gray-700 mt-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                {t('registration.businessInfo.businessDetails')}
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('registration.businessInfo.businessType')}
+                  </label>
+                  <select
+                    name="business_type"
+                    value={formData.business_type}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">{t('registration.businessInfo.businessTypePlaceholder')}</option>
+                    {businessCategories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {i18n.language === 'ar' ? category.name : category.nameEn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('registration.businessInfo.phone')}
+                  </label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="05xxxxxxxx"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('registration.ownerInfo.ownerFullName')}
+                  </label>
+                  <input
+                    type="text"
+                    name="owner_name"
+                    value={formData.owner_name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder={t('registration.ownerInfo.ownerNamePlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('registration.businessInfo.crNumber')}
+                  </label>
+                  <input
+                    type="text"
+                    name="license_number"
+                    value={formData.license_number}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="1010xxxxxx"
+                  />
+                </div>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('registration.smartFill.subtitle', { ns: 'common' })}</p>
-              <GooglePlacesAutocomplete
-                onPlaceSelect={handlePlaceSelect}
-                placeholder={t('registration.smartFill.searchPlaceholder', { ns: 'common' })}
-              />
-            </div>
 
-            <div className="relative flex py-5 items-center">
-              <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-              <span className="flex-shrink mx-4 text-gray-400 text-sm font-medium">{t('registration.smartFill.or', { ns: 'common' })}</span>
-              <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('registration.businessInfo.businessDescription')}
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder={t('registration.businessInfo.businessDescriptionPlaceholder')}
+                />
+              </div>
             </div>
-
-            {/* Manual Entry Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-gray-700 dark:text-gray-300 font-medium">{t('registration.manualEntry.title', { ns: 'common' })}</span>
-              <button
-                type="button"
-                onClick={() => setShowManualEntry(!showManualEntry)}
-                className="text-primary hover:underline text-sm font-medium"
-              >
-                {showManualEntry ? t('common:hide') : t('common:show')}
-              </button>
-            </div>
-
-            {showManualEntry && (
-              <ManualEntryForm
-                formData={formData}
-                handleInputChange={handleInputChange}
-                businessCategories={businessCategories}
-              />
-            )}
 
             {/* Terms and Submit */}
             <div className="pt-6 space-y-4">

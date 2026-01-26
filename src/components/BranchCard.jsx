@@ -142,10 +142,10 @@ function BranchCard({
               onManagerAccess(branch);
             }}
             className="flex items-center space-x-1.5 px-2 sm:px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
-            title={t('branches.managerAccess')}
+            title={t('branches.posAccess')}
           >
             <KeyIcon className="w-4 h-4" />
-            <span className="font-medium">{t('branches.managerAccess')}</span>
+            <span className="font-medium">{t('branches.posAccess')}</span>
           </button>
         </div>
       </div>

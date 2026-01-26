@@ -139,10 +139,10 @@
       "and": "and",
       "privacyPolicy": "Privacy Policy",
       "whatHappensNext": "What happens next?",
-      "reviewApplication": "Your application will be reviewed by our team",
-      "verifyDocuments": "We'll verify your business documents",
-      "approvalNotification": "You'll receive approval notification via email",
-      "accessDashboard": "Once approved, you can access your dashboard"
+      "reviewApplication": "You will be automatically logged in",
+      "verifyDocuments": "You can start setting up your loyalty program immediately",
+      "approvalNotification": "Access all features from your dashboard",
+      "accessDashboard": "Welcome to Madna Platform!"
     },
     "navigation": {
       "previous": "Previous",

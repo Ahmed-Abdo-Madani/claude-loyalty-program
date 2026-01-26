@@ -1,240 +1,135 @@
 /**
  * GoogleWalletPreview Component
  * Realistic preview of Google Wallet loyalty card
- * Phase 2 - Frontend Components
  */
 
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import QRCode from 'qrcode'
 
 function GoogleWalletPreview({ design, offerData }) {
   const { t } = useTranslation('cardDesign')
-  
+
   const {
-    background_color = '#3B82F6',
+    background_color = '#059669', // Default to green
     foreground_color = '#FFFFFF',
     logo_google_url,
-    hero_image_url,
-    stamp_icon = '⭐',
-    progress_display_style = 'bar'
   } = design || {}
 
   const {
     title = t('preview.mockData.loyaltyCard'),
-    description = t('preview.mockData.loyaltyRewards'),
-    stamps_required = 10,
-    type = 'stamps'
+    stamps_required = 4,
+    description
   } = offerData || {}
 
-  // Mock progress for preview
-  const mockProgress = Math.floor(stamps_required * 0.6) // 60% complete
-  const progressPercentage = (mockProgress / stamps_required) * 100
+  const [qrCodeUrl, setQrCodeUrl] = useState('')
+
+  // Generate QR Code
+  useEffect(() => {
+    QRCode.toDataURL('https://example.com/loyalty', {
+      width: 180,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    })
+      .then(url => setQrCodeUrl(url))
+      .catch(err => console.error(err))
+  }, [])
+
+  // Mock progress
+  const mockProgress = 0
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Google Wallet Card */}
+    <div className="flex flex-col items-center">
+      {/* Google Wallet Card Container */}
       <div
-        className="rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-[320px] rounded-[24px] overflow-hidden shadow-2xl flex flex-col min-h-[500px]"
         style={{ backgroundColor: background_color }}
       >
-        {/* Card Content */}
-        <div className="p-6">
-          {/* Header with Logo */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <h3
-                className="text-xl font-bold mb-1 line-clamp-1"
-                style={{ color: foreground_color }}
-              >
-                {title}
-              </h3>
-              <p
-                className="text-sm opacity-90 line-clamp-2"
-                style={{ color: foreground_color }}
-              >
-                {description}
-              </p>
-            </div>
-
-            {/* Circular Logo */}
-            {logo_google_url && (
-              <div
-                className="w-16 h-16 rounded-full overflow-hidden ml-3 flex-shrink-0 border-2"
-                style={{ borderColor: foreground_color + '40' }}
-              >
-                <img
-                  src={logo_google_url}
-                  alt="Logo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+        {/* Header Section */}
+        <div className="p-6 flex items-center justify-between">
+          {/* Logo */}
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-white/20">
+            {logo_google_url ? (
+              <img src={logo_google_url} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-gray-200" />
             )}
           </div>
 
-          {/* Progress Section - Google Wallet Accurate Display (Phase 4) */}
-          <div className="mt-6 pt-4 border-t" style={{ borderColor: foreground_color + '30' }}>
-            {type === 'stamps' && (
-              <div className="space-y-3">
-                {/* Loyalty Points Label */}
-                <div className="flex justify-between items-center">
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: foreground_color }}
-                  >
-                    ⭐ {t('preview.labels.stampsCollected')}
-                  </span>
-                  <span
-                    className="text-sm opacity-90"
-                    style={{ color: foreground_color }}
-                  >
-                    {mockProgress} / {stamps_required}
-                  </span>
-                </div>
+          {/* Business Name */}
+          <h3 className="text-lg font-medium opacity-90 ml-3 flex-1 text-left" style={{ color: foreground_color }}>
+            {offerData?.businessName || 'Madna'}
+          </h3>
 
-                {/* Visual Progress with Stars - Accurate Google Wallet Display Only */}
-                <div
-                  className="rounded-lg p-3"
-                  style={{ backgroundColor: foreground_color + '10' }}
-                >
-                  <p
-                    className="text-xs font-semibold mb-2 opacity-90"
-                    style={{ color: foreground_color }}
-                  >
-                    {t('preview.progress.yourProgress')}
-                  </p>
-
-                  {/* Google Wallet only supports text-based star display */}
-                  <div className="text-lg leading-relaxed text-center py-2" style={{ color: foreground_color }}>
-                    {'⭐'.repeat(mockProgress)}{'☆'.repeat(stamps_required - mockProgress)}
-                  </div>
-
-                  <p
-                    className="text-xs text-center mt-2 opacity-75"
-                    style={{ color: foreground_color }}
-                  >
-                    {t('preview.progress.stampsCollectedCount', { current: mockProgress, max: stamps_required })}
-                    <br />
-                    {stamps_required - mockProgress === 0
-                      ? t('preview.progress.rewardReady')
-                      : stamps_required - mockProgress === 1
-                      ? t('preview.progress.oneMoreStamp')
-                      : t('preview.progress.stampsUntilReward', { count: stamps_required - mockProgress })
-                    }
-                  </p>
-                </div>
-
-                {/* Additional Info Modules - Matches Google Wallet Text Modules */}
-                <div
-                  className="rounded-lg p-3 space-y-2"
-                  style={{ backgroundColor: foreground_color + '05' }}
-                >
-                  <div>
-                    <p
-                      className="text-xs font-semibold opacity-75"
-                      style={{ color: foreground_color }}
-                    >
-                      🎁 {t('preview.labels.reward')}
-                    </p>
-                    <p
-                      className="text-sm"
-                      style={{ color: foreground_color }}
-                    >
-                      {description || t('preview.mockData.freeItem')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {type === 'points' && (
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span
-                    className="text-sm font-semibold"
-                    style={{ color: foreground_color }}
-                  >
-                    ⭐ {t('preview.labels.pointsBalance')}
-                  </span>
-                  <span
-                    className="text-2xl font-bold"
-                    style={{ color: foreground_color }}
-                  >
-                    {mockProgress}
-                  </span>
-                </div>
-                <p
-                  className="text-xs opacity-75"
-                  style={{ color: foreground_color }}
-                >
-                  {t('preview.progress.moreToNextReward', { count: stamps_required - mockProgress })}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Barcode Placeholder */}
-          <div className="mt-6 pt-4 border-t" style={{ borderColor: foreground_color + '30' }}>
-            <div
-              className="h-16 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: foreground_color + '10' }}
-            >
-              <div className="flex gap-1">
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-1 rounded-full"
-                    style={{
-                      height: `${20 + Math.random() * 20}px`,
-                      backgroundColor: foreground_color,
-                      opacity: 0.8
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-            <p
-              className="text-xs text-center mt-2 opacity-75"
-              style={{ color: foreground_color }}
-            >
-              {t('preview.labels.scanToCollect')}
-            </p>
-          </div>
+          <button className="text-white/80">
+            <span className="sr-only">More options</span>
+            •••
+          </button>
         </div>
 
-        {/* Hero Image at Bottom - Matches Google Wallet Display */}
-        {hero_image_url && (
-          <div className="w-full h-32 overflow-hidden border-t" style={{ borderColor: foreground_color + '20' }}>
-            <img
-              src={hero_image_url}
-              alt="Hero"
-              className="w-full h-full object-cover"
-            />
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col items-center px-6 pt-4 pb-8 text-center space-y-6">
+
+          {/* Offer Text */}
+          <h2 className="text-2xl font-bold leading-tight" style={{ color: foreground_color }}>
+            {description || `Buy ${stamps_required} cups and get 1 free`}
+          </h2>
+
+          {/* Stamps Collected Pill */}
+          <div className="inline-flex items-center gap-1 bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <span className="text-yellow-400 text-sm">★</span>
+            <span className="text-sm font-medium" style={{ color: foreground_color }}>
+              Stamps Collected {mockProgress}/{stamps_required}
+            </span>
           </div>
-        )}
+
+          {/* QR Code Card */}
+          <div className="bg-white p-4 rounded-2xl shadow-lg mt-4 w-full aspect-square flex items-center justify-center max-w-[220px]">
+            {qrCodeUrl && (
+              <img src={qrCodeUrl} alt="QR Code" className="w-full h-full object-contain" />
+            )}
+          </div>
+
+          <p className="text-xs opacity-80" style={{ color: foreground_color }}>
+            Customer: cust_19a280df1f099b2839b
+          </p>
+
+        </div>
+
+        {/* Decorative Geometric Footer Strip */}
+        <div className="h-16 w-full bg-[#FEF3C7] relative overflow-hidden flex items-end">
+          {/* Simple CSS Geometric Pattern Simulation */}
+          <div className="absolute inset-0 opacity-80" style={{
+            backgroundImage: `repeating-linear-gradient(
+                   45deg,
+                   #1fa27a 0px,
+                   #1fa27a 10px,
+                   transparent 10px,
+                   transparent 20px
+                 ), repeating-linear-gradient(
+                   -45deg,
+                   #1fa27a 0px,
+                   #1fa27a 10px,
+                   transparent 10px,
+                   transparent 20px
+                 )`
+          }}></div>
+
+          {/* Bottom edge decoration */}
+          <div className="w-full h-4 bg-[#064E3B] z-10 opacity-20"></div>
+        </div>
+
       </div>
 
       {/* Platform Label */}
-      <div className="flex items-center justify-center mt-3 gap-2">
+      <div className="flex items-center justify-center mt-4 gap-2">
         <div className="w-3 h-3 rounded-full bg-green-500"></div>
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-          {t('preview.google.title')}
+          Google Wallet
         </span>
-      </div>
-
-      {/* Platform Limitations Disclaimer */}
-      <div className="mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <div className="flex items-start gap-2">
-          <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          <div className="flex-1">
-            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-              {t('preview.google.limitations')}
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-              {t('preview.google.limitationsDesc')}
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )

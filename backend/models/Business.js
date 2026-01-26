@@ -117,7 +117,8 @@ const Business = sequelize.define('Business', {
   },
   status: {
     type: DataTypes.ENUM('active', 'pending', 'suspended', 'inactive'),
-    defaultValue: 'pending'
+    defaultValue: 'active', // AUTO-APPROVAL: Businesses are auto-approved upon registration
+    comment: 'Business account status'
   },
   suspension_reason: {
     type: DataTypes.TEXT,

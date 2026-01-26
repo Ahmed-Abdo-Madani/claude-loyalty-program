@@ -19,7 +19,6 @@ const CustomerSignup = lazy(() => import('./pages/CustomerSignup'))
 const MenuPage = lazy(() => import('./pages/MenuPage'))
 const TestPage = lazy(() => import('./pages/TestPage'))
 const BusinessRegistrationPage = lazy(() => import('./pages/BusinessRegistrationPage'))
-const RegistrationSuccessPage = lazy(() => import('./pages/RegistrationSuccessPage'))
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
 const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage'))
 const SuspendedAccountPage = lazy(() => import('./pages/SuspendedAccountPage'))
@@ -85,7 +84,6 @@ function App() {
             <Route path="/menu/branch/:branchId" element={<MenuPage type="branch" />} />
             <Route path="/test" element={<TestPage />} />
             <Route path="/business/register" element={<BusinessRegistrationPage />} />
-            <Route path="/registration-success" element={<RegistrationSuccessPage />} />
             <Route path="/subscription/checkout" element={<CheckoutPage />} />
             <Route path="/subscription/payment-callback" element={<PaymentCallbackPage />} />
             <Route path="/subscription/suspended" element={<SuspendedAccountPage />} />

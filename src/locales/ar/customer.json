@@ -101,7 +101,7 @@
       "crNumberHelp": "أدخل 10 أرقام فقط",
       "businessDescription": "وصف الأعمال",
       "businessDescriptionPlaceholder": "صف خدمات أعمالك",
-      "businessDetails": "تفاصيل الأعمال"
+      "businessDetails": "تفاصيل النشاط التجاري"
     },
     "locationContact": {
       "locationContact": "الموقع والتواصل",
@@ -139,10 +139,10 @@
       "and": "و",
       "privacyPolicy": "سياسة الخصوصية",
       "whatHappensNext": "ماذا يحدث بعد ذلك؟",
-      "reviewApplication": "سيتم مراجعة طلبك من قبل فريقنا",
-      "verifyDocuments": "سنتحقق من وثائق أعمالك",
-      "approvalNotification": "ستتلقى إشعار الموافقة عبر البريد الإلكتروني",
-      "accessDashboard": "بمجرد الموافقة، يمكنك الوصول إلى لوحة التحكم"
+      "reviewApplication": "سيتم تسجيل دخولك تلقائيًا",
+      "verifyDocuments": "يمكنك البدء في إعداد برنامج الولاء الخاص بك على الفور",
+      "approvalNotification": "الوصول إلى جميع الميزات من لوحة التحكم الخاصة بك",
+      "accessDashboard": "مرحبًا بك في منصة مادنا!"
     },
     "navigation": {
       "previous": "السابق",

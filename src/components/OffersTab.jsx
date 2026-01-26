@@ -5,12 +5,14 @@ import OfferGrid from './OfferGrid'
 
 import { endpoints, secureApi } from '../config/api'
 import { CardDesignProvider } from '../contexts/CardDesignContext'
-import CardDesignEditor from './cardDesign/CardDesignEditor'
+import SimpleLoyaltyCardDesigner from './cardDesign/SimpleLoyaltyCardDesigner'
 import OfferAnalyticsModal from './OfferAnalyticsModal'
 import PlanLimitModal from './PlanLimitModal'
 import UsageIndicator from './UsageIndicator'
 
-function OffersTab({ analytics, demoData, onAddOffer }) {
+function OffersTab({ analytics, demoData, onAddOffer, user }) {
+  // ... existing code ...
+
   const { t } = useTranslation('dashboard')
   const [offers, setOffers] = useState(demoData || [])
   const [branches, setBranches] = useState([])
@@ -496,8 +498,9 @@ function OffersTab({ analytics, demoData, onAddOffer }) {
       {/* Card Design Editor Modal */}
       {showCardDesigner && (
         <CardDesignProvider>
-          <CardDesignEditor
+          <SimpleLoyaltyCardDesigner
             offer={showCardDesigner}
+            businessName={user?.businessName}
             onClose={() => setShowCardDesigner(null)}
             onSave={(savedDesign) => {
               console.log('💾 Card design saved:', savedDesign)
