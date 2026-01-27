@@ -1837,6 +1837,15 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
       }
     })
 
+    // Auto-disable POS access if branch is paused/closed
+    if (updates.status === 'inactive' || updates.status === 'closed') {
+      branch.pos_access_enabled = false
+      logger.info('POS Access disabled due to branch status change', {
+        branchId: branch.public_id,
+        newStatus: updates.status
+      })
+    }
+
     await branch.save()
 
     // Audit Log for POS Access Changes
@@ -1861,6 +1870,73 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: getLocalizedMessage('errors.serverError', req.locale)
+    })
+  }
+})
+
+// Update branch status
+router.patch('/my/branches/:id/status', requireBusinessAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const businessId = req.business.public_id
+    const { status } = req.body
+
+    // Validate status
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.statusRequired', req.locale || 'ar')
+      })
+    }
+
+    const validStatuses = ['active', 'inactive', 'closed']
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.invalidStatus', req.locale || 'ar')
+      })
+    }
+
+    // Verify ownership
+    const branch = await Branch.findOne({
+      where: {
+        public_id: id,
+        business_id: businessId
+      }
+    })
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: getLocalizedMessage('errors.notFound', req.locale || 'ar')
+      })
+    }
+
+    // Update status
+    const updateData = { status }
+
+    // Auto-disable POS access if branch is paused/closed
+    if (status === 'inactive' || status === 'closed') {
+      updateData.pos_access_enabled = false
+      logger.info('POS Access disabled due to branch status change', {
+        branchId: branch.public_id,
+        newStatus: status
+      })
+    }
+
+    await branch.update(updateData)
+
+    res.json({
+      success: true,
+      data: branch,
+      message: getLocalizedMessage('success.statusUpdated', req.locale || 'ar')
+    })
+  } catch (error) {
+    console.error('Update branch status error:', error)
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.failedToUpdateStatus', req.locale || 'ar'),
+      error: error.message
     })
   }
 })

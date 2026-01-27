@@ -300,43 +300,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
         {/* Body - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-6">
-            {/* POS Access Control Section */}
-            <div className={`p-4 rounded-lg border-2 mb-4 transition-colors ${posAccessEnabled
-              ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
-              : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
-              }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className={`text-sm font-bold flex items-center gap-2 ${posAccessEnabled ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
-                    }`}>
-                    {posAccessEnabled ? '✅ ' + t('branches.posAccessActive') : '🚫 ' + t('branches.posAccessDisabled')}
-                  </h3>
-                  <p className={`text-xs mt-1 ${posAccessEnabled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    }`}>
-                    {t('branches.posAccessDesc')}
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <button
-                    onClick={() => handleTogglePosAccess(!posAccessEnabled)}
-                    disabled={toggleSaving}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${posAccessEnabled
-                      ? 'bg-green-500 focus:ring-green-500'
-                      : 'bg-gray-200 dark:bg-gray-600 focus:ring-gray-500'
-                      }`}
-                  >
-                    <span
-                      className={`${posAccessEnabled ? 'translate-x-6' : 'translate-x-1'
-                        } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
+
 
             {/* Manager Access Section */}
-            <div className={`p-4 rounded-lg border-2 border-purple-200 dark:border-purple-800 transition-opacity ${!posAccessEnabled ? 'opacity-50 pointer-events-none grayscale' : 'bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20'
-              }`}>
+            <div className={`p-4 rounded-lg border-2 border-purple-200 dark:border-purple-800 transition-opacity bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
@@ -348,15 +315,15 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                 </div>
                 <input
                   type="checkbox"
-                  id="manager_pin_enabled"
-                  checked={managerPinEnabled}
-                  onChange={(e) => handleToggleManagerAccess(e.target.checked)}
+                  id="pos_access_enabled"
+                  checked={posAccessEnabled}
+                  onChange={(e) => handleTogglePosAccess(e.target.checked)}
                   disabled={toggleSaving}
                   className="h-6 w-6 min-h-[24px] min-w-[24px] text-purple-600 focus:ring-purple-500 border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-gray-700 disabled:opacity-50"
                 />
               </div>
 
-              {managerPinEnabled && (
+              {posAccessEnabled && (
                 <div className="space-y-4 mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
                   {/* PIN Input */}
                   <div>
