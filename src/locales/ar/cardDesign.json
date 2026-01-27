@@ -304,5 +304,57 @@
     "contrastRatio": "نسبة التباين",
     "wcagLevel": "مستوى WCAG",
     "wcagGuidance": "يتطلب WCAG 4.5:1 كحد أدنى للنص القابل للقراءة (AA). 7:1 هو AAA (محسّن)."
+  },
+  "designer": {
+    "title": "🎨 صمم بطاقتك",
+    "loading": "جاري التحميل...",
+    "steps": {
+      "style": "النمط",
+      "brand": "الهوية",
+      "preview": "المعاينة"
+    },
+    "step1": {
+      "title": "ما هو نوع نشاطك التجاري؟",
+      "subtitle": "اختر نمطاً يناسب علامتك التجارية"
+    },
+    "step2": {
+      "title": "أضف هويتك",
+      "subtitle": "ارفع شعارك وخصص الألوان",
+      "logo": "شعارك",
+      "clickToUpload": "انقر لرفع الشعار",
+      "uploadHelper": "PNG، JPG حتى 5 ميجابايت",
+      "uploading": "جاري الرفع...",
+      "background": "الخلفية",
+      "textColor": "لون النص",
+      "colorPreview": "معاينة ألوان بطاقتك"
+    },
+    "step3": {
+      "title": "معاينة بطاقتك",
+      "subtitle": "شاهد كيف تبدو على Apple & Google Wallet",
+      "apple": "Apple",
+      "google": "Google",
+      "liveUpdates": "المعاينة تتحدث في الوقت الفعلي"
+    },
+    "templates": {
+      "coffee": "مقهى",
+      "restaurant": "مطعم",
+      "retail": "تجزئة",
+      "salon": "صالون",
+      "fitness": "لياقة",
+      "food": "طعام",
+      "pets": "حيوانات أليفة",
+      "other": "آخر"
+    },
+    "actions": {
+      "back": "← السابق",
+      "next": "التالي →",
+      "save": "حفظ البطاقة",
+      "saving": "جاري الحفظ...",
+      "unsaved": "غير محفوظ"
+    },
+    "errors": {
+      "uploadLogo": "فشل رفع الشعار. يرجى المحاولة مرة أخرى.",
+      "saveFailed": "فشل الحفظ. يرجى المحاولة مرة أخرى."
+    }
   }
 }

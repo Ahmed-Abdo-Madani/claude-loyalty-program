@@ -6,6 +6,11 @@ import CompactStatsBar from './CompactStatsBar'
 import StatusBadge from './StatusBadge'
 import QRCodeModal from './QRCodeModal'
 import { getSecureBusinessId } from '../utils/secureAuth'
+import {
+  MagnifyingGlassIcon, FunnelIcon, PlusIcon, QrCodeIcon,
+  TrashIcon, PencilSquareIcon, DocumentDuplicateIcon,
+  Squares2X2Icon, TableCellsIcon
+} from '@heroicons/react/24/outline'
 
 export default function ProductsTab({ demoData, onAddProduct }) {
   const { t, i18n } = useTranslation('dashboard')
@@ -361,22 +366,26 @@ export default function ProductsTab({ demoData, onAddProduct }) {
     {
       label: t('products.stats.totalProducts'),
       value: products.length,
-      icon: '🛍️'
+      icon: '📦',
+      color: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
     },
     {
       label: t('products.stats.activeProducts'),
       value: products.filter(p => p.status === 'active').length,
-      icon: '✅'
+      icon: '✅',
+      color: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
     },
     {
-      label: t('products.stats.totalCategories'),
+      label: t('products.stats.categories'),
       value: categories.length,
-      icon: '📁'
+      icon: '📂',
+      color: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
     },
     {
       label: t('products.stats.outOfStock'),
       value: products.filter(p => p.status === 'out_of_stock').length,
-      icon: '⚠️'
+      icon: '⚠️',
+      color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
     }
   ]
 
@@ -441,76 +450,71 @@ export default function ProductsTab({ demoData, onAddProduct }) {
       {/* Stats Bar */}
       <CompactStatsBar stats={stats} />
 
-      {/* Filters Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Filters & Controls Bar - Redesigned */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
           {/* Search */}
-          <div className="lg:col-span-2">
+          <div className="relative w-full lg:w-96">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            </div>
             <input
               type="text"
               placeholder={t('products.searchPlaceholder')}
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary/50"
             />
           </div>
 
-          {/* Status Filter */}
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-          >
-            <option value="all">{t('products.filters.all')}</option>
-            <option value="active">{t('products.filters.active')}</option>
-            <option value="inactive">{t('products.filters.inactive')}</option>
-            <option value="out_of_stock">{t('products.filters.outOfStock')}</option>
-          </select>
+          {/* Filters Group */}
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+              <FunnelIcon className="w-4 h-4 text-gray-500" />
+              <select
+                value={filters.categoryId}
+                onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
+                className="bg-transparent border-none text-sm focus:ring-0 p-0 text-gray-700 dark:text-gray-200"
+              >
+                <option value="all">{t('products.filters.allCategories')}</option>
+                {categories.map(cat => (
+                  <option key={cat.public_id} value={cat.public_id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Category Filter */}
-          <select
-            value={filters.categoryId}
-            onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="all">{t('products.filters.allCategories')}</option>
-            {categories.map(cat => (
-              <option key={cat.public_id} value={cat.public_id}>
-                {cat.name} ({cat.product_count})
-              </option>
-            ))}
-          </select>
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="bg-transparent border-none text-sm focus:ring-0 p-0 text-gray-700 dark:text-gray-200"
+              >
+                <option value="all">{t('products.filters.allStatus')}</option>
+                <option value="active">{t('products.filters.active')}</option>
+                <option value="inactive">{t('products.filters.inactive')}</option>
+                <option value="out_of_stock">{t('products.filters.outOfStock')}</option>
+              </select>
+            </div>
 
-          {/* Branch Filter */}
-          <select
-            value={filters.branchId === null ? 'null' : filters.branchId}
-            onChange={(e) => setFilters({
-              ...filters,
-              branchId: e.target.value === 'null' ? null : e.target.value
-            })}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="all">{t('products.filters.allBranches')}</option>
-            <option value="null">{t('products.card.allBranches')}</option>
-            {branches.map(branch => (
-              <option key={branch.public_id} value={branch.public_id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Clear Filters Button */}
-        {(filters.search || filters.status !== 'all' || filters.categoryId !== 'all' || filters.branchId !== 'all') && (
-          <div className="mt-4">
-            <button
-              onClick={clearFilters}
-              className="text-sm text-primary hover:text-primary-dark font-medium"
-            >
-              🔄 {t('products.filters.clearFilters')}
-            </button>
+            {/* View Toggle */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('list')} // Assuming you might have a list/grid toggle state
+                className={`p-1.5 rounded-md transition-all ${viewMode !== 'grid' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-500'}`}
+              >
+                <TableCellsIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-500'}`}
+              >
+                <Squares2X2Icon className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Products List/Table View */}

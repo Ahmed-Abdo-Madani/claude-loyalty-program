@@ -4,27 +4,14 @@ import { endpoints, secureApi } from '../config/api'
 import { secureApiRequest } from '../utils/secureAuth'
 import WalletCard from './WalletCard'
 import MonthlyChart from './MonthlyChart'
+import { formatCurrency, formatNumber } from '../utils/formatUtils'
 
 export default function POSAnalytics({ demoData }) {
   const { t, i18n } = useTranslation('dashboard')
 
-  // Currency formatter for SAR
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
-      style: 'decimal',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount || 0)
-  }
-
-  // Number formatter
-  const formatNumber = (number) => {
-    return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US').format(number || 0)
-  }
-
-  // Percentage formatter
+  // Percentage formatter (keep local as it's specialized)
   const formatPercentage = (percentage) => {
-    return new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
+    return new Intl.NumberFormat('en-US', {
       style: 'decimal',
       minimumFractionDigits: 1,
       maximumFractionDigits: 1

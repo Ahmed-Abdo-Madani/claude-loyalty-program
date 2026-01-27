@@ -12,14 +12,14 @@ import AppleWalletPreview from './AppleWalletPreview'
 
 // Industry templates with icons and colors
 const TEMPLATES = [
-    { id: 'coffee_classic', icon: '☕', name: 'Café', color: '#5C3A29', textColor: '#FFFFFF' },
-    { id: 'restaurant_rewards', icon: '🍽️', name: 'Restaurant', color: '#B91C1C', textColor: '#FFFFFF' },
-    { id: 'retail_rewards', icon: '🛍️', name: 'Retail', color: '#1E40AF', textColor: '#FFFFFF' },
-    { id: 'beauty_wellness', icon: '💇', name: 'Salon', color: '#BE185D', textColor: '#FFFFFF' },
-    { id: 'fitness_gym', icon: '💪', name: 'Fitness', color: '#C2410C', textColor: '#FFFFFF' },
-    { id: 'food_delivery', icon: '🍕', name: 'Food', color: '#A16207', textColor: '#FFFFFF' },
-    { id: 'pet_services', icon: '🐾', name: 'Pets', color: '#059669', textColor: '#FFFFFF' },
-    { id: 'professional_default', icon: '⭐', name: 'Other', color: '#1E40AF', textColor: '#FFFFFF' },
+    { id: 'coffee_classic', icon: '☕', name: 'designer.templates.coffee', color: '#5C3A29', textColor: '#FFFFFF' },
+    { id: 'restaurant_rewards', icon: '🍽️', name: 'designer.templates.restaurant', color: '#B91C1C', textColor: '#FFFFFF' },
+    { id: 'retail_rewards', icon: '🛍️', name: 'designer.templates.retail', color: '#1E40AF', textColor: '#FFFFFF' },
+    { id: 'beauty_wellness', icon: '💇', name: 'designer.templates.salon', color: '#BE185D', textColor: '#FFFFFF' },
+    { id: 'fitness_gym', icon: '💪', name: 'designer.templates.fitness', color: '#C2410C', textColor: '#FFFFFF' },
+    { id: 'food_delivery', icon: '🍕', name: 'designer.templates.food', color: '#A16207', textColor: '#FFFFFF' },
+    { id: 'pet_services', icon: '🐾', name: 'designer.templates.pets', color: '#059669', textColor: '#FFFFFF' },
+    { id: 'professional_default', icon: '⭐', name: 'designer.templates.other', color: '#1E40AF', textColor: '#FFFFFF' },
 ]
 
 function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
@@ -92,7 +92,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                 updateDesignField('background_color', result.suggestedColor)
             }
         } catch (err) {
-            setError('Failed to upload logo. Please try again.')
+            setError(t('designer.errors.uploadLogo'))
         } finally {
             setUploading(false)
         }
@@ -110,14 +110,14 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
             const savedDesign = await saveDesign()
             onSave?.(savedDesign)
         } catch (err) {
-            setError('Failed to save. Please try again.')
+            setError(t('designer.errors.saveFailed'))
         }
     }
 
     // Handle close with confirmation
     const handleClose = () => {
         if (isDirty) {
-            const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close?')
+            const confirmed = window.confirm(t('editor.confirmClose'))
             if (!confirmed) return
         }
         onClose()
@@ -136,7 +136,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+                    <p className="text-gray-600 dark:text-gray-400">{t('designer.loading')}</p>
                 </div>
             </div>
         )
@@ -150,10 +150,10 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                 <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                            🎨 Design Your Card
+                            {t('designer.title')}
                         </h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                            {offer?.title || 'Loyalty Card'}
+                            {offer?.title || t('preview.mockData.loyaltyCard')}
                         </p>
                     </div>
                     <button
@@ -182,7 +182,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                         >
                             {step > s ? '✓' : s}
                             <span className="hidden sm:inline">
-                                {s === 1 ? 'Style' : s === 2 ? 'Brand' : 'Preview'}
+                                {s === 1 ? t('designer.steps.style') : s === 2 ? t('designer.steps.brand') : t('designer.steps.preview')}
                             </span>
                         </button>
                     ))}
@@ -204,10 +204,10 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                         <div className="space-y-4">
                             <div className="text-center mb-6">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    What type of business are you?
+                                    {t('designer.step1.title')}
                                 </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Choose a style that matches your brand
+                                    {t('designer.step1.subtitle')}
                                 </p>
                             </div>
 
@@ -230,7 +230,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                             {template.icon}
                                         </div>
                                         <span className="text-sm font-medium text-gray-900 dark:text-white block">
-                                            {template.name}
+                                            {t(template.name)}
                                         </span>
                                         {selectedTemplate?.id === template.id && (
                                             <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs">
@@ -248,17 +248,17 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                         <div className="space-y-6">
                             <div className="text-center mb-4">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Add Your Brand
+                                    {t('designer.step2.title')}
                                 </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Upload your logo and customize colors
+                                    {t('designer.step2.subtitle')}
                                 </p>
                             </div>
 
                             {/* Logo Upload */}
                             <div className="space-y-3">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Your Logo
+                                    {t('designer.step2.logo')}
                                 </label>
                                 <div className="flex items-center gap-4">
                                     {/* Logo Preview */}
@@ -292,14 +292,14 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                         ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 {uploading ? (
-                                                    <span className="text-sm text-gray-500">Uploading...</span>
+                                                    <span className="text-sm text-gray-500">{t('designer.step2.uploading')}</span>
                                                 ) : (
                                                     <>
                                                         <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                            Click to upload logo
+                                                            {t('designer.step2.clickToUpload')}
                                                         </span>
                                                         <span className="block text-xs text-gray-400 mt-1">
-                                                            PNG, JPG up to 5MB
+                                                            {t('designer.step2.uploadHelper')}
                                                         </span>
                                                     </>
                                                 )}
@@ -314,7 +314,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                 {/* Background Color */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Background
+                                        {t('designer.step2.background')}
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <input
@@ -337,7 +337,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                 {/* Text Color */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Text Color
+                                        {t('designer.step2.textColor')}
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <input
@@ -370,7 +370,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                     {currentDesign?.logo_url && (
                                         <img src={currentDesign.logo_url} alt="" className="w-10 h-10 object-contain" />
                                     )}
-                                    <span className="font-semibold">Preview of your card colors</span>
+                                    <span className="font-semibold">{t('designer.step2.colorPreview')}</span>
                                 </div>
                             </div>
                         </div>
@@ -381,10 +381,10 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                         <div className="space-y-4">
                             <div className="text-center mb-4">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Preview Your Card
+                                    {t('designer.step3.title')}
                                 </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    See how it looks on Apple & Google Wallet
+                                    {t('designer.step3.subtitle')}
                                 </p>
                             </div>
 
@@ -398,7 +398,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                             : 'text-gray-600 dark:text-gray-400'
                                         }`}
                                 >
-                                    <span></span> Apple
+                                    <span></span> {t('designer.step3.apple')}
                                 </button>
                                 <button
                                     onClick={() => setPreviewPlatform('google')}
@@ -408,7 +408,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                             : 'text-gray-600 dark:text-gray-400'
                                         }`}
                                 >
-                                    <span>G</span> Google
+                                    <span>G</span> {t('designer.step3.google')}
                                 </button>
                             </div>
 
@@ -427,7 +427,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                             {/* Live indicator */}
                             <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                <span>Preview updates in real-time</span>
+                                <span>{t('designer.step3.liveUpdates')}</span>
                             </div>
                         </div>
                     )}
@@ -443,7 +443,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                 className="px-4 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white 
                   font-medium transition-colors flex items-center gap-2"
                             >
-                                ← Back
+                                {t('designer.actions.back')}
                             </button>
                         )}
                     </div>
@@ -453,7 +453,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                         {isDirty && (
                             <span className="text-xs text-orange-500 flex items-center gap-1">
                                 <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                                Unsaved
+                                {t('designer.actions.unsaved')}
                             </span>
                         )}
 
@@ -465,7 +465,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                   transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
                   flex items-center gap-2"
                             >
-                                Next →
+                                {t('designer.actions.next')}
                             </button>
                         ) : (
                             <button
@@ -478,11 +478,11 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                                 {saving ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Saving...</span>
+                                        <span>{t('designer.actions.saving')}</span>
                                     </>
                                 ) : (
                                     <>
-                                        <span>Save Card</span>
+                                        <span>{t('designer.actions.save')}</span>
                                         <span>✓</span>
                                     </>
                                 )}

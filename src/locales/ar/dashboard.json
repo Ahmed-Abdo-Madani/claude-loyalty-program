@@ -348,7 +348,7 @@
     "emailPlaceholder": "branch@example.com",
     "posAccess": "وصول نقاط البيع",
     "enablePosAccess": "تفعيل وصول نقاط البيع",
-    "posAccessDesc": "تمكين الوصول لأجهزة نقاط البيع (POS) لمسح رموز QR للعملاء",
+    "posAccessDesc": "تمكين الوصول لبوابة نقاط البيع (POS)",
     "posAccessActive": "نقاط البيع نشطة",
     "posAccessDisabled": "نقاط البيع معطلة",
     "posAccessNotConfigured": "نقاط البيع غير مجهزة",

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import BranchCard from './BranchCard'
+import { formatCurrency } from '../utils/formatUtils'
 
 function BranchGrid({
   branches,
@@ -10,14 +11,7 @@ function BranchGrid({
   onRefresh,
   onManagerAccess
 }) {
-  const { t } = useTranslation('dashboard')
-  
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount)
-  }
+  const { t, i18n } = useTranslation('dashboard')
 
   if (loading) {
     return (
@@ -84,7 +78,11 @@ function BranchGrid({
         </div>
         <div className="flex-1 text-center border-r border-gray-200 dark:border-gray-700 last:border-0">
           <div className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
-            {branches.reduce((sum, branch) => sum + (branch.customers || 0), 0)}
+            {branches.reduce((sum, branch) => {
+              // Handle both snake_case (DB) and camelCase (potential legacy/frontend mocks)
+              const count = branch.customers !== undefined ? branch.customers : (branch.totalCustomers || 0);
+              return sum + Number(count);
+            }, 0)}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
             {t('branches.customers')}
@@ -92,7 +90,12 @@ function BranchGrid({
         </div>
         <div className="flex-1 text-center">
           <div className="text-base sm:text-lg font-bold text-purple-600 dark:text-purple-400">
-            {formatCurrency(branches.reduce((sum, branch) => sum + (branch.monthlyRevenue || 0), 0))}
+            {formatCurrency(branches.reduce((sum, branch) => {
+              // Fix: Access monthly_revenue (DB field) instead of monthlyRevenue
+              // Also handle potential string numbers from API
+              const revenue = branch.monthly_revenue !== undefined ? branch.monthly_revenue : (branch.monthlyRevenue || 0);
+              return sum + Number(revenue);
+            }, 0), i18n.language)}
           </div>
           <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">
             {t('branches.revenue')}

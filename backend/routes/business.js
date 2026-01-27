@@ -12,7 +12,7 @@ import SubscriptionService from '../services/SubscriptionService.js'
 import MoyasarService from '../services/MoyasarService.js'
 import InvoiceService from '../services/InvoiceService.js'
 import LemonSqueezyService from '../services/LemonSqueezyService.js'
-import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice } from '../models/index.js'
+import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice, Sale } from '../models/index.js'
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 import appleWalletController from '../controllers/appleWalletController.js'
@@ -1695,10 +1695,50 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
       order: [['created_at', 'DESC']]
     })
 
+    // Calculate start of current month for revenue filtering
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    // Enrich branches with real-time stats from Sales table
+    // We do this here to avoid complex sync logic and ensure accuracy
+    const enrichedBranches = await Promise.all(branches.map(async (branch) => {
+      const branchJson = branch.toJSON()
+
+      // 1. Calculate Monthly Revenue (sum of total_amount for this month's completed sales)
+      const monthlyRevenue = await Sale.sum('total_amount', {
+        where: {
+          branch_id: branch.public_id,
+          status: 'completed',
+          sale_date: {
+            [Op.gte]: startOfMonth
+          }
+        }
+      }) || 0
+
+      // 2. Calculate Total Customers (count of unique customer_ids)
+      // Note: This counts unique registered customers. Anonymous sales might need different handling if desired.
+      const totalCustomers = await Sale.count({
+        distinct: true,
+        col: 'customer_id',
+        where: {
+          branch_id: branch.public_id,
+          status: 'completed',
+          customer_id: { [Op.ne]: null } // Only count linked customers
+        }
+      }) || 0
+
+      // Override static fields with dynamic values
+      branchJson.monthly_revenue = parseFloat(monthlyRevenue)
+      branchJson.customers = totalCustomers
+
+      return branchJson
+    }))
+
     res.json({
       success: true,
-      data: branches,
-      total: branches.length
+      data: enrichedBranches,
+      total: enrichedBranches.length
     })
   } catch (error) {
     console.error('Get my branches error:', error)

@@ -13,6 +13,7 @@ import {
   PencilSquareIcon,
   KeyIcon
 } from '@heroicons/react/24/outline'
+import { formatCurrency } from '../utils/formatUtils'
 
 function BranchCard({
   branch,
@@ -21,15 +22,8 @@ function BranchCard({
   onToggleStatus,
   onManagerAccess
 }) {
-  const { t } = useTranslation('dashboard')
+  const { t, i18n } = useTranslation('dashboard')
   const [showDeactivateWarning, setShowDeactivateWarning] = useState(false)
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('ar-SA', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount)
-  }
 
   const isActive = branch.status === 'active'
 
@@ -175,16 +169,13 @@ function BranchCard({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (e.nativeEvent) {
-                e.nativeEvent.stopImmediatePropagation();
-              }
               onManagerAccess(branch);
             }}
-            className="flex items-center space-x-1.5 px-2 sm:px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 text-xs sm:text-sm min-h-[36px] sm:min-h-[40px]"
+            className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 text-sm min-h-[40px] group"
             title={t('branches.posAccess')}
           >
-            <KeyIcon className="w-4 h-4" />
-            <span className="font-medium">{t('branches.posAccess')}</span>
+            <KeyIcon className="w-4 h-4 transition-transform group-hover:rotate-12" />
+            <span className="font-bold underline-offset-4">{t('branches.posAccess')}</span>
           </button>
         </div>
       </div>

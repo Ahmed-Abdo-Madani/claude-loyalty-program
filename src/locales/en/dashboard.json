@@ -341,7 +341,7 @@
     "emailPlaceholder": "branch@example.com",
     "posAccess": "POS Access",
     "enablePosAccess": "Enable POS Access",
-    "posAccessDesc": "Enable access for Point of Sale (POS) devices to scan customer QR codes",
+    "posAccessDesc": "Enable access for Point of Sale (POS) Portal",
     "posAccessActive": "POS Active",
     "posAccessDisabled": "POS Disabled",
     "posAccessNotConfigured": "POS Not Configured",

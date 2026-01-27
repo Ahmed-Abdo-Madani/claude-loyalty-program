@@ -304,5 +304,57 @@
     "contrastRatio": "Contrast Ratio",
     "wcagLevel": "WCAG Level",
     "wcagGuidance": "WCAG requires 4.5:1 minimum for readable text (AA). 7:1 is AAA (enhanced)."
+  },
+  "designer": {
+    "title": "🎨 Design Your Card",
+    "loading": "Loading...",
+    "steps": {
+      "style": "Style",
+      "brand": "Brand",
+      "preview": "Preview"
+    },
+    "step1": {
+      "title": "What type of business are you?",
+      "subtitle": "Choose a style that matches your brand"
+    },
+    "step2": {
+      "title": "Add Your Brand",
+      "subtitle": "Upload your logo and customize colors",
+      "logo": "Your Logo",
+      "clickToUpload": "Click to upload logo",
+      "uploadHelper": "PNG, JPG up to 5MB",
+      "uploading": "Uploading...",
+      "background": "Background",
+      "textColor": "Text Color",
+      "colorPreview": "Preview of your card colors"
+    },
+    "step3": {
+      "title": "Preview Your Card",
+      "subtitle": "See how it looks on Apple & Google Wallet",
+      "apple": "Apple",
+      "google": "Google",
+      "liveUpdates": "Preview updates in real-time"
+    },
+    "templates": {
+      "coffee": "Café",
+      "restaurant": "Restaurant",
+      "retail": "Retail",
+      "salon": "Salon",
+      "fitness": "Fitness",
+      "food": "Food",
+      "pets": "Pets",
+      "other": "Other"
+    },
+    "actions": {
+      "back": "← Back",
+      "next": "Next →",
+      "save": "Save Card",
+      "saving": "Saving...",
+      "unsaved": "Unsaved"
+    },
+    "errors": {
+      "uploadLogo": "Failed to upload logo. Please try again.",
+      "saveFailed": "Failed to save. Please try again."
+    }
   }
 }

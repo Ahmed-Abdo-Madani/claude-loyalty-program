@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatCurrency } from '../utils/formatUtils'
 import { endpoints, secureApi } from '../config/api'
 
 /**
@@ -189,10 +190,8 @@ export default function PaymentHistoryPage() {
   /**
    * Format currency
    */
-  const formatCurrency = (amount, currency = 'SAR') => {
-    const num = parseFloat(amount)
-    if (isNaN(num)) return '0.00 SAR'
-    return `${num.toFixed(2)} ${currency}`
+  const formatCurrencyLocal = (amount, currency = 'SAR') => {
+    return formatCurrency(amount, i18n.language, currency)
   }
 
   /**
@@ -428,7 +427,7 @@ export default function PaymentHistoryPage() {
                       {payment.invoice?.invoice_number || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {formatCurrency(payment.amount, payment.currency)}
+                      {formatCurrencyLocal(payment.amount, payment.currency)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(payment.status)}
@@ -493,7 +492,7 @@ export default function PaymentHistoryPage() {
               : t('subscription:payment.history.emptyState.title')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {!filters.status && !filters.dateFrom && !filters.dateTo && !filters.minAmount && !filters.maxAmount && !filters.search 
+            {!filters.status && !filters.dateFrom && !filters.dateTo && !filters.minAmount && !filters.maxAmount && !filters.search
               ? t('subscription:payment.history.emptyState.description')
               : ''}
           </p>
