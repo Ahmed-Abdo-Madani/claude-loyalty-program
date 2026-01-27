@@ -32,6 +32,8 @@ function CustomerSignup() {
   const [deviceCapabilities, setDeviceCapabilities] = useState(null)
   const [isGeneratingWallet, setIsGeneratingWallet] = useState(false)
   const [walletError, setWalletError] = useState(null)
+  const [offerUnavailable, setOfferUnavailable] = useState(false)
+  const [offerStatusReason, setOfferStatusReason] = useState('')
 
   // Helper function to get colors from card design or use defaults
   const getColors = () => {
@@ -63,14 +65,14 @@ function CustomerSignup() {
   // Helper function to render stamp icon (emoji or icon ID)
   const renderStampIcon = (stampIcon) => {
     if (!stampIcon) return '⭐'
-    
+
     // Check if it's an emoji (1-4 chars, no hyphen)
     const isEmoji = stampIcon.length <= 4 && !stampIcon.includes('-')
-    
+
     if (isEmoji) {
       return stampIcon
     }
-    
+
     // It's an icon ID, render as image
     return (
       <img
@@ -104,7 +106,7 @@ function CustomerSignup() {
    */
   const getLogoUrl = () => {
     let url = null
-    
+
     // Priority 1: Business profile logo
     if (offer?.businessLogo?.url) {
       console.log('🖼️ Using business profile logo')
@@ -120,19 +122,19 @@ function CustomerSignup() {
       console.log('🖼️ Using card design logo from design fetch')
       url = cardDesign.logo_url
     }
-    
+
     // No logo available
     if (!url) {
       console.log('⚠️ No logo available')
       return null
     }
-    
+
     // If URL is absolute (starts with http:// or https://), return as-is
     // Otherwise, prepend apiBaseUrl for relative URLs
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url
     }
-    
+
     return apiBaseUrl + url
   }
 
@@ -172,24 +174,43 @@ function CustomerSignup() {
   const loadOffer = async () => {
     try {
       console.log('� Loading public offer with secure ID:', offerId)
-      
+
       // Validate offer ID format
       if (!validateSecureOfferId(offerId)) {
         throw new Error('Invalid offer ID format')
       }
-      
+
       setLoading(true)
       setError('')
-      
+
       // Use direct fetch to public endpoint (no authentication needed)
       const response = await fetch(`${apiBaseUrl}/api/business/public/offer/${offerId}`)
       const data = await response.json()
-      
+
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to load offer')
+        console.warn('⚠️ Offer fetch failed with status:', response.status)
+
+        // Handle inactive/paused/expired offers (usually 404 if not found or custom status if returned)
+        // If the backend returns a 404/403 for an inactive offer, we handle it here
+        setOfferUnavailable(true)
+        setOfferStatusReason(data.status || data.reason || 'inactive')
+        setOffer(null) // Ensure offer is NOT set when fetch fails for status reasons
+        setLoading(false)
+        return
       }
-      
+
       console.log('✅ Public offer loaded successfully:', data.data)
+
+      // Early client-side validation of offer status (if returned as active but has status field)
+      if (data.data.status !== 'active') {
+        console.warn('⚠️ Offer is not active:', data.data.status)
+        setOfferUnavailable(true)
+        setOfferStatusReason(data.data.status)
+        setOffer(data.data) // Still set offer to show business context if we actually got data
+        setLoading(false)
+        return
+      }
+
       setOffer(data.data)
 
       // Fetch card design for dynamic colors
@@ -208,21 +229,25 @@ function CustomerSignup() {
         setCardDesign(null)
       }
     } catch (err) {
-      console.error('❌ Error loading offer:', err)
-      setError(err.message || 'Failed to load offer details')
-      console.error('Error loading offer:', err)
-      
-      // Use fallback data for development
-      setOffer({
-        public_id: offerId,
-        title: "Special Loyalty Offer",
-        description: "Join our loyalty program and start earning rewards!",
-        businessName: "Local Business",
-        branchName: "Main Branch",
-        stamps_required: 10,
-        type: "stamps",
-        status: "active"
-      })
+      console.error('❌ Network error loading offer:', err)
+
+      // Only use development fallback for true network/unexpected failures, 
+      // not for status-related failures (which are handled in the response.ok check above)
+      if (!offerUnavailable) {
+        setError(err.message || 'Failed to load offer details')
+
+        // Use fallback data for development only if it's a real failure and not a status issue
+        setOffer({
+          public_id: offerId,
+          title: "Special Loyalty Offer",
+          description: "Join our loyalty program and start earning rewards!",
+          businessName: "Local Business",
+          branchName: "Main Branch",
+          stamps_required: 10,
+          type: "stamps",
+          status: "active"
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -230,7 +255,7 @@ function CustomerSignup() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    
+
     // Apply Arabic-to-English conversion for phone field in real-time
     if (name === 'phone') {
       const convertedValue = convertArabicToEnglishNumbers(value)
@@ -250,7 +275,7 @@ function CustomerSignup() {
   const convertArabicToEnglishNumbers = (str) => {
     const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']
     const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-    
+
     let result = str
     for (let i = 0; i < arabicNumbers.length; i++) {
       result = result.replace(new RegExp(arabicNumbers[i], 'g'), englishNumbers[i])
@@ -262,15 +287,15 @@ function CustomerSignup() {
   const normalizePhoneNumber = (phone) => {
     // Convert Arabic numerals to English
     let normalized = convertArabicToEnglishNumbers(phone)
-    
+
     // Remove all non-digit characters
     normalized = normalized.replace(/\D/g, '')
-    
+
     // If it's a 10-digit number starting with 0, remove the leading 0
     if (normalized.length === 10 && normalized.startsWith('0')) {
       normalized = normalized.substring(1)
     }
-    
+
     return normalized
   }
 
@@ -485,7 +510,7 @@ function CustomerSignup() {
       }
 
       const data = await response.json()
-      
+
       if (data.saveUrl) {
         window.location.href = data.saveUrl
         handleWalletAdded('google', { success: true })
@@ -511,7 +536,7 @@ function CustomerSignup() {
     )
   }
 
-  if (error && !offer) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
@@ -529,15 +554,106 @@ function CustomerSignup() {
     )
   }
 
+  if (offerUnavailable && offer) {
+    const getStatusMessage = () => {
+      if (offerStatusReason === 'paused') return t('signup.errors.offerPaused')
+      if (offerStatusReason === 'inactive') return t('signup.errors.offerInactive')
+      if (offerStatusReason === 'expired') return t('signup.errors.offerExpired')
+      return t('signup.errors.offerNotActive')
+    }
+
+    const isWarning = offerStatusReason === 'paused'
+
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4 sm:p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-300">
+          <div className="p-8 text-center">
+            {/* Warning/Error Icon */}
+            <div className={`text-7xl mb-6 transform transition-transform hover:scale-110 duration-300 ${isWarning ? 'text-amber-500' : 'text-red-500'}`}>
+              {isWarning ? '⚠️' : '🚫'}
+            </div>
+
+            {/* Status Heading */}
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {t('signup.errors.offerUnavailable')}
+            </h1>
+
+            {/* Detailed Message */}
+            <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+              {getStatusMessage()}
+            </p>
+
+            {/* Business Card Context */}
+            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-5 mb-8 border border-gray-100 dark:border-gray-600">
+              <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                {getLogoUrl() ? (
+                  <img
+                    src={getLogoUrl()}
+                    alt={offer.businessName}
+                    className="w-16 h-16 object-contain rounded-lg shadow-sm bg-white"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-2xl">
+                    🏢
+                  </div>
+                )}
+                <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-1">
+                    {offer.businessName}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {offer.branchName}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            {offer.businessPhone && (
+              <div className="mb-8">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+                  {t('signup.errors.contactBusinessMessage')}
+                </p>
+                <a
+                  href={`tel:${offer.businessPhone}`}
+                  className="inline-flex items-center gap-2 text-lg font-bold transition-all hover:opacity-80 active:scale-95"
+                  style={{ color: getColors().primary }}
+                >
+                  <span className="text-xl">📞</span>
+                  <span dir="ltr">{offer.businessPhone}</span>
+                </a>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="space-y-4">
+              <button
+                onClick={() => window.history.back()}
+                className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg hover:shadow-lg transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+                style={{ backgroundColor: getColors().primary }}
+              >
+                {t('signup.errors.goBack')}
+              </button>
+
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                {t('signup.errors.checkBackLater')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (isSubmitted && customerData && offer) {
     return (
-      <div 
-        className="min-h-screen dark:bg-gray-900 flex flex-col items-center justify-center py-20 px-4" 
+      <div
+        className="min-h-screen dark:bg-gray-900 flex flex-col items-center justify-center py-20 px-4"
         style={{ backgroundColor: getColors().primary }}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <div className="max-w-md mx-auto w-full">
-          
+
           {/* Business Logo with Brand Color Halo */}
           {getLogoUrl() && (
             <div className="mb-8 flex justify-center">
@@ -551,14 +667,14 @@ function CustomerSignup() {
 
           {/* Business Name (Bilingual, Brand Colors) */}
           <div className="text-center mb-12">
-            <h1 
+            <h1
               className="text-2xl font-bold mb-2"
               style={{ color: getColors().secondary }}
             >
               {offer.businessName}
             </h1>
             {offer.businessNameEn && offer.businessNameEn !== offer.businessName && (
-              <p 
+              <p
                 className="text-sm font-medium uppercase tracking-wider"
                 style={{ color: getColors().secondary, opacity: 0.7 }}
               >
@@ -676,19 +792,19 @@ function CustomerSignup() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
-      <SEO 
+      <SEO
         title={offer?.title ? `${offer.title} - ${t('seo:pages.customerSignup.title')}` : undefined}
         titleKey={!offer?.title ? 'pages.customerSignup.title' : undefined}
         descriptionKey="pages.customerSignup.description"
       />
-      
-      <div 
+
+      <div
         className="max-w-md w-full rounded-2xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700"
         style={{ backgroundColor: getColors().formBg }}
       >
 
         {/* Header */}
-        <div 
+        <div
           className="text-white p-6"
           style={{ backgroundColor: getColors().primary, color: getColors().secondary }}
         >
@@ -709,7 +825,7 @@ function CustomerSignup() {
         </div>
 
         {/* Offer Display */}
-        <div 
+        <div
           className="p-4 sm:p-6 text-white text-center"
           style={{ backgroundColor: getColors().primary, filter: 'brightness(0.9)' }}
         >
@@ -728,41 +844,39 @@ function CustomerSignup() {
         </div>
 
         {/* Language Selection Tabs */}
-        <div 
+        <div
           className="px-6 pt-4"
           style={{ backgroundColor: getColors().formBg }}
         >
           <div className="flex justify-center">
-            <div 
+            <div
               className="flex rounded-lg p-1"
               style={{ backgroundColor: '#F3F4F6' }}
             >
               {/* Always show Arabic first, then English - regardless of current language */}
               <button
                 onClick={() => i18n.changeLanguage('ar')}
-                style={{ 
+                style={{
                   backgroundColor: i18n.language === 'ar' ? getColors().primary : undefined,
                   color: i18n.language === 'ar' ? getColors().secondary : getColors().bodyText
                 }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  i18n.language === 'ar'
-                    ? 'shadow-sm'
-                    : 'hover:opacity-80'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${i18n.language === 'ar'
+                  ? 'shadow-sm'
+                  : 'hover:opacity-80'
+                  }`}
               >
                 {t('signup.language.arabic')}
               </button>
               <button
                 onClick={() => i18n.changeLanguage('en')}
-                style={{ 
+                style={{
                   backgroundColor: i18n.language === 'en' ? getColors().primary : undefined,
                   color: i18n.language === 'en' ? getColors().secondary : getColors().bodyText
                 }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  i18n.language === 'en'
-                    ? 'shadow-sm'
-                    : 'hover:opacity-80'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${i18n.language === 'en'
+                  ? 'shadow-sm'
+                  : 'hover:opacity-80'
+                  }`}
               >
                 {t('signup.language.english')}
               </button>
@@ -773,7 +887,7 @@ function CustomerSignup() {
         {/* Form */}
         <div className="p-6">
           <div className="text-center mb-6">
-            <p 
+            <p
               className="font-medium"
               style={{ color: getColors().labelText }}
             >
@@ -784,7 +898,7 @@ function CustomerSignup() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Full Name Field */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2"
                 style={{ color: getColors().labelText }}
               >
@@ -797,7 +911,7 @@ function CustomerSignup() {
                 value={formData.fullName}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200"
-                style={{ 
+                style={{
                   backgroundColor: getColors().inputBg,
                   borderColor: getColors().inputBorder,
                   color: getColors().bodyText,
@@ -812,7 +926,7 @@ function CustomerSignup() {
 
             {/* Phone Number Field with Country Code */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2"
                 style={{ color: getColors().labelText }}
               >
@@ -838,7 +952,7 @@ function CustomerSignup() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   className="flex-1 min-w-0 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200"
-                  style={{ 
+                  style={{
                     backgroundColor: getColors().inputBg,
                     borderColor: getColors().inputBorder,
                     color: getColors().bodyText,
@@ -853,7 +967,7 @@ function CustomerSignup() {
 
             {/* Gender Selector */}
             <div>
-              <label 
+              <label
                 className="block text-sm font-medium mb-2"
                 style={{ color: getColors().labelText }}
               >
@@ -879,15 +993,14 @@ function CustomerSignup() {
             <button
               type="submit"
               disabled={loading}
-              style={{ 
+              style={{
                 backgroundColor: loading ? '#9CA3AF' : getColors().primary,
                 color: getColors().secondary
               }}
-              className={`w-full py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/25 ${
-                loading
-                  ? 'cursor-not-allowed'
-                  : 'transform hover:scale-[1.02] hover:brightness-90'
-              }`}
+              className={`w-full py-4 rounded-lg font-semibold text-lg transition-all duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/25 ${loading
+                ? 'cursor-not-allowed'
+                : 'transform hover:scale-[1.02] hover:brightness-90'
+                }`}
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -904,7 +1017,7 @@ function CustomerSignup() {
 
             {/* Disclaimer text below button */}
             <div className="text-center mt-3">
-              <p 
+              <p
                 className="text-xs"
                 style={{ color: getColors().bodyText, opacity: 0.7 }}
               >

@@ -14,7 +14,7 @@ export default function CheckoutModal({
   onLoyaltyDiscountChange
 }) {
   const { t, i18n } = useTranslation('pos')
-  
+
   // State
   const [paymentMethod, setPaymentMethod] = useState(null)
   const [processing, setProcessing] = useState(false)
@@ -30,6 +30,7 @@ export default function CheckoutModal({
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(false)
   const [loyaltyLoading, setLoyaltyLoading] = useState(false)
   const [loyaltyError, setLoyaltyError] = useState(null)
+  const [loyaltyWarning, setLoyaltyWarning] = useState(null)
   const [prizeConfirmationStatus, setPrizeConfirmationStatus] = useState(null) // 'pending', 'confirmed', 'failed'
   const [totalCompletions, setTotalCompletions] = useState(null)
   const [tierInfo, setTierInfo] = useState(null)
@@ -50,6 +51,7 @@ export default function CheckoutModal({
       setLoyaltyOffer(null)
       setApplyLoyaltyDiscount(false)
       setLoyaltyError(null)
+      setLoyaltyWarning(null)
       setPrizeConfirmationStatus(null)
       setTotalCompletions(null)
       setTierInfo(null)
@@ -62,7 +64,7 @@ export default function CheckoutModal({
   const handlePaymentMethodSelect = (method) => {
     setPaymentMethod(method)
     setError(null)
-    
+
     // Reset cash fields when switching away from cash
     if (method !== 'cash') {
       setCashReceived('')
@@ -84,22 +86,22 @@ export default function CheckoutModal({
 
   const handleScanSuccess = async (customerToken, offerHash, rawData, format) => {
     console.log('🛒 POS loyalty scan:', { format, customerToken: customerToken.substring(0, 20) + '...', offerHash })
-    
+
     setShowScanner(false)
     setLoyaltyLoading(true)
     setLoyaltyError(null)
-    
+
     try {
       const managerData = getManagerAuthData()
-      
+
       // 🔄 REUSE BRANCH SCANNER LOGIC: Call scan endpoint to add stamp and update passes
       // Construct URL based on whether offerHash is present (new format) or null (legacy format)
-      const scanUrl = offerHash 
+      const scanUrl = offerHash
         ? `${endpoints.branchManagerScan}/${customerToken}/${offerHash}`
         : `${endpoints.branchManagerScan}/${customerToken}`
-      
+
       console.log(`🔗 POS calling scan API with format: ${offerHash ? 'new (token:hash)' : 'legacy (token-only)'}`)
-      
+
       const response = await fetch(scanUrl, {
         method: 'POST',
         headers: {
@@ -108,9 +110,9 @@ export default function CheckoutModal({
           'Content-Type': 'application/json'
         }
       })
-      
+
       const json = await response.json()
-      
+
       console.log('🛒 POS scan response:', {
         success: json.success,
         rewardEarned: json.rewardEarned,
@@ -118,24 +120,27 @@ export default function CheckoutModal({
         offerId: json.offerId,
         progress: json.progress
       })
-      
+
       if (json.success) {
         // Map scan response to loyalty state
         setScannedCustomer({
           customer_id: json.customerId,
           first_name: json.progress?.customerName || 'Customer'
         })
-        
+
         setLoyaltyOffer({
           public_id: json.offerId,
           title: json.progress?.offerTitle || 'Loyalty Offer'
         })
-        
+
+        // Store loyalty warning
+        setLoyaltyWarning(json.offerWarning)
+
         // Handle reward earned - auto-confirm prize
         if (json.rewardEarned) {
           console.log('🔄 POS auto-confirming prize for customer:', json.customerId, 'offer:', json.offerId)
           setPrizeConfirmationStatus('pending')
-          
+
           // Auto-confirm prize (mirroring BranchScanner logic)
           try {
             const confirmResponse = await fetch(
@@ -160,28 +165,28 @@ export default function CheckoutModal({
 
             if (confirmData.success) {
               console.log('✅ POS prize confirmed, stamps reset, wallet updated', confirmData.progress)
-              
+
               // Update with FRESH progress data (reset stamps)
               setLoyaltyProgress({
                 current_stamps: confirmData.progress?.currentStamps || 0,
                 max_stamps: confirmData.progress?.maxStamps || 10,
                 is_completed: confirmData.progress?.isCompleted || false
               })
-              
+
               setPrizeConfirmationStatus('confirmed')
               setTotalCompletions(confirmData.totalCompletions)
               setTierInfo({
                 tier: confirmData.tier,
                 tierUpgrade: confirmData.tierUpgrade
               })
-              
+
               // Auto-select gift_offer payment
               setPaymentMethod('gift_offer')
               setApplyLoyaltyDiscount(true)
               if (onLoyaltyDiscountChange) {
                 onLoyaltyDiscountChange(totals.total)
               }
-              
+
               console.log('🛒 Setting loyalty progress to:', {
                 current_stamps: confirmData.progress?.currentStamps,
                 max_stamps: confirmData.progress?.maxStamps,
@@ -189,17 +194,17 @@ export default function CheckoutModal({
               })
             } else {
               console.error('⚠️ POS prize confirmation failed but stamp was added:', confirmData.error)
-              
+
               // Prize confirmation failed, use scan data
               setLoyaltyProgress({
                 current_stamps: json.progress?.currentStamps || 0,
                 max_stamps: json.progress?.maxStamps || 10,
                 is_completed: json.rewardEarned || false
               })
-              
+
               setPrizeConfirmationStatus('failed')
               setLoyaltyError('Prize confirmed but wallet update may be delayed')
-              
+
               // Still auto-select gift_offer payment
               setPaymentMethod('gift_offer')
               setApplyLoyaltyDiscount(true)
@@ -209,17 +214,17 @@ export default function CheckoutModal({
             }
           } catch (confirmError) {
             console.error('⚠️ POS prize confirmation failed but stamp was added:', confirmError)
-            
+
             // Handle auto-confirm errors without blocking flow
             setLoyaltyProgress({
               current_stamps: json.progress?.currentStamps || 0,
               max_stamps: json.progress?.maxStamps || 10,
               is_completed: json.rewardEarned || false
             })
-            
+
             setPrizeConfirmationStatus('failed')
             setLoyaltyError('Prize confirmed but wallet update may be delayed')
-            
+
             // Still auto-select gift_offer payment
             setPaymentMethod('gift_offer')
             setApplyLoyaltyDiscount(true)
@@ -234,7 +239,7 @@ export default function CheckoutModal({
             max_stamps: json.progress?.maxStamps || 10,
             is_completed: json.rewardEarned || false
           })
-          
+
           console.log('✅ POS scan successful, stamps updated and pass synced')
         }
       } else {
@@ -259,6 +264,7 @@ export default function CheckoutModal({
     setLoyaltyOffer(null)
     setApplyLoyaltyDiscount(false)
     setLoyaltyError(null)
+    setLoyaltyWarning(null)
     setPrizeConfirmationStatus(null)
     setTotalCompletions(null)
     setTierInfo(null)
@@ -321,7 +327,7 @@ export default function CheckoutModal({
       if (json.success) {
         // Store completed sale data
         setCompletedSale(json.sale)
-        
+
         // Show receipt options instead of closing immediately
         setShowReceiptOptions(true)
         setProcessing(false)
@@ -332,7 +338,7 @@ export default function CheckoutModal({
 
     } catch (err) {
       console.error('Sale failed:', err)
-      
+
       // Determine error message
       let errorMessage = t('checkout.error.message')
       if (err.message?.includes('network') || err.message?.includes('fetch')) {
@@ -340,7 +346,7 @@ export default function CheckoutModal({
       } else if (err.message?.includes('500') || err.message?.includes('server')) {
         errorMessage = t('checkout.error.serverError')
       }
-      
+
       setError(errorMessage)
     } finally {
       setProcessing(false)
@@ -354,7 +360,7 @@ export default function CheckoutModal({
           // Open receipt preview modal (parent component will handle this)
           onComplete(completedSale, { action: 'preview' })
           break
-          
+
         case 'print':
           // Call print endpoint
           await managerApiRequest(endpoints.posReceiptPrint(completedSale.public_id), {
@@ -364,16 +370,16 @@ export default function CheckoutModal({
           alert(t('checkout.success.printSuccess'))
           onComplete(completedSale, { action: 'print' })
           break
-          
+
         case 'skip':
           // Just complete without receipt action
           onComplete(completedSale, { action: 'skip' })
           break
       }
-      
+
       // Close modal after action
       onClose()
-      
+
     } catch (error) {
       console.error('Receipt action failed:', error)
       alert(t('checkout.error.receiptActionFailed'))
@@ -406,8 +412,8 @@ export default function CheckoutModal({
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
             {t('checkout.title')}
           </h2>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             disabled={processing}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl sm:text-2xl transition-colors disabled:opacity-50"
             aria-label={t('common.close')}
@@ -415,7 +421,7 @@ export default function CheckoutModal({
             ✕
           </button>
         </div>
-        
+
         {/* Content */}
         <div className="p-3 sm:p-4">
           {/* Order Summary - Compact */}
@@ -428,8 +434,8 @@ export default function CheckoutModal({
                 {cart.map(item => (
                   <div key={item.product.public_id} className="flex justify-between text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                     <span className="truncate mr-2">
-                      {i18n.language === 'ar' && item.product.name_ar 
-                        ? item.product.name_ar 
+                      {i18n.language === 'ar' && item.product.name_ar
+                        ? item.product.name_ar
                         : item.product.name} × {item.quantity}
                     </span>
                     <span className="whitespace-nowrap">{item.total.toFixed(2)} {t('common.sar')}</span>
@@ -455,14 +461,14 @@ export default function CheckoutModal({
                   <span>{t('cart.total')}</span>
                   <span>
                     {applyLoyaltyDiscount && (loyaltyProgress?.is_completed || prizeConfirmationStatus === 'confirmed')
-                      ? '0.00' 
+                      ? '0.00'
                       : totals.total.toFixed(2)} {t('common.sar')}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {/* Loyalty Scanner Section - Compact */}
           <div className="mb-3 sm:mb-4">
             <div className="flex justify-between items-center mb-2">
@@ -478,7 +484,7 @@ export default function CheckoutModal({
                 </button>
               )}
             </div>
-            
+
             {!scannedCustomer ? (
               <button
                 onClick={() => setShowScanner(true)}
@@ -498,7 +504,7 @@ export default function CheckoutModal({
                     <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
                       {scannedCustomer.name || scannedCustomer.first_name || 'Customer'}
                     </p>
-                    
+
                     {/* Prize Confirmed - Show New Cycle */}
                     {prizeConfirmationStatus === 'confirmed' && (
                       <div className="mt-2 space-y-2">
@@ -545,7 +551,7 @@ export default function CheckoutModal({
                         </label>
                       </div>
                     )}
-                    
+
                     {/* Prize Pending/Failed - Show Warning */}
                     {(prizeConfirmationStatus === 'pending' || prizeConfirmationStatus === 'failed') && loyaltyProgress && loyaltyProgress.is_completed && (
                       <div className="mt-2 space-y-2">
@@ -585,17 +591,17 @@ export default function CheckoutModal({
                         </label>
                       </div>
                     )}
-                    
+
                     {/* Regular Progress - No Reward Yet */}
                     {!loyaltyProgress.is_completed && prizeConfirmationStatus !== 'confirmed' && (
                       <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
-                        {t('checkout.loyalty.progress', { 
-                          current: loyaltyProgress.current_stamps, 
-                          max: loyaltyProgress.max_stamps 
+                        {t('checkout.loyalty.progress', {
+                          current: loyaltyProgress.current_stamps,
+                          max: loyaltyProgress.max_stamps
                         })}
                       </p>
                     )}
-                    
+
                     {/* Old Completed State (shouldn't happen with auto-confirm, but fallback) */}
                     {loyaltyProgress.is_completed && !prizeConfirmationStatus && (
                       <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded">
@@ -627,11 +633,50 @@ export default function CheckoutModal({
                         </label>
                       </div>
                     )}
+                    <p className="text-[10px] sm:text-xs mt-1 italic opacity-75">
+                      {t('checkout.loyalty.offerWarnings.note')}
+                    </p>
                   </div>
                 </div>
               </div>
             )}
-            
+
+            {/* Loyalty Warning Alert */}
+            {loyaltyWarning && (
+              <div className={`mt-3 p-3 rounded-lg border-l-4 text-left ${loyaltyWarning.code === 'OFFER_PAUSED' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 text-yellow-800 dark:text-yellow-200' :
+                  loyaltyWarning.code === 'OFFER_INACTIVE' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-800 dark:text-orange-200' :
+                    loyaltyWarning.code === 'OFFER_EXPIRED' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200' :
+                      'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200'
+                }`}>
+                <div className="flex items-start gap-2">
+                  <span className="text-lg">
+                    {loyaltyWarning.code === 'OFFER_PAUSED' ? '⚠️' :
+                      loyaltyWarning.code === 'OFFER_INACTIVE' ? '⚠️' :
+                        loyaltyWarning.code === 'OFFER_EXPIRED' ? '🚫' : 'ℹ️'}
+                  </span>
+                  <div>
+                    <h4 className="font-bold text-xs sm:text-sm mb-0.5">
+                      {t(`checkout.loyalty.offerWarnings.${loyaltyWarning.offerStatus}`)}
+                    </h4>
+                    <p className="text-[10px] sm:text-xs opacity-90 leading-tight">
+                      {loyaltyWarning.code === 'OFFER_EXPIRED'
+                        ? t('checkout.loyalty.offerWarnings.expiredDesc', { date: new Date(loyaltyWarning.expirationDate).toLocaleDateString() })
+                        : t(`checkout.loyalty.offerWarnings.${loyaltyWarning.offerStatus}Desc`)
+                      }
+                    </p>
+                    {loyaltyWarning.code === 'OFFER_TIME_LIMITED' && loyaltyWarning.expirationDate && (
+                      <p className="text-[10px] sm:text-xs mt-1 font-medium">
+                        {t('checkout.loyalty.offerWarnings.expiresOn', { date: new Date(loyaltyWarning.expirationDate).toLocaleDateString() })}
+                      </p>
+                    )}
+                    <p className="text-[10px] sm:text-xs mt-1 italic opacity-75">
+                      {t('checkout.loyalty.offerWarnings.note')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {loyaltyError && (
               <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-xs sm:text-sm text-red-900 dark:text-red-100">
@@ -640,7 +685,7 @@ export default function CheckoutModal({
               </div>
             )}
           </div>
-          
+
           {/* Payment Method Selection - Compact */}
           <div className="mb-3 sm:mb-4">
             <h3 className="text-base sm:text-lg font-semibold mb-2 text-gray-900 dark:text-white">
@@ -651,43 +696,40 @@ export default function CheckoutModal({
               <button
                 onClick={() => handlePaymentMethodSelect('cash')}
                 disabled={processing}
-                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${
-                  paymentMethod === 'cash'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
-                }`}
+                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${paymentMethod === 'cash'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                  }`}
               >
                 <div className="text-2xl sm:text-3xl mb-0.5">💵</div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                   {t('checkout.payment.cash')}
                 </div>
               </button>
-              
+
               {/* Card Button */}
               <button
                 onClick={() => handlePaymentMethodSelect('card')}
                 disabled={processing}
-                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${
-                  paymentMethod === 'card'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
-                }`}
+                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${paymentMethod === 'card'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                  }`}
               >
                 <div className="text-2xl sm:text-3xl mb-0.5">💳</div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                   {t('checkout.payment.card')}
                 </div>
               </button>
-              
+
               {/* Gift Offer Button */}
               <button
                 onClick={() => handlePaymentMethodSelect('gift_offer')}
                 disabled={processing}
-                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${
-                  paymentMethod === 'gift_offer'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
-                }`}
+                className={`h-16 sm:h-20 rounded-lg border-2 transition-all disabled:opacity-50 flex flex-col items-center justify-center ${paymentMethod === 'gift_offer'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                  }`}
               >
                 <div className="text-2xl sm:text-3xl mb-0.5">🎁</div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
@@ -696,7 +738,7 @@ export default function CheckoutModal({
               </button>
             </div>
           </div>
-          
+
           {/* Cash Payment Details - Compact */}
           {paymentMethod === 'cash' && (
             <div className="mb-3 sm:mb-4">
@@ -728,7 +770,7 @@ export default function CheckoutModal({
               )}
             </div>
           )}
-          
+
           {/* Gift Offer Note - Compact */}
           {paymentMethod === 'gift_offer' && (
             <div className="mb-3 sm:mb-4 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
@@ -743,7 +785,7 @@ export default function CheckoutModal({
               )}
             </div>
           )}
-          
+
           {/* Receipt Options - Compact */}
           {showReceiptOptions && completedSale && (
             <div className="mb-3 sm:mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
@@ -759,7 +801,7 @@ export default function CheckoutModal({
               <p className="text-xs sm:text-sm font-semibold mb-2 text-green-900 dark:text-green-100">
                 {t('checkout.success.saleNumber')}: {completedSale.sale_number}
               </p>
-              
+
               {/* Receipt Action Buttons */}
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -783,7 +825,7 @@ export default function CheckoutModal({
               </div>
             </div>
           )}
-          
+
           {/* Error Message - Compact */}
           {error && (
             <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -793,7 +835,7 @@ export default function CheckoutModal({
             </div>
           )}
         </div>
-        
+
         {/* Footer - Compact & Sticky */}
         <div className="sticky bottom-0 bg-white dark:bg-gray-800 flex gap-2 p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700">
           <button
@@ -828,7 +870,7 @@ export default function CheckoutModal({
           )}
         </div>
       </div>
-      
+
       {/* QR Scanner Modal */}
       {showScanner && (
         <EnhancedQRScanner

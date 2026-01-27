@@ -325,6 +325,18 @@
       "title": "New POS System Available",
       "message": "We've integrated loyalty scanning into our new POS system! You can now process sales and redeem loyalty rewards in one place. This scanner will remain available during the transition.",
       "tryPOS": "Try POS System"
+    },
+    "offerWarnings": {
+      "paused": "⚠️ This offer is currently paused",
+      "pausedDesc": "The business has temporarily paused this offer. Stamps are still being awarded.",
+      "inactive": "⚠️ This offer is inactive",
+      "inactiveDesc": "This offer has been deactivated. Stamps are still being awarded for existing customers.",
+      "expired": "⚠️ Offer Expired",
+      "expiredDesc": "This time-limited offer ended on {{date}}.",
+      "notStarted": "⚠️ Offer Not Started",
+      "notStartedDesc": "This loyalty offer is scheduled to start on {{date}}.",
+      "expiresOn": "Expires: {{date}}",
+      "contactBusiness": "Contact business owner for more information."
     }
   }
 }

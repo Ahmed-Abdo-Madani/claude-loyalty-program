@@ -239,3 +239,96 @@ If tests fail unexpectedly:
 
 **Last Updated:** January 2025  
 **Maintained By:** Development Team
+
+## Status Validation Tests
+
+### Overview
+
+The status validation test suite ensures that offer and branch status checks work correctly across all validation points.
+
+### Test Files
+
+- `backend/test/offer-status-validation.test.js` - Offer status validation tests
+- `backend/test/branch-status-validation.test.js` - Branch status validation tests
+- `backend/test/status-validation-integration.test.js` - End-to-end integration tests
+
+### Running Tests
+
+```bash
+# Run all status validation tests
+npm run test:status-validation
+
+# Run individual test suites
+node backend/test/offer-status-validation.test.js
+node backend/test/branch-status-validation.test.js
+node backend/test/status-validation-integration.test.js
+```
+
+### Test Coverage
+
+#### Offer Status Validation
+- ✅ Customer signup blocking for inactive/paused offers
+- ✅ QR scanning non-blocking warnings
+- ✅ POS loyalty validation warnings
+- ✅ Time-limited offer validation
+- ✅ Expiration date handling
+
+#### Branch Status Validation
+- ✅ Branch manager login blocking
+- ✅ POS access control
+- ✅ Status-specific error messages
+- ✅ Business contact information display
+
+#### Integration Tests
+- ✅ End-to-end customer signup flow
+- ✅ End-to-end manager login flow
+- ✅ End-to-end QR scanning flow
+- ✅ End-to-end POS validation flow
+
+### Expected Output
+
+```
+═══════════════════════════════════════════════════════
+TEST SUITE 1: Offer Model Status Methods
+═══════════════════════════════════════════════════════
+
+✅ PASS isActive() returns false for paused offers
+✅ PASS isActive() returns false for inactive offers
+✅ PASS isActive() returns false for expired offers
+✅ PASS isActive() returns true for active offers
+✅ PASS isExpired() returns true when past end_date
+
+═══════════════════════════════════════════════════════
+TEST RESULTS SUMMARY
+═══════════════════════════════════════════════════════
+
+Total Tests:  45
+Passed:       45 ✅
+Failed:       0
+Success Rate: 100.0%
+
+🎉 All tests passed! Status validation is working correctly.
+```
+
+### Troubleshooting Test Failures
+
+**Common Issues:**
+
+1. **Database Connection Errors**
+   - Ensure PostgreSQL is running
+   - Check `DATABASE_URL` environment variable
+   - Run `node backend/test/db-connection-test.js` first
+
+2. **Migration Not Applied**
+   - Run `node backend/migrations/20260126-add-pos-access-enabled-to-branches.js`
+   - Verify `pos_access_enabled` column exists
+
+3. **Model Import Errors**
+   - Ensure all models are properly exported
+   - Check ES module syntax (import/export)
+
+4. **Assertion Failures**
+   - Review error message for expected vs actual values
+   - Check if backend logic changed
+   - Verify test data matches current schema
+

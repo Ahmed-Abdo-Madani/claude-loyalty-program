@@ -28,59 +28,59 @@ const router = express.Router()
 
 function validateProductData(data) {
   const errors = []
-  
+
   if (!data.name || data.name.trim() === '') {
     errors.push('Product name is required')
   }
-  
+
   if (data.price === undefined || data.price === null) {
     errors.push('Product price is required')
   } else if (data.price <= 0) {
     errors.push('Product price must be greater than 0')
   }
-  
+
   if (data.tax_rate !== undefined && (data.tax_rate < 0 || data.tax_rate > 100)) {
     errors.push('Tax rate must be between 0 and 100')
   }
-  
+
   return { valid: errors.length === 0, errors }
 }
 
 function validateSaleData(data) {
   const errors = []
-  
+
   if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
     errors.push('Sale must contain at least one item')
   }
-  
+
   if (!data.paymentMethod) {
     errors.push('Payment method is required')
   } else if (!['cash', 'card', 'gift_offer', 'mixed'].includes(data.paymentMethod)) {
     errors.push('Invalid payment method')
   }
-  
+
   if (data.paymentMethod === 'mixed' && !data.paymentDetails) {
     errors.push('Payment details required for mixed payments')
   }
-  
+
   if (data.discountAmount && data.discountAmount < 0) {
     errors.push('Discount amount cannot be negative')
   }
-  
+
   return { valid: errors.length === 0, errors }
 }
 
 function validateCategoryData(data) {
   const errors = []
-  
+
   if (!data.name || data.name.trim() === '') {
     errors.push('Category name is required')
   }
-  
+
   if (data.display_order !== undefined && (!Number.isInteger(data.display_order) || data.display_order < 0)) {
     errors.push('Display order must be a non-negative integer')
   }
-  
+
   return { valid: errors.length === 0, errors }
 }
 
@@ -95,18 +95,18 @@ function validateCategoryData(data) {
 router.get('/categories', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.businessId
-    
+
     const categories = await ProductCategory.findAll({
       where: { business_id: businessId },
       order: [['display_order', 'ASC'], ['name', 'ASC']],
       attributes: ['public_id', 'name', 'name_ar', 'description', 'display_order', 'status', 'product_count', 'created_at', 'updated_at']
     })
-    
+
     res.json({
       success: true,
       categories
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch categories:', error)
     res.status(500).json({
@@ -125,7 +125,7 @@ router.post('/categories', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.businessId
     const { name, name_ar, description, display_order } = req.body
-    
+
     // Validate input
     const validation = validateCategoryData(req.body)
     if (!validation.valid) {
@@ -135,7 +135,7 @@ router.post('/categories', requireBusinessAuth, async (req, res) => {
         code: 'VALIDATION_ERROR'
       })
     }
-    
+
     // Create category
     const category = await ProductCategory.create({
       business_id: businessId,
@@ -144,14 +144,14 @@ router.post('/categories', requireBusinessAuth, async (req, res) => {
       description: description?.trim(),
       display_order: display_order || 0
     })
-    
+
     logger.info(`Category created: ${category.public_id} for business ${businessId}`)
-    
+
     res.status(201).json({
       success: true,
       category
     })
-    
+
   } catch (error) {
     logger.error('Failed to create category:', error)
     res.status(500).json({
@@ -171,7 +171,7 @@ router.put('/categories/:categoryId', requireBusinessAuth, async (req, res) => {
     const businessId = req.businessId
     const { categoryId } = req.params
     const { name, name_ar, description, display_order, status } = req.body
-    
+
     // Find category and verify ownership
     const category = await ProductCategory.findOne({
       where: {
@@ -179,7 +179,7 @@ router.put('/categories/:categoryId', requireBusinessAuth, async (req, res) => {
         business_id: businessId
       }
     })
-    
+
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -187,23 +187,23 @@ router.put('/categories/:categoryId', requireBusinessAuth, async (req, res) => {
         code: 'CATEGORY_NOT_FOUND'
       })
     }
-    
+
     // Update fields
     if (name) category.name = name.trim()
     if (name_ar !== undefined) category.name_ar = name_ar?.trim()
     if (description !== undefined) category.description = description?.trim()
     if (display_order !== undefined) category.display_order = display_order
     if (status && ['active', 'inactive'].includes(status)) category.status = status
-    
+
     await category.save()
-    
+
     logger.info(`Category updated: ${categoryId}`)
-    
+
     res.json({
       success: true,
       category
     })
-    
+
   } catch (error) {
     logger.error('Failed to update category:', error)
     res.status(500).json({
@@ -222,7 +222,7 @@ router.delete('/categories/:categoryId', requireBusinessAuth, async (req, res) =
   try {
     const businessId = req.businessId
     const { categoryId } = req.params
-    
+
     // Find category and verify ownership
     const category = await ProductCategory.findOne({
       where: {
@@ -230,7 +230,7 @@ router.delete('/categories/:categoryId', requireBusinessAuth, async (req, res) =
         business_id: businessId
       }
     })
-    
+
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -238,7 +238,7 @@ router.delete('/categories/:categoryId', requireBusinessAuth, async (req, res) =
         code: 'CATEGORY_NOT_FOUND'
       })
     }
-    
+
     // Check if category has products
     if (category.product_count > 0) {
       return res.status(400).json({
@@ -247,16 +247,16 @@ router.delete('/categories/:categoryId', requireBusinessAuth, async (req, res) =
         code: 'CATEGORY_HAS_PRODUCTS'
       })
     }
-    
+
     await category.destroy()
-    
+
     logger.info(`Category deleted: ${categoryId}`)
-    
+
     res.json({
       success: true,
       message: 'Category deleted successfully'
     })
-    
+
   } catch (error) {
     logger.error('Failed to delete category:', error)
     res.status(500).json({
@@ -279,10 +279,10 @@ router.get('/products', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.businessId
     const { branchId, categoryId, status, search } = req.query
-    
+
     // Build where clause
     const where = { business_id: businessId }
-    
+
     if (branchId) where.branch_id = branchId
     if (categoryId) where.category_id = categoryId
     if (status) where.status = status
@@ -293,7 +293,7 @@ router.get('/products', requireBusinessAuth, async (req, res) => {
         { sku: { [Op.iLike]: `%${search}%` } }
       ]
     }
-    
+
     const products = await Product.findAll({
       where,
       include: [
@@ -315,12 +315,12 @@ router.get('/products', requireBusinessAuth, async (req, res) => {
         ['name', 'ASC']
       ]
     })
-    
+
     res.json({
       success: true,
       products
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch products:', error)
     res.status(500).json({
@@ -339,7 +339,7 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
   try {
     const businessId = req.businessId
     const { productId } = req.params
-    
+
     const product = await Product.findOne({
       where: {
         public_id: productId,
@@ -359,7 +359,7 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
         }
       ]
     })
-    
+
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -367,12 +367,12 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
         code: 'PRODUCT_NOT_FOUND'
       })
     }
-    
+
     res.json({
       success: true,
       product
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch product:', error)
     res.status(500).json({
@@ -389,7 +389,7 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
  */
 router.post('/products', requireBusinessAuth, async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const businessId = req.businessId
     const {
@@ -406,7 +406,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
       image_url,
       display_order
     } = req.body
-    
+
     // Validate input
     const validation = validateProductData(req.body)
     if (!validation.valid) {
@@ -417,7 +417,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
         code: 'VALIDATION_ERROR'
       })
     }
-    
+
     // Verify branch belongs to business if branch_id provided
     if (branch_id) {
       const branch = await Branch.findOne({
@@ -426,7 +426,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
           business_id: businessId
         }
       })
-      
+
       if (!branch) {
         await transaction.rollback()
         return res.status(400).json({
@@ -436,7 +436,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
         })
       }
     }
-    
+
     // Verify category belongs to business if category_id provided
     if (category_id) {
       const category = await ProductCategory.findOne({
@@ -445,7 +445,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
           business_id: businessId
         }
       })
-      
+
       if (!category) {
         await transaction.rollback()
         return res.status(400).json({
@@ -455,10 +455,10 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
         })
       }
     }
-    
+
     // Normalize SKU - treat empty strings as null
     const normalizedSku = sku && sku.trim() !== '' ? sku.trim() : null
-    
+
     // Check SKU uniqueness within business if provided
     if (normalizedSku) {
       const existingProduct = await Product.findOne({
@@ -467,7 +467,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
           sku: normalizedSku
         }
       })
-      
+
       if (existingProduct) {
         await transaction.rollback()
         return res.status(400).json({
@@ -477,7 +477,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
         })
       }
     }
-    
+
     // Create product
     const product = await Product.create({
       business_id: businessId,
@@ -494,7 +494,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
       image_url: image_url?.trim(),
       display_order: display_order || 0
     }, { transaction })
-    
+
     // Increment category product count if category assigned
     if (category_id) {
       const category = await ProductCategory.findOne({
@@ -502,16 +502,16 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
       })
       await category.incrementProductCount({ transaction })
     }
-    
+
     await transaction.commit()
-    
+
     logger.info(`Product created: ${product.public_id} for business ${businessId}`)
-    
+
     res.status(201).json({
       success: true,
       product
     })
-    
+
   } catch (error) {
     await transaction.rollback()
     logger.error('Failed to create product:', error)
@@ -529,7 +529,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
  */
 router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const businessId = req.businessId
     const { productId } = req.params
@@ -548,7 +548,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
       image_url,
       display_order
     } = req.body
-    
+
     // Find product and verify ownership
     const product = await Product.findOne({
       where: {
@@ -556,7 +556,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
         business_id: businessId
       }
     })
-    
+
     if (!product) {
       await transaction.rollback()
       return res.status(404).json({
@@ -565,9 +565,9 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
         code: 'PRODUCT_NOT_FOUND'
       })
     }
-    
+
     const oldCategoryId = product.category_id
-    
+
     // Verify branch if provided
     if (branch_id !== undefined && branch_id !== null) {
       const branch = await Branch.findOne({
@@ -576,7 +576,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
           business_id: businessId
         }
       })
-      
+
       if (!branch) {
         await transaction.rollback()
         return res.status(400).json({
@@ -586,7 +586,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
         })
       }
     }
-    
+
     // Verify category if provided
     if (category_id !== undefined && category_id !== null) {
       const category = await ProductCategory.findOne({
@@ -595,7 +595,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
           business_id: businessId
         }
       })
-      
+
       if (!category) {
         await transaction.rollback()
         return res.status(400).json({
@@ -605,12 +605,12 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
         })
       }
     }
-    
+
     // Normalize SKU - treat empty strings as null
-    const normalizedSku = sku !== undefined 
+    const normalizedSku = sku !== undefined
       ? (sku && sku.trim() !== '' ? sku.trim() : null)
       : undefined
-    
+
     // Check SKU uniqueness if changing SKU
     if (normalizedSku !== undefined && normalizedSku !== product.sku) {
       if (normalizedSku !== null) {
@@ -621,7 +621,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
             public_id: { [Op.ne]: productId }
           }
         })
-        
+
         if (existingProduct) {
           await transaction.rollback()
           return res.status(400).json({
@@ -632,7 +632,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
         }
       }
     }
-    
+
     // Update fields
     if (name) product.name = name.trim()
     if (name_ar !== undefined) product.name_ar = name_ar?.trim()
@@ -647,9 +647,9 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
     if (status && ['active', 'inactive', 'out_of_stock'].includes(status)) product.status = status
     if (image_url !== undefined) product.image_url = image_url?.trim()
     if (display_order !== undefined) product.display_order = display_order
-    
+
     await product.save({ transaction })
-    
+
     // Update category product counts if category changed
     if (category_id !== undefined && category_id !== oldCategoryId) {
       // Decrement old category
@@ -661,7 +661,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
           await oldCategory.decrementProductCount({ transaction })
         }
       }
-      
+
       // Increment new category
       if (category_id) {
         const newCategory = await ProductCategory.findOne({
@@ -672,16 +672,16 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
         }
       }
     }
-    
+
     await transaction.commit()
-    
+
     logger.info(`Product updated: ${productId}`)
-    
+
     res.json({
       success: true,
       product
     })
-    
+
   } catch (error) {
     await transaction.rollback()
     logger.error('Failed to update product:', error)
@@ -699,11 +699,11 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
  */
 router.delete('/products/:productId', requireBusinessAuth, async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const businessId = req.businessId
     const { productId } = req.params
-    
+
     // Find product and verify ownership
     const product = await Product.findOne({
       where: {
@@ -711,7 +711,7 @@ router.delete('/products/:productId', requireBusinessAuth, async (req, res) => {
         business_id: businessId
       }
     })
-    
+
     if (!product) {
       await transaction.rollback()
       return res.status(404).json({
@@ -720,33 +720,33 @@ router.delete('/products/:productId', requireBusinessAuth, async (req, res) => {
         code: 'PRODUCT_NOT_FOUND'
       })
     }
-    
+
     // Check if product has sale history
     const saleItemCount = await SaleItem.count({
       where: { product_id: productId }
     })
-    
+
     if (saleItemCount > 0) {
       // Soft delete - set status to inactive instead of hard delete
       product.status = 'inactive'
       await product.save({ transaction })
-      
+
       await transaction.commit()
-      
+
       logger.info(`Product soft deleted (set to inactive): ${productId}`)
-      
+
       return res.json({
         success: true,
         message: 'Product set to inactive (has sale history)',
         soft_delete: true
       })
     }
-    
+
     // Hard delete if no sale history
     const categoryId = product.category_id
-    
+
     await product.destroy({ transaction })
-    
+
     // Decrement category product count
     if (categoryId) {
       const category = await ProductCategory.findOne({
@@ -756,16 +756,16 @@ router.delete('/products/:productId', requireBusinessAuth, async (req, res) => {
         await category.decrementProductCount({ transaction })
       }
     }
-    
+
     await transaction.commit()
-    
+
     logger.info(`Product deleted: ${productId}`)
-    
+
     res.json({
       success: true,
       message: 'Product deleted successfully'
     })
-    
+
   } catch (error) {
     await transaction.rollback()
     logger.error('Failed to delete product:', error)
@@ -786,7 +786,7 @@ router.patch('/products/:productId/status', requireBusinessAuth, async (req, res
     const businessId = req.businessId
     const { productId } = req.params
     const { status } = req.body
-    
+
     if (!status || !['active', 'inactive', 'out_of_stock'].includes(status)) {
       return res.status(400).json({
         success: false,
@@ -794,7 +794,7 @@ router.patch('/products/:productId/status', requireBusinessAuth, async (req, res
         code: 'INVALID_STATUS'
       })
     }
-    
+
     // Find product and verify ownership
     const product = await Product.findOne({
       where: {
@@ -802,7 +802,7 @@ router.patch('/products/:productId/status', requireBusinessAuth, async (req, res
         business_id: businessId
       }
     })
-    
+
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -810,17 +810,17 @@ router.patch('/products/:productId/status', requireBusinessAuth, async (req, res
         code: 'PRODUCT_NOT_FOUND'
       })
     }
-    
+
     product.status = status
     await product.save()
-    
+
     logger.info(`Product status updated: ${productId} to ${status}`)
-    
+
     res.json({
       success: true,
       product
     })
-    
+
   } catch (error) {
     logger.error('Failed to update product status:', error)
     res.status(500).json({
@@ -845,7 +845,7 @@ router.get('/manager/products', requireBranchManagerAuth, async (req, res) => {
     const { branchId, branch } = req
     const businessId = branch.business_id
     const { status } = req.query
-    
+
     // Build where clause
     const whereClause = {
       business_id: businessId,
@@ -854,12 +854,12 @@ router.get('/manager/products', requireBranchManagerAuth, async (req, res) => {
         { branch_id: null }          // All-branches products
       ]
     }
-    
+
     // Filter by status if provided
     if (status) {
       whereClause.status = status
     }
-    
+
     const products = await Product.findAll({
       where: whereClause,
       include: [
@@ -871,32 +871,32 @@ router.get('/manager/products', requireBranchManagerAuth, async (req, res) => {
       ],
       order: [['name', 'ASC']],
       attributes: [
-  'public_id', 
-  'sku', 
-  'name', 
-  'name_ar', 
-  'description',
-  'price', 
-  'cost', 
-  'tax_rate', 
-  'tax_included',
-  'category_id',
-  'image_url', 
-  'status', 
-  'branch_id',
-  'created_at',
-  'updated_at'
+        'public_id',
+        'sku',
+        'name',
+        'name_ar',
+        'description',
+        'price',
+        'cost',
+        'tax_rate',
+        'tax_included',
+        'category_id',
+        'image_url',
+        'status',
+        'branch_id',
+        'created_at',
+        'updated_at'
       ]
     })
-    
+
     logger.info(`Manager retrieved ${products.length} products for branch ${branchId}`)
-    
+
     res.json({
       success: true,
       products,
       count: products.length
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch products for manager:', error)
     res.status(500).json({
@@ -915,29 +915,29 @@ router.get('/manager/categories', requireBranchManagerAuth, async (req, res) => 
   try {
     const { branch } = req
     const businessId = branch.business_id
-    
+
     const categories = await ProductCategory.findAll({
       where: { business_id: businessId },
       order: [['display_order', 'ASC'], ['name', 'ASC']],
       attributes: [
-        'public_id', 
-        'name', 
-        'name_ar', 
-        'description', 
-        'display_order', 
-        'status', 
+        'public_id',
+        'name',
+        'name_ar',
+        'description',
+        'display_order',
+        'status',
         'product_count'
       ]
     })
-    
+
     logger.info(`Manager retrieved ${categories.length} categories for business ${businessId}`)
-    
+
     res.json({
       success: true,
       categories,
       count: categories.length
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch categories for manager:', error)
     res.status(500).json({
@@ -961,7 +961,7 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
     const { branchId, branch } = req
     const businessId = branch.business_id
     let { customerToken, offerHash } = req.body
-    
+
     // Validate required fields (offerHash may be null for legacy QRs)
     if (!customerToken) {
       return res.status(400).json({
@@ -969,9 +969,9 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
         error: 'Customer token is required'
       })
     }
-    
+
     logger.debug('POS loyalty validation attempt:', { branchId, businessId })
-    
+
     // 1. Decode customer token
     const tokenData = CustomerService.decodeCustomerToken(customerToken)
     if (!tokenData || !tokenData.isValid) {
@@ -981,9 +981,9 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
         error: 'Invalid customer token'
       })
     }
-    
+
     const { customerId, businessId: tokenBusinessId } = tokenData
-    
+
     // 2. Validate business matches
     if (tokenBusinessId !== businessId) {
       logger.warn('Business mismatch in POS loyalty validation:', {
@@ -995,7 +995,7 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
         error: 'This loyalty card is for a different business'
       })
     }
-    
+
     // 3. Find offer by hash (or auto-detect for legacy QRs)
     let offer
     if (offerHash === null || offerHash === undefined) {
@@ -1020,31 +1020,83 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
         })
       }
     }
-    
+
+    // --- OFFER STATUS VALIDATION (Non-blocking) ---
+    let offerWarning = null
+    const now = new Date()
+
+    if (!offer.isActive()) {
+      // If the offer is not active, determine why to provide the correct warning code
+      if (offer.status === 'paused') {
+        offerWarning = {
+          code: 'OFFER_PAUSED',
+          message: 'This offer is currently paused',
+          offerStatus: 'paused'
+        }
+      } else if (offer.status === 'inactive') {
+        offerWarning = {
+          code: 'OFFER_INACTIVE',
+          message: 'This offer is inactive',
+          offerStatus: 'inactive'
+        }
+      } else if (offer.status === 'expired' || offer.isExpired()) {
+        offerWarning = {
+          code: 'OFFER_EXPIRED',
+          message: 'This offer has expired',
+          offerStatus: 'expired',
+          expirationDate: offer.end_date
+        }
+      } else if (offer.is_time_limited && offer.start_date && now < new Date(offer.start_date)) {
+        offerWarning = {
+          code: 'OFFER_NOT_STARTED',
+          message: 'This offer has not started yet',
+          offerStatus: 'inactive', // Will show as inactive UI-wise
+          startDate: offer.start_date
+        }
+      }
+    } else if (offer.is_time_limited && offer.end_date) {
+      // Offer IS active but is time-limited (about to expire)
+      offerWarning = {
+        code: 'OFFER_TIME_LIMITED',
+        message: 'This offer is active but has an expiration date',
+        offerStatus: 'active',
+        expirationDate: offer.end_date
+      }
+    }
+
+    if (offerWarning) {
+      logger.info('Offer warning detected during POS validation:', {
+        offerId: offer.public_id,
+        warningCode: offerWarning.code,
+        status: offer.status
+      })
+    }
+    // ----------------------------------------------
+
     // 4. Find or create customer progress
     let progress = await CustomerService.findCustomerProgress(customerId, offer.public_id)
     if (!progress) {
       progress = await CustomerService.createCustomerProgress(customerId, offer.public_id, businessId)
     }
-    
+
     // 5. Calculate customer tier
     const tierData = await CustomerService.calculateCustomerTier(customerId, offer.public_id)
-    
+
     // 6. Get customer details
     const customer = await Customer.findOne({
       where: { customer_id: customerId, business_id: businessId }
     })
-    
+
     if (!customer) {
       return res.status(404).json({
         success: false,
         error: 'Customer not found'
       })
     }
-    
+
     // 7. Check if reward can be redeemed
     const canRedeemReward = progress.is_completed === true
-    
+
     logger.debug('POS loyalty validation successful:', {
       customerId,
       offerId: offer.public_id,
@@ -1052,7 +1104,7 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
       isCompleted: progress.is_completed,
       canRedeem: canRedeemReward
     })
-    
+
     // 8. Return validation response
     res.json({
       success: true,
@@ -1074,9 +1126,10 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
       },
       tier: tierData,
       canRedeemReward,
-      rewardValue: offer.reward_value || 0
+      rewardValue: offer.reward_value || 0,
+      offerWarning // Include the warning object
     })
-    
+
   } catch (error) {
     logger.error('POS loyalty validation error:', error)
     res.status(500).json({
@@ -1097,7 +1150,7 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
  */
 router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOperations'), async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const { branchId, branch } = req
     const businessId = branch.business_id
@@ -1110,7 +1163,7 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
       notes,
       loyaltyRedemption
     } = req.body
-    
+
     // Validate sale data
     const validation = validateSaleData(req.body)
     if (!validation.valid) {
@@ -1121,16 +1174,16 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         code: 'VALIDATION_ERROR'
       })
     }
-    
+
     // Initialize loyalty variables
     let loyaltyDiscountAmount = 0
     let loyaltyCustomerId = customerId || null
     let progress = null
-    
+
     // Validate loyalty redemption if provided
     if (loyaltyRedemption) {
       const { customerId: loyaltyCustomerIdParam, offerId, rewardValue } = loyaltyRedemption
-      
+
       if (!loyaltyCustomerIdParam || !offerId) {
         await transaction.rollback()
         return res.status(400).json({
@@ -1139,12 +1192,12 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
           code: 'INVALID_LOYALTY_REDEMPTION'
         })
       }
-      
+
       // Validate customer exists
       const customer = await Customer.findOne({
         where: { customer_id: loyaltyCustomerIdParam, business_id: businessId }
       })
-      
+
       if (!customer) {
         await transaction.rollback()
         return res.status(404).json({
@@ -1153,15 +1206,15 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
           code: 'CUSTOMER_NOT_FOUND'
         })
       }
-      
+
       // Validate offer exists
       const offer = await Offer.findOne({
-        where: { 
+        where: {
           public_id: offerId,
           business_id: businessId
         }
       })
-      
+
       if (!offer) {
         await transaction.rollback()
         return res.status(404).json({
@@ -1170,7 +1223,7 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
           code: 'OFFER_NOT_FOUND'
         })
       }
-      
+
       // Fetch customer progress
       progress = await CustomerProgress.findOne({
         where: {
@@ -1178,7 +1231,7 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
           offer_id: offerId
         }
       })
-      
+
       if (!progress || !progress.is_completed) {
         await transaction.rollback()
         return res.status(400).json({
@@ -1187,18 +1240,18 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
           code: 'REWARD_NOT_AVAILABLE'
         })
       }
-      
+
       // Set loyalty discount
       loyaltyDiscountAmount = parseFloat(rewardValue) || 0
       loyaltyCustomerId = loyaltyCustomerIdParam
-      
+
       logger.info('Processing loyalty redemption:', {
         customerId: loyaltyCustomerId,
         offerId,
         rewardValue: loyaltyDiscountAmount
       })
     }
-    
+
     // Validate all products exist and are available
     const productIds = items.map(item => item.productId)
     const products = await Product.findAll({
@@ -1212,7 +1265,7 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         ]
       }
     })
-    
+
     if (products.length !== productIds.length) {
       await transaction.rollback()
       return res.status(400).json({
@@ -1221,13 +1274,13 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         code: 'INVALID_PRODUCTS'
       })
     }
-    
+
     // Create product lookup map
     const productMap = {}
     products.forEach(p => {
       productMap[p.public_id] = p
     })
-    
+
     // Enforce branch-specific product availability
     for (const item of items) {
       const product = productMap[item.productId]
@@ -1239,7 +1292,7 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
           code: 'INVALID_PRODUCTS'
         })
       }
-      
+
       // Product must either be branch-agnostic (branch_id = null) or assigned to this branch
       if (product.branch_id !== null && product.branch_id !== branchId) {
         await transaction.rollback()
@@ -1250,19 +1303,19 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         })
       }
     }
-    
+
     // Calculate sale totals
     const saleItemsData = items.map(item => {
       const product = productMap[item.productId]
       let unitPrice = parseFloat(product.price)
       const quantity = parseInt(item.quantity)
       const taxRate = parseFloat(product.tax_rate)
-      
+
       // If tax is included in the product price, extract the base price
       if (product.tax_included) {
         unitPrice = taxCalculator.calculatePriceWithoutTax(unitPrice, taxRate)
       }
-      
+
       return {
         productId: item.productId,
         quantity,
@@ -1272,23 +1325,23 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         notes: item.notes
       }
     })
-    
+
     // Calculate totals without discount first to determine max discount
     const totalsRaw = taxCalculator.calculateSaleTotals(
       saleItemsData.map(i => ({ quantity: i.quantity, unitPrice: i.unitPrice, taxRate: i.taxRate })),
       0
     )
-    
+
     // Clamp loyalty discount to prevent negative totals
     const maxDiscount = totalsRaw.subtotal + totalsRaw.taxAmount
     loyaltyDiscountAmount = Math.min(loyaltyDiscountAmount, maxDiscount)
-    
+
     // Calculate final totals with clamped discount
     const totals = taxCalculator.calculateSaleTotals(
       saleItemsData.map(i => ({ quantity: i.quantity, unitPrice: i.unitPrice, taxRate: i.taxRate })),
       (discountAmount || 0) + loyaltyDiscountAmount
     )
-    
+
     // Create sale
     const sale = await Sale.create({
       business_id: businessId,
@@ -1306,12 +1359,12 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
       sale_date: new Date(),
       created_by_manager: req.managerName || null
     }, { transaction })
-    
+
     // Create sale items
     const saleItems = []
     for (const itemData of saleItemsData) {
       const product = productMap[itemData.productId]
-      
+
       const saleItem = await SaleItem.create({
         sale_id: sale.public_id,
         product_id: product.public_id,
@@ -1325,14 +1378,14 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         total: taxCalculator.calculatePriceWithTax(itemData.unitPrice * itemData.quantity, itemData.taxRate),
         notes: itemData.notes || null
       }, { transaction })
-      
+
       saleItems.push(saleItem)
-      
+
       // Update product analytics
       const revenue = parseFloat(saleItem.total)
       await product.incrementSold(itemData.quantity, revenue, { transaction })
     }
-    
+
     // Generate complete receipt content using ReceiptService
     // CRITICAL: Pass transaction to ensure receipt generation can see the uncommitted sale
     const receiptContent = await ReceiptService.generateReceiptContent(sale.public_id, {
@@ -1347,14 +1400,14 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
       format: 'digital',
       content_json: receiptContent
     }, { transaction })
-    
+
     // Claim loyalty reward if redemption was processed
     let loyaltyRedemptionResult = null
     if (loyaltyRedemption && progress) {
       try {
         await progress.claimReward(branchId, 'Redeemed via POS')
         await progress.reload({ transaction })
-        
+
         loyaltyRedemptionResult = {
           rewardClaimed: true,
           newProgress: {
@@ -1362,7 +1415,7 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
             rewards_claimed: progress.rewards_claimed
           }
         }
-        
+
         logger.info('Loyalty reward claimed successfully:', {
           customerId: loyaltyRedemption.customerId,
           offerId: loyaltyRedemption.offerId,
@@ -1375,11 +1428,11 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         // The sale is already complete, reward can be manually adjusted if needed
       }
     }
-    
+
     await transaction.commit()
-    
+
     logger.info(`Sale created: ${sale.public_id} (${sale.sale_number}) for branch ${branchId}`)
-    
+
     // Fetch complete sale with associations
     const completeSale = await Sale.findOne({
       where: { public_id: sale.public_id },
@@ -1399,14 +1452,14 @@ router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOpera
         }
       ]
     })
-    
+
     res.status(201).json({
       success: true,
       sale: completeSale,
       receipt: receipt,
       loyaltyRedemption: loyaltyRedemptionResult
     })
-    
+
   } catch (error) {
     await transaction.rollback()
     logger.error('Failed to create sale:', error)
@@ -1427,19 +1480,19 @@ router.get('/sales', requireBranchManagerAuth, async (req, res) => {
   try {
     const { branchId } = req
     const { startDate, endDate, status, paymentMethod, limit, offset } = req.query
-    
+
     // Build where clause
     const where = { branch_id: branchId }
-    
+
     if (status) where.status = status
     if (paymentMethod) where.payment_method = paymentMethod
-    
+
     if (startDate || endDate) {
       where.sale_date = {}
       if (startDate) where.sale_date[Op.gte] = new Date(startDate)
       if (endDate) where.sale_date[Op.lte] = new Date(endDate)
     }
-    
+
     const sales = await Sale.findAll({
       where,
       include: [
@@ -1465,12 +1518,12 @@ router.get('/sales', requireBranchManagerAuth, async (req, res) => {
       limit: limit ? parseInt(limit) : 50,
       offset: offset ? parseInt(offset) : 0
     })
-    
+
     res.json({
       success: true,
       sales
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch sales:', error)
     res.status(500).json({
@@ -1489,7 +1542,7 @@ router.get('/sales/:saleId', requireBranchManagerAuth, async (req, res) => {
   try {
     const { branchId } = req
     const { saleId } = req.params
-    
+
     const sale = await Sale.findOne({
       where: {
         public_id: saleId,
@@ -1519,7 +1572,7 @@ router.get('/sales/:saleId', requireBranchManagerAuth, async (req, res) => {
         }
       ]
     })
-    
+
     if (!sale) {
       return res.status(404).json({
         success: false,
@@ -1527,12 +1580,12 @@ router.get('/sales/:saleId', requireBranchManagerAuth, async (req, res) => {
         code: 'SALE_NOT_FOUND'
       })
     }
-    
+
     res.json({
       success: true,
       sale
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch sale:', error)
     res.status(500).json({
@@ -1549,12 +1602,12 @@ router.get('/sales/:saleId', requireBranchManagerAuth, async (req, res) => {
  */
 router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const { branchId } = req
     const { saleId } = req.params
     const { reason } = req.body
-    
+
     if (!reason || reason.trim() === '') {
       await transaction.rollback()
       return res.status(400).json({
@@ -1563,7 +1616,7 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
         code: 'REASON_REQUIRED'
       })
     }
-    
+
     // Find sale and verify it belongs to branch
     const sale = await Sale.findOne({
       where: {
@@ -1577,7 +1630,7 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
         }
       ]
     })
-    
+
     if (!sale) {
       await transaction.rollback()
       return res.status(404).json({
@@ -1586,7 +1639,7 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
         code: 'SALE_NOT_FOUND'
       })
     }
-    
+
     // Check if sale can be refunded
     if (!sale.canRefund()) {
       await transaction.rollback()
@@ -1596,10 +1649,10 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
         code: 'CANNOT_REFUND'
       })
     }
-    
+
     // Update sale status
     await sale.markAsRefunded({ transaction })
-    
+
     // Update product analytics (decrement sold counts)
     for (const item of sale.items) {
       const product = await Product.findByPk(item.product_id)
@@ -1609,20 +1662,20 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
         await product.save({ transaction })
       }
     }
-    
+
     // Add refund note
     sale.notes = (sale.notes || '') + `\n[REFUND] ${new Date().toISOString()}: ${reason}`
     await sale.save({ transaction })
-    
+
     await transaction.commit()
-    
+
     logger.info(`Sale refunded: ${saleId}`)
-    
+
     res.json({
       success: true,
       sale
     })
-    
+
   } catch (error) {
     await transaction.rollback()
     logger.error('Failed to refund sale:', error)
@@ -1640,12 +1693,12 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
  */
 router.post('/sales/:saleId/cancel', requireBranchManagerAuth, async (req, res) => {
   const transaction = await sequelize.transaction()
-  
+
   try {
     const { branchId } = req
     const { saleId } = req.params
     const { reason } = req.body
-    
+
     if (!reason || reason.trim() === '') {
       await transaction.rollback()
       return res.status(400).json({
@@ -1654,7 +1707,7 @@ router.post('/sales/:saleId/cancel', requireBranchManagerAuth, async (req, res) 
         code: 'REASON_REQUIRED'
       })
     }
-    
+
     // Find sale and verify it belongs to branch
     const sale = await Sale.findOne({
       where: {
@@ -1669,7 +1722,7 @@ router.post('/sales/:saleId/cancel', requireBranchManagerAuth, async (req, res) 
         }
       ]
     })
-    
+
     if (!sale) {
       await transaction.rollback()
       return res.status(404).json({
@@ -1678,10 +1731,10 @@ router.post('/sales/:saleId/cancel', requireBranchManagerAuth, async (req, res) 
         code: 'SALE_NOT_FOUND'
       })
     }
-    
+
     // Update sale status
     await sale.markAsCancelled({ transaction })
-    
+
     // Update product analytics (decrement sold counts)
     for (const item of sale.items) {
       const product = await Product.findByPk(item.product_id)
@@ -1691,20 +1744,20 @@ router.post('/sales/:saleId/cancel', requireBranchManagerAuth, async (req, res) 
         await product.save({ transaction })
       }
     }
-    
+
     // Add cancellation note
     sale.notes = (sale.notes || '') + `\n[CANCELLED] ${new Date().toISOString()}: ${reason}`
     await sale.save({ transaction })
-    
+
     await transaction.commit()
-    
+
     logger.info(`Sale cancelled: ${saleId}`)
-    
+
     res.json({
       success: true,
       sale
     })
-    
+
   } catch (error) {
     await transaction.rollback()
     logger.error('Failed to cancel sale:', error)
@@ -1728,7 +1781,7 @@ router.get('/receipts/:saleId', requireBranchManagerAuth, async (req, res) => {
   try {
     const { branchId } = req
     const { saleId } = req.params
-    
+
     // Verify sale belongs to branch
     const sale = await Sale.findOne({
       where: {
@@ -1736,7 +1789,7 @@ router.get('/receipts/:saleId', requireBranchManagerAuth, async (req, res) => {
         branch_id: branchId
       }
     })
-    
+
     if (!sale) {
       return res.status(404).json({
         success: false,
@@ -1744,11 +1797,11 @@ router.get('/receipts/:saleId', requireBranchManagerAuth, async (req, res) => {
         code: 'SALE_NOT_FOUND'
       })
     }
-    
+
     const receipt = await Receipt.findOne({
       where: { sale_id: saleId }
     })
-    
+
     if (!receipt) {
       return res.status(404).json({
         success: false,
@@ -1756,12 +1809,12 @@ router.get('/receipts/:saleId', requireBranchManagerAuth, async (req, res) => {
         code: 'RECEIPT_NOT_FOUND'
       })
     }
-    
+
     res.json({
       success: true,
       receipt
     })
-    
+
   } catch (error) {
     logger.error('Failed to fetch receipt:', error)
     res.status(500).json({

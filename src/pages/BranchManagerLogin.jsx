@@ -14,6 +14,7 @@ export default function BranchManagerLogin() {
   const [error, setError] = useState('')
   const [showPinInput, setShowPinInput] = useState(false)
   const [showPin, setShowPin] = useState(false)
+  const [errorDetails, setErrorDetails] = useState(null)
 
   // Auto-fill branch ID from URL parameter and advance to PIN input
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function BranchManagerLogin() {
 
   const handleBranchIdSubmit = (e) => {
     e.preventDefault()
-    
+
     if (!branchId.trim()) {
       setError(t('branchManagerAuth.errors.branchIdRequired'))
       return
@@ -44,7 +45,7 @@ export default function BranchManagerLogin() {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    
+
     if (!pin.trim()) {
       setError(t('branchManagerAuth.errors.pinRequired'))
       return
@@ -65,14 +66,35 @@ export default function BranchManagerLogin() {
 
     try {
       const result = await managerLogin(branchId, pin)
-      
+
       if (result.success) {
         navigate('/branch-pos')
       } else {
-        setError(result.error || t('branchManagerAuth.errors.loginFailed'))
+        // Map error codes to translations
+        let errorMessage = result.error || t('branchManagerAuth.errors.loginFailed')
+
+        if (result.errorCode) {
+          setErrorDetails({
+            code: result.errorCode,
+            businessContact: result.businessContact
+          })
+
+          if (result.errorCode === 'BRANCH_INACTIVE') {
+            errorMessage = t('branchManagerAuth.errors.branchInactive')
+          } else if (result.errorCode === 'BRANCH_CLOSED') {
+            errorMessage = t('branchManagerAuth.errors.branchClosed')
+          } else if (result.errorCode === 'POS_ACCESS_DISABLED') {
+            errorMessage = t('branchManagerAuth.errors.posAccessDisabled')
+          }
+        } else {
+          setErrorDetails(null)
+        }
+
+        setError(errorMessage)
       }
     } catch (err) {
       setError(t('branchManagerAuth.errors.loginFailed'))
+      setErrorDetails(null)
     } finally {
       setLoading(false)
     }
@@ -82,12 +104,13 @@ export default function BranchManagerLogin() {
     setShowPinInput(false)
     setPin('')
     setError('')
+    setErrorDetails(null)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <SEO titleKey="pages.branchManager.title" descriptionKey="pages.branchManager.description" noindex={true} />
-      
+
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -104,12 +127,65 @@ export default function BranchManagerLogin() {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <div className="flex items-center text-red-800 dark:text-red-200">
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <span>{error}</span>
+          <div className="mb-6 overflow-hidden">
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg shadow-sm">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-red-800 dark:text-red-200 font-bold text-sm uppercase tracking-wider">
+                      {errorDetails?.code || 'ERROR'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </p>
+
+                  {errorDetails?.businessContact && (
+                    <div className="mt-4 pt-3 border-t border-red-200 dark:border-red-800/50">
+                      <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-2 uppercase tracking-wide">
+                        {t('branchManagerAuth.errors.contactBusiness', {
+                          name: errorDetails.businessContact.name || 'Business Owner',
+                          phone: ''
+                        }).split(':')[0]}:
+                      </p>
+                      <div className="space-y-2">
+                        {errorDetails.businessContact.name && (
+                          <div className="text-sm text-red-950 dark:text-red-100 font-medium">
+                            {errorDetails.businessContact.name}
+                          </div>
+                        )}
+                        {errorDetails.businessContact.phone && (
+                          <a
+                            href={`tel:${errorDetails.businessContact.phone}`}
+                            className="flex items-center text-sm text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 transition-colors"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            {errorDetails.businessContact.phone}
+                          </a>
+                        )}
+                        {errorDetails.businessContact.email && (
+                          <a
+                            href={`mailto:${errorDetails.businessContact.email}`}
+                            className="flex items-center text-sm text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 transition-colors"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            {errorDetails.businessContact.email}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

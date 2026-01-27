@@ -58,7 +58,14 @@
       "goBack": "Go Back",
       "noOfferSelected": "No Offer Selected",
       "selectValidOffer": "Please select a valid offer to continue.",
-      "loadingOffer": "Loading offer details..."
+      "loadingOffer": "Loading offer details...",
+      "offerUnavailable": "Offer Not Available",
+      "offerPaused": "This loyalty offer has been temporarily paused by the business.",
+      "offerInactive": "This loyalty offer is currently inactive.",
+      "offerExpired": "This loyalty offer has expired.",
+      "offerNotActive": "This offer is not currently available for new registrations.",
+      "contactBusinessMessage": "Please contact the business for more information:",
+      "checkBackLater": "Please check back later or contact the business directly."
     },
     "wallet": {
       "addedSuccessfully": "Added Successfully!",

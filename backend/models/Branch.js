@@ -100,6 +100,12 @@ const Branch = sequelize.define('Branch', {
     allowNull: true,
     comment: 'Last time branch manager logged in'
   },
+  pos_access_enabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    allowNull: false,
+    comment: 'Whether POS access is enabled for this branch (independent of branch status)'
+  },
   status: {
     type: DataTypes.ENUM('active', 'inactive', 'closed'),
     defaultValue: 'active'
@@ -140,32 +146,32 @@ const Branch = sequelize.define('Branch', {
 })
 
 // Instance methods
-Branch.prototype.isOpen = function() {
+Branch.prototype.isOpen = function () {
   return this.status === 'active'
 }
 
-Branch.prototype.verifyManagerPin = async function(pin) {
+Branch.prototype.verifyManagerPin = async function (pin) {
   if (!this.manager_pin || !this.manager_pin_enabled) {
     return false
   }
-  
+
   const isValid = await bcrypt.compare(pin, this.manager_pin)
-  
+
   if (isValid) {
     this.manager_last_login = new Date()
     await this.save()
   }
-  
+
   return isValid
 }
 
-Branch.prototype.incrementCustomers = async function() {
+Branch.prototype.incrementCustomers = async function () {
   this.customers = (this.customers || 0) + 1
   await this.save()
   return this
 }
 
-Branch.prototype.updateActiveOffers = async function(count) {
+Branch.prototype.updateActiveOffers = async function (count) {
   this.active_offers = count
   await this.save()
   return this

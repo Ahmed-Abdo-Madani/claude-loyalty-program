@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import Branch from '../models/Branch.js'
+import Business from '../models/Business.js'
 import logger from '../config/logger.js'
 
 /**
@@ -23,26 +24,6 @@ export const requireBranchManagerAuth = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: 'Invalid branch ID format'
-      })
-    }
-
-    // Find branch
-    const branch = await Branch.findOne({
-      where: { public_id: branchId }
-    })
-
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        error: 'Branch not found'
-      })
-    }
-
-    // Verify manager login is enabled
-    if (!branch.manager_pin_enabled) {
-      return res.status(403).json({
-        success: false,
-        error: 'Manager login is disabled for this branch'
       })
     }
 
@@ -75,6 +56,64 @@ export const requireBranchManagerAuth = async (req, res, next) => {
         error: 'Token does not match branch'
       })
     }
+
+    // Find branch with business association
+    const branch = await Branch.findOne({
+      where: { public_id: branchId },
+      include: [{
+        model: Business,
+        as: 'business',
+        attributes: ['business_name', 'phone', 'email']
+      }]
+    })
+
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        error: 'Branch not found'
+      })
+    }
+
+    // Verify manager login is enabled
+    if (!branch.manager_pin_enabled) {
+      return res.status(403).json({
+        success: false,
+        error: 'Manager login is disabled for this branch'
+      })
+    }
+
+    // --- Branch Status & POS Access Validation ---
+    if (branch.status !== 'active') {
+      const errorCode = branch.status === 'inactive' ? 'BRANCH_INACTIVE' : 'BRANCH_CLOSED'
+      return res.status(403).json({
+        success: false,
+        errorCode,
+        error: branch.status === 'inactive'
+          ? 'This branch is currently inactive. Please contact your business owner.'
+          : 'This branch has been closed. Please contact your business owner.',
+        branchStatus: branch.status,
+        businessContact: {
+          name: branch.business?.business_name,
+          phone: branch.business?.phone,
+          email: branch.business?.email
+        }
+      })
+    }
+
+    if (branch.pos_access_enabled === false) {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'POS_ACCESS_DISABLED',
+        error: 'POS access is temporarily disabled for this branch.',
+        branchStatus: branch.status,
+        businessContact: {
+          name: branch.business?.business_name,
+          phone: branch.business?.phone,
+          email: branch.business?.email
+        }
+      })
+    }
+    // --------------------------------------------
 
     // Check token expiration (8 hours)
     const now = Math.floor(Date.now() / 1000)
@@ -142,7 +181,7 @@ export const verifyManagerToken = (token) => {
     }
 
     const decoded = jwt.verify(token, jwtSecret)
-    
+
     if (decoded.type !== 'branch_manager') {
       return null
     }

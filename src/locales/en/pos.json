@@ -1,13 +1,11 @@
 {
   "title": "Point of Sale",
   "description": "Branch manager POS system for processing sales",
-  
   "header": {
     "pos": "POS System",
     "branch": "Branch",
     "logout": "Logout"
   },
-  
   "products": {
     "title": "Products",
     "search": "Search products...",
@@ -27,7 +25,6 @@
       "switchToGrid": "Switch to grid view"
     }
   },
-  
   "cart": {
     "title": "Current Order",
     "empty": "Cart is empty",
@@ -46,7 +43,6 @@
     "increase": "Increase quantity",
     "decrease": "Decrease quantity"
   },
-  
   "checkout": {
     "title": "Checkout",
     "orderSummary": "Order Summary",
@@ -55,7 +51,6 @@
     "completeSale": "Complete Sale",
     "processing": "Processing...",
     "cancel": "Cancel",
-    
     "payment": {
       "cash": "Cash",
       "card": "Card",
@@ -66,7 +61,6 @@
       "insufficientCash": "Insufficient cash received",
       "giftOfferNote": "Gift offer redemption will be available in the next update. For now, this records the payment as a gift offer."
     },
-    
     "loyalty": {
       "title": "Customer Loyalty",
       "scanCard": "Scan Loyalty Card",
@@ -93,15 +87,25 @@
       "success": {
         "rewardRedeemed": "Reward redeemed successfully!",
         "stampsReset": "Stamps reset to 0. New cycle started."
+      },
+      "offerWarnings": {
+        "paused": "⚠️ Offer Paused",
+        "pausedDesc": "This loyalty offer is currently paused by the business.",
+        "inactive": "⚠️ Offer Inactive",
+        "inactiveDesc": "This loyalty offer has been deactivated.",
+        "expired": "⚠️ Offer Expired",
+        "expiredDesc": "This time-limited offer ended on {{date}}.",
+        "notStarted": "⚠️ Offer Not Started",
+        "notStartedDesc": "This loyalty offer is scheduled to start on {{date}}.",
+        "expiresOn": "Expires: {{date}}",
+        "note": "Stamps are still being awarded for existing customers."
       }
     },
-    
     "validation": {
       "selectPaymentMethod": "Please select a payment method",
       "enterCashAmount": "Please enter cash received amount",
       "insufficientAmount": "Cash received must be greater than or equal to total"
     },
-    
     "success": {
       "title": "Sale Completed!",
       "message": "Transaction completed successfully",
@@ -119,7 +123,6 @@
       "newSale": "New Sale",
       "close": "Close"
     },
-    
     "error": {
       "title": "Sale Failed",
       "message": "Failed to complete sale. Please try again.",
@@ -129,7 +132,6 @@
       "receiptActionFailed": "Receipt action failed. Please try again."
     }
   },
-  
   "receipt": {
     "preview": "Receipt Preview",
     "loading": "Loading receipt...",
@@ -157,12 +159,10 @@
     "thankYou": "Thank you for your business!",
     "error": "Failed to load receipt"
   },
-  
   "categories": {
     "all": "All",
     "loading": "Loading categories..."
   },
-  
   "messages": {
     "productAdded": "Product added to cart",
     "productRemoved": "Product removed from cart",
@@ -172,7 +172,6 @@
     "loadingFailed": "Failed to load products",
     "unauthorized": "Unauthorized. Please login again."
   },
-  
   "common": {
     "sar": "SAR",
     "loading": "Loading...",

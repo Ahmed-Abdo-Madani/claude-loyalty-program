@@ -16,7 +16,11 @@
     "start": "concurrently \"npm run backend\" \"npm run preview\"",
     "start:clean": "npm run clean-ports && npm run start",
     "migrate:branch-manager": "node backend/migrations/20250127-add-branch-manager-auth.js",
-    "migrate:pass-lifecycle": "node backend/migrations/20250127-add-pass-lifecycle-fields.js"
+    "migrate:pass-lifecycle": "node backend/migrations/20250127-add-pass-lifecycle-fields.js",
+    "test:status-validation": "node backend/test/offer-status-validation.test.js && node backend/test/branch-status-validation.test.js && node backend/test/status-validation-integration.test.js",
+    "test:offer-status": "node backend/test/offer-status-validation.test.js",
+    "test:branch-status": "node backend/test/branch-status-validation.test.js",
+    "test:status-integration": "node backend/test/status-validation-integration.test.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

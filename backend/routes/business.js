@@ -1824,9 +1824,12 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
     // Allowed fields to update
     const allowedFields = [
       'name', 'address', 'city', 'region', 'district',
-      'phone', 'email', 'manager_name', 'manager_pin_enabled',
+      'phone', 'email', 'manager_name', 'manager_pin_enabled', 'pos_access_enabled',
       'status', 'operating_hours', 'location_id', 'location_type', 'location_hierarchy'
     ]
+
+    // Capture previous values before update
+    const previousPosAccess = branch.pos_access_enabled
 
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key)) {
@@ -1835,6 +1838,19 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
     })
 
     await branch.save()
+
+    // Audit Log for POS Access Changes
+    if (updates.pos_access_enabled !== undefined && updates.pos_access_enabled !== previousPosAccess) {
+      logger.info('POS access updated for branch', {
+        businessId: req.business.public_id,
+        branchId: branch.public_id,
+        branchName: branch.name,
+        previousValue: previousPosAccess,
+        newValue: updates.pos_access_enabled,
+        action: updates.pos_access_enabled ? 'enabled' : 'disabled',
+        updatedBy: req.business.email
+      })
+    }
 
     res.json({
       success: true,

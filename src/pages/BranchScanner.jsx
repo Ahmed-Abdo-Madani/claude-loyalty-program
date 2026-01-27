@@ -62,21 +62,21 @@ export default function BranchScanner() {
 
   const handleScanSuccess = async (customerToken, offerHash, rawData, format) => {
     console.log('📱 Scanned barcode:', { format, customerToken: customerToken.substring(0, 20) + '...', offerHash })
-    
+
     setIsScanning(false)
     setLoading(true)
     setError('')
 
     try {
       const authData = getManagerAuthData()
-      
+
       // Construct URL based on whether offerHash is present (new format) or null (legacy format)
-      const scanUrl = offerHash 
+      const scanUrl = offerHash
         ? `${endpoints.branchManagerScan}/${customerToken}/${offerHash}`
         : `${endpoints.branchManagerScan}/${customerToken}`
-      
+
       console.log(`🔗 Calling scan API with format: ${offerHash ? 'new (token:hash)' : 'legacy (token-only)'}`)
-      
+
       const response = await fetch(scanUrl, {
         method: 'POST',
         headers: {
@@ -123,7 +123,8 @@ export default function BranchScanner() {
                 totalCompletions: confirmData.totalCompletions,
                 progress: confirmData.progress, // Fresh data with reset stamps
                 customerId: data.customerId,
-                offerId: data.offerId
+                offerId: data.offerId,
+                offerWarning: data.offerWarning // Capture warning
               })
             } else {
               // Prize confirmation failed, but still show result
@@ -133,7 +134,8 @@ export default function BranchScanner() {
                 progress: data.progress,
                 customerId: data.customerId,
                 offerId: data.offerId,
-                confirmError: confirmData.error || 'Prize confirmation failed'
+                confirmError: confirmData.error || 'Prize confirmation failed',
+                offerWarning: data.offerWarning // Capture warning
               })
             }
           } catch (confirmError) {
@@ -145,7 +147,8 @@ export default function BranchScanner() {
               progress: data.progress,
               customerId: data.customerId,
               offerId: data.offerId,
-              confirmError: 'Prize confirmation failed - wallet update may be delayed'
+              confirmError: 'Prize confirmation failed - wallet update may be delayed',
+              offerWarning: data.offerWarning // Capture warning
             })
           }
         } else {
@@ -154,10 +157,11 @@ export default function BranchScanner() {
             rewardEarned: false,
             progress: data.progress,
             customerId: data.customerId,
-            offerId: data.offerId
+            offerId: data.offerId,
+            offerWarning: data.offerWarning // Capture warning
           })
         }
-        
+
         // Reload stats
         loadTodayStats()
       } else {
@@ -189,7 +193,7 @@ export default function BranchScanner() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       <SEO titleKey="pages.branchScanner.title" descriptionKey="pages.branchScanner.description" noindex={true} />
-      
+
       {/* Header */}
       {!isScanning && !scanResult && (
         <div className="bg-white dark:bg-gray-800 shadow-sm px-4 py-4 flex items-center justify-between sticky top-0 z-10">
@@ -284,11 +288,11 @@ export default function BranchScanner() {
 
         {error && !isScanning && !scanResult && (
           /* Error Modal Overlay */
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
             onClick={() => setError('')}
           >
-            <div 
+            <div
               className="max-w-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-8 lg:p-6 text-center"
               onClick={(e) => e.stopPropagation()}
             >
@@ -311,112 +315,139 @@ export default function BranchScanner() {
         {scanResult && !loading && (
           /* Scan Result Modal with Backdrop */
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 lg:relative lg:bg-transparent lg:z-auto lg:p-0">
-            <div 
+            <div
               className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-10 lg:p-8 text-center max-h-[90vh] overflow-y-auto"
-              style={{ 
-                paddingTop: 'max(2.5rem, env(safe-area-inset-top))', 
-                paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))' 
+              style={{
+                paddingTop: 'max(2.5rem, env(safe-area-inset-top))',
+                paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))'
               }}
             >
-            {scanResult.rewardEarned && scanResult.prizeFulfilled ? (
-              /* Prize Auto-Confirmed State */
-              <>
-                <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
-                <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
-                  {t('branchScanner.prizeConfirmed')}
-                </h2>
-                
-                {/* Display tier information if available */}
-                {scanResult.tier && (
-                  <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
-                    <p className="text-xl lg:text-lg font-bold text-gray-900 dark:text-white mb-1">
-                      {scanResult.tier.currentTier && (
-                        <>
-                          {scanResult.tier.currentTier.icon} {scanResult.tier.currentTier.name}
-                        </>
-                      )}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('branchScanner.rewardsEarned', { count: scanResult.totalCompletions })}
-                    </p>
-                  </div>
-                )}
-                
-                {/* New cycle indicator with fresh progress data */}
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  {t('branchScanner.newCycleStarted', { 
-                    current: scanResult.progress?.currentStamps || 0, 
-                    max: scanResult.progress?.maxStamps || 5 
-                  })}
-                </p>
-                
-                {/* Show confirmation error if auto-confirm failed */}
-                {scanResult.confirmError && (
-                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      ⚠️ {t('branchScanner.prizeConfirmedButDelayed')}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Tier upgrade celebration */}
-                {scanResult.tier && scanResult.tierUpgrade && (
-                  <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-300 dark:border-purple-700">
-                    <p className="text-lg font-bold text-purple-900 dark:text-purple-200 mb-1">
-                      🎉 {t('branchScanner.tierUpgrade')}
-                    </p>
-                    <p className="text-sm text-purple-700 dark:text-purple-300">
-                      {t('branchScanner.customerReachedTier', { tierName: scanResult.tier.currentTier.name })}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Milestone celebration */}
-                {scanResult.totalCompletions && [5, 10, 25, 50, 100].includes(scanResult.totalCompletions) && (
-                  <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
-                    <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
-                      {t('branchScanner.milestone', { count: scanResult.totalCompletions })}
-                    </p>
-                  </div>
-                )}
-                
-                <button
-                  onClick={handleScanNext}
-                  className="w-full py-5 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xl lg:text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
-                  aria-label="Scan next customer after prize confirmation"
-                >
-                  {t('branchScanner.scanNextCustomer')}
-                </button>
-              </>
-            ) : (
-              /* Stamp Added State */
-              <>
-                <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
-                <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
-                  {t('branchScanner.stampAdded')}
-                </h2>
-                
-                <div className="my-6">
-                  <p className="text-4xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {t('branchScanner.progress', { current: scanResult.progress.currentStamps, max: scanResult.progress.maxStamps })}
+              {/* Offer Warning Alert Banner */}
+              {scanResult.offerWarning && (
+                <div className={`mb-6 p-4 rounded-xl border-l-4 text-left ${scanResult.offerWarning.code === 'OFFER_PAUSED' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 text-yellow-800 dark:text-yellow-200' :
+                    scanResult.offerWarning.code === 'OFFER_INACTIVE' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-800 dark:text-orange-200' :
+                      scanResult.offerWarning.code === 'OFFER_EXPIRED' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200' :
+                        'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200'
+                  }`}>
+                  <h4 className="font-bold flex items-center gap-2 mb-1">
+                    {t(`branchScanner.offerWarnings.${scanResult.offerWarning.offerStatus}`)}
+                  </h4>
+                  <p className="text-sm opacity-90">
+                    {scanResult.offerWarning.code === 'OFFER_EXPIRED'
+                      ? t('branchScanner.offerWarnings.expiredDesc', { date: new Date(scanResult.offerWarning.expirationDate).toLocaleDateString() })
+                      : t(`branchScanner.offerWarnings.${scanResult.offerWarning.offerStatus}Desc`)
+                    }
                   </p>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-6 lg:h-4">
-                    <div
-                      className="bg-blue-600 h-6 lg:h-4 rounded-full transition-all duration-500"
-                      style={{ width: `${(scanResult.progress.currentStamps / scanResult.progress.maxStamps) * 100}%` }}
-                    ></div>
-                  </div>
+                  {scanResult.offerWarning.code === 'OFFER_TIME_LIMITED' && scanResult.offerWarning.expirationDate && (
+                    <p className="text-xs mt-2 font-medium">
+                      {t('branchScanner.offerWarnings.expiresOn', { date: new Date(scanResult.offerWarning.expirationDate).toLocaleDateString() })}
+                    </p>
+                  )}
+                  <p className="text-xs mt-2 italic opacity-75">
+                    {t('branchScanner.offerWarnings.contactBusiness')}
+                  </p>
                 </div>
-                
-                <button
-                  onClick={handleScanNext}
-                  className="w-full py-5 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xl lg:text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
-                  aria-label="Scan next customer after stamp added"
-                >
-                  {t('branchScanner.scanNextCustomer')}
-                </button>
-              </>
-            )}
+              )}
+
+              {scanResult.rewardEarned && scanResult.prizeFulfilled ? (
+                /* Prize Auto-Confirmed State */
+                <>
+                  <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
+                  <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
+                    {t('branchScanner.prizeConfirmed')}
+                  </h2>
+
+                  {/* Display tier information if available */}
+                  {scanResult.tier && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border-2 border-yellow-300 dark:border-yellow-700">
+                      <p className="text-xl lg:text-lg font-bold text-gray-900 dark:text-white mb-1">
+                        {scanResult.tier.currentTier && (
+                          <>
+                            {scanResult.tier.currentTier.icon} {scanResult.tier.currentTier.name}
+                          </>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('branchScanner.rewardsEarned', { count: scanResult.totalCompletions })}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* New cycle indicator with fresh progress data */}
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    {t('branchScanner.newCycleStarted', {
+                      current: scanResult.progress?.currentStamps || 0,
+                      max: scanResult.progress?.maxStamps || 5
+                    })}
+                  </p>
+
+                  {/* Show confirmation error if auto-confirm failed */}
+                  {scanResult.confirmError && (
+                    <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        ⚠️ {t('branchScanner.prizeConfirmedButDelayed')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Tier upgrade celebration */}
+                  {scanResult.tier && scanResult.tierUpgrade && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-300 dark:border-purple-700">
+                      <p className="text-lg font-bold text-purple-900 dark:text-purple-200 mb-1">
+                        🎉 {t('branchScanner.tierUpgrade')}
+                      </p>
+                      <p className="text-sm text-purple-700 dark:text-purple-300">
+                        {t('branchScanner.customerReachedTier', { tierName: scanResult.tier.currentTier.name })}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Milestone celebration */}
+                  {scanResult.totalCompletions && [5, 10, 25, 50, 100].includes(scanResult.totalCompletions) && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                      <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
+                        {t('branchScanner.milestone', { count: scanResult.totalCompletions })}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleScanNext}
+                    className="w-full py-5 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xl lg:text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
+                    aria-label="Scan next customer after prize confirmation"
+                  >
+                    {t('branchScanner.scanNextCustomer')}
+                  </button>
+                </>
+              ) : (
+                /* Stamp Added State */
+                <>
+                  <div className="text-8xl lg:text-6xl mb-8 lg:mb-4">✅</div>
+                  <h2 className="text-3xl lg:text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
+                    {t('branchScanner.stampAdded')}
+                  </h2>
+
+                  <div className="my-6">
+                    <p className="text-4xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                      {t('branchScanner.progress', { current: scanResult.progress.currentStamps, max: scanResult.progress.maxStamps })}
+                    </p>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-6 lg:h-4">
+                      <div
+                        className="bg-blue-600 h-6 lg:h-4 rounded-full transition-all duration-500"
+                        style={{ width: `${(scanResult.progress.currentStamps / scanResult.progress.maxStamps) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleScanNext}
+                    className="w-full py-5 lg:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xl lg:text-lg rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-500"
+                    aria-label="Scan next customer after stamp added"
+                  >
+                    {t('branchScanner.scanNextCustomer')}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

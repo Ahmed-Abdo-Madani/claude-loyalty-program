@@ -6,6 +6,7 @@ import { requireBranchManagerAuth, generateManagerToken } from '../middleware/br
 import PassLifecycleService from '../services/PassLifecycleService.js'
 import WalletPass from '../models/WalletPass.js'
 import Offer from '../models/Offer.js'
+import Business from '../models/Business.js'
 import logger from '../config/logger.js'
 import { Op } from 'sequelize'
 
@@ -110,9 +111,14 @@ router.post('/login', rateLimitLogin, async (req, res) => {
       })
     }
 
-    // Find branch
+    // Find branch with business association
     const branch = await Branch.findOne({
-      where: { public_id: branchId }
+      where: { public_id: branchId },
+      include: [{
+        model: Business,
+        as: 'business',
+        attributes: ['business_name', 'phone', 'email']
+      }]
     })
 
     if (!branch) {
@@ -135,10 +141,10 @@ router.post('/login', rateLimitLogin, async (req, res) => {
 
     if (!isValidPin) {
       logger.warn('Failed manager login attempt', { branchId })
-      
+
       // Track failed attempt for rate limiting
       trackFailedLogin(branchId)
-      
+
       return res.status(401).json({
         success: false,
         error: 'Invalid PIN'
@@ -147,6 +153,39 @@ router.post('/login', rateLimitLogin, async (req, res) => {
 
     // Clear login attempts on successful login
     clearLoginAttempts(branchId)
+
+    // --- Branch Status & POS Access Validation ---
+    if (branch.status !== 'active') {
+      const errorCode = branch.status === 'inactive' ? 'BRANCH_INACTIVE' : 'BRANCH_CLOSED'
+      return res.status(403).json({
+        success: false,
+        errorCode,
+        error: branch.status === 'inactive'
+          ? 'This branch is currently inactive. Please contact your business owner.'
+          : 'This branch has been closed. Please contact your business owner.',
+        branchStatus: branch.status,
+        businessContact: {
+          name: branch.business?.business_name,
+          phone: branch.business?.phone,
+          email: branch.business?.email
+        }
+      })
+    }
+
+    if (branch.pos_access_enabled === false) {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'POS_ACCESS_DISABLED',
+        error: 'POS access is temporarily disabled for this branch.',
+        branchStatus: branch.status,
+        businessContact: {
+          name: branch.business?.business_name,
+          phone: branch.business?.phone,
+          email: branch.business?.email
+        }
+      })
+    }
+    // --------------------------------------------
 
     // Generate manager token (8-hour expiration)
     const token = generateManagerToken(branch.public_id, branch.name)
@@ -236,15 +275,15 @@ router.post('/scan/:customerToken/:offerHash?', requireBranchManagerAuth, async 
       })
     }
 
-    console.log('🔍 Branch Manager scan attempt:', { 
-      customerToken: customerToken.substring(0, 20) + '...', 
-      offerHash, 
-      businessId 
+    console.log('🔍 Branch Manager scan attempt:', {
+      customerToken: customerToken.substring(0, 20) + '...',
+      offerHash,
+      businessId
     })
 
     // Comment 1: Decode customer token and validate properly
     const tokenData = CustomerService.decodeCustomerToken(customerToken)
-    
+
     if (!tokenData.isValid) {
       return res.status(400).json({
         success: false,
@@ -268,14 +307,14 @@ router.post('/scan/:customerToken/:offerHash?', requireBranchManagerAuth, async 
     if (offerHash === null) {
       console.log('🔍 Branch Manager: Legacy token-only format - auto-selecting offer')
       targetOffer = await CustomerService.findOfferForBusiness(businessId)
-      
+
       if (!targetOffer) {
         return res.status(400).json({
           success: false,
           error: 'Could not determine offer for this QR code. Please scan a newer QR code.'
         })
       }
-      
+
       console.log(`✅ Branch Manager: Auto-selected offer ${targetOffer.public_id}`)
     } else {
       // Comment 4: Use helper method instead of manual query and loop
@@ -293,6 +332,58 @@ router.post('/scan/:customerToken/:offerHash?', requireBranchManagerAuth, async 
 
     // Extract offer ID from the matched offer
     const offerId = targetOffer.public_id
+
+    // --- OFFER STATUS VALIDATION (Non-blocking) ---
+    let offerWarning = null
+    const now = new Date()
+
+    if (!targetOffer.isActive()) {
+      // If the offer is not active, determine why to provide the correct warning code
+      if (targetOffer.status === 'paused') {
+        offerWarning = {
+          code: 'OFFER_PAUSED',
+          message: 'This offer is currently paused',
+          offerStatus: 'paused'
+        }
+      } else if (targetOffer.status === 'inactive') {
+        offerWarning = {
+          code: 'OFFER_INACTIVE',
+          message: 'This offer is inactive',
+          offerStatus: 'inactive'
+        }
+      } else if (targetOffer.status === 'expired' || targetOffer.isExpired()) {
+        offerWarning = {
+          code: 'OFFER_EXPIRED',
+          message: 'This offer has expired',
+          offerStatus: 'expired',
+          expirationDate: targetOffer.end_date
+        }
+      } else if (targetOffer.is_time_limited && targetOffer.start_date && now < new Date(targetOffer.start_date)) {
+        offerWarning = {
+          code: 'OFFER_NOT_STARTED',
+          message: 'This offer has not started yet',
+          offerStatus: 'inactive', // Will show as inactive UI-wise
+          startDate: targetOffer.start_date
+        }
+      }
+    } else if (targetOffer.is_time_limited && targetOffer.end_date) {
+      // Offer IS active but is time-limited (about to expire)
+      offerWarning = {
+        code: 'OFFER_TIME_LIMITED',
+        message: 'This offer is active but has an expiration date',
+        offerStatus: 'active',
+        expirationDate: targetOffer.end_date
+      }
+    }
+
+    if (offerWarning) {
+      logger.info('Offer warning detected during scan:', {
+        offerId,
+        warningCode: offerWarning.code,
+        status: targetOffer.status
+      })
+    }
+    // ----------------------------------------------
 
     // Comment 2: Find or create customer progress (don't reject new customers)
     let progress = await CustomerProgress.findOne({
@@ -462,6 +553,7 @@ router.post('/scan/:customerToken/:offerHash?', requireBranchManagerAuth, async 
         isCompleted: progress.is_completed,
         rewardsClaimed: progress.rewards_claimed
       },
+      offerWarning, // Include the warning object
       walletUpdates: walletUpdates.length > 0 ? walletUpdates : undefined
     })
   } catch (error) {
@@ -536,10 +628,10 @@ router.post('/confirm-prize/:customerId/:offerId', requireBranchManagerAuth, asy
     // Calculate customer tier AFTER claimReward (uses fresh rewards_claimed from database)
     const tierData = await CustomerService.calculateCustomerTier(customerId, offerId)
     const tierNameAfter = tierData?.currentTier?.name || null
-    
+
     // Detect tier upgrade by comparing tier names
     const tierUpgrade = tierNameBefore !== null && tierNameAfter !== null && tierNameBefore !== tierNameAfter
-    
+
     if (tierData) {
       logger.info('🏆 Customer tier after claim:', tierData)
       if (tierUpgrade) {

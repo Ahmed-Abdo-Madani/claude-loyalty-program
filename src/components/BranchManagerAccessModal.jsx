@@ -15,6 +15,8 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   const [pinSaveError, setPinSaveError] = useState(null)
   const [pinSavedSuccessfully, setPinSavedSuccessfully] = useState(false)
   const [managerPinEnabled, setManagerPinEnabled] = useState(branch?.manager_pin_enabled || false)
+  const [posAccessEnabled, setPosAccessEnabled] = useState(branch?.pos_access_enabled ?? true)
+  const [showPosDisableConfirm, setShowPosDisableConfirm] = useState(false)
   const [managerPin, setManagerPin] = useState('')
   const [toggleSaving, setToggleSaving] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -49,12 +51,13 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   }, [isOpen, branch?.public_id])
 
 
-  // Sync managerPinEnabled with branch prop only on initial mount or when modal reopens
+  // Sync state with branch prop
   useEffect(() => {
     if (isOpen && branch) {
       setManagerPinEnabled(branch.manager_pin_enabled || false)
+      setPosAccessEnabled(branch.pos_access_enabled ?? true)
     }
-  }, [isOpen, branch?.public_id]) // Only sync when modal opens or different branch
+  }, [isOpen, branch?.public_id])
 
   // Generate QR code when modal opens, branch changes, or manager access is enabled
   useEffect(() => {
@@ -184,6 +187,53 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     }
   }
 
+  // Handle POS Access Toggle
+  const handleTogglePosAccess = async (enabled) => {
+    if (!branch?.public_id) {
+      setPosAccessEnabled(enabled)
+      return
+    }
+
+    if (!enabled) {
+      setShowPosDisableConfirm(true)
+      return
+    }
+
+    await executePosToggle(true)
+  }
+
+  const executePosToggle = async (enabled) => {
+    setPosAccessEnabled(enabled)
+    setToggleSaving(true)
+    setShowPosDisableConfirm(false)
+
+    try {
+      const response = await secureApiRequest(`${endpoints.myBranches}/${branch.public_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getSecureAuthHeaders()
+        },
+        body: JSON.stringify({
+          pos_access_enabled: enabled
+        })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to update POS access')
+      }
+      // Success - optimistic update holds
+    } catch (error) {
+      console.error('Error updating POS access:', error)
+      setPosAccessEnabled(!enabled) // Revert
+      setPinSaveError(error.message || 'Failed to update POS access setting')
+    } finally {
+      setToggleSaving(false)
+    }
+  }
+
   // Handle copying the login link
   const handleCopyLoginLink = async () => {
     if (!branch?.public_id) return
@@ -250,8 +300,43 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
         {/* Body - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-6">
+            {/* POS Access Control Section */}
+            <div className={`p-4 rounded-lg border-2 mb-4 transition-colors ${posAccessEnabled
+              ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+              }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`text-sm font-bold flex items-center gap-2 ${posAccessEnabled ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
+                    }`}>
+                    {posAccessEnabled ? '✅ ' + t('branches.posAccessActive') : '🚫 ' + t('branches.posAccessDisabled')}
+                  </h3>
+                  <p className={`text-xs mt-1 ${posAccessEnabled ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    }`}>
+                    {t('branches.posAccessDesc')}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => handleTogglePosAccess(!posAccessEnabled)}
+                    disabled={toggleSaving}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${posAccessEnabled
+                      ? 'bg-green-500 focus:ring-green-500'
+                      : 'bg-gray-200 dark:bg-gray-600 focus:ring-gray-500'
+                      }`}
+                  >
+                    <span
+                      className={`${posAccessEnabled ? 'translate-x-6' : 'translate-x-1'
+                        } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Manager Access Section */}
-            <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+            <div className={`p-4 rounded-lg border-2 border-purple-200 dark:border-purple-800 transition-opacity ${!posAccessEnabled ? 'opacity-50 pointer-events-none grayscale' : 'bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20'
+              }`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
@@ -423,6 +508,42 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal for Disabling POS Access */}
+      {showPosDisableConfirm && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPosDisableConfirm(false)}></div>
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-w-sm w-full border border-red-200 dark:border-red-800 animation-scale-in">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                <svg className="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                {t('branches.disablePosAccessTitle')}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                {t('branches.disablePosAccessMessage')}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowPosDisableConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t('common.cancel') || 'Cancel'}
+                </button>
+                <button
+                  onClick={() => executePosToggle(false)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all"
+                >
+                  {t('branches.disable') || 'Disable'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   )

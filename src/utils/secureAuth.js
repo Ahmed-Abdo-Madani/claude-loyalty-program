@@ -25,12 +25,12 @@ export function getAuthData() {
 /**
  * Set authentication data including business status
  */
-export function setAuthData({ 
-  sessionToken, 
-  businessId, 
-  businessName, 
-  userEmail, 
-  businessStatus, 
+export function setAuthData({
+  sessionToken,
+  businessId,
+  businessName,
+  userEmail,
+  businessStatus,
   subscriptionStatus,
   suspensionReason,
   suspensionDate
@@ -44,7 +44,7 @@ export function setAuthData({
   localStorage.setItem('subscriptionStatus', subscriptionStatus || 'trial')
   localStorage.setItem('suspensionReason', suspensionReason || '')
   localStorage.setItem('suspensionDate', suspensionDate || '')
-  
+
   console.log('🔒 Authentication data stored with status:', businessStatus)
 }
 
@@ -68,7 +68,7 @@ export function isSuspended() {
 export function getSubscriptionData() {
   const subscriptionStr = localStorage.getItem('subscription')
   if (!subscriptionStr) return null
-  
+
   try {
     return JSON.parse(subscriptionStr)
   } catch (error) {
@@ -85,7 +85,7 @@ export function setSubscriptionData(subscriptionData) {
     localStorage.removeItem('subscription')
     return
   }
-  
+
   try {
     localStorage.setItem('subscription', JSON.stringify(subscriptionData))
     console.log('🔒 Subscription data stored')
@@ -99,7 +99,7 @@ export function setSubscriptionData(subscriptionData) {
  */
 export function getSecureAuthHeaders() {
   const { sessionToken, businessId } = getAuthData()
-  
+
   if (!sessionToken || !businessId) {
     console.warn('⚠️ Missing authentication data for secure headers')
     return {
@@ -159,7 +159,7 @@ export function logout() {
   localStorage.removeItem('subscriptionStatus')
   localStorage.removeItem('suspensionReason')
   localStorage.removeItem('suspensionDate')
-  
+
   console.log('🔒 User logged out - secure data cleared')
   window.location.href = '/auth?mode=signin'
 }
@@ -169,10 +169,10 @@ export function logout() {
  */
 export function isAuthenticated() {
   const { isAuthenticated, businessId, sessionToken } = getAuthData()
-  
+
   // Verify we have secure business ID format
   const hasSecureBusinessId = businessId && businessId.startsWith('biz_')
-  
+
   return isAuthenticated && hasSecureBusinessId && sessionToken
 }
 
@@ -229,13 +229,13 @@ export function updateStatusAfterPayment({ businessStatus, subscriptionStatus, s
   if (subscriptionData) {
     setSubscriptionData(subscriptionData)
   }
-  
+
   // Clear suspension fields if reactivated
   if (businessStatus === 'active') {
     localStorage.removeItem('suspensionReason')
     localStorage.removeItem('suspensionDate')
   }
-  
+
   console.log('🔒 Status updated after payment', { businessStatus, subscriptionStatus })
 }
 
@@ -278,7 +278,7 @@ export function getManagerAuthData() {
  */
 export function getManagerAuthHeaders() {
   const { managerToken, branchId } = getManagerAuthData()
-  
+
   if (!managerToken || !branchId) {
     console.warn('⚠️ Missing manager authentication data')
     return {
@@ -300,7 +300,7 @@ export function getManagerAuthHeaders() {
  */
 export function isManagerAuthenticated() {
   const { isAuthenticated, branchId, managerToken } = getManagerAuthData()
-  
+
   if (!isAuthenticated || !branchId || !managerToken) {
     return false
   }
@@ -337,7 +337,12 @@ export async function managerLogin(branchId, pin) {
 
       return { success: true }
     } else {
-      return { success: false, error: data.error || 'Login failed' }
+      return {
+        success: false,
+        error: data.error || 'Login failed',
+        errorCode: data.errorCode,
+        businessContact: data.businessContact
+      }
     }
   } catch (error) {
     console.error('Manager login error:', error)
@@ -430,7 +435,7 @@ export async function updateBranchManagerPin(branchId, pin) {
     }
   } catch (error) {
     console.error('Error updating branch manager PIN:', error)
-    
+
     // Handle network errors
     if (error.message === 'Failed to fetch' || error.message === 'Network request failed') {
       return {

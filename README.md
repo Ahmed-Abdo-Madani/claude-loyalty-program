@@ -347,6 +347,82 @@ npm run seed
 
 ## 🔧 **Troubleshooting**
 
+### **Status Management Best Practices**
+
+#### **Offer Status Management**
+
+**When to Use Each Status:**
+- **Active**: Offer is live and accepting new customers
+- **Paused**: Temporarily suspend new signups while allowing existing customers to continue
+- **Inactive**: Deactivate offer (e.g., seasonal offer out of season)
+- **Expired**: Automatically set when time-limited offer passes end_date
+
+**Best Practices:**
+- Use "Paused" instead of "Inactive" for temporary suspensions
+- Set time limits for promotional campaigns to auto-expire
+- Monitor offer status before marketing campaigns
+- Existing customers can always complete their loyalty journey
+
+**Common Workflows:**
+```bash
+# Pause offer during inventory shortage
+Dashboard → Offers → Select Offer → Status: Paused
+
+# Resume offer when ready
+Dashboard → Offers → Select Offer → Status: Active
+
+# Create time-limited campaign
+Dashboard → Create Offer → Enable Time Limit → Set End Date
+```
+
+#### **Branch Status Management**
+
+**When to Use Each Status:**
+- **Active**: Branch is operational and accepting POS operations
+- **Inactive**: Branch is temporarily closed (e.g., renovation, holiday)
+- **Closed**: Branch is permanently closed
+
+**POS Access Control:**
+- `pos_access_enabled`: Independent toggle for POS operations
+- Use when you want branch visible but POS disabled
+- Useful for training, maintenance, or gradual rollout
+
+**Best Practices:**
+- Set branch to "Inactive" during temporary closures
+- Use POS Access toggle for maintenance windows
+- Communicate status changes to branch managers
+- Provide business contact info for support
+
+**Common Workflows:**
+```bash
+# Temporarily disable POS for maintenance
+Dashboard → Branches → Select Branch → Toggle POS Access: OFF
+
+# Close branch for renovation
+Dashboard → Branches → Select Branch → Status: Inactive
+
+# Permanently close branch
+Dashboard → Branches → Select Branch → Status: Closed
+```
+
+#### **Status Validation Reference**
+
+For detailed information on status validation rules, error codes, and troubleshooting:
+- **[Status Validation Documentation](docs/STATUS_VALIDATION.md)** - Complete reference guide
+- **[Testing Guide](tests/README.md)** - Run status validation tests
+
+**Quick Status Check:**
+```bash
+# Test offer status validation
+node backend/test/offer-status-validation.test.js
+
+# Test branch status validation
+node backend/test/branch-status-validation.test.js
+
+# Run all status validation tests
+node backend/test/status-validation-integration.test.js
+```
+
 ### **Common Issues**
 
 #### **Google Wallet Pass Generation Fails**
