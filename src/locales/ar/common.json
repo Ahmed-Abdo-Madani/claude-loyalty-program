@@ -143,6 +143,7 @@
     "generateMenuQR": "إنشاء رمز QR للقائمة",
     "downloadMenuQR": "تحميل رمز QR للقائمة",
     "shareMenu": "مشاركة القائمة",
+    "scanCode": "مسح رمز القائمة",
     "menuQRGenerated": "تم إنشاء رمز QR للقائمة بنجاح"
   },
   "registration": {

@@ -147,6 +147,7 @@
     "generateMenuQR": "Generate Menu QR Code",
     "downloadMenuQR": "Download Menu QR",
     "shareMenu": "Share Menu",
+    "scanCode": "Scan Menu Code",
     "menuQRGenerated": "Menu QR code generated successfully"
   },
   "registration": {

@@ -47,7 +47,9 @@
     "signOut": "تسجيل الخروج",
     "billingSubscription": "الفواتير والاشتراك",
     "approachingLimit": "لقد اقتربت من حدود خطتك. قم بالترقية الآن لفتح المزيد.",
-    "viewPlans": "عرض الخطط"
+    "upgradeRequired": "ترقية مطلوبة",
+    "viewPlans": "عرض الخطط",
+    "viewMenu": "عرض القائمة العامة"
   },
   "mobileNav": {
     "overview": "عام",
@@ -65,6 +67,8 @@
     "scanQR": "مسح QR",
     "reports": "التحليلات",
     "manageBranches": "الفروع",
+    "viewMenu": "القائمة العامة",
+    "subscription": "الاشتراك",
     "settings": "الإعدادات"
   },
   "todaysSnapshot": {
@@ -428,6 +432,7 @@
     "searchPlaceholder": "البحث بالاسم أو رمز المنتج...",
     "filters": {
       "all": "الكل",
+      "allStatus": "جميع الحالات",
       "active": "نشط",
       "inactive": "غير نشط",
       "lowStock": "مخزون منخفض",
@@ -441,7 +446,8 @@
       "activeProducts": "المنتجات النشطة",
       "totalCategories": "الفئات",
       "totalValue": "القيمة الإجمالية",
-      "outOfStock": "نفذ من المخزون"
+      "outOfStock": "نفذ من المخزون",
+      "categories": "الفئات"
     },
     "noProductsFound": "لم يتم العثور على منتجات",
     "noProductsDesc": "ابدأ بإضافة منتجك الأول",
@@ -504,6 +510,8 @@
     "categories": {
       "title": "فئات المنتجات",
       "manage": "إدارة الفئات",
+      "manageDesc": "إدارة فئات المنتجات",
+      "list": "قائمة الفئات",
       "add": "إضافة فئة",
       "addCategory": "إضافة فئة",
       "edit": "تعديل الفئة",

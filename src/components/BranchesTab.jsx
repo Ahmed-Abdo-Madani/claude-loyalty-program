@@ -263,11 +263,11 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="text-sm font-medium bg-transparent border-none focus:outline-none focus:ring-0 text-gray-900 dark:text-white pr-6"
+              className="text-sm font-medium bg-transparent dark:bg-gray-800 border-none focus:outline-none focus:ring-0 text-gray-900 dark:text-white pr-6"
             >
-              <option value="all">{t('branches.allCities')}</option>
+              <option value="all" className="dark:bg-gray-800">{t('branches.allCities')}</option>
               {[...new Set(branches?.map(branch => branch.city).filter(Boolean))].map((city) => (
-                <option key={city} value={city}>
+                <option key={city} value={city} className="dark:bg-gray-800">
                   {city}
                 </option>
               ))}

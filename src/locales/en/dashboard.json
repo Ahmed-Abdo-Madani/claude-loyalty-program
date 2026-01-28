@@ -40,7 +40,9 @@
     "subscription": "Subscription",
     "billingSubscription": "Billing & Subscription",
     "approachingLimit": "You are approaching your plan limits. Upgrade now to unlock more.",
-    "viewPlans": "View Plans"
+    "upgradeRequired": "Upgrade Required",
+    "viewPlans": "View Plans",
+    "viewMenu": "View Public Menu"
   },
   "mobileNav": {
     "overview": "Overview",
@@ -58,6 +60,8 @@
     "scanQR": "Scan QR",
     "reports": "Analytics",
     "manageBranches": "Branches",
+    "viewMenu": "Public Menu",
+    "subscription": "Subscription",
     "settings": "Settings"
   },
   "todaysSnapshot": {
@@ -421,6 +425,7 @@
     "searchPlaceholder": "Search by name or SKU...",
     "filters": {
       "all": "All",
+      "allStatus": "All Status",
       "active": "Active",
       "inactive": "Inactive",
       "lowStock": "Low Stock",
@@ -434,7 +439,8 @@
       "activeProducts": "Active Products",
       "totalCategories": "Categories",
       "totalValue": "Total Value",
-      "outOfStock": "Out of Stock"
+      "outOfStock": "Out of Stock",
+      "categories": "Categories"
     },
     "noProductsFound": "No products found",
     "noProductsDesc": "Get started by adding your first product",
@@ -497,6 +503,8 @@
     "categories": {
       "title": "Product Categories",
       "manage": "Manage Categories",
+      "manageDesc": "Manage product categories",
+      "list": "Categories List",
       "add": "Add Category",
       "addCategory": "Add Category",
       "edit": "Edit Category",

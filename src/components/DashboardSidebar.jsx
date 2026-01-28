@@ -119,7 +119,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">🚀</span>
-                <span className="text-xs font-bold text-white uppercase tracking-wider">{t('subscription.upgradeRequired', 'Upgrade Required')}</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">{t('sidebar.upgradeRequired', 'Upgrade Required')}</span>
               </div>
               <p className="text-[11px] text-white/70 mb-3 leading-relaxed">
                 {t('sidebar.approachingLimit', 'You are approaching your plan limits. Upgrade now to unlock more.')}

@@ -1,17 +1,28 @@
 import { useTranslation } from 'react-i18next'
-import { 
-  PlusIcon, 
-  QrCodeIcon, 
-  ChartBarIcon, 
-  ShoppingBagIcon, 
-  MapPinIcon, 
+import {
+  PlusIcon,
+  QrCodeIcon,
+  ChartBarIcon,
+  ShoppingBagIcon,
+  MapPinIcon,
   Cog6ToothIcon,
-  DocumentTextIcon 
+  DocumentTextIcon,
+  GlobeAltIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline'
 
-function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, onManageBranches, onGenerateMenuQR }) {
+function QuickActions({
+  onNewOffer,
+  onScanQR,
+  onViewReports,
+  onManageProducts,
+  onManageBranches,
+  onGenerateMenuQR,
+  onViewMenu,
+  onManageSubscription
+}) {
   const { t } = useTranslation(['dashboard', 'common'])
-  
+
   const actions = [
     {
       id: 'new_offer',
@@ -66,6 +77,25 @@ function QuickActions({ onNewOffer, onScanQR, onViewReports, onManageProducts, o
       bgColor: 'bg-teal-50 dark:bg-teal-900/20',
       iconColor: 'text-teal-600 dark:text-teal-400',
       hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-900/30'
+
+    },
+    {
+      id: 'view_menu',
+      label: t('quickActions.viewMenu'),
+      icon: <GlobeAltIcon className="w-5 h-5" />,
+      action: onViewMenu,
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+      iconColor: 'text-indigo-600 dark:text-indigo-400',
+      hoverBg: 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
+    },
+    {
+      id: 'subscription',
+      label: t('quickActions.subscription'),
+      icon: <CreditCardIcon className="w-5 h-5" />,
+      action: onManageSubscription,
+      bgColor: 'bg-rose-50 dark:bg-rose-900/20',
+      iconColor: 'text-rose-600 dark:text-rose-400',
+      hoverBg: 'hover:bg-rose-100 dark:hover:bg-rose-900/30'
     }
   ]
 

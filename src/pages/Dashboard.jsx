@@ -239,7 +239,7 @@ function Dashboard() {
                   {/* Today's Snapshot - Real-time POS Metrics */}
                   <TodaysSnapshot />
 
-                  {/* Quick Actions - Expanded to 7 Actions */}
+                  {/* Quick Actions - Expanded to 8 Actions */}
                   <QuickActions
                     onNewOffer={handleNewOffer}
                     onScanQR={handleScanQR}
@@ -247,6 +247,8 @@ function Dashboard() {
                     onManageProducts={() => handleTabChange('products')}
                     onManageBranches={() => handleTabChange('branches')}
                     onGenerateMenuQR={handleGenerateMenuQR}
+                    onViewMenu={() => user?.businessId && window.open(`/menu/business/${user.businessId}`, '_blank')}
+                    onManageSubscription={() => handleTabChange('billing-subscription')}
                   />
                 </div>
               )}
