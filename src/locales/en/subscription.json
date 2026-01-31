@@ -40,61 +40,67 @@
     "description": "Your account is in good standing."
   },
   "plans": {
-    "free": {
-      "name": "Free",
-      "price": "0 SAR",
-      "period": "Forever",
-      "description": "Perfect for trying out the platform",
+    "loyalty_starter": {
+      "name": "Loyalty Starter",
+      "description": "Essential loyalty features for small businesses",
       "features": [
-        "1 loyalty offer",
-        "Up to 100 customers",
-        "20 POS operations per month",
-        "1 location",
-        "Basic analytics",
-        "Mobile wallet integration",
-        "Email support"
+        "Up to 500 Customers",
+        "1 Active Offer",
+        "1 Location",
+        "Basic Analytics"
       ]
     },
-    "loyalty": {
-      "name": "Loyalty Program",
-      "price": "60 SAR",
-      "period": "per location/month",
-      "description": "For businesses focused on customer retention",
-      "popular": "Most Popular",
+    "loyalty_growth": {
+      "name": "Loyalty Growth",
+      "description": "Advanced tools for growing businesses",
       "features": [
-        "Unlimited loyalty offers",
-        "Unlimited customers",
-        "No POS operations",
-        "Unlimited locations",
-        "Basic analytics",
-        "Mobile wallet integration",
-        "API access",
-        "Priority support"
+        "Up to 2,000 Customers",
+        "5 Active Offers",
+        "Up to 3 Locations",
+        "Advanced Analytics",
+        "Priority Support"
       ]
     },
-    "pos": {
-      "name": "POS Program",
-      "price": "210 SAR",
-      "period": "per location/month",
-      "description": "Complete solution with Point of Sale",
+    "loyalty_professional": {
+      "name": "Loyalty Professional",
+      "description": "Complete loyalty solution for established brands",
       "features": [
-        "Unlimited loyalty offers",
-        "Unlimited customers",
-        "Unlimited POS operations",
-        "Unlimited locations",
-        "Full analytics",
-        "Mobile wallet integration",
-        "API access",
-        "Dedicated account manager",
-        "Custom integrations",
-        "24/7 priority support"
+        "Unlimited Customers",
+        "Unlimited Offers",
+        "Unlimited Locations",
+        "Custom Branding",
+        "API Access"
       ]
     },
-    "professional": {
-      "name": "Loyalty Program"
+    "pos_business": {
+      "name": "POS Business",
+      "description": "Streamlined POS for retail and service",
+      "features": [
+        "1 Register",
+        "Inventory Management",
+        "Sales Reporting",
+        "Employee Management"
+      ]
     },
-    "enterprise": {
-      "name": "POS Program"
+    "pos_enterprise": {
+      "name": "POS Enterprise",
+      "description": "Powerful POS for high-volume businesses",
+      "features": [
+        "Unlimited Registers",
+        "Multi-location Support",
+        "Advanced Inventory",
+        "Kitchen Display System"
+      ]
+    },
+    "pos_premium": {
+      "name": "POS Premium",
+      "description": "Ultimate control and customization",
+      "features": [
+        "All Enterprise Features",
+        "White-label Option",
+        "Custom Development",
+        "SLA Guarantees"
+      ]
     }
   },
   "actions": {
@@ -141,8 +147,29 @@
     "secureNote": "Payments are processed securely by Lemon Squeezy. We do not store your card details.",
     "securityNote": "Your payment is secure and encrypted",
     "processingNote": "Do not close this page during payment",
-    "backButton": "Back to Plans",
+    "backButton": "Back",
     "supportText": "Need help? Contact support",
+    "billingInterval": "Billing Interval",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "billedMonthly": "Billed monthly",
+    "billedAnnually": "Billed annually",
+    "savings": "Save {{amount}} SAR ({{months}} months free)",
+    "youSave": "You save {{amount}} SAR",
+    "planDetails": "Plan Details",
+    "subtotal": "Subtotal",
+    "planLimits": "Plan Limits",
+    "customers": "Customers",
+    "offers": "Offers",
+    "terminals": "Terminals",
+    "whyChooseMadna": "Why choose Madna vs Competitors?",
+    "compareWithCompetitors": "Compare with competitors",
+    "invalidPlan": "Selected plan is not available",
+    "networkError": "Connection failed. Please check your internet and retry.",
+    "whatsIncluded": "What's Included",
+    "andMore": "+ {{count}} more features",
+    "redirecting": "Redirecting to Payment...",
+    "retry": "Try Again",
     "loadingPaymentForm": "Loading payment form...",
     "paymentFormReady": "Payment form ready",
     "scriptLoadError": "Payment gateway failed to load. Please check your internet connection and refresh the page.",
@@ -349,6 +376,9 @@
     "close": "Close"
   },
   "billingHistory": {
+    "title": "Recent Payments",
+    "viewAll": "View All",
+    "empty": "No payment history yet",
     "date": "Date",
     "amount": "Amount",
     "status": "Status",
@@ -358,6 +388,15 @@
     "paid": "Paid",
     "failed": "Failed",
     "pending": "Pending",
+    "refunded": "Refunded",
+    "actions": "Actions",
+    "downloadInvoice": "Download Invoice"
+  },
+  "paymentStatus": {
+    "succeeded": "Paid",
+    "paid": "Paid",
+    "pending": "Pending",
+    "failed": "Failed",
     "refunded": "Refunded"
   },
   "status": {
@@ -476,7 +515,8 @@
     "upgradeFailed": "Failed to upgrade subscription. Please try again.",
     "downgradeFailed": "Failed to downgrade subscription. Please try again.",
     "cancelFailed": "Failed to cancel subscription. Please try again.",
-    "portalFailed": "Failed to redirect to billing portal. Please try again."
+    "portalFailed": "Failed to redirect to billing portal. Please try again.",
+    "invoiceFailed": "Failed to download invoice. Please try again."
   },
   "planLabel": "Plan",
   "usage": {

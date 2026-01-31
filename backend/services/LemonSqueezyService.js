@@ -133,6 +133,11 @@ class LemonSqueezyService {
 
         logger.info(`Processing Lemon Squeezy Event: ${eventName}`);
 
+        // Log variant info if available for debugging
+        if (data.attributes && data.attributes.variant_id) {
+            logger.info(`Webhook Variant ID: ${data.attributes.variant_id}`);
+        }
+
         // Extract business_id from custom_data (passed during checkout)
         // OR if it's an update, we might need to look it up via subscription ID
         let businessId = customData.business_id;
@@ -174,16 +179,54 @@ class LemonSqueezyService {
         const attributes = data.attributes;
         const variantId = attributes.variant_id.toString();
 
+        logger.info(`Syncing subscription for Variant ID: ${variantId}`);
+
+        // Reverse Mapping Configuration
+        const VARIANT_TO_PLAN_MAPPING = {
+            // Loyalty Plans
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_STARTER_MONTHLY]: 'loyalty_starter',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_STARTER_YEARLY]: 'loyalty_starter',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_GROWTH_MONTHLY]: 'loyalty_growth',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_GROWTH_YEARLY]: 'loyalty_growth',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_PROFESSIONAL_MONTHLY]: 'loyalty_professional',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_PROFESSIONAL_YEARLY]: 'loyalty_professional',
+
+            // POS Plans
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_BUSINESS_MONTHLY]: 'pos_business',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_BUSINESS_YEARLY]: 'pos_business',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_ENTERPRISE_MONTHLY]: 'pos_enterprise',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_ENTERPRISE_YEARLY]: 'pos_enterprise',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_PREMIUM_MONTHLY]: 'pos_premium',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_PREMIUM_YEARLY]: 'pos_premium',
+
+            // Legacy Plans (Backward Compatibility)
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_MONTHLY]: 'loyalty_growth', // Map old loyalty to growth
+            [process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_YEARLY]: 'loyalty_growth',
+            [process.env.LEMONSQUEEZY_VARIANT_ID_POS_MONTHLY]: 'pos_business' // Map old POS to business
+        };
+
         // Determine Plan Type based on Variant ID
-        let planType = 'free';
-        // You should probably load these from config/constants but using env/logic here
+        let planType = VARIANT_TO_PLAN_MAPPING[variantId];
+
+        if (!planType) {
+            logger.error(`❌ Unknown Variant ID: ${variantId}. Skipping sync to prevent data corruption. Full payload: ${JSON.stringify(data)}`);
+            return;
+        } else {
+            logger.info(`✅ Identified Plan Type: ${planType} from Variant ID: ${variantId}`);
+        }
+
+        // Determine Billing Interval (for logic/logging, even if not stored yet)
+        let billingInterval = 'monthly';
         if (
-            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_MONTHLY ||
+            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_STARTER_YEARLY ||
+            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_GROWTH_YEARLY ||
+            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_PROFESSIONAL_YEARLY ||
+            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_POS_BUSINESS_YEARLY ||
+            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_POS_ENTERPRISE_YEARLY ||
+            variantId === process.env.LEMONSQUEEZY_VARIANT_ID_POS_PREMIUM_YEARLY ||
             variantId === process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_YEARLY
         ) {
-            planType = 'professional'; // "Loyalty" tier
-        } else if (variantId === process.env.LEMONSQUEEZY_VARIANT_ID_POS_MONTHLY) {
-            planType = 'enterprise'; // "POS" tier
+            billingInterval = 'annual';
         }
 
         await Subscription.upsert({
@@ -210,7 +253,7 @@ class LemonSqueezyService {
             { where: { public_id: businessId } }
         );
 
-        logger.info(`Synced subscription for Business ${businessId}: ${planType}`);
+        logger.info(`Synced subscription for Business ${businessId}: ${planType} (${billingInterval})`);
     }
 
     async handleCancellation(businessId, data) {

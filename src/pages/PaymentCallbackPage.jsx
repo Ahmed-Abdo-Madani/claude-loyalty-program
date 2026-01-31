@@ -284,7 +284,7 @@ export default function PaymentCallbackPage() {
           if (isPaymentMethodUpdate) {
             navigate('/dashboard/subscription')
           } else {
-            navigate('/dashboard?tab=billing-subscription')
+            navigate('/subscription/success', { state: { paymentResult } })
           }
           return 0
         }

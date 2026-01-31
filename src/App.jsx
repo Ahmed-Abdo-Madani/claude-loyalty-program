@@ -20,6 +20,7 @@ const MenuPage = lazy(() => import('./pages/MenuPage'))
 const TestPage = lazy(() => import('./pages/TestPage'))
 const BusinessRegistrationPage = lazy(() => import('./pages/BusinessRegistrationPage'))
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const CheckoutSuccessPage = lazy(() => import('./pages/CheckoutSuccessPage'))
 const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage'))
 const SuspendedAccountPage = lazy(() => import('./pages/SuspendedAccountPage'))
 const SubscriptionPlansPage = lazy(() => import('./pages/SubscriptionPlansPage'))
@@ -85,6 +86,7 @@ function App() {
             <Route path="/test" element={<TestPage />} />
             <Route path="/business/register" element={<BusinessRegistrationPage />} />
             <Route path="/subscription/checkout" element={<CheckoutPage />} />
+            <Route path="/subscription/success" element={<CheckoutSuccessPage />} />
             <Route path="/subscription/payment-callback" element={<PaymentCallbackPage />} />
             <Route path="/subscription/suspended" element={<SuspendedAccountPage />} />
             <Route path="/subscription/plans" element={<SubscriptionPlansPage />} />

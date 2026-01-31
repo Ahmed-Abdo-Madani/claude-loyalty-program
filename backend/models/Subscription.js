@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
+import { PLAN_HIERARCHY } from '../constants/plans.js'
 
 const Subscription = sequelize.define('Subscription', {
   public_id: {
@@ -18,7 +19,17 @@ const Subscription = sequelize.define('Subscription', {
     }
   },
   plan_type: {
-    type: DataTypes.ENUM('free', 'professional', 'enterprise'),
+    type: DataTypes.ENUM(
+      'free',
+      'professional',
+      'enterprise',
+      'loyalty_starter',
+      'loyalty_growth',
+      'loyalty_professional',
+      'pos_business',
+      'pos_enterprise',
+      'pos_premium'
+    ),
     allowNull: false,
     defaultValue: 'free',
     comment: 'Subscription plan type'
@@ -153,12 +164,21 @@ Subscription.prototype.isExpired = function () {
 }
 
 Subscription.prototype.canUpgrade = function () {
-  if (this.plan_type === 'enterprise') return false
+  const currentPlanIndex = PLAN_HIERARCHY.indexOf(this.plan_type)
+  const highestPlanIndex = PLAN_HIERARCHY.length - 1
+
+  if (currentPlanIndex === highestPlanIndex) {
+    return false
+  }
   return this.isActive()
 }
 
 Subscription.prototype.canDowngrade = function () {
-  if (this.plan_type === 'free') return false
+  const currentPlanIndex = PLAN_HIERARCHY.indexOf(this.plan_type)
+
+  if (currentPlanIndex <= 0) {
+    return false
+  }
   return this.isActive()
 }
 

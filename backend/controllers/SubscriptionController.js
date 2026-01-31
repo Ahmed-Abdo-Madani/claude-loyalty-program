@@ -6,33 +6,100 @@ import { getLocalizedMessage } from '../middleware/languageMiddleware.js';
 
 export const generateCheckout = async (req, res) => {
     try {
-        const { variantId: directVariantId, planType: rawPlanType } = req.body;
+        const { variantId: directVariantId, planType: rawPlanType, interval: rawInterval, billingInterval } = req.body;
         const businessId = req.business.public_id;
         const userEmail = req.business.email;
 
         const planType = (rawPlanType || '').toLowerCase();
-        console.log(`🚀 Generating checkout for plan: ${planType}`);
+        // Support both 'interval' and 'billingInterval' parameters, default to monthly
+        const intervalInput = (rawInterval || billingInterval || 'monthly').toLowerCase();
+        const interval = (intervalInput === 'yearly' || intervalInput === 'annual' || intervalInput === 'year') ? 'annual' : 'monthly';
+
+        console.log(`🚀 Generating checkout for plan: ${planType}, interval: ${interval}`);
 
         let targetVariantId = directVariantId;
 
+        // Variant Mapping Configuration
+        const VARIANT_MAPPING = {
+            // Loyalty Plans
+            loyalty_starter: {
+                monthly: process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_STARTER_MONTHLY,
+                annual: process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_STARTER_YEARLY
+            },
+            loyalty_growth: {
+                monthly: process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_GROWTH_MONTHLY,
+                annual: process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_GROWTH_YEARLY
+            },
+            loyalty_professional: {
+                monthly: process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_PROFESSIONAL_MONTHLY,
+                annual: process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_PROFESSIONAL_YEARLY
+            },
+
+            // POS Plans
+            pos_business: {
+                monthly: process.env.LEMONSQUEEZY_VARIANT_ID_POS_BUSINESS_MONTHLY,
+                annual: process.env.LEMONSQUEEZY_VARIANT_ID_POS_BUSINESS_YEARLY
+            },
+            pos_enterprise: {
+                monthly: process.env.LEMONSQUEEZY_VARIANT_ID_POS_ENTERPRISE_MONTHLY,
+                annual: process.env.LEMONSQUEEZY_VARIANT_ID_POS_ENTERPRISE_YEARLY
+            },
+            pos_premium: {
+                monthly: process.env.LEMONSQUEEZY_VARIANT_ID_POS_PREMIUM_MONTHLY,
+                annual: process.env.LEMONSQUEEZY_VARIANT_ID_POS_PREMIUM_YEARLY
+            }
+        };
+
         // If a direct variantId is not provided, try to derive it from planType
         if (!targetVariantId && planType) {
-            if (planType === 'loyalty') {
-                // Default to monthly for now, or check req.body.interval
-                targetVariantId = process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_MONTHLY;
-            } else if (planType === 'pos') {
-                targetVariantId = process.env.LEMONSQUEEZY_VARIANT_ID_POS_MONTHLY;
-            } else if (planType === 'enterprise') {
-                targetVariantId = process.env.LEMONSQUEEZY_VARIANT_ID_POS_MONTHLY; // Assuming enterprise uses POS monthly for now
+            // Check for new plan types
+            if (VARIANT_MAPPING[planType]) {
+                targetVariantId = VARIANT_MAPPING[planType][interval];
+            }
+            // Backward Compatibility for Legacy Plans
+            else if (planType === 'free') {
+                return res.status(400).json({ success: false, message: 'Free plan does not require checkout' });
+            }
+            else if (planType === 'professional') {
+                // Map legacy 'professional' to 'loyalty_professional'
+                console.warn('⚠️ Legacy plan type "professional" requested. Mapping to "loyalty_professional".');
+                targetVariantId = VARIANT_MAPPING.loyalty_professional[interval];
+            }
+            else if (planType === 'enterprise') {
+                // Map legacy 'enterprise' to 'pos_enterprise'
+                console.warn('⚠️ Legacy plan type "enterprise" requested. Mapping to "pos_enterprise".');
+                targetVariantId = VARIANT_MAPPING.pos_enterprise[interval];
+            }
+            else if (planType === 'loyalty') {
+                // Map generic 'loyalty' to 'loyalty_growth' (middle tier) or legacy env var
+                console.warn('⚠️ Generic "loyalty" plan requested. Using legacy configuration or default.');
+                targetVariantId = interval === 'annual'
+                    ? process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_YEARLY
+                    : process.env.LEMONSQUEEZY_VARIANT_ID_LOYALTY_MONTHLY;
+
+                // Fallback to new structure if legacy vars are missing
+                if (!targetVariantId) targetVariantId = VARIANT_MAPPING.loyalty_growth[interval];
+            }
+            else if (planType === 'pos') {
+                // Map generic 'pos' to 'pos_business' (middle tier) or legacy env var
+                console.warn('⚠️ Generic "pos" plan requested. Mapping to "pos_business".');
+
+                // If annual is requested, use the new structure directly (since legacy was likely monthly-only)
+                if (interval === 'annual') {
+                    targetVariantId = VARIANT_MAPPING.pos_business.annual;
+                } else {
+                    // For monthly, try legacy first, then fall back to new
+                    targetVariantId = process.env.LEMONSQUEEZY_VARIANT_ID_POS_MONTHLY || VARIANT_MAPPING.pos_business.monthly;
+                }
             }
         }
 
         if (!targetVariantId) {
-            console.error(`❌ Invalid plan type or missing variant ID for: ${planType}`);
+            console.error(`❌ Invalid plan type or missing configuration for: ${planType} (${interval})`);
             return res.status(400).json({
                 success: false,
-                error: 'Invalid plan type',
-                message: req.locale === 'ar' ? 'خطة غير صالحة' : 'Invalid plan selected'
+                error: 'Invalid plan configuration',
+                message: req.locale === 'ar' ? 'الخطة غير متوفرة حالياً' : 'Selected plan is not currently available'
             });
         }
 

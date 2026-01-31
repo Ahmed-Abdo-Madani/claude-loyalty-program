@@ -89,55 +89,140 @@
   },
   "pricing": {
     "title": "Simple, Transparent Pricing",
-    "subtitle": "Choose the plan that fits your business. All plans include core loyalty features.",
-    "free": {
-      "name": "Free Account",
-      "price": "Free",
-      "period": "/month",
-      "description": "Perfect for trying out the platform"
+    "subtitle": "Choose the plan that fits your needs. All plans include 14-day free trial.",
+    "hero": {
+      "title": "Simple, Transparent Pricing for Every Business",
+      "subtitle": "Choose the plan that fits your needs. All plans include 14-day free trial.",
+      "monthly": "Monthly",
+      "annual": "Annual",
+      "save": "Save 2 months"
     },
-    "loyalty": {
-      "name": "Loyalty Program",
-      "price": "60 SAR",
-      "period": "/location/month",
-      "description": "For businesses focused on customer retention"
+    "tabs": {
+      "loyalty": "Loyalty Plans",
+      "pos": "POS Plans"
     },
-    "pos": {
-      "name": "POS Program",
-      "price": "210 SAR",
-      "period": "/location/month",
-      "description": "Complete solution with Point of Sale"
+    "plans": {
+      "loyalty_starter": {
+        "name": "Loyalty Starter",
+        "price": "49 SAR",
+        "description": "Essential loyalty features for small businesses",
+        "features": [
+          "Up to 500 Customers",
+          "1 Active Offer",
+          "1 Location",
+          "Basic Analytics"
+        ]
+      },
+      "loyalty_growth": {
+        "name": "Loyalty Growth",
+        "price": "99 SAR",
+        "description": "Advanced tools for growing businesses",
+        "badge": "Best Value",
+        "features": [
+          "Up to 2,000 Customers",
+          "5 Active Offers",
+          "Up to 3 Locations",
+          "Advanced Analytics",
+          "Priority Support"
+        ]
+      },
+      "loyalty_professional": {
+        "name": "Loyalty Professional",
+        "price": "179 SAR",
+        "description": "Complete loyalty solution for established brands",
+        "badge": "Most Popular",
+        "features": [
+          "Unlimited Customers",
+          "Unlimited Offers",
+          "Unlimited Locations",
+          "Custom Branding",
+          "API Access"
+        ]
+      },
+      "pos_business": {
+        "name": "POS Business",
+        "price": "199 SAR",
+        "description": "Streamlined POS for retail and service",
+        "features": [
+          "1 Register",
+          "Inventory Management",
+          "Sales Reporting",
+          "Employee Management"
+        ]
+      },
+      "pos_enterprise": {
+        "name": "POS Enterprise",
+        "price": "349 SAR",
+        "description": "Powerful POS for high-volume businesses",
+        "badge": "Most Popular",
+        "features": [
+          "Unlimited Registers",
+          "Multi-location Support",
+          "Advanced Inventory",
+          "Kitchen Display System"
+        ]
+      },
+      "pos_premium": {
+        "name": "POS Premium",
+        "price": "549 SAR",
+        "description": "Ultimate control and customization",
+        "features": [
+          "All Enterprise Features",
+          "White-label Option",
+          "Custom Development",
+          "SLA Guarantees"
+        ]
+      }
     },
-    "features": {
-      "1_loyalty_offer": "1 Loyalty Offer",
-      "100_customers": "Up to 100 Customers",
-      "20_pos_operations": "20 POS Operations/mo",
-      "1_location": "1 Location",
-      "unlimited_loyalty_offers": "Unlimited Loyalty Offers",
-      "unlimited_customers": "Unlimited Customers",
-      "unlimited_pos_operations": "Unlimited POS Operations",
-      "unlimited_locations": "Unlimited Locations",
-      "no_pos_operations": "No POS Operations",
-      "basic_analytics": "Basic Analytics",
-      "full_analytics": "Full Analytics"
+    "comparison": {
+      "title": "How We Compare",
+      "competitors": [
+        "Madna",
+        "Competitor A",
+        "Competitor B"
+      ],
+      "features": {
+        "pricing": "Transparent Pricing",
+        "customer_limits": "Customer Limits",
+        "pos_features": "POS Integration",
+        "analytics": "Advanced Analytics",
+        "support": "Local Support"
+      }
     },
-    "mostPopular": "Most Popular",
-    "startFreeTrial": "Start Free Trial",
-    "contactSales": "Contact Sales",
+    "roi": {
+      "title": "Calculate Your ROI",
+      "inputs": {
+        "revenue": "Monthly Revenue",
+        "retention": "Customer Retention Rate (%)",
+        "transaction": "Average Transaction Value"
+      },
+      "subtitle": "See how much you can grow with Madna.",
+      "outputs": {
+        "savings": "Projected Monthly Savings",
+        "roi": "ROI Percentage"
+      }
+    },
     "faq": {
       "title": "Frequently Asked Questions",
-      "changePlans": {
-        "question": "Can I change plans at any time?",
-        "answer": "Yes, you can upgrade or downgrade at any time. Changes take effect immediately."
-      },
-      "freeTrial": {
-        "question": "Is there a free trial?",
-        "answer": "All plans come with a 14-day free trial. No credit card required to start."
-      },
-      "payment": {
-        "question": "What payment methods do you accept?",
-        "answer": "We accept all major credit cards and PayPal. Enterprise customers can pay via bank transfer."
-      }
+      "items": [
+        {
+          "question": "Can I switch between plans?",
+          "answer": "Yes, you can upgrade or downgrade at any time. Changes take effect immediately."
+        },
+        {
+          "question": "What's included in the free trial?",
+          "answer": "All plans come with a 14-day free trial. No credit card required to start."
+        },
+        {
+          "question": "Do POS plans include loyalty features?",
+          "answer": "POS plans include basic loyalty features. For advanced loyalty tools, we recommend bundling with a Loyalty plan."
+        }
+      ]
+    },
+    "cta": {
+      "getStarted": "Get Started",
+      "startTrial": "Start Free Trial",
+      "contactSales": "Contact Sales"
     }
   },
   "help": {

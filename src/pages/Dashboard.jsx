@@ -14,6 +14,8 @@ import MobileBottomNav from '../components/MobileBottomNav'
 import QuickActions from '../components/QuickActions'
 import TodaysSnapshot from '../components/TodaysSnapshot'
 import QRCodeModal from '../components/QRCodeModal'
+import UsageMetrics from '../components/UsageMetrics'
+import PlanUpgradeModal from '../components/PlanUpgradeModal'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
@@ -36,6 +38,8 @@ function Dashboard() {
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [showMenuQRModal, setShowMenuQRModal] = useState(false)
+  const [subscriptionData, setSubscriptionData] = useState(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Sync activeTab with URL query parameter
   useEffect(() => {
@@ -83,13 +87,25 @@ function Dashboard() {
       setLoading(true)
 
       // Use secure API requests with authentication headers
-      const [analyticsResponse, activityResponse] = await Promise.all([
+      const [analyticsResponse, activityResponse, subscriptionResponse] = await Promise.all([
         secureApi.get(endpoints.myAnalytics),
-        secureApi.get(endpoints.myActivity)
+        secureApi.get(endpoints.myActivity),
+        secureApi.get(endpoints.subscriptionDetails)
       ])
 
       const analyticsData = await analyticsResponse.json()
       const activityData = await activityResponse.json()
+
+      let subData = null;
+      try {
+        const subResponseData = await subscriptionResponse.json();
+        if (subResponseData.success) {
+          subData = subResponseData.data;
+          setSubscriptionData(subData);
+        }
+      } catch (err) {
+        console.warn('Failed to parse subscription data', err);
+      }
 
       if (analyticsData.success) {
         // Fetch customer analytics to get VIP count
@@ -236,6 +252,80 @@ function Dashboard() {
                     </div>
                   )}
 
+                  {/* Subscription Summary Card - NEW */}
+                  {subscriptionData && (
+                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
+                      <div className="relative z-10 flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl font-bold">{t('dashboard.subscription.title', 'Your Subscription')}</h3>
+                            <span className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded-full uppercase">
+                              {subscriptionData.subscription?.plan_type || 'free'}
+                            </span>
+                          </div>
+
+                          <p className="text-gray-300 text-sm mb-4 max-w-md">
+                            {t('dashboard.subscription.usageSummary', 'Manage your plan and usage limits.')}
+                            {subscriptionData.subscription?.trial_info?.is_trial && (
+                              <span className="text-amber-400 ml-2 font-semibold">
+                                {t('dashboard.subscription.trialEnding', 'Trial ends in {{days}} days', { days: subscriptionData.subscription.trial_info.days_remaining })}
+                              </span>
+                            )}
+                          </p>
+
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setShowUpgradeModal(true)}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
+                            >
+                              {t('dashboard.subscription.upgradePrompt', 'Upgrade Plan')}
+                            </button>
+                            <button
+                              onClick={() => handleTabChange('billing-subscription')}
+                              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                              {t('dashboard.subscription.manageBilling', 'Manage Billing')}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Mini Usage Stats */}
+                        <div className="w-full lg:w-1/3 bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
+                          <div className="space-y-3">
+                            {['customers', 'locations', 'offers'].map(metric => {
+                              const limit = subscriptionData.limits?.[metric];
+                              const current = subscriptionData.usage?.[metric] || 0;
+                              const pct = limit ? Math.min((current / limit) * 100, 100) : 0;
+
+                              return (
+                                <div key={metric}>
+                                  <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-gray-400 capitalize">{t(`subscription:usage.${metric}`, metric)}</span>
+                                    <span className="text-gray-200">{current} / {limit || '∞'}</span>
+                                  </div>
+                                  <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${pct > 90 ? 'bg-red-500' : pct > 75 ? 'bg-amber-500' : 'bg-green-500'}`}
+                                      style={{ width: `${limit ? pct : 100}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed Usage Metrics - NEW */}
+                  {subscriptionData && (
+                    <UsageMetrics
+                      usage={subscriptionData.usage}
+                      limits={subscriptionData.limits}
+                    />
+                  )}
+
                   {/* Today's Snapshot - Real-time POS Metrics */}
                   <TodaysSnapshot />
 
@@ -302,6 +392,13 @@ function Dashboard() {
           />
         )
       }
+      {/* Plan Upgrade Modal */}
+      <PlanUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={subscriptionData?.subscription?.plan_type}
+      />
+
     </div >
   )
 }

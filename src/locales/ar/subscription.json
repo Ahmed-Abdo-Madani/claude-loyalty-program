@@ -15,102 +15,124 @@
     "customers": "العملاء",
     "posOperations": "عمليات نقاط البيع",
     "locations": "المواقع",
+    "upgradeSuccess": "تمت ترقية الاشتراك بنجاح!",
+    "downgradeScheduled": "تم جدولة التخفيض لتاريخ {{date}}",
+    "currentPlan": "الخطة الحالية",
+    "renewalDate": "الفوترة التالية",
+    "loading": "جاري تحميل تفاصيل الاشتراك...",
     "unlimited": "غير محدود",
     "perMonth": "شهرياً"
   },
+  "lifetime": "مدى الحياة",
   "trial": {
+    "title": "فترة تجريبية مجانية",
+    "days": "أيام متبقية",
+    "remainingDescription": "قم بالترقية قبل انتهاء الفترة للحفاظ على بياناتك.",
     "active": "الفترة التجريبية نشطة",
     "ending": "الفترة التجريبية تنتهي قريباً",
     "expired": "انتهت الفترة التجريبية",
     "daysRemaining": "{{days}} أيام متبقية",
     "endsOn": "تنتهي في {{date}}",
-    "upgradePrompt": "قم بالترقية الآن لمواصلة استخدام جميع الميزات",
-    "title": "فترة تجريبية",
-    "days": "أيام متبقية",
-    "remainingDescription": "قم بالترقية قبل انتهاء الفترة للحفاظ على بياناتك."
+    "upgradePrompt": "قم بالترقية الآن لمواصلة استخدام جميع الميزات"
+  },
+  "active": {
+    "title": "اشتراك نشط",
+    "description": "حسابك في وضع جيد."
   },
   "plans": {
-    "free": {
-      "name": "مجاني",
-      "price": "0 ريال",
-      "period": "للأبد",
-      "description": "مثالي لتجربة المنصة",
+    "loyalty_starter": {
+      "name": "بداية الولاء",
+      "description": "ميزات الولاء الأساسية للمشاريع الصغيرة",
       "features": [
-        "عرض ولاء واحد",
-        "حتى 100 عميل",
-        "20 عملية نقاط بيع شهرياً",
+        "حتى 500 عميل",
+        "علاوة نشطة واحدة",
         "موقع واحد",
-        "تحليلات أساسية",
-        "تكامل المحفظة الرقمية",
-        "دعم عبر البريد الإلكتروني"
+        "تحليلات أساسية"
       ]
     },
-    "loyalty": {
-      "name": "برنامج الولاء",
-      "price": "60 ريال",
-      "period": "لكل فرع/شهر",
-      "description": "للشركات التي تركز على ولاء العملاء",
-      "popular": "الأكثر شعبية",
+    "loyalty_growth": {
+      "name": "نمو الولاء",
+      "description": "أدوات متقدمة للشركات النامية",
       "features": [
-        "عروض ولاء غير محدودة",
-        "عملاء غير محدودين",
-        "بدون عمليات نقاط بيع",
-        "فروع غير محدودة",
-        "تحليلات أساسية",
-        "تكامل المحفظة الرقمية",
-        "الوصول إلى API",
+        "حتى 2,000 عميل",
+        "5 عروض نشطة",
+        "حتى 3 مواقع",
+        "تحليلات متقدمة",
         "دعم ذو أولوية"
       ]
     },
-    "pos": {
-      "name": "برنامج نقاط البيع",
-      "price": "210 ريال",
-      "period": "لكل فرع/شهر",
-      "description": "حل متكامل مع نقاط البيع",
+    "loyalty_professional": {
+      "name": "محترف الولاء",
+      "description": "حل ولاء متكامل للعلامات التجارية الراسخة",
       "features": [
-        "عروض ولاء غير محدودة",
         "عملاء غير محدودين",
-        "عمليات نقاط بيع غير محدودة",
+        "عروض غير محدودة",
         "فروع غير محدودة",
-        "تحليلات كاملة",
-        "تكامل المحفظة الرقمية",
-        "الوصول إلى API",
-        "مدير حساب مخصص",
-        "تكاملات مخصصة",
-        "دعم ذو أولوية على مدار الساعة"
+        "علامة تجارية مخصصة",
+        "وصول للواجهة البرمجية"
       ]
     },
-    "professional": {
-      "name": "برنامج الولاء"
+    "pos_business": {
+      "name": "أعمال نقاط البيع",
+      "description": "نقاط بيع مبسطة للتجزئة والخدمات",
+      "features": [
+        "جهاز كاشير واحد",
+        "إدارة المخزون",
+        "تقارير المبيعات",
+        "إدارة الموظفين"
+      ]
     },
-    "enterprise": {
-      "name": "برنامج نقاط البيع"
+    "pos_enterprise": {
+      "name": "مؤسسات نقاط البيع",
+      "description": "نقاط بيع قوية للشركات ذات الحجم الكبير",
+      "features": [
+        "أجهزة كاشير غير محدودة",
+        "دعم متعدد المواقع",
+        "مخزون متقدم",
+        "نظام عرض المطبخ"
+      ]
+    },
+    "pos_premium": {
+      "name": "نقاط البيع المميزة",
+      "description": "تحكم وتخصيص كامل",
+      "features": [
+        "جميع ميزات المؤسسات",
+        "خيار العلامة البيضاء",
+        "تطوير مخصص",
+        "ضمانات مستوى الخدمة"
+      ]
+    },
+    "free": {
+      "name": "الخطة المجانية",
+      "description": "تجربة مجانية للميزات الأساسية"
     }
   },
   "actions": {
     "currentPlan": "الخطة الحالية",
     "selectPlan": "اختر الخطة",
+    "manageBilling": "إدارة الاشتراك",
     "upgrade": "ترقية",
     "upgradeFromFree": "الترقية إلى الاحترافي",
     "downgrade": "تخفيض",
-    "upgradeNow": "قم بالترقية الآن",
+    "upgradeNow": "ترقية الآن",
     "contactSales": "اتصل بالمبيعات",
     "cancel": "إلغاء",
     "confirm": "تأكيد",
     "cancelSubscription": "إلغاء الاشتراك",
     "updatePaymentMethod": "تحديث طريقة الدفع",
-    "viewPlans": "عرض الخطط",
+    "viewPlans": "عرض جميع الخطط",
     "processing": "جاري المعالجة...",
     "retry": "إعادة المحاولة",
-    "backToBilling": "العودة إلى الفواتير والاشتراك",
-    "manageBilling": "إدارة الاشتراك",
-    "soon": "قريباً"
+    "backToBilling": "العودة للفوترة والاشتراك",
+    "soon": "قريباً",
+    "upgradePlan": "ترقية الخطة",
+    "changePlan": "تغيير الخطة"
   },
   "banner": {
     "trialEnding": "تنتهي فترتك التجريبية خلال {{days}} أيام",
     "trialExpired": "انتهت فترتك التجريبية",
     "upgradePrompt": "قم بالترقية لمواصلة استخدام الميزات المميزة",
-    "dismiss": "إخفاء"
+    "dismiss": "تجاهل"
   },
   "comparison": {
     "title": "مقارنة الخطط",
@@ -131,15 +153,36 @@
     "secureNote": "يتم معالجة المدفوعات بشكل آمن بواسطة Lemon Squeezy. نحن لا نخزن تفاصيل بطاقتك.",
     "securityNote": "دفعك آمن ومشفر",
     "processingNote": "لا تغلق هذه الصفحة أثناء الدفع",
-    "backButton": "العودة إلى الخطط",
+    "backButton": "رجوع",
     "supportText": "تحتاج مساعدة؟ اتصل بالدعم",
+    "billingInterval": "فترة الفوترة",
+    "monthly": "شهري",
+    "annual": "سنوي",
+    "billedMonthly": "تفوتر شهرياً",
+    "billedAnnually": "تفوتر سنوياً",
+    "savings": "وفر {{amount}} ريال ({{months}} أشهر مجاناً)",
+    "youSave": "أنت توفر {{amount}} ريال",
+    "planDetails": "تفاصيل الخطة",
+    "subtotal": "المجموع الفرعي",
+    "planLimits": "حدود الخطة",
+    "customers": "العملاء",
+    "offers": "العروض",
+    "terminals": "الأجهزة",
+    "whyChooseMadna": "لماذا تختار مدنا مقابل المنافسين؟",
+    "compareWithCompetitors": "مقارنة مع المنافسين",
+    "invalidPlan": "الخطة المختارة غير متوفرة",
+    "networkError": "فشل الاتصال. يرجى التحقق من الإنترنت وإعادة المحاولة.",
+    "whatsIncluded": "ماذا تتضمن",
+    "andMore": "+ {{count}} ميزات إضافية",
+    "redirecting": "جاري التوجيه للدفع...",
+    "retry": "حاول مرة أخرى",
     "loadingPaymentForm": "جاري تحميل نموذج الدفع...",
     "paymentFormReady": "نموذج الدفع جاهز",
-    "scriptLoadError": "فشل تحميل بوابة الدفع. يرجى التحقق من اتصال الإنترنت وتحديث الصفحة.",
+    "scriptLoadError": "فشل تحميل بوابة الدفع. يرجى التحقق من الإنترنت وتحديث الصفحة.",
     "initializationError": "فشل تهيئة نموذج الدفع. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.",
-    "fallbackTitle": "نموذج الدفع غير متاح",
+    "fallbackTitle": "نموذج الدفع غير متوفر",
     "fallbackMessage": "نواجه مشكلة في تحميل نموذج الدفع. يرجى تجربة ما يلي:",
-    "fallbackStep1": "تحديث هذه الصفحة",
+    "fallbackStep1": "تحديث الصفحة",
     "fallbackStep2": "مسح ذاكرة التخزين المؤقت للمتصفح",
     "fallbackStep3": "تجربة متصفح آخر",
     "fallbackStep4": "الاتصال بفريق الدعم",
@@ -150,15 +193,15 @@
     "sessionStatus": "حالة الجلسة",
     "amountValidation": "التحقق من المبلغ",
     "configurationError": "خطأ في إعدادات بوابة الدفع. يرجى التواصل مع الدعم برمز الخطأ: CONFIG_001",
-    "invalidPublishableKey": "بيانات اعتماد بوابة الدفع غير صالحة. يرجى التواصل مع الدعم.",
-    "paymentMethodsUnavailable": "بعض طرق الدفع غير متاحة مؤقتاً. الدفع ببطاقة الائتمان متاح.",
+    "invalidPublishableKey": "بيانات اعتماد غير صالحة. يرجى التواصل مع الدعم.",
+    "paymentMethodsUnavailable": "بعض طرق الدفع غير متوفرة مؤقتاً. بطاقة الائتمان متوفرة.",
     "keyFormatInvalid": "خطأ في إعدادات نظام الدفع. تم إبلاغ الدعم.",
-    "merchantConfigMissing": "إعدادات التاجر للدفع غير مكتملة. يرجى التواصل مع الدعم.",
+    "merchantConfigMissing": "إعدادات التاجر غير مكتملة. يرجى التواصل مع الدعم.",
     "keyFormat": "تنسيق المفتاح",
     "paymentMethods": "طرق الدفع",
     "configurationValid": "الإعدادات صالحة",
-    "testCards": "بطاقات الاختبار للتطوير",
-    "testCardsDescription": "استخدم بطاقات الاختبار هذه لمحاكاة سيناريوهات الدفع المختلفة",
+    "testCards": "بطاقات اختبار للتطوير",
+    "testCardsDescription": "استخدم بطاقات الاختبار هذه لمحاكاة سيناريوهات دفع مختلفة",
     "madaSuccess": "مدى - نجاح",
     "madaFailure": "مدى - فشل",
     "visaSuccess": "فيزا - نجاح",
@@ -167,133 +210,129 @@
     "paymentSucceeds": "ينجح الدفع",
     "paymentFails": "يفشل الدفع",
     "paymentDeclines": "يُرفض الدفع",
-    "testCardInstructions": "استخدم أي تاريخ انتهاء صلاحية مستقبلي، أي رمز CVV مكون من 3 أرقام، واسم يتكون من كلمتين على الأقل (مثل 'مستخدم تجريبي')",
+    "testCardInstructions": "استخدم أي تاريخ انتهاء صلاحية مستقبلي، أي رمز CVV مكون من 3 أرقام، واسماً من كلمتين على الأقل (مثل 'مستخدم تجريبي')",
     "viewMoyasarDocs": "عرض وثائق بطاقات اختبار ميسر",
     "copyCardNumber": "نسخ رقم البطاقة",
     "cardNumberCopied": "تم نسخ رقم البطاقة!",
-    "retryBanner": "فشلت محاولة الدفع السابقة. يرجى التحقق من تفاصيل بطاقتك والمحاولة مرة أخرى.",
-    "dismissBanner": "إغلاق",
+    "retryBanner": "فشلت محاولة الدفع السابقة. يرجى التحقق من تفاصيل البطاقة والمحاولة مرة أخرى.",
+    "dismissBanner": "تجاهل",
     "testModeActive": "وضع الاختبار نشط",
-    "commonIssues": "المشاكل الشائعة",
-    "formNotLoading": "النموذج لا يتم تحميله؟",
+    "commonIssues": "مشاكل شائعة",
+    "formNotLoading": "النموذج لا يحمل؟",
     "formNotLoadingFix": "تحقق من سكريبت ميسر في index.html",
-    "invalidKeyError": "خطأ في المفتاح غير صالح؟",
-    "invalidKeyErrorFix": "تحقق من أن تنسيق المفتاح يبدأ بـ pk_test_ أو pk_live_",
-    "paymentNotRedirecting": "الدفع لا يعيد التوجيه؟",
-    "paymentNotRedirectingFix": "تحقق من أن عنوان URL للاستدعاء يطابق عنوان URL الأمامي تماماً",
+    "invalidKeyError": "خطأ في المفتاح؟",
+    "invalidKeyErrorFix": "تأكد من أن المفتاح يبدأ بـ pk_test_ أو pk_live_",
+    "paymentNotRedirecting": "لا يوجد إعادة توجيه؟",
+    "paymentNotRedirectingFix": "تأكد من مطابقة عنوان URL للاستدعاء لعنوان الواجهة الأمامية تماماً",
     "copyDebugInfo": "نسخ معلومات التصحيح",
-    "debugInfoCopied": "تم نسخ معلومات التصحيح إلى الحافظة",
+    "debugInfoCopied": "تم نسخ المعلومات للحافظة",
     "reactivationTitle": "إعادة تفعيل حسابك",
     "reactivationDescription": "أكمل الدفع لإعادة تفعيل حسابك المعلق",
     "reactivationNotice": "إعادة تفعيل الحساب",
-    "reactivationNoticeDescription": "سيتم إعادة تفعيل حسابك فورًا بعد نجاح الدفع. ستستعيد الوصول الكامل إلى جميع الميزات.",
-    "noActiveSubscription": "يجب أن يكون لديك اشتراك نشط قبل تحديث طريقة الدفع. يرجى الاشتراك في خطة أولاً.",
+    "reactivationNoticeDescription": "سيتم إعادة تفعيل حسابك فوراً بعد نجاح الدفع. ستستعيد الوصول الكامل لجميع الميزات.",
+    "noActiveSubscription": "يجب أن يكون لديك اشتراك نشط قبل تحديث طريقة الدفع. يرجى الاشتراك أولاً.",
     "updatePaymentMethodTitle": "تحديث طريقة الدفع",
-    "updatePaymentMethodDescription": "أضف أو حدّث بطاقتك للفوترة التلقائية",
+    "updatePaymentMethodDescription": "أضف أو حدث بطاقتك للفوترة التلقائية",
     "cardVerificationNotice": "التحقق من البطاقة",
-    "cardVerificationDescription": "سيتم إجراء رسم مؤقت بقيمة 1 ريال للتحقق من بطاقتك. سيتم استرداد هذا المبلغ فوراً.",
-    "saveCardNote": "للفوترة المتكررة، يرجى التأكد من تحديد مربع 'حفظ هذه البطاقة' إذا ظهر لك."
+    "cardVerificationDescription": "سيتم خصم مبلغ رمزي بقيمة 1 ريال للتحقق من البطاقة، وسيتم استرداده فوراً.",
+    "saveCardNote": "للفوترة المتكررة، يرجى التأكد من تحديد 'حفظ هذه البطاقة' إذا ظهر الخيار."
   },
   "paymentCallback": {
     "verifying": "جاري التحقق من الدفع...",
     "success": "تم الدفع بنجاح!",
     "failure": "فشل الدفع",
-    "successMessage": "تم تفعيل اشتراكك",
+    "successMessage": "تم تفعيل اشتراكك بنجاح",
     "failureMessage": "لم نتمكن من معالجة دفعتك",
     "transactionId": "رقم المعاملة",
-    "retryButton": "إعادة المحاولة",
-    "continueButton": "المتابعة إلى لوحة التحكم",
+    "retryButton": "إعادة محاولة الدفع",
+    "continueButton": "المتابعة للوحة التحكم",
     "supportButton": "اتصل بالدعم",
-    "autoRedirect": "إعادة التوجيه خلال {{seconds}} ثانية...",
+    "autoRedirect": "إعادة التوجيه خلال {{seconds}} ثواني...",
     "paymentNotCompleted": "لم يتم إكمال الدفع",
-    "paymentNotCompletedMessage": "ربما أغلقت نافذة الدفع أو تم إلغاء الدفع. يرجى المحاولة مرة أخرى.",
+    "paymentNotCompletedMessage": "ربما أغلقت نافذة الدفع أو تم إلغاؤه. يرجى المحاولة مرة أخرى.",
     "paymentDeclined": "تم رفض الدفع",
-    "paymentDeclinedMessage": "تم رفض دفعتك من قبل بوابة الدفع. يرجى التحقق من تفاصيل بطاقتك والمحاولة مرة أخرى.",
+    "paymentDeclinedMessage": "تم رفض دفعتك من بوابة الدفع. يرجى التحقق من تفاصيل البطاقة والمحاولة مرة أخرى.",
     "verificationTimeout": "انتهت مهلة التحقق",
-    "verificationTimeoutMessage": "يستغرق التحقق من الدفع وقتاً أطول من المتوقع. يرجى التحقق من بريدك الإلكتروني لتأكيد الدفع أو الاتصال بالدعم.",
+    "verificationTimeoutMessage": "يستغرق التحقق وقتاً أطول من المتوقع. يرجى التحقق من بريدك الإلكتروني أو الاتصال بالدعم.",
     "copyErrorDetails": "نسخ تفاصيل الخطأ",
-    "errorDetailsCopied": "تم نسخ تفاصيل الخطأ إلى الحافظة",
+    "errorDetailsCopied": "تم نسخ تفاصيل الخطأ للحافظة",
     "verificationFailed": "فشل التحقق من الدفع",
     "verificationIssues": "مشاكل التحقق",
     "statusMismatch": "عدم تطابق حالة الدفع",
-    "amountMismatch": "عدم تطابق مبلغ الدفع",
+    "amountMismatch": "عدم تطابق المبلغ",
     "currencyMismatch": "عدم تطابق العملة",
-    "sessionLinkingFailed": "تعذر ربط الدفع بحسابك. يرجى التواصل مع الدعم مع رقم المعاملة: {{transactionId}}",
-    "moyasarPaymentNotFound": "الدفع غير موجود على بوابة الدفع. قد تكون هذه مشكلة مؤقتة - يرجى المحاولة مرة أخرى أو التواصل مع الدعم.",
+    "sessionLinkingFailed": "تعذر ربط الدفع بحسابك. يرجى الاتصال بالدعم برقم المعاملة: {{transactionId}}",
+    "moyasarPaymentNotFound": "الدفع غير موجود في بوابة الدفع. قد يكون ذلك مؤقتاً - يرجى المحاولة مرة أخرى.",
     "viewTechnicalDetails": "عرض التفاصيل التقنية",
     "hideTechnicalDetails": "إخفاء التفاصيل التقنية",
     "expectedAmount": "المبلغ المتوقع",
     "actualAmount": "المبلغ الفعلي",
     "waitAndRetry": "يرجى الانتظار لحظة والمحاولة مرة أخرى",
     "paymentMethodUpdated": "تم تحديث طريقة الدفع بنجاح!",
-    "paymentMethodUpdatedMessage": "تم تحديث طريقة الدفع الخاصة بك وسيتم استخدامها للفواتير المستقبلية",
+    "paymentMethodUpdatedMessage": "تم تحديث طريقة الدفع وسيتم استخدامها للفواتير القادمة",
     "cardBrand": "نوع البطاقة",
-    "lastFourDigits": "أخر 4 أرقام",
+    "lastFourDigits": "آخر 4 أرقام",
     "paymentMethodUpdateFailed": "فشل تحديث طريقة الدفع. يرجى المحاولة مرة أخرى.",
-    "cardVerificationFailed": "فشل التحقق من البطاقة. يرجى التحقق من تفاصيل بطاقتك والمحاولة مرة أخرى.",
-    "cardVerificationNotFound": "لم يتم العثور على عملية التحقق من البطاقة. قد تكون هذه مشكلة مؤقتة - يرجى المحاولة مرة أخرى.",
-    "cardTokenFailed": "فشل حفظ تفاصيل البطاقة. يرجى التأكد من تحديد مربع 'حفظ هذه البطاقة' إذا كان متاحاً، أو تجربة بطاقة أخرى.",
-    "noSubscriptionForUpdate": "لم يتم العثور على اشتراك نشط. يرجى الاشتراك في خطة قبل تحديث طريقة الدفع."
+    "cardVerificationFailed": "فشل التحقق من البطاقة. يرجى المحاولة مرة أخرى.",
+    "cardVerificationNotFound": "لم يتم العثور على عملية التحقق. قد يكون ذلك مؤقتاً.",
+    "cardTokenFailed": "فشل حفظ تفاصيل البطاقة. يرجى التأكد من اختيار 'حفظ هذه البطاقة'.",
+    "noSubscriptionForUpdate": "لم يتم العثور على اشتراك نشط. يرجى الاشتراك قبل تحديث طريقة الدفع."
   },
   "modal": {
     "upgrade": {
       "title": "الترقية إلى {{plan}}",
       "subtitle": "أنت تقوم بالترقية من {{currentPlan}} إلى {{newPlan}}",
       "priceChange": "السعر الشهري الجديد: {{price}} ريال",
-      "effectiveDate": "ساري المفعول فوراً",
+      "effectiveDate": "فعال فوراً",
       "proceedToPayment": "المتابعة للدفع",
       "comingSoon": "تكامل الدفع قريباً",
-      "comingSoonMessage": "سيكون تدفق الدفع متاحاً في المرحلة التالية. ستتمكن من إكمال ترقيتك حينها.",
+      "comingSoonMessage": "سيكون نظام الدفع متاحاً في المرحلة القادمة. ستتمكن من إكمال الترقية حينها.",
       "withStoredPayment": "ترقية الآن",
       "withoutStoredPayment": "المتابعة للدفع",
-      "proratedAmount": "المبلغ المقسّم: {{amount}} ريال",
-      "proratedExplanation": "سيتم محاسبتك بمبلغ مقسّم للأيام المتبقية في دورة الفوترة",
+      "proratedAmount": "المبلغ بالنسب والتناسب: {{amount}} ريال",
+      "proratedExplanation": "سيتم محاسبتك بمبلغ مقسم للأيام المتبقية في دورة الفوترة",
       "immediateUpgrade": "سيتم ترقية خطتك فوراً",
       "confirmUpgrade": "تأكيد الترقية"
     },
     "downgrade": {
       "title": "التخفيض إلى {{plan}}",
       "subtitle": "أنت تقوم بالتخفيض من {{currentPlan}} إلى {{newPlan}}",
-      "warning": "قد يحد التخفيض من الوصول إلى بعض الميزات",
+      "warning": "قد يحد التخفيض من وصولك لبعض الميزات",
       "effectiveDate": "ستدخل التغييرات حيز التنفيذ في {{date}}",
       "effectiveDateUnknown": "ستدخل التغييرات حيز التنفيذ في نهاية فترة الفوترة الحالية",
-      "featuresLost": {
+      "comingSoon": "إدارة التخفيض قريباً",
+      "comingSoonMessage": "سيكون نظام التخفيض متاحاً في المرحلة القادمة. خطتك الحالية ستبقى نشطة حتى اكتمال العملية.",
+      "confirmDowngrade": "تأكيد التخفيض",
+      "creditNote": "ستحصل على رصيد بقيمة {{amount}} ريال عن الوقت غير المستخدم",
+      "featuresLost": "الميزات التي ستفقدها:",
+      "continueWithDowngrade": "المتابعة في التخفيض",
+      "featureLoss": {
         "free": [
-          "محدود بعرض ولاء واحد",
+          "محدود بـ 1 عرض ولاء",
           "بحد أقصى 100 عميل",
-          "20 عملية نقاط بيع شهريًا",
+          "20 عملية نقاط بيع شهرياً",
           "إزالة التحليلات المتقدمة"
         ],
         "professional": [
-          "محدود بموقع واحد",
+          "محدود بـ موقع واحد",
           "بحد أقصى 1,000 عميل",
-          "لا يوجد مدير حساب مخصص"
+          "بدون مدير حساب مخصص"
         ]
-      },
-      "continueWithDowngrade": "المتابعة مع التخفيض"
+      }
     }
   },
   "limits": {
-    "approaching": "الاقتراب من الحد",
-    "reached": "تم الوصول إلى الحد",
+    "approaching": "تقترب من الحد",
+    "reached": "تم الوصول للحد",
     "upgradeRequired": "الترقية مطلوبة للمتابعة"
-  },
-  "status": {
-    "trial": "تجريبي",
-    "active": "نشط",
-    "expired": "منتهي",
-    "cancelled": "ملغى",
-    "suspended": "معلق",
-    "past_due": "متأخر الدفع"
   },
   "management": {
     "title": "إدارة الاشتراك",
-    "subtitle": "إدارة خطتك والفوترة",
+    "subtitle": "إدارة اشتراكك والفوترة",
     "loading": "جاري تحميل تفاصيل الاشتراك...",
-    "error": "فشل تحميل تفاصيل الاشتراك",
     "currentSubscription": "الاشتراك الحالي",
     "billingCycle": "دورة الفوترة",
-    "nextBillingDate": "تاريخ الفوترة التالي",
+    "nextBillingDate": "موعد الفوترة القادم",
     "currentPeriodStart": "بداية الفترة الحالية",
     "currentPeriodEnd": "نهاية الفترة الحالية",
     "monthlyPrice": "السعر الشهري",
@@ -302,77 +341,50 @@
     "cardEnding": "بطاقة تنتهي بـ {{last4}}",
     "updatePaymentMethod": "تحديث طريقة الدفع",
     "addPaymentMethod": "إضافة طريقة دفع",
-    "deletePaymentMethod": "حذف طريقة الدفع",
+    "deletePaymentMethod": "حذف طريقة دفع",
     "billingHistory": "المدفوعات الأخيرة",
     "viewFullHistory": "عرض السجل الكامل",
-    "noBillingHistory": "لا يوجد سجل دفع بعد",
+    "noBillingHistory": "لا يوجد سجل مدفوعات حالياً",
     "subscriptionActions": "إجراءات الاشتراك",
     "manageSubscription": "إدارة الاشتراك",
-    "upgradeSuccess": "تمت ترقية الاشتراك بنجاح!",
-    "downgradeScheduled": "تم جدولة التخفيض لتاريخ {{date}}",
     "renewalDate": "الفوترة التالية",
     "currentPlan": "الخطة الحالية",
-    "currentPlanCard": {
-      "renewalDate": "تاريخ التجديد: {{date}}",
-      "billingCycle": "دورة الفوترة: شهرية",
-      "price": "{{amount}} ريال/شهر",
-      "cancelledNote": "سيتم إلغاء اشتراكك في {{date}}",
-      "pastDueWarning": "دفعتك متأخرة. يرجى تحديث طريقة الدفع.",
-      "nextBilling": "الفوترة التالية: {{date}}"
-    },
-    "usageCard": {
-      "title": "استخدام الخطة",
-      "currentUsage": "الاستخدام الحالي",
-      "nearing": "تقترب من الحد",
-      "exceeded": "تجاوزت الحد",
-      "of": "من"
-    },
-    "actionsCard": {
-      "title": "إجراءات الاشتراك",
-      "upgradeTitle": "ترقية الخطة",
-      "upgradeDescription": "احصل على المزيد من الميزات والحدود",
-      "downgradeTitle": "تخفيض الخطة",
-      "downgradeDescription": "تقليل التكاليف بميزات أقل",
-      "cancelTitle": "إلغاء الاشتراك",
-      "cancelDescription": "إلغاء خطتك الحالية"
-    }
-  },
-  "lifetime": "مدى الحياة",
-  "active": {
-    "title": "اشتراك نشط",
-    "description": "حسابك في وضع جيد."
+    "upgradeSuccess": "تمت ترقية الاشتراك بنجاح!",
+    "downgradeScheduled": "تم جدولة التخفيض في {{date}}"
   },
   "cancel": {
     "title": "إلغاء الاشتراك",
     "subtitle": "هل أنت متأكد من إلغاء اشتراكك؟",
-    "warning": "ستفقد الوصول إلى الميزات المميزة في نهاية فترة الفوترة",
+    "warning": "ستفقد الوصول للميزات المميزة في نهاية فترة الفوترة",
     "accessUntil": "سيكون لديك وصول حتى {{date}}",
-    "accessUntilUnknown": "سيتم تحديد فترة الوصول بناءً على دورة الفوترة الخاصة بك",
+    "accessUntilUnknown": "سيتم تحديد فترة الوصول بناءً على دورة الفوترة",
     "reasonLabel": "لماذا تقوم بالإلغاء؟ (اختياري)",
     "reasonPlaceholder": "اختر سبباً",
     "reasons": {
-      "expensive": "غالي جداً",
+      "expensive": "مكلف جداً",
       "notUsing": "لا أستخدم الميزات",
-      "competitor": "التبديل إلى منافس",
+      "competitor": "انتقلت للمنافسين",
       "other": "أخرى"
     },
     "confirmCancel": "تأكيد الإلغاء",
     "keepSubscription": "الاحتفاظ بالاشتراك",
     "cancelled": "تم إلغاء الاشتراك",
-    "cancelledMessage": "تم إلغاء اشتراكك. سيكون لديك وصول حتى {{date}}."
+    "cancelledMessage": "تم إلغاء اشتراكك. لديك وصول حتى {{date}}."
   },
   "paymentMethodUpdate": {
     "title": "تحديث طريقة الدفع",
-    "subtitle": "إضافة أو تحديث طريقة الدفع للفوترة المتكررة",
+    "subtitle": "إضافة أو تحديث بطاقتك للفوترة التلقائية",
     "currentMethod": "طريقة الدفع الحالية",
     "newMethod": "طريقة دفع جديدة",
-    "securityNote": "يتم تخزين معلومات الدفع الخاصة بك بشكل آمن بواسطة ميسر",
+    "securityNote": "يتم تخزين معلوماتك بشكل آمن بواسطة ميسر",
     "success": "تم تحديث طريقة الدفع بنجاح",
     "failure": "فشل تحديث طريقة الدفع",
     "close": "إغلاق"
   },
   "billingHistory": {
-    "title": "سجل الفوترة",
+    "title": "المدفوعات الأخيرة",
+    "viewAll": "عرض الكل",
+    "empty": "لا يوجد سجل مدفوعات حالياً",
     "date": "التاريخ",
     "amount": "المبلغ",
     "status": "الحالة",
@@ -380,9 +392,26 @@
     "invoice": "الفاتورة",
     "download": "تحميل",
     "paid": "مدفوع",
-    "failed": "فشل",
+    "failed": "فاشل",
     "pending": "معلق",
+    "refunded": "مسترد",
+    "actions": "الإجراءات",
+    "downloadInvoice": "تحميل الفاتورة"
+  },
+  "paymentStatus": {
+    "succeeded": "مدفوع",
+    "paid": "مدفوع",
+    "pending": "معلق",
+    "failed": "فاشل",
     "refunded": "مسترد"
+  },
+  "status": {
+    "trial": "تجريبي",
+    "active": "نشط",
+    "expired": "منتهي",
+    "cancelled": "ملغى",
+    "past_due": "متأخر",
+    "suspended": "موقوف"
   },
   "payment": {
     "history": {
@@ -392,11 +421,11 @@
         "status": "الحالة",
         "dateFrom": "من تاريخ",
         "dateTo": "إلى تاريخ",
-        "minAmount": "الحد الأدنى للمبلغ (ريال)",
-        "maxAmount": "الحد الأقصى للمبلغ (ريال)",
+        "minAmount": "أقل مبلغ (ريال)",
+        "maxAmount": "أعلى مبلغ (ريال)",
         "search": "بحث",
         "searchPlaceholder": "رقم الفاتورة أو معرف الدفع",
-        "clearFilters": "مسح الفلاتر",
+        "clearFilters": "مسح التصفية",
         "allStatuses": "جميع الحالات"
       },
       "table": {
@@ -409,27 +438,27 @@
       },
       "statuses": {
         "paid": "مدفوع",
-        "pending": "قيد الانتظار",
-        "failed": "فشل",
+        "pending": "معلق",
+        "failed": "فاشل",
         "refunded": "مسترد",
         "cancelled": "ملغى"
       },
       "paymentMethods": {
-        "card": "بطاقة ائتمان",
-        "apple_pay": "آبل باي",
-        "stc_pay": "STC باي"
+        "card": "بطاقة ائتمانية",
+        "apple_pay": "Apple Pay",
+        "stc_pay": "STC Pay"
       },
       "actions": {
         "downloadInvoice": "تحميل الفاتورة",
         "downloadSuccess": "تم تحميل الفاتورة بنجاح",
         "downloadFailed": "فشل تحميل الفاتورة",
-        "retry": "إعادة المحاولة"
+        "retry": "إعادة محاولة الدفع"
       },
       "emptyState": {
-        "title": "لا توجد مدفوعات بعد",
-        "description": "سيظهر سجل مدفوعاتك هنا بمجرد الاشتراك في خطة.",
-        "noResults": "لم يتم العثور على مدفوعات تطابق الفلاتر.",
-        "clearFiltersButton": "مسح الفلاتر"
+        "title": "لا توجد مدفوعات حالياً",
+        "description": "سجل مدفوعاتك سيظهر هنا بمجرد اشتراكك في خطة.",
+        "noResults": "لا توجد مدفوعات تطابق خيارات التصفية.",
+        "clearFiltersButton": "مسح التصفية"
       },
       "pagination": {
         "previous": "السابق",
@@ -441,58 +470,59 @@
         "items": "عناصر"
       }
     },
-    "historyFetched": "تم استرجاع سجل المدفوعات بنجاح",
+    "historyFetched": "تم تحميل سجل المدفوعات",
     "invalidStatus": "حالة دفع غير صالحة",
     "invalidDateRange": "نطاق تاريخ غير صالح"
   },
   "suspended": {
-    "title": "الحساب معلق",
+    "title": "الحساب موقوف",
     "subtitle": "الدفع مطلوب لإعادة التفعيل",
-    "reason": "سبب التعليق",
-    "date": "تاريخ التعليق",
-    "retryHistory": "فشلت {{count}} محاولات دفع",
+    "reason": "سبب الإيقاف",
+    "date": "تاريخ الإيقاف",
+    "retryHistory": "فشل {{count}} محاولات دفع",
     "gracePeriodExpired": "انتهت فترة السماح في {{date}}",
-    "updatePaymentCTA": "تحديث الدفع وإعادة التفعيل",
+    "updatePaymentCTA": "تحديث الدفع والتفعيل",
     "contactSupport": "اتصل بالدعم",
     "viewPaymentHistory": "عرض سجل المدفوعات",
     "logout": "تسجيل الخروج",
-    "whySuspended": "لماذا تم تعليق حسابي؟",
-    "faqContent": "تم تعليق حسابك بسبب فشل محاولات الدفع. حاولنا تحصيل الرسوم من طريقة الدفع الخاصة بك {{count}} مرات على مدار {{days}} أيام. بعد فشل المحاولة الأخيرة، دخل حسابك فترة سماح. عندما انتهت فترة السماح دون دفع، تم تعليق حسابك تلقائيًا لمنع الاستخدام غير المصرح به.",
-    "howToReactivate": "كيفية إعادة تفعيل حسابك",
-    "reactivateSteps": "1. انقر على 'تحديث الدفع وإعادة التفعيل' أدناه\n2. أدخل تفاصيل الدفع الخاصة بك\n3. أكمل عملية الدفع\n4. سيتم إعادة تفعيل حسابك فورًا",
-    "loading": "جاري تحميل تفاصيل التعليق...",
-    "error": "فشل تحميل تفاصيل التعليق. يرجى المحاولة مرة أخرى.",
-    "alreadyActive": "حسابك نشط بالفعل. جاري التوجيه إلى لوحة التحكم..."
+    "whySuspended": "لماذا تم إيقاف حسابي؟",
+    "faqContent": "تم إيقاف حسابك بسبب فشل عمليات الدفع. حاولنا الخصم من بطاقتك {{count}} مرة على مدار {{days}} يوم. بعد فشل المحاولة الأخيرة، دخل الحساب فترة سماح، وعند انتهائها تم الإيقاف تلقائياً.",
+    "howToReactivate": "كيفية إعادة التفعيل",
+    "reactivateSteps": "1. اضغط على 'تحديث الدفع والتفعيل'\n2. أدخل بيانات بطاقتك\n3. أكمل عملية الدفع\n4. سيعود حسابك للعمل فوراً",
+    "loading": "جاري تحميل تفاصيل الإيقاف...",
+    "error": "فشل تحميل تفاصيل الإيقاف. حاول مرة أخرى.",
+    "alreadyActive": "حسابك نشط بالفعل، جاري التوجيه للوحة التحكم..."
   },
   "paymentBanner": {
     "title": {
-      "retry": "فشل الدفع - تم جدولة إعادة المحاولة",
-      "final": "فشلت محاولة الدفع الأخيرة",
-      "gracePeriod": "فترة السماح نشطة - الدفع مطلوب"
+      "retry": "فشل الدفع - سيتم إعادة المحاولة",
+      "final": "فشلت آخر محاولة دفع",
+      "gracePeriod": "فترة السماح مفعلة - الدفع مطلوب"
     },
     "retryCount": "فشلت المحاولة {{current}} من {{max}}",
-    "nextRetry": "المحاولة التالية: {{date}}",
-    "gracePeriodEnd": "سيتم تعليق الحساب في {{date}}",
+    "nextRetry": "المحاولة القادمة: {{date}}",
+    "gracePeriodEnd": "سيتم إيقاف الحساب في {{date}}",
     "daysRemaining": "{{days}} أيام متبقية",
     "updatePayment": "تحديث الدفع",
-    "dismiss": "إخفاء",
-    "urgentAction": "مطلوب إجراء عاجل لمنع تعليق الحساب"
+    "dismiss": "تجاهل",
+    "urgentAction": "إجراء عاجل مطلوب لتفادي إيقاف الحساب"
   },
   "reactivation": {
-    "success": "تم إعادة تفعيل الحساب بنجاح!",
-    "processing": "جاري معالجة إعادة التفعيل...",
-    "failed": "فشلت إعادة التفعيل. يرجى المحاولة مرة أخرى أو الاتصال بالدعم.",
-    "paymentVerificationFailed": "فشل التحقق من الدفع. يرجى التحقق من تفاصيل الدفع الخاصة بك.",
-    "notSuspended": "حسابك غير معلق.",
-    "redirecting": "جاري التوجيه إلى لوحة التحكم...",
-    "backToSuspended": "العودة إلى الحساب المعلق"
+    "success": "تم إعادة تفعيل الحساب!",
+    "processing": "جاري معالجة طلب التفعيل...",
+    "failed": "فشل التفعيل، حاول مرة أخرى أو تواصل مع الدعم.",
+    "paymentVerificationFailed": "فشل التحقق من الدفع، تحقق من بيانات بطاقتك.",
+    "notSuspended": "حسابك ليس موقوفاً.",
+    "redirecting": "جاري التوجيه للوحة التحكم...",
+    "backToSuspended": "الرجوع للحساب الموقوف"
   },
   "errors": {
-    "fetchFailed": "فشل تحميل تفاصيل الاشتراك. يرجى المحاولة مرة أخرى.",
-    "upgradeFailed": "فشلت ترقية الاشتراك. يرجى المحاولة مرة أخرى.",
-    "downgradeFailed": "فشل تخفيض الاشتراك. يرجى المحاولة مرة أخرى.",
-    "cancelFailed": "فشل إلغاء الاشتراك. يرجى المحاولة مرة أخرى.",
-    "portalFailed": "فشل الانتقال إلى بوابة الفواتير. يرجى المحاولة مرة أخرى."
+    "fetchFailed": "فشل تحميل تفاصيل الاشتراك، حاول لاحقاً.",
+    "upgradeFailed": "فشلت عملية الترقية، حاول لاحقاً.",
+    "downgradeFailed": "فشلت عملية التخفيض، حاول لاحقاً.",
+    "cancelFailed": "فشل إلغاء الاشتراك، حاول لاحقاً.",
+    "portalFailed": "فشل فتح بوابة الفواتير، حاول لاحقاً.",
+    "invoiceFailed": "فشل تحميل الفاتورة، حاول لاحقاً."
   },
   "planLabel": "الخطة",
   "usage": {

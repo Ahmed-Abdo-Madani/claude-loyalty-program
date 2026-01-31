@@ -1,6 +1,8 @@
 import { DataTypes } from 'sequelize'
 import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
+import logger from '../config/logger.js'
+import SubscriptionService from '../services/SubscriptionService.js'
 
 const Business = sequelize.define('Business', {
   public_id: {
@@ -182,7 +184,17 @@ const Business = sequelize.define('Business', {
     comment: 'File size in bytes'
   },
   current_plan: {
-    type: DataTypes.ENUM('free', 'professional', 'enterprise'),
+    type: DataTypes.ENUM(
+      'free',
+      'professional',
+      'enterprise',
+      'loyalty_starter',
+      'loyalty_growth',
+      'loyalty_professional',
+      'pos_business',
+      'pos_enterprise',
+      'pos_premium'
+    ),
     allowNull: false,
     defaultValue: 'free',
     comment: 'Current subscription plan'
@@ -269,14 +281,13 @@ Business.prototype.hasActiveSubscription = function () {
 }
 
 Business.prototype.canAccessFeature = function (feature) {
-  const featureAccess = {
-    free: ['basic_offers'],
-    professional: ['basic_offers', 'unlimited_offers', 'api_access'],
-    enterprise: ['basic_offers', 'unlimited_offers', 'multiple_locations', 'api_access', 'advanced_analytics']
+  try {
+    const plan = SubscriptionService.getPlanDefinition(this.current_plan)
+    return plan.features.includes(feature)
+  } catch (error) {
+    logger.error('Error checking feature access', { plan: this.current_plan, feature, error: error.message })
+    return false
   }
-
-  const allowedFeatures = featureAccess[this.current_plan] || []
-  return allowedFeatures.includes(feature)
 }
 
 Business.prototype.getRemainingTrialDays = function () {
@@ -289,28 +300,18 @@ Business.prototype.getRemainingTrialDays = function () {
 }
 
 Business.prototype.getPlanLimits = function () {
-  const limits = {
-    free: {
-      offers: 1,
-      customers: 100,
-      posOperations: 20,
-      locations: 5
-    },
-    professional: {
-      offers: Infinity,
-      customers: 1000,
-      posOperations: Infinity,
-      locations: 10
-    },
-    enterprise: {
-      offers: Infinity,
-      customers: Infinity,
-      posOperations: Infinity,
-      locations: Infinity
+  try {
+    const plan = SubscriptionService.getPlanDefinition(this.current_plan)
+    return plan.limits
+  } catch (error) {
+    logger.error('Error getting plan limits', { plan: this.current_plan, error: error.message })
+    // Fallback to free plan limits if plan not found/error
+    try {
+      return SubscriptionService.getPlanDefinition('free').limits
+    } catch (fallbackError) {
+      return { offers: 1, customers: 100, posOperations: 20, locations: 1 }
     }
   }
-
-  return limits[this.current_plan] || limits.free
 }
 
 export default Business

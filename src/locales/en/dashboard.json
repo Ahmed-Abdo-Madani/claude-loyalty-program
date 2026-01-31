@@ -950,7 +950,11 @@
     "title": "Subscription",
     "viewPlans": "View Plans",
     "managePlan": "Manage Subscription",
-    "currentPlan": "Current Plan"
+    "manageBilling": "Manage Billing",
+    "currentPlan": "Current Plan",
+    "usageSummary": "Manage your plan and usage limits.",
+    "upgradePrompt": "Upgrade Plan",
+    "trialEnding": "Trial ends in {{days}} days"
   },
   "settings": {
     "title": "Settings",

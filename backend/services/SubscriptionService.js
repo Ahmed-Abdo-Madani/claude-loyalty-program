@@ -11,6 +11,7 @@ import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Counter from '../models/Counter.js';
 import MoyasarService from './MoyasarService.js';
+import { PLAN_DEFINITIONS, PLAN_HIERARCHY } from '../constants/plans.js';
 
 /**
  * SubscriptionService - Centralized subscription and plan management
@@ -23,46 +24,11 @@ import MoyasarService from './MoyasarService.js';
  */
 class SubscriptionService {
   // Plan definitions with limits and features
-  static PLAN_DEFINITIONS = {
-    free: {
-      name: 'free',
-      price: 0,
-      limits: {
-        offers: 1,
-        customers: 100,
-        posOperations: 20,
-        locations: 1
-      },
-      features: ['basic_offers']
-    },
-    professional: {
-      name: 'professional',
-      price: 210,
-      limits: {
-        offers: Infinity,
-        customers: 1000,
-        posOperations: Infinity,
-        locations: 1
-      },
-      features: ['basic_offers', 'unlimited_offers', 'api_access']
-    },
-    enterprise: {
-      name: 'enterprise',
-      basePrice: 570,
-      pricePerLocation: 180,
-      limits: {
-        offers: Infinity,
-        customers: Infinity,
-        posOperations: Infinity,
-        locations: Infinity
-      },
-      features: ['basic_offers', 'unlimited_offers', 'multiple_locations', 'api_access', 'advanced_analytics']
-    }
-  };
+  static PLAN_DEFINITIONS = PLAN_DEFINITIONS;
 
   /**
    * Get plan definition for a given plan type
-   * @param {string} planType - Plan type: 'free', 'professional', 'enterprise'
+   * @param {string} planType - Plan type: 'free', 'professional', 'enterprise', 'loyalty_starter', 'loyalty_growth', 'loyalty_professional', 'pos_business', 'pos_enterprise', 'pos_premium'
    * @returns {Object} Plan configuration
    * @throws {Error} If plan type is invalid
    */
@@ -70,9 +36,13 @@ class SubscriptionService {
     const plan = this.PLAN_DEFINITIONS[planType?.toLowerCase()];
 
     if (!plan) {
-      const error = new Error(`Invalid plan type: ${planType}. Valid plans: free, professional, enterprise`);
+      const error = new Error(`Invalid plan type: ${planType}. Valid plans: free, professional, enterprise, loyalty_starter, loyalty_growth, loyalty_professional, pos_business, pos_enterprise, pos_premium`);
       logger.error('Invalid plan type requested', { planType });
       throw error;
+    }
+
+    if (plan.deprecated) {
+      logger.warn('Deprecated plan accessed', { planType, deprecationMessage: plan.deprecationMessage });
     }
 
     logger.debug('Plan definition retrieved', { planType, plan });
@@ -80,13 +50,32 @@ class SubscriptionService {
   }
 
   /**
+   * Helper to categorize plan type
+   * @param {string} planType 
+   * @returns {string} 'legacy', 'loyalty', 'pos', or 'unknown'
+   */
+  static getPlanCategory(planType) {
+    if (['free', 'professional', 'enterprise'].includes(planType)) {
+      return 'legacy';
+    }
+    if (planType.startsWith('loyalty_')) {
+      return 'loyalty';
+    }
+    if (planType.startsWith('pos_')) {
+      return 'pos';
+    }
+    return 'unknown';
+  }
+
+  /**
    * Calculate price for a plan based on location count
    * Enterprise pricing: 570 SAR for up to 3 locations, then +180 SAR per additional location
    * @param {string} planType - Plan type
+   * @param {string} billingInterval - 'monthly' or 'annual'
    * @param {number} locationCount - Number of locations
    * @returns {number} Price in SAR
    */
-  static calculatePlanPrice(planType, locationCount = 1) {
+  static calculatePlanPrice(planType, billingInterval = 'monthly', locationCount = 1) {
     const plan = this.getPlanDefinition(planType);
 
     if (planType === 'enterprise') {
@@ -109,8 +98,13 @@ class SubscriptionService {
       }
     }
 
-    // Free and Professional plans have fixed prices
-    return plan.price;
+    // For legacy 'free' and 'professional' plans, return fixed price (ignoring interval)
+    if (['free', 'professional'].includes(planType)) {
+      return plan.price;
+    }
+
+    // For new plans, return price based on billing interval
+    return billingInterval === 'annual' ? plan.annualPrice : plan.monthlyPrice;
   }
 
   /**
@@ -189,7 +183,7 @@ class SubscriptionService {
   /**
    * Check if business can perform action based on subscription limits
    * @param {string} businessId - Business secure ID
-   * @param {string} limitType - Type of limit: 'offers', 'customers', 'posOperations', 'locations'
+   * @param {string} limitType - Type of limit: 'offers', 'customers', 'posOperations', 'locations', 'terminals'
    * @returns {Promise<Object>} { allowed: boolean, message: string, current: number, limit: number }
    * @throws {Error} If business not found or limit check fails
    */
@@ -220,6 +214,15 @@ class SubscriptionService {
         throw new Error(`Invalid limit type: ${limitType}. Valid types: ${Object.keys(planLimits).join(', ')}`);
       }
 
+      // Calculate current usage
+      const usage = await this.calculateUsage(businessId);
+      const currentUsage = usage[limitType];
+
+      // Comment 2: Guard against undefined usage
+      if (currentUsage === undefined) {
+        throw new Error(`Usage not calculated for limit type: ${limitType}`);
+      }
+
       // Optional: Log if Business model has its own getPlanLimits for debugging
       if (business.getPlanLimits && typeof business.getPlanLimits === 'function') {
         logger.debug('Business model has getPlanLimits method (service definition takes precedence)', {
@@ -227,10 +230,6 @@ class SubscriptionService {
           businessPlan: business.current_plan
         });
       }
-
-      // Calculate current usage
-      const usage = await this.calculateUsage(businessId);
-      const currentUsage = usage[limitType];
 
       // Check limit
       const result = this.enforceLimit(currentUsage, limit, limitType);
@@ -317,7 +316,8 @@ class SubscriptionService {
         limits: plan.limits,
         usage,
         features: plan.features,
-        can_upgrade: business.current_plan !== 'enterprise',
+        can_upgrade: business.current_plan !== 'pos_premium',
+        plan_tier: this.getPlanCategory(business.current_plan),
         next_billing_date: subscription?.next_billing_date || null,
         // Comment 4: Include retry and grace metadata for payment failure banner
         retry_count: subscription?.retry_count || 0,
@@ -421,16 +421,16 @@ class SubscriptionService {
       const newPlan = this.getPlanDefinition(newPlanType);
 
       // Validate upgrade path (can't downgrade)
-      const planHierarchy = ['free', 'professional', 'enterprise'];
-      const currentIndex = planHierarchy.indexOf(currentPlan);
-      const newIndex = planHierarchy.indexOf(newPlanType);
+      const currentIndex = PLAN_HIERARCHY.indexOf(currentPlan);
+      const newIndex = PLAN_HIERARCHY.indexOf(newPlanType);
 
       if (newIndex <= currentIndex) {
         throw new Error(`Cannot upgrade from ${currentPlan} to ${newPlanType}. Use downgradeSubscription instead.`);
       }
 
       // Calculate new price
-      const newPrice = this.calculatePlanPrice(newPlanType, locationCount);
+      // Comment 1: Pass billing interval (default monthly) and location count explicitly
+      const newPrice = this.calculatePlanPrice(newPlanType, 'monthly', locationCount);
 
       // Calculate prorated amount if upgrading mid-period
       let proratedAmount = newPrice;
@@ -528,9 +528,8 @@ class SubscriptionService {
       const newPlan = this.getPlanDefinition(newPlanType);
 
       // Validate downgrade path
-      const planHierarchy = ['free', 'professional', 'enterprise'];
-      const currentIndex = planHierarchy.indexOf(currentPlan);
-      const newIndex = planHierarchy.indexOf(newPlanType);
+      const currentIndex = PLAN_HIERARCHY.indexOf(currentPlan);
+      const newIndex = PLAN_HIERARCHY.indexOf(newPlanType);
 
       if (newIndex >= currentIndex) {
         throw new Error(`Cannot downgrade from ${currentPlan} to ${newPlanType}. Use upgradeSubscription instead.`);
@@ -539,7 +538,10 @@ class SubscriptionService {
       // Calculate credit for unused portion
       let creditAmount = 0;
       if (subscription?.next_billing_date) {
-        const currentPrice = this.calculatePlanPrice(currentPlan);
+        // Comment 1: Pass billing interval and fetch correct location count
+        const locationCount = await Branch.count({ where: { business_id: businessId } });
+        const currentPrice = this.calculatePlanPrice(currentPlan, 'monthly', locationCount);
+
         const now = new Date();
         const nextBilling = new Date(subscription.next_billing_date);
         const daysRemaining = Math.ceil((nextBilling - now) / (1000 * 60 * 60 * 24));
@@ -733,11 +735,17 @@ class SubscriptionService {
         where: { business_id: businessId }
       });
 
+      // Comment 2: Count terminals
+      const terminalCount = await Counter.count({
+        where: { business_id: businessId }
+      });
+
       const usage = {
         offers: offerCount,
         customers: customerCount,
         posOperations: posOperationCount,
-        locations: locationCount
+        locations: locationCount,
+        terminals: terminalCount
       };
 
       logger.debug('Usage calculated', {

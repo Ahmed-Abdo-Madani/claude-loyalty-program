@@ -955,6 +955,10 @@
   },
   "subscription": {
     "title": "الاشتراك",
+    "usageSummary": "إدارة خطتك وحدود الاستخدام.",
+    "upgradePrompt": "ترقية الخطة",
+    "manageBilling": "إدارة الفواتير",
+    "trialEnding": "تنتهي الفترة التجريبية خلال {{days}} يوم",
     "viewPlans": "عرض الخطط",
     "managePlan": "إدارة الاشتراك",
     "currentPlan": "الخطة الحالية"
@@ -1017,8 +1021,5 @@
     "plan": "",
     "upgradeTo": "الترقية إلى",
     "maybeLater": "ربما لاحقاً"
-  },
-  "usage": {
-    "offers": "العروض"
   }
 }
