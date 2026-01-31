@@ -101,7 +101,23 @@
         "Custom Development",
         "SLA Guarantees"
       ]
-    }
+    },
+    "free": {
+      "name": "Free Plan",
+      "description": "Free trial of essential features"
+    },
+    "current": "Current Plan",
+    "active": "Active Plan",
+    "loyalty": "Loyalty Program",
+    "pos": "POS Program"
+  },
+  "billing": {
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "month": "mo",
+    "savePercent": "Save 15%",
+    "billedAnnually": "Billed annually",
+    "billedMonthly": "Billed monthly"
   },
   "actions": {
     "currentPlan": "Current Plan",
@@ -112,6 +128,7 @@
     "downgrade": "Downgrade",
     "upgradeNow": "Upgrade Now",
     "contactSales": "Contact Sales",
+    "contactSupport": "Contact Support",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "cancelSubscription": "Cancel Subscription",
@@ -120,7 +137,9 @@
     "processing": "Processing...",
     "retry": "Retry",
     "backToBilling": "Back to Billing & Subscription",
-    "soon": "COMING SOON"
+    "soon": "COMING SOON",
+    "upgradePlan": "Upgrade Plan",
+    "changePlan": "Change Plan"
   },
   "banner": {
     "trialEnding": "Your trial ends in {{days}} days",

@@ -41,7 +41,7 @@ export const requireBusinessAuth = async (req, res, next) => {
       logger.warn('Invalid business ID format', {
         providedId: businessId
       })
-      
+
       return res.status(400).json({
         success: false,
         message: 'Invalid business ID format',
@@ -52,12 +52,12 @@ export const requireBusinessAuth = async (req, res, next) => {
     business = await Business.findOne({
       where: { public_id: businessId }
     })
-    
+
     if (!business) {
       logger.warn('Business not found', {
         businessId: businessId.substring(0, 8) + '...'
       })
-      
+
       return res.status(401).json({
         success: false,
         message: 'Business not found',
@@ -81,20 +81,20 @@ export const requireBusinessAuth = async (req, res, next) => {
           path: req.path,
           suspensionReason: business.suspension_reason
         })
-        
+
         // Allow through to reactivation endpoint
         req.business = business
         req.businessId = business.public_id
         return next()
       }
-      
+
       // Block access to all other routes for suspended businesses
       logger.warn('Suspended business attempting to access restricted route', {
         businessId: business.public_id,
         path: req.path,
         suspensionReason: business.suspension_reason
       })
-      
+
       return res.status(403).json({
         success: false,
         message: 'Account suspended due to payment failure',
@@ -105,14 +105,14 @@ export const requireBusinessAuth = async (req, res, next) => {
         reactivation_url: '/subscription/reactivate'
       })
     }
-    
+
     if (business.status !== 'active') {
       logger.warn('Business account not active', {
         businessId: business.public_id || business.id,
         status: business.status,
         businessName: business.business_name
       })
-      
+
       return res.status(401).json({
         success: false,
         message: `Business account is ${business.status}`,
@@ -135,7 +135,7 @@ export const requireBusinessAuth = async (req, res, next) => {
           businessId: business.public_id,
           hasSessionToken: !!sessionToken
         })
-        
+
         return res.status(401).json({
           success: false,
           message: 'Invalid or expired session',
@@ -149,7 +149,7 @@ export const requireBusinessAuth = async (req, res, next) => {
           businessId: business.public_id,
           expiredAt: session.expires_at
         })
-        
+
         return res.status(401).json({
           success: false,
           message: 'Session has expired',
@@ -177,26 +177,26 @@ export const requireBusinessAuth = async (req, res, next) => {
         businessId: business.public_id,
         errorCode: sessionError.code
       })
-      
+
       const response = {
         success: false,
         message: 'Session validation failed',
         code: 'SESSION_ERROR'
       }
-      
+
       // Add debugging hint in non-production environments
       if (process.env.NODE_ENV !== 'production') {
         response.hint = 'Check business_sessions schema – missing columns (ip_address, user_agent) or incorrect data types. Run migration: 20250202-create-or-sync-business-sessions.js'
         response.error = sessionError.message
       }
-      
+
       return res.status(500).json(response)
     }
-    
+
     // Attach business to request with secure ID only
     req.business = business
     req.businessId = business.public_id
-    
+
     next()
   } catch (error) {
     logger.error('Business authentication failed', {
@@ -208,19 +208,19 @@ export const requireBusinessAuth = async (req, res, next) => {
       },
       errorCode: error.code
     })
-    
+
     const response = {
       success: false,
       message: 'Authentication failed',
       code: 'AUTH_ERROR'
     }
-    
+
     // Add debugging hint in non-production environments
     if (process.env.NODE_ENV !== 'production') {
       response.hint = 'Common causes: business_sessions table missing, schema mismatch, or invalid business_id format'
       response.error = error.message
     }
-    
+
     res.status(500).json(response)
   }
 }
@@ -235,27 +235,27 @@ export const migrateBusinessIdIfNeeded = async (req, res, next) => {
         legacyId: req.business.id,
         businessName: req.business.business_name
       })
-      
+
       const publicId = SecureIDGenerator.generateBusinessID()
       await req.business.update({ public_id: publicId })
-      
+
       // Update request data
       req.businessId = publicId
-      
+
       logger.info('Generated secure ID for business', {
         legacyId: req.business.id,
         publicId: publicId.substring(0, 8) + '...',
         businessName: req.business.business_name
       })
     }
-    
+
     next()
   } catch (error) {
     logger.error('Failed to migrate business to secure ID', {
       error: error.message,
       businessId: req.business?.id
     })
-    
+
     // Don't fail the request, just log and continue
     next()
   }
@@ -268,7 +268,7 @@ export const migrateBusinessIdIfNeeded = async (req, res, next) => {
 export const validateBusinessExists = async (req, res, next) => {
   try {
     const { businessId } = req.params
-    
+
     if (!businessId) {
       return res.status(400).json({
         success: false,
@@ -276,9 +276,9 @@ export const validateBusinessExists = async (req, res, next) => {
         code: 'MISSING_BUSINESS_ID'
       })
     }
-    
+
     let business = null
-    
+
     // Try secure ID format first
     if (SecureIDGenerator.validateSecureID(businessId, 'business')) {
       business = await Business.findOne({
@@ -294,7 +294,7 @@ export const validateBusinessExists = async (req, res, next) => {
         })
       }
     }
-    
+
     if (!business || business.status !== 'active') {
       return res.status(404).json({
         success: false,
@@ -302,18 +302,18 @@ export const validateBusinessExists = async (req, res, next) => {
         code: 'BUSINESS_NOT_FOUND'
       })
     }
-    
+
     req.business = business
     req.businessId = business.public_id || business.id
     req.legacyBusinessId = business.id
-    
+
     next()
   } catch (error) {
     logger.error('Business validation failed', {
       error: error.message,
       businessId: req.params.businessId
     })
-    
+
     res.status(500).json({
       success: false,
       message: 'Validation failed',
@@ -327,20 +327,20 @@ export const validateBusinessExists = async (req, res, next) => {
  */
 export const findBusinessByAnyId = async (businessId) => {
   if (!businessId) return null
-  
+
   // Try secure ID first
   if (SecureIDGenerator.validateSecureID(businessId, 'business')) {
     return await Business.findOne({
       where: { public_id: businessId }
     })
   }
-  
+
   // Try legacy ID
   const legacyId = parseInt(businessId)
   if (!isNaN(legacyId) && legacyId > 0) {
     return await Business.findByPk(legacyId)
   }
-  
+
   return null
 }
 
@@ -365,7 +365,7 @@ export const checkTrialExpiration = async (req, res, next) => {
       // Check if trial has expired
       if (business.isTrialExpired && business.isTrialExpired()) {
         const daysExpired = Math.floor((new Date() - new Date(business.trial_ends_at)) / (1000 * 60 * 60 * 24))
-        
+
         logger.warn('Trial period expired', {
           business_id: business.public_id,
           trial_ends_at: business.trial_ends_at,
@@ -389,7 +389,7 @@ export const checkTrialExpiration = async (req, res, next) => {
       stack: error.stack,
       business_id: req.business?.public_id
     })
-    
+
     res.status(500).json({
       success: false,
       message: 'Trial expiration check failed',
@@ -413,11 +413,11 @@ export const checkSubscriptionLimit = (limitType) => {
       // For customer signup route without auth, derive business ID from offer
       if (!businessId && limitType === 'customers' && req.body?.offerId) {
         const { Offer } = await import('../models/index.js')
-        const offer = await Offer.findOne({ 
+        const offer = await Offer.findOne({
           where: { public_id: req.body.offerId },
           attributes: ['public_id', 'business_id']
         })
-        
+
         if (offer) {
           businessId = offer.business_id
           logger.debug('Resolved business ID from offer for customer limit check', {
@@ -434,7 +434,7 @@ export const checkSubscriptionLimit = (limitType) => {
           hasReqBusiness: !!req.business,
           hasOfferId: !!req.body?.offerId
         })
-        
+
         // Skip limit check if no business context
         return next()
       }
@@ -478,7 +478,7 @@ export const checkSubscriptionLimit = (limitType) => {
         limit_type: limitType,
         business_id: req.business?.public_id
       })
-      
+
       // Don't block on limit check errors in development
       if (process.env.NODE_ENV === 'production') {
         res.status(500).json({
@@ -495,11 +495,34 @@ export const checkSubscriptionLimit = (limitType) => {
   }
 }
 
+/**
+ * Middleware to bridge branch authentication to business context for trial checks
+ * Used for branch-manager routes where req.branch is set but req.business is needed
+ */
+export const attachBusinessFromBranch = async (req, res, next) => {
+  try {
+    if (req.branch && !req.business) {
+      const business = await Business.findOne({
+        where: { public_id: req.branch.business_id }
+      })
+      if (business) {
+        req.business = business
+        req.businessId = business.public_id
+      }
+    }
+    next()
+  } catch (error) {
+    logger.error('Failed to attach business from branch:', error)
+    next()
+  }
+}
+
 export default {
   requireBusinessAuth,
   migrateBusinessIdIfNeeded,
   validateBusinessExists,
   findBusinessByAnyId,
   checkTrialExpiration,
-  checkSubscriptionLimit
+  checkSubscriptionLimit,
+  attachBusinessFromBranch
 }

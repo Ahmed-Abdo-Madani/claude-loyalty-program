@@ -1,6 +1,6 @@
 import express from 'express'
 import { Op } from 'sequelize'
-import { requireBusinessAuth, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
+import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit, attachBusinessFromBranch } from '../middleware/hybridBusinessAuth.js'
 import { requireBranchManagerAuth } from '../middleware/branchManagerAuth.js'
 import Product from '../models/Product.js'
 import ProductCategory from '../models/ProductCategory.js'
@@ -121,7 +121,7 @@ router.get('/categories', requireBusinessAuth, async (req, res) => {
  * POST /api/pos/categories
  * Create new category
  */
-router.post('/categories', requireBusinessAuth, async (req, res) => {
+router.post('/categories', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.businessId
     const { name, name_ar, description, display_order } = req.body
@@ -166,7 +166,7 @@ router.post('/categories', requireBusinessAuth, async (req, res) => {
  * PUT /api/pos/categories/:categoryId
  * Update category
  */
-router.put('/categories/:categoryId', requireBusinessAuth, async (req, res) => {
+router.put('/categories/:categoryId', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.businessId
     const { categoryId } = req.params
@@ -218,7 +218,7 @@ router.put('/categories/:categoryId', requireBusinessAuth, async (req, res) => {
  * DELETE /api/pos/categories/:categoryId
  * Delete category
  */
-router.delete('/categories/:categoryId', requireBusinessAuth, async (req, res) => {
+router.delete('/categories/:categoryId', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.businessId
     const { categoryId } = req.params
@@ -387,7 +387,7 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
  * POST /api/pos/products
  * Create new product
  */
-router.post('/products', requireBusinessAuth, async (req, res) => {
+router.post('/products', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
 
   try {
@@ -527,7 +527,7 @@ router.post('/products', requireBusinessAuth, async (req, res) => {
  * PUT /api/pos/products/:productId
  * Update product
  */
-router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
+router.put('/products/:productId', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
 
   try {
@@ -697,7 +697,7 @@ router.put('/products/:productId', requireBusinessAuth, async (req, res) => {
  * DELETE /api/pos/products/:productId
  * Delete product (soft delete by setting status to inactive)
  */
-router.delete('/products/:productId', requireBusinessAuth, async (req, res) => {
+router.delete('/products/:productId', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
 
   try {
@@ -781,7 +781,7 @@ router.delete('/products/:productId', requireBusinessAuth, async (req, res) => {
  * PATCH /api/pos/products/:productId/status
  * Toggle product status
  */
-router.patch('/products/:productId/status', requireBusinessAuth, async (req, res) => {
+router.patch('/products/:productId/status', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.businessId
     const { productId } = req.params
@@ -1148,7 +1148,7 @@ router.post('/loyalty/validate', requireBranchManagerAuth, async (req, res) => {
  * Create new sale (checkout)
  * Enforces POS operations limit from subscription plan
  */
-router.post('/sales', requireBranchManagerAuth, checkSubscriptionLimit('posOperations'), async (req, res) => {
+router.post('/sales', requireBranchManagerAuth, attachBusinessFromBranch, checkTrialExpiration, checkSubscriptionLimit('posOperations'), async (req, res) => {
   const transaction = await sequelize.transaction()
 
   try {
@@ -1600,7 +1600,7 @@ router.get('/sales/:saleId', requireBranchManagerAuth, async (req, res) => {
  * POST /api/pos/sales/:saleId/refund
  * Refund a sale
  */
-router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) => {
+router.post('/sales/:saleId/refund', requireBranchManagerAuth, attachBusinessFromBranch, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
 
   try {
@@ -1691,7 +1691,7 @@ router.post('/sales/:saleId/refund', requireBranchManagerAuth, async (req, res) 
  * POST /api/pos/sales/:saleId/cancel
  * Cancel a sale
  */
-router.post('/sales/:saleId/cancel', requireBranchManagerAuth, async (req, res) => {
+router.post('/sales/:saleId/cancel', requireBranchManagerAuth, attachBusinessFromBranch, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
 
   try {

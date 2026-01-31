@@ -16,7 +16,7 @@ function PlanLimitModal({
     currentUsage = 0,
     planLimit = 1,
     currentPlan = 'free',
-    suggestedPlan = 'professional'
+    suggestedPlan: propSuggestedPlan // Optional override from prop
 }) {
     const { t } = useTranslation(['subscription', 'dashboard'])
     const navigate = useNavigate()
@@ -61,15 +61,65 @@ function PlanLimitModal({
 
     const planNames = {
         free: t('subscription:plans.free.name', 'Free'),
-        professional: t('subscription:plans.loyalty.name', 'Loyalty Program'),
-        enterprise: t('subscription:plans.pos.name', 'POS Program')
+        loyalty_starter: t('subscription:plans.loyalty_starter.name', 'Loyalty Starter'),
+        loyalty_growth: t('subscription:plans.loyalty_growth.name', 'Loyalty Growth'),
+        loyalty_professional: t('subscription:plans.loyalty_professional.name', 'Loyalty Professional'),
+        pos_business: t('subscription:plans.pos_business.name', 'POS Business'),
+        pos_enterprise: t('subscription:plans.pos_enterprise.name', 'POS Enterprise'),
+        pos_premium: t('subscription:plans.pos_premium.name', 'POS Premium'),
+        // Retro-compatibility
+        professional: t('subscription:plans.loyalty_professional.name', 'Loyalty Professional'),
+        enterprise: t('subscription:plans.pos_enterprise.name', 'POS Enterprise')
     }
 
     const planPrices = {
         free: 0,
-        professional: 60,
-        enterprise: 210
+        loyalty_starter: 49,
+        loyalty_growth: 99,
+        loyalty_professional: 179,
+        pos_business: 199,
+        pos_enterprise: 349,
+        pos_premium: 549,
+        // Retro values for compatibility
+        professional: 179,
+        enterprise: 349
     }
+
+    // Determine the smart suggestion
+    const getSuggestedPlan = (lType, cPlan) => {
+        // If prop is provided, use it
+        if (propSuggestedPlan) return propSuggestedPlan;
+
+        // Loyalty limits
+        if (['offers', 'customers'].includes(lType)) {
+            if (cPlan === 'free' || cPlan === 'loyalty_starter') {
+                return 'loyalty_growth';
+            }
+            return 'loyalty_professional';
+        }
+
+        if (lType === 'branches') {
+            return 'loyalty_growth'; // Supports 3 locations (based on assumption from plan)
+        }
+
+        // POS limits
+        if (lType === 'posOperations') {
+            return 'pos_business'; // Entry-level POS plan
+        }
+
+        // General fallback
+        if (cPlan && cPlan.startsWith('loyalty_')) {
+            return 'loyalty_professional';
+        }
+        if (cPlan && cPlan.startsWith('pos_')) {
+            return 'pos_enterprise';
+        }
+
+        return 'loyalty_growth'; // Default suggestion
+    };
+
+    const suggestedPlan = getSuggestedPlan(limitType, currentPlan);
+    const isPosPlan = suggestedPlan.startsWith('pos_') || suggestedPlan === 'enterprise';
 
     const handleUpgrade = () => {
         onClose()
@@ -84,10 +134,12 @@ function PlanLimitModal({
 
     const handleViewPlans = () => {
         onClose()
-        navigate('/subscription')
+        navigate('/subscription/plans') // Explicitly using /plans just in case, but usually path handles it
     }
 
-    const usagePercentage = planLimit > 0 ? Math.min((currentUsage / planLimit) * 100, 100) : 100
+    const usagePercentage = planLimit > 0 && planLimit !== Infinity
+        ? Math.min((currentUsage / planLimit) * 100, 100)
+        : (planLimit === 0 ? 100 : 0)
 
     return (
         <div
@@ -100,12 +152,12 @@ function PlanLimitModal({
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header with gradient */}
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+                <div className={`p-6 text-white bg-gradient-to-r ${isPosPlan ? 'from-purple-600 to-indigo-600' : 'from-amber-500 to-orange-500'}`}>
                     <div className="flex items-center gap-3">
                         <span className="text-4xl">{config.icon}</span>
                         <div>
                             <h2 className="text-xl font-bold">{config.title}</h2>
-                            <p className="text-amber-100 text-sm mt-1">{config.description}</p>
+                            <p className="text-white/90 text-sm mt-1">{config.description}</p>
                         </div>
                     </div>
                 </div>
@@ -123,27 +175,34 @@ function PlanLimitModal({
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                         <div
                             className={`h-full rounded-full transition-all duration-500 ${usagePercentage >= 100
-                                    ? 'bg-gradient-to-r from-red-500 to-red-600'
-                                    : usagePercentage >= 80
-                                        ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                                        : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                                ? 'bg-gradient-to-r from-red-500 to-red-600'
+                                : usagePercentage >= 80
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                                    : 'bg-gradient-to-r from-green-500 to-emerald-500'
                                 }`}
                             style={{ width: `${usagePercentage}%` }}
                         />
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                        {t('dashboard:planLimits.onPlan', 'You\'re on the')} <span className="font-semibold">{planNames[currentPlan]}</span> {t('dashboard:planLimits.plan', 'plan')}
+                        {t('dashboard:planLimits.onPlan', 'You\'re on the')} <span className="font-semibold">{planNames[currentPlan] || currentPlan}</span> {t('dashboard:planLimits.plan', 'plan')}
                     </p>
                 </div>
 
                 {/* Upgrade suggestion */}
                 <div className="p-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                    <div className={`rounded-xl p-4 border ${isPosPlan
+                        ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
+                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'}`}>
                         <div className="flex items-start gap-3">
-                            <span className="text-2xl">🚀</span>
+                            <div className="flex-shrink-0 mt-1">
+                                <span className={`inline-flex items-center justify-center rounded-full w-8 h-8 text-sm font-bold ${isPosPlan ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                                    {isPosPlan ? 'POS' : 'Loyalty'}
+                                </span>
+                            </div>
+
                             <div>
                                 <h3 className="font-semibold text-gray-900 dark:text-white">
-                                    {t('dashboard:planLimits.upgradeTo', 'Upgrade to')} {planNames[suggestedPlan]}
+                                    {t('dashboard:planLimits.upgradeTo', 'Upgrade to')} {planNames[suggestedPlan] || suggestedPlan}
                                 </h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                     {config.actionLabel}
@@ -162,7 +221,10 @@ function PlanLimitModal({
                     <div className="flex flex-col gap-3 mt-6">
                         <button
                             onClick={handleUpgrade}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
+                            className={`w-full py-3 px-4 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg ${isPosPlan
+                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+                                    : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
+                                }`}
                         >
                             {t('subscription:actions.upgradeNow', 'Upgrade Now')} →
                         </button>

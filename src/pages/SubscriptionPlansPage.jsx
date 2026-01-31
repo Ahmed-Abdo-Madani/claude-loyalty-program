@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getSubscriptionData } from '../utils/secureAuth'
+import { secureApi, endpoints } from '../config/api'
 import SEO from '../components/SEO'
 
 const SubscriptionPlansPage = () => {
@@ -14,50 +15,49 @@ const SubscriptionPlansPage = () => {
   const [modalType, setModalType] = useState(null)
   const [error, setError] = useState(null)
 
-  // Plan definitions matching backend SubscriptionService.js
-  const plans = {
-    free: {
-      name: 'free',
-      price: 0,
-      period: t('plans.free.period'),
-      description: t('plans.free.description'),
-      features: Array.isArray(t('plans.free.features', { returnObjects: true }))
-        ? t('plans.free.features', { returnObjects: true })
-        : [],
-      icon: '🆓'
-    },
-    loyalty: {
-      name: 'loyalty',
-      price: 60,
-      period: t('plans.loyalty.period'),
-      description: t('plans.loyalty.description'),
-      features: Array.isArray(t('plans.loyalty.features', { returnObjects: true }))
-        ? t('plans.loyalty.features', { returnObjects: true })
-        : [],
-      icon: '💼',
-      popular: true
-    },
-    pos: {
-      name: 'pos',
-      price: 210,
-      period: t('plans.pos.period'),
-      description: t('plans.pos.description'),
-      features: Array.isArray(t('plans.pos.features', { returnObjects: true }))
-        ? t('plans.pos.features', { returnObjects: true })
-        : [],
-      icon: '🏢'
-    }
-  }
+  // New state for API plans
+  const [plans, setPlans] = useState([])
+  const [loyaltyPlans, setLoyaltyPlans] = useState([])
+  const [posPlans, setPosPlans] = useState([])
+  const [apiLoading, setApiLoading] = useState(true)
+  const [apiError, setApiError] = useState(null)
 
   useEffect(() => {
     loadSubscriptionData()
+    fetchPlans()
   }, [])
+
+  const fetchPlans = async () => {
+    try {
+      setApiLoading(true)
+      const response = await secureApi.get(endpoints.subscriptionPlans)
+      const data = await response.json()
+      const fetchedPlans = data.data?.plans || []
+
+      setPlans(fetchedPlans)
+
+      // Filter and sort plans
+      const loyalty = fetchedPlans
+        .filter(p => p.category === 'loyalty')
+        .sort((a, b) => a.monthlyPrice - b.monthlyPrice)
+
+      const pos = fetchedPlans
+        .filter(p => p.category === 'pos')
+        .sort((a, b) => a.monthlyPrice - b.monthlyPrice)
+
+      setLoyaltyPlans(loyalty)
+      setPosPlans(pos)
+      setApiLoading(false)
+    } catch (err) {
+      console.error('Failed to fetch plans:', err)
+      setApiError(t('page.error') || 'Failed to load plans')
+      setApiLoading(false)
+    }
+  }
 
   const loadSubscriptionData = async () => {
     try {
       setLoading(true)
-      setError(null)
-
       // First try to get from localStorage
       const storedSubscription = getSubscriptionData()
       if (storedSubscription) {
@@ -84,26 +84,32 @@ const SubscriptionPlansPage = () => {
     }
   }
 
-  const handlePlanSelect = (planType) => {
-    if (planType === subscriptionData?.current_plan) {
+  const handlePlanSelect = (planKey, planDetails) => {
+    // Check if user is already on this plan
+    // We map the current plan key to match API names if needed
+    const currentPlanName = mapPlanKey(subscriptionData?.current_plan)
+
+    if (planKey === currentPlanName) {
       // Already on this plan
       return
     }
 
-    setSelectedPlan(planType)
+    setSelectedPlan(planKey)
 
     // Determine if upgrade or downgrade
-    const planOrder = { free: 0, loyalty: 1, pos: 2 }
-    const currentOrder = planOrder[subscriptionData?.current_plan || 'free']
-    const newOrder = planOrder[planType]
+    // We need current plan details to compare. 
+    const currentPlanDetails = plans.find(p => p.name === currentPlanName) || { monthlyPrice: 0 }
 
-    if (newOrder > currentOrder) {
+    const isDowngrade = planDetails.monthlyPrice < currentPlanDetails.monthlyPrice;
+
+    if (!isDowngrade) {
       // Upgrade - navigate to checkout
       navigate('/subscription/checkout', {
         state: {
-          planType: planType,
-          locationCount: 1,
-          currentPlan: subscriptionData?.current_plan
+          selectedPlan: planKey,
+          planDetails: planDetails,
+          category: planDetails.category,
+          currentPlan: currentPlanName
         }
       })
     } else {
@@ -119,44 +125,118 @@ const SubscriptionPlansPage = () => {
     setModalType(null)
   }
 
-  const getUsagePercentage = (current, limit) => {
-    if (limit === -1 || limit === 'unlimited') return 0
-    if (limit === 0) return 100
-    return Math.min((current / limit) * 100, 100)
-  }
-
-  const getUsageColor = (percentage) => {
-    if (percentage >= 90) return 'text-red-600 dark:text-red-400'
-    if (percentage >= 70) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-green-600 dark:text-green-400'
-  }
-
-  const getProgressBarColor = (percentage) => {
-    if (percentage >= 90) return 'bg-red-500'
-    if (percentage >= 70) return 'bg-yellow-500'
-    return 'bg-green-500'
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return ''
-    return new Intl.DateTimeFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(new Date(dateString))
-  }
-
   // Map internal database plan keys to frontend plan keys
   const mapPlanKey = (dbKey) => {
+    if (!dbKey) return 'free'
+
+    // Legacy mapping
     const mapping = {
-      'professional': 'loyalty',
-      'enterprise': 'pos',
+      'professional': 'loyalty_professional',
+      'enterprise': 'pos_enterprise',
       'free': 'free'
     };
+
+    // If it's one of the new keys, return it as is
+    if (['loyalty_starter', 'loyalty_growth', 'loyalty_professional',
+      'pos_business', 'pos_enterprise', 'pos_premium'].includes(dbKey)) {
+      return dbKey;
+    }
+
     return mapping[dbKey] || dbKey;
   };
 
-  if (loading) {
+  const renderPlanCard = (plan, index, isLoyalty) => {
+    const isCurrentPlan = mapPlanKey(subscriptionData?.current_plan) === plan.name;
+    // Highlight the middle one in each category if there are 3.
+    const isHighlight = (isLoyalty && index === 1) || (!isLoyalty && index === 1);
+
+    return (
+      <div
+        key={plan.name}
+        className={`reveal-stagger lg:col-span-4 ${isHighlight
+          ? 'lg:col-span-4 lg:order-2 lg:scale-110 z-20'
+          : 'lg:order-1'
+          }`}
+        style={{ animationDelay: `${(index + 3) * 150}ms` }}
+      >
+        <div
+          className={`relative glass-card p-8 sm:p-10 transition-all duration-500 flex flex-col h-full overflow-hidden ${isHighlight
+            ? 'border-2 border-[hsl(var(--electric-indigo))] dark:border-[hsl(var(--neon-teal))] indigo-glow dark:teal-glow'
+            : 'hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-2xl'
+            }`}
+        >
+          {/* Plan Accent */}
+          {isHighlight && (
+            <div className="absolute top-0 right-0">
+              <div className="bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 text-[10px] font-black uppercase tracking-tighter px-6 py-1 rotate-45 translate-x-4 translate-y-2">
+                {t('plans.loyalty.popular', 'POPULAR')}
+              </div>
+            </div>
+          )}
+
+          {/* Plan Content */}
+          <div className="mb-10 text-center sm:text-left">
+            <div className="text-4xl mb-6 flex justify-center sm:justify-start">
+              <span className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
+                {isLoyalty ? '💼' : '🏢'}
+              </span>
+            </div>
+            <h2 className="text-display text-3xl sm:text-4xl text-slate-900 dark:text-white mb-2">
+              {plan.displayName}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+              {plan.description || (isLoyalty ? t('plans.loyalty.description') : t('plans.pos.description'))}
+            </p>
+          </div>
+
+          {/* Price */}
+          <div className="mb-10 text-center sm:text-left sticky top-0 sm:relative bg-inherit py-4 sm:py-0 z-10 -mx-8 sm:mx-0 px-8 sm:px-0 border-b border-transparent sm:border-0 dark:data-[sticky=true]:bg-slate-900 data-[sticky=true]:border-slate-200 dark:data-[sticky=true]:border-slate-800 transition-colors">
+            <div className="flex items-baseline justify-center sm:justify-start gap-1">
+              <span className="text-display text-5xl sm:text-6xl text-slate-900 dark:text-white">
+                {plan.monthlyPrice}
+              </span>
+              <span className="text-xl font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+                SAR
+              </span>
+            </div>
+            <p className="text-xs font-black uppercase tracking-tighter text-slate-400 dark:text-slate-600 mt-2">
+              {t('plans.monthly', 'PER MONTH')}
+            </p>
+          </div>
+
+          {/* Features */}
+          <ul className="space-y-5 mb-12 flex-grow">
+            {plan.features && plan.features.map((feature, idx) => (
+              <li key={idx} className="flex items-start gap-3 group">
+                <div className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] transition-colors group-hover:bg-[hsl(var(--electric-indigo))] dark:group-hover:bg-[hsl(var(--neon-teal))] group-hover:text-white dark:group-hover:text-slate-950">
+                  ✓
+                </div>
+                <span className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-tight">
+                  {typeof feature === 'string' && feature.startsWith('plans.') ? t(feature) : feature}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          {/* CTA Button */}
+          <button
+            onClick={() => handlePlanSelect(plan.name, plan)}
+            disabled={isCurrentPlan}
+            className={`w-full py-5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all transform active:scale-95 ${isCurrentPlan
+              ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-transparent'
+              : isHighlight
+                ? 'bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 hover:shadow-indigo-500/50 dark:hover:shadow-teal-500/50 hover:shadow-2xl'
+                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-200 hover:shadow-xl'
+              }`}
+          >
+            {isCurrentPlan ? t('actions.currentPlan') : t('actions.selectPlan')}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading || apiLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -167,13 +247,13 @@ const SubscriptionPlansPage = () => {
     )
   }
 
-  if (error) {
+  if (error || apiError) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          <p className="text-red-600 dark:text-red-400 mb-4">{error || apiError}</p>
           <button
-            onClick={loadSubscriptionData}
+            onClick={() => { loadSubscriptionData(); fetchPlans(); }}
             className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           >
             {t('page.retry')}
@@ -188,7 +268,7 @@ const SubscriptionPlansPage = () => {
       <SEO titleKey="page.title" descriptionKey="page.subtitle" noindex={true} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-        {/* Hero Section - Bold Modern */}
+        {/* Hero Section */}
         <div className="text-center mb-16 sm:mb-24 reveal-stagger">
           <h1 className="text-display text-5xl sm:text-7xl lg:text-8xl text-slate-900 dark:text-white mb-6 leading-none">
             {t('page.title')}
@@ -198,7 +278,7 @@ const SubscriptionPlansPage = () => {
           </p>
         </div>
 
-        {/* Back Navigation - Modern Minimal */}
+        {/* Back Navigation */}
         <div className="flex justify-center mb-12 sm:mb-16 reveal-stagger" style={{ animationDelay: '200ms' }}>
           <button
             onClick={() => navigate('/dashboard?tab=billing-subscription')}
@@ -209,98 +289,28 @@ const SubscriptionPlansPage = () => {
           </button>
         </div>
 
-        {/* Dynamic & Asymmetric Pricing Layout */}
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {Object.entries(plans).map(([planKey, plan], index) => {
-            const mappedCurrentPlan = mapPlanKey(subscriptionData?.current_plan);
-            const isCurrentPlan = mappedCurrentPlan === planKey;
-            const isProfessional = planKey === 'loyalty';
+        {/* Loyalty Plans Section */}
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white inline-block border-b-4 border-[hsl(var(--electric-indigo))] pb-2">
+              {t('plans.loyalty.categoryName', 'Loyalty Plans')}
+            </h2>
+          </div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center justify-center">
+            {loyaltyPlans.map((plan, index) => renderPlanCard(plan, index, true))}
+          </div>
+        </div>
 
-            return (
-              <div
-                key={planKey}
-                className={`reveal-stagger lg:col-span-4 ${isProfessional
-                  ? 'lg:col-span-4 lg:order-2 lg:scale-110 z-20'
-                  : planKey === 'free' ? 'lg:order-1' : 'lg:order-3'
-                  }`}
-                style={{ animationDelay: `${(index + 3) * 150}ms` }}
-              >
-                <div
-                  className={`relative glass-card p-8 sm:p-10 transition-all duration-500 flex flex-col h-full overflow-hidden ${isProfessional
-                    ? 'border-2 border-[hsl(var(--electric-indigo))] dark:border-[hsl(var(--neon-teal))] indigo-glow dark:teal-glow'
-                    : 'hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-2xl'
-                    }`}
-                >
-                  {/* Plan Accent */}
-                  {plan.popular && (
-                    <div className="absolute top-0 right-0">
-                      <div className="bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 text-[10px] font-black uppercase tracking-tighter px-6 py-1 rotate-45 translate-x-4 translate-y-2">
-                        {t('plans.loyalty.popular')}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Plan Content */}
-                  <div className="mb-10 text-center sm:text-left">
-                    <div className="text-4xl mb-6 flex justify-center sm:justify-start">
-                      <span className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
-                        {plan.icon}
-                      </span>
-                    </div>
-                    <h2 className="text-display text-3xl sm:text-4xl text-slate-900 dark:text-white mb-2">
-                      {t(`plans.${planKey}.name`)}
-                    </h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                      {plan.description}
-                    </p>
-                  </div>
-
-                  {/* Price - The Focus Point (Sticky on Mobile) */}
-                  <div className="mb-10 text-center sm:text-left sticky top-0 sm:relative bg-inherit py-4 sm:py-0 z-10 -mx-8 sm:mx-0 px-8 sm:px-0 border-b border-transparent sm:border-0 dark:data-[sticky=true]:bg-slate-900 data-[sticky=true]:border-slate-200 dark:data-[sticky=true]:border-slate-800 transition-colors">
-                    <div className="flex items-baseline justify-center sm:justify-start gap-1">
-                      <span className="text-display text-5xl sm:text-6xl text-slate-900 dark:text-white">
-                        {plan.price}
-                      </span>
-                      <span className="text-xl font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">
-                        SAR
-                      </span>
-                    </div>
-                    <p className="text-xs font-black uppercase tracking-tighter text-slate-400 dark:text-slate-600 mt-2">
-                      {plan.period}
-                    </p>
-                  </div>
-
-                  {/* Features */}
-                  <ul className="space-y-5 mb-12 flex-grow">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-3 group">
-                        <div className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] transition-colors group-hover:bg-[hsl(var(--electric-indigo))] dark:group-hover:bg-[hsl(var(--neon-teal))] group-hover:text-white dark:group-hover:text-slate-950">
-                          ✓
-                        </div>
-                        <span className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-tight">
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => handlePlanSelect(planKey)}
-                    disabled={isCurrentPlan}
-                    className={`w-full py-5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all transform active:scale-95 ${isCurrentPlan
-                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-transparent'
-                      : isProfessional
-                        ? 'bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 hover:shadow-indigo-500/50 dark:hover:shadow-teal-500/50 hover:shadow-2xl'
-                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-200 hover:shadow-xl'
-                      }`}
-                  >
-                    {isCurrentPlan ? t('actions.currentPlan') : t('actions.selectPlan')}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+        {/* POS Plans Section */}
+        <div>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white inline-block border-b-4 border-purple-500 pb-2">
+              {t('plans.pos.categoryName', 'POS Plans')}
+            </h2>
+          </div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center justify-center">
+            {posPlans.map((plan, index) => renderPlanCard(plan, index, false))}
+          </div>
         </div>
       </div>
 
@@ -313,13 +323,13 @@ const SubscriptionPlansPage = () => {
           ></div>
           <div className="relative glass-card max-w-md w-full p-10 reveal-stagger" style={{ animationDelay: '0ms' }}>
             <h3 className="text-display text-4xl text-slate-900 dark:text-white mb-6">
-              {t(`modal.${modalType}.title`, { plan: t(`plans.${selectedPlan}.name`) })}
+              {t(`modal.${modalType}.title`, { plan: selectedPlan })}
             </h3>
 
             <p className="text-slate-600 dark:text-slate-400 mb-8 font-medium">
               {t(`modal.${modalType}.subtitle`, {
-                currentPlan: t(`plans.${subscriptionData?.current_plan}.name`),
-                newPlan: t(`plans.${selectedPlan}.name`)
+                currentPlan: subscriptionData?.current_plan,
+                newPlan: selectedPlan
               })}
             </p>
 

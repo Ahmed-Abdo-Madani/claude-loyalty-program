@@ -4,6 +4,7 @@ import ReceiptService from '../services/ReceiptService.js'
 import Receipt from '../models/Receipt.js'
 import Sale from '../models/Sale.js'
 import logger from '../config/logger.js'
+import { attachBusinessFromBranch, checkTrialExpiration } from '../middleware/hybridBusinessAuth.js'
 
 const router = express.Router()
 
@@ -41,19 +42,19 @@ router.get('/:saleId', requireBranchManagerAuth, async (req, res) => {
     if (format === 'pdf') {
       // Generate PDF receipt
       const pdfBuffer = await ReceiptService.generatePDFReceipt(saleId, 'a4')
-      
+
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename="receipt-${sale.sale_number}.pdf"`)
       return res.send(pdfBuffer)
-      
+
     } else if (format === 'thermal') {
       // Generate thermal receipt
       const thermalBuffer = await ReceiptService.generateThermalReceipt(saleId)
-      
+
       res.setHeader('Content-Type', 'application/octet-stream')
       res.setHeader('Content-Disposition', `attachment; filename="receipt-${sale.sale_number}.bin"`)
       return res.send(thermalBuffer)
-      
+
     } else {
       // Return JSON receipt content
       const receipt = await Receipt.findOne({
@@ -74,9 +75,9 @@ router.get('/:saleId', requireBranchManagerAuth, async (req, res) => {
     }
 
   } catch (error) {
-    logger.error('Failed to get receipt', { 
-      saleId: req.params.saleId, 
-      error: error.message 
+    logger.error('Failed to get receipt', {
+      saleId: req.params.saleId,
+      error: error.message
     })
     return res.status(500).json({
       success: false,
@@ -123,9 +124,9 @@ router.get('/:saleId/preview', requireBranchManagerAuth, async (req, res) => {
     })
 
   } catch (error) {
-    logger.error('Failed to get receipt preview', { 
-      saleId: req.params.saleId, 
-      error: error.message 
+    logger.error('Failed to get receipt preview', {
+      saleId: req.params.saleId,
+      error: error.message
     })
     return res.status(500).json({
       success: false,
@@ -139,7 +140,7 @@ router.get('/:saleId/preview', requireBranchManagerAuth, async (req, res) => {
  * POST /api/receipts/:saleId/print
  * Mark receipt as printed
  */
-router.post('/:saleId/print', requireBranchManagerAuth, async (req, res) => {
+router.post('/:saleId/print', requireBranchManagerAuth, attachBusinessFromBranch, checkTrialExpiration, async (req, res) => {
   try {
     const { saleId } = req.params
     const { format = 'thermal' } = req.body
@@ -182,10 +183,10 @@ router.post('/:saleId/print', requireBranchManagerAuth, async (req, res) => {
     // Reload receipt to get updated fields
     await receipt.reload()
 
-    logger.info('Receipt marked as printed', { 
-      saleId, 
+    logger.info('Receipt marked as printed', {
+      saleId,
       receiptNumber: receipt.receipt_number,
-      format 
+      format
     })
 
     return res.json({
@@ -200,9 +201,9 @@ router.post('/:saleId/print', requireBranchManagerAuth, async (req, res) => {
     })
 
   } catch (error) {
-    logger.error('Failed to mark receipt as printed', { 
-      saleId: req.params.saleId, 
-      error: error.message 
+    logger.error('Failed to mark receipt as printed', {
+      saleId: req.params.saleId,
+      error: error.message
     })
     return res.status(500).json({
       success: false,
@@ -216,7 +217,7 @@ router.post('/:saleId/print', requireBranchManagerAuth, async (req, res) => {
  * POST /api/receipts/:saleId/email
  * Email receipt to customer
  */
-router.post('/:saleId/email', requireBranchManagerAuth, async (req, res) => {
+router.post('/:saleId/email', requireBranchManagerAuth, attachBusinessFromBranch, checkTrialExpiration, async (req, res) => {
   try {
     const { saleId } = req.params
     const { email } = req.body
@@ -262,7 +263,7 @@ router.post('/:saleId/email', requireBranchManagerAuth, async (req, res) => {
 
     if (emailResult.success) {
       logger.info('Receipt emailed successfully', { saleId, email })
-      
+
       return res.json({
         success: true,
         message: 'Receipt emailed successfully'
@@ -272,9 +273,9 @@ router.post('/:saleId/email', requireBranchManagerAuth, async (req, res) => {
     }
 
   } catch (error) {
-    logger.error('Failed to email receipt', { 
-      saleId: req.params.saleId, 
-      error: error.message 
+    logger.error('Failed to email receipt', {
+      saleId: req.params.saleId,
+      error: error.message
     })
     return res.status(500).json({
       success: false,
@@ -288,7 +289,7 @@ router.post('/:saleId/email', requireBranchManagerAuth, async (req, res) => {
  * POST /api/receipts/:saleId/regenerate
  * Regenerate receipt content (if needed)
  */
-router.post('/:saleId/regenerate', requireBranchManagerAuth, async (req, res) => {
+router.post('/:saleId/regenerate', requireBranchManagerAuth, attachBusinessFromBranch, checkTrialExpiration, async (req, res) => {
   try {
     const { saleId } = req.params
     const branchId = req.branchId
@@ -347,9 +348,9 @@ router.post('/:saleId/regenerate', requireBranchManagerAuth, async (req, res) =>
     })
 
   } catch (error) {
-    logger.error('Failed to regenerate receipt', { 
-      saleId: req.params.saleId, 
-      error: error.message 
+    logger.error('Failed to regenerate receipt', {
+      saleId: req.params.saleId,
+      error: error.message
     })
     return res.status(500).json({
       success: false,

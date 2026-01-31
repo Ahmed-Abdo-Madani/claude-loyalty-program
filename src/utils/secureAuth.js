@@ -142,6 +142,31 @@ export async function secureApiRequest(url, options = {}) {
     throw new Error('Authentication failed')
   }
 
+  // Handle trial expiration
+  if (response.status === 403) {
+    const data = await response.json().catch(() => ({}))
+
+    if (data.code === 'TRIAL_EXPIRED') {
+      console.warn('🔒 Trial period expired')
+
+      // Store trial expiration state
+      localStorage.setItem('trialExpired', 'true')
+      localStorage.setItem('trialExpirationData', JSON.stringify({
+        trial_ends_at: data.trial_ends_at,
+        days_expired: data.days_expired,
+        message: data.message
+      }))
+
+      // Dispatch custom event to trigger modal
+      window.dispatchEvent(new CustomEvent('trialExpired', {
+        detail: data
+      }))
+
+      // Re-throw to allow component-level handling
+      throw new Error('TRIAL_EXPIRED')
+    }
+  }
+
   return response
 }
 
@@ -239,6 +264,20 @@ export function updateStatusAfterPayment({ businessStatus, subscriptionStatus, s
   console.log('🔒 Status updated after payment', { businessStatus, subscriptionStatus })
 }
 
+export function isTrialExpired() {
+  return localStorage.getItem('trialExpired') === 'true'
+}
+
+export function getTrialExpirationData() {
+  const data = localStorage.getItem('trialExpirationData')
+  return data ? JSON.parse(data) : null
+}
+
+export function clearTrialExpiration() {
+  localStorage.removeItem('trialExpired')
+  localStorage.removeItem('trialExpirationData')
+}
+
 export default {
   getAuthData,
   setAuthData,
@@ -255,7 +294,10 @@ export default {
   setSubscriptionData,
   getBusinessStatus,
   isSuspended,
-  updateStatusAfterPayment
+  updateStatusAfterPayment,
+  isTrialExpired,
+  getTrialExpirationData,
+  clearTrialExpiration
 }
 // ============================================
 // Branch Manager Authentication Functions

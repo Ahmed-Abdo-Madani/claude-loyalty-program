@@ -6,39 +6,7 @@ import { Customer, CustomerProgress, Business, Offer } from '../models/index.js'
 
 const router = express.Router()
 
-// Middleware to verify business session - reused from business.js pattern
-const requireBusinessAuth = async (req, res, next) => {
-  try {
-    const sessionToken = req.headers['x-session-token']
-    const businessId = req.headers['x-business-id'] // Expects secure ID (biz_*)
-
-    if (!sessionToken || !businessId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      })
-    }
-
-    // Find business by secure public_id instead of integer id
-    const business = await Business.findByPk(businessId) // businessId is now secure string
-
-    if (!business || business.status !== 'active') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid business or account not active'
-      })
-    }
-
-    req.business = business
-    next()
-  } catch (error) {
-    console.error('Auth middleware error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Authentication failed'
-    })
-  }
-}
+import { requireBusinessAuth, checkTrialExpiration } from '../middleware/hybridBusinessAuth.js'
 
 // ===============================
 // CUSTOMER MANAGEMENT ROUTES
@@ -175,7 +143,7 @@ router.get('/:customerId', requireBusinessAuth, async (req, res) => {
 })
 
 // POST /api/customers - Create new customer
-router.post('/', requireBusinessAuth, async (req, res) => {
+router.post('/', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.business.public_id
     const customerData = {
@@ -230,7 +198,7 @@ router.post('/', requireBusinessAuth, async (req, res) => {
 })
 
 // PUT /api/customers/:id - Update customer
-router.put('/:customerId', requireBusinessAuth, async (req, res) => {
+router.put('/:customerId', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.business.public_id
     const { customerId } = req.params

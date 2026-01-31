@@ -1,42 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid'
 import { secureApi, endpoints } from '../config/api'
 import { getAuthData } from '../utils/secureAuth'
 import SEO from '../components/SEO'
 import CompetitorComparison from '../components/CompetitorComparison'
-
-// Plan Definitions
-const PLAN_DEFINITIONS = {
-  // Loyalty Plans
-  loyalty_starter: {
-    monthly: 49,
-    limits: { customers: 500, offers: 5 }
-  },
-  loyalty_growth: {
-    monthly: 99,
-    limits: { customers: 2000, offers: 15 }
-  },
-  loyalty_professional: {
-    monthly: 179,
-    limits: { customers: 10000, offers: 50 }
-  },
-  // POS Plans
-  pos_business: {
-    monthly: 199,
-    limits: { terminals: 1, locations: 1 }
-  },
-  pos_enterprise: {
-    monthly: 349,
-    limits: { terminals: 3, locations: 3 }
-  },
-  pos_premium: {
-    monthly: 549,
-    limits: { terminals: 10, locations: 10 }
-  }
-}
 
 export default function CheckoutPage() {
   const { t, i18n } = useTranslation('subscription')
@@ -50,27 +19,64 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false)
   const [showComparison, setShowComparison] = useState(false)
 
+  // Plans data state
+  const [allPlans, setAllPlans] = useState([])
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [plansError, setPlansError] = useState(null)
+
   // Get plan details from navigation state or query params
   const searchParams = new URLSearchParams(location.search)
   const planFromQuery = searchParams.get('plan')
   const intervalFromQuery = searchParams.get('interval')
   const locationsFromQuery = parseInt(searchParams.get('locations')) || 1
 
-  const planDetails = location.state || {}
+  const planDetailsState = location.state || {}
 
-  // Initialize state with defaults or URL params
-  const [planType, setPlanType] = useState(planFromQuery || planDetails.planType || 'loyalty_starter')
-  const [billingInterval, setBillingInterval] = useState(intervalFromQuery || planDetails.interval || 'monthly') // 'monthly' or 'annual'
-  const [locationCount, setLocationCount] = useState(locationsFromQuery || planDetails.locationCount || 1)
+  // Initialize state with defaults or URL params relative to what we expect
+  const [planType, setPlanType] = useState(planFromQuery || planDetailsState.selectedPlan || planDetailsState.planType || 'loyalty_starter')
+  const [billingInterval, setBillingInterval] = useState(intervalFromQuery || planDetailsState.interval || 'monthly') // 'monthly' or 'annual'
+  const [locationCount, setLocationCount] = useState(locationsFromQuery || planDetailsState.locationCount || 1)
 
-  // Get current plan details helper
+  // Fetch plans on mount
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setPlansLoading(true)
+        const response = await secureApi.get(endpoints.subscriptionPlans)
+        const data = await response.json()
+        const fetchedPlans = data.data?.plans || []
+        setAllPlans(fetchedPlans)
+        setPlansLoading(false)
+      } catch (err) {
+        console.error('Failed to fetch plans for checkout:', err)
+        setPlansError(t('checkout.plansFetchError') || "Failed to load plan details.")
+        setPlansLoading(false)
+      }
+    }
+
+    // Check auth first
+    const authData = getAuthData()
+    if (!authData.isAuthenticated) {
+      navigate(`/auth?mode=signin&redirect=${encodeURIComponent(location.pathname + location.search)}`)
+      return
+    }
+
+    fetchPlans()
+  }, [navigate, location.pathname, location.search, t])
+
+  // Get current plan details helper from fetched data
   const getCurrentPlanDetails = useMemo(() => {
-    const safePlanType = PLAN_DEFINITIONS[planType] ? planType : 'loyalty_starter'
-    const def = PLAN_DEFINITIONS[safePlanType]
+    if (plansLoading || allPlans.length === 0) return null
+
+    // Find the plan in the fetched list
+    const selectedPlan = allPlans.find(p => p.name === planType)
+
+    // Fallback if not found
+    if (!selectedPlan) return null;
 
     // Calculate prices
-    const monthlyPrice = def.monthly
-    const annualPrice = monthlyPrice * 10 // 2 months free
+    const monthlyPrice = selectedPlan.monthlyPrice
+    const annualPrice = selectedPlan.annualPrice || (monthlyPrice * 10) // Fallback if API doesn't send annual logic
     const isAnnual = billingInterval === 'annual'
 
     const unitPrice = isAnnual ? annualPrice : monthlyPrice
@@ -79,44 +85,39 @@ export default function CheckoutPage() {
     const savings = isAnnual ? (monthlyPrice * 12 * locationCount) - (annualPrice * locationCount) : 0
     const savingsPercent = isAnnual ? 17 : 0 // ~16.6%
 
-    // Get translations
-    // Map old keys like 'loyalty' to new structure if needed, or rely on correct keys in json
-    // Using explicit implementation from plan
-    const translationKey = `plans.${safePlanType}`
+    // Ensure category is available
+    const category = selectedPlan.category || (planType.startsWith('pos') ? 'pos' : 'loyalty')
 
     return {
-      type: safePlanType,
-      name: t(`${translationKey}.name`),
-      description: t(`${translationKey}.description`),
+      type: selectedPlan.name,
+      name: selectedPlan.displayName,
+      description: selectedPlan.description || t(`plans.${selectedPlan.name}.description`),
       monthlyPrice,
       annualPrice,
       currentPrice: totalPrice,
-      limits: def.limits,
+      limits: selectedPlan.limits,
+      category,
       savings,
       savingsPercent,
       isAnnual,
-      features: t(`${translationKey}.features`, { returnObjects: true }) || []
+      features: selectedPlan.features || []
     }
-  }, [planType, billingInterval, locationCount, t])
+  }, [planType, billingInterval, locationCount, allPlans, plansLoading, t])
 
-  // Check authentication & validate plan on mount
+  // Validate plan and fetch URL once plans are loaded and valid
   useEffect(() => {
-    const authData = getAuthData()
-    if (!authData.isAuthenticated) {
-      // Pass current URL state to redirect back after login
-      navigate(`/auth?mode=signin&redirect=${encodeURIComponent(location.pathname + location.search)}`)
-      return
-    }
+    if (plansLoading) return;
 
-    // Validate plan type
-    if (!PLAN_DEFINITIONS[planType]) {
-      setError(t('checkout.invalidPlan') || "Selected plan is not available. Please return to pricing page.")
-      setLoading(false)
+    if (!getCurrentPlanDetails) {
+      // Only error if we finished loading plans and still can't find the plan
+      if (!plansLoading && allPlans.length > 0) {
+        setError(t('checkout.invalidPlan') || "Selected plan is not available.")
+      }
       return
     }
 
     fetchCheckoutUrl()
-  }, [planType, billingInterval, locationCount]) // Re-fetch if these change
+  }, [getCurrentPlanDetails, plansLoading, allPlans.length])
 
   const fetchCheckoutUrl = async () => {
     try {
@@ -164,19 +165,17 @@ export default function CheckoutPage() {
   const handleProceed = () => {
     if (checkoutUrl) {
       setProcessing(true)
-      // Optional timeout warning if redirect is slow (handled by browser usually, but good for UX)
       setTimeout(() => {
         if (processing) {
-          // If still processing after 10s, maybe user cancelled or network slow actions
-          // But we are redirecting so we can't do much. 
+          // If still processing after 10s...
         }
       }, 10000)
       window.location.href = checkoutUrl
     }
   }
 
-  // Skeleton Loader
-  if (loading && !checkoutUrl && !error) {
+  // Loading state
+  if ((loading && !checkoutUrl && !error) || plansLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -186,6 +185,22 @@ export default function CheckoutPage() {
       </div>
     )
   }
+
+  // Error state
+  if (plansError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 mb-4">{plansError}</p>
+          <button onClick={() => window.location.reload()} className="text-primary hover:underline">
+            {t('checkout.retry') || 'Retry'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!getCurrentPlanDetails) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12" dir={i18n.dir()}>
@@ -204,7 +219,6 @@ export default function CheckoutPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
           {/* Header */}
           <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-8 text-center relative overflow-hidden">
-            {/* Abstract Pattern overlay */}
             <div className="absolute inset-0 opacity-10 bg-[url('/patterns/grid.svg')]"></div>
 
             <h1 className="text-2xl font-bold text-white mb-2 relative z-10">
@@ -256,7 +270,7 @@ export default function CheckoutPage() {
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                   {t('checkout.planDetails') || 'Plan Details'}
                 </h2>
-                {getCurrentPlanDetails.type.includes('loyalty') ? (
+                {getCurrentPlanDetails.category === 'loyalty' ? (
                   <span className="px-3 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-xs font-bold uppercase tracking-wide rounded-full">
                     Loyalty
                   </span>
@@ -296,7 +310,7 @@ export default function CheckoutPage() {
                           {t(`checkout.${key}`) || key}
                         </span>
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {value.toLocaleString()}
+                          {value === -1 || value === 'unlimited' ? '∞' : value.toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -362,7 +376,6 @@ export default function CheckoutPage() {
               </button>
 
               <div className="flex items-center justify-center gap-4 text-xs text-gray-400 grayscale opacity-70">
-                {/* Simple trust indicators */}
                 <span className="flex items-center gap-1"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg> SSL Secure</span>
                 <span>•</span>
                 <span>Lemon Squeezy</span>

@@ -193,6 +193,7 @@ export const endpoints = {
   subscriptionDowngrade: `${API_BASE_URL}/api/subscriptions/downgrade`,
   subscriptionCancel: `${API_BASE_URL}/api/subscriptions/cancel`,
   subscriptionPortal: `${API_BASE_URL}/api/subscriptions/portal`,
+  subscriptionPlans: `${API_BASE_URL}/api/subscriptions/plans`,
   subscriptionPaymentMethod: `${API_BASE_URL}/api/subscriptions/payment-method`,
 
   // Payment History & Invoice Management

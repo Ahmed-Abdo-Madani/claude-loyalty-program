@@ -1,6 +1,6 @@
 
 import express from 'express';
-import { generateCheckout, handleWebhook, getSubscriptionDetails, cancelSubscription, getPortalUrl } from '../controllers/SubscriptionController.js';
+import { generateCheckout, handleWebhook, getSubscriptionDetails, cancelSubscription, getPortalUrl, getAvailablePlans } from '../controllers/SubscriptionController.js';
 import { requireBusinessAuth } from '../middleware/hybridBusinessAuth.js';
 
 const router = express.Router();
@@ -12,6 +12,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook
 router.post('/checkout', requireBusinessAuth, generateCheckout);
 router.get('/details', requireBusinessAuth, getSubscriptionDetails);
 router.post('/portal', requireBusinessAuth, getPortalUrl);
+router.get('/plans', requireBusinessAuth, getAvailablePlans);
 router.post('/cancel', requireBusinessAuth, cancelSubscription);
 
 export default router;

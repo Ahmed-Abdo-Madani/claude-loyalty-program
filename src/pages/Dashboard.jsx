@@ -23,7 +23,7 @@ import SEO from '../components/SEO'
 const SubscriptionManagementPage = lazy(() => import('./SubscriptionManagementPage'))
 
 function Dashboard() {
-  const { t, i18n } = useTranslation('dashboard')
+  const { t, i18n } = useTranslation(['dashboard', 'subscription'])
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -40,6 +40,8 @@ function Dashboard() {
   const [showMenuQRModal, setShowMenuQRModal] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
+  const [trialExpirationMessage, setTrialExpirationMessage] = useState('')
 
   // Sync activeTab with URL query parameter
   useEffect(() => {
@@ -80,6 +82,18 @@ function Dashboard() {
 
     // Load dashboard data
     loadDashboardData()
+
+    // Listen for trial expiration events
+    const handleTrialExpired = (event) => {
+      setTrialExpirationMessage(event.detail.message || 'Your trial has expired. Please upgrade to continue.')
+      setShowTrialExpiredModal(true)
+    }
+
+    window.addEventListener('trialExpired', handleTrialExpired)
+
+    return () => {
+      window.removeEventListener('trialExpired', handleTrialExpired)
+    }
   }, [navigate])
 
   const loadDashboardData = async () => {
@@ -252,6 +266,62 @@ function Dashboard() {
                     </div>
                   )}
 
+                  {/* Trial Expiration Warning Banner */}
+                  {subscriptionData?.subscription?.trial_info?.is_trial && (
+                    <>
+                      {/* Approaching Expiration (1-2 days left) */}
+                      {subscriptionData.subscription.trial_info.days_remaining <= 2 &&
+                        subscriptionData.subscription.trial_info.days_remaining > 0 && (
+                          <div className="bg-gradient-to-r from-amber-600 to-orange-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden">
+                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
+                                  <span>⏰</span> {i18n.language === 'ar' ? 'الفترة التجريبية تنتهي قريباً' : 'Trial Ending Soon'}
+                                </h3>
+                                <p className="text-amber-100/90 text-sm max-w-2xl">
+                                  {i18n.language === 'ar'
+                                    ? `فترتك التجريبية تنتهي خلال ${subscriptionData.subscription.trial_info.days_remaining} ${subscriptionData.subscription.trial_info.days_remaining === 1 ? 'يوم' : 'أيام'}. قم بالترقية الآن لتجنب انقطاع الخدمة.`
+                                    : `Your trial ends in ${subscriptionData.subscription.trial_info.days_remaining} day${subscriptionData.subscription.trial_info.days_remaining === 1 ? '' : 's'}. Upgrade now to avoid service interruption.`}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => setShowUpgradeModal(true)}
+                                className="px-6 py-2.5 bg-white text-amber-700 font-bold rounded-lg hover:bg-amber-50 transition-colors shadow-md whitespace-nowrap"
+                              >
+                                {i18n.language === 'ar' ? 'ترقية الآن' : 'Upgrade Now'}
+                              </button>
+                            </div>
+                            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                          </div>
+                        )}
+
+                      {/* Trial Expired */}
+                      {subscriptionData.subscription.trial_info.days_remaining <= 0 && (
+                        <div className="bg-gradient-to-r from-red-600 to-rose-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden border-2 border-red-400">
+                          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
+                                <span>🚫</span> {i18n.language === 'ar' ? 'انتهت الفترة التجريبية' : 'Trial Period Expired'}
+                              </h3>
+                              <p className="text-red-100/90 text-sm max-w-2xl">
+                                {i18n.language === 'ar'
+                                  ? 'فترتك التجريبية انتهت. يرجى الترقية إلى خطة مدفوعة لمواصلة استخدام جميع الميزات.'
+                                  : 'Your trial period has ended. Please upgrade to a paid plan to continue using all features.'}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setShowUpgradeModal(true)}
+                              className="px-6 py-2.5 bg-white text-red-700 font-bold rounded-lg hover:bg-red-50 transition-colors shadow-md whitespace-nowrap animate-pulse"
+                            >
+                              {i18n.language === 'ar' ? 'ترقية الآن' : 'Upgrade Now'}
+                            </button>
+                          </div>
+                          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   {/* Subscription Summary Card - NEW */}
                   {subscriptionData && (
                     <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
@@ -260,7 +330,7 @@ function Dashboard() {
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-xl font-bold">{t('dashboard.subscription.title', 'Your Subscription')}</h3>
                             <span className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded-full uppercase">
-                              {subscriptionData.subscription?.plan_type || 'free'}
+                              {t(`subscription:plans.${subscriptionData.subscription?.plan_type || 'free'}.name`)}
                             </span>
                           </div>
 
@@ -394,9 +464,14 @@ function Dashboard() {
       }
       {/* Plan Upgrade Modal */}
       <PlanUpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
+        isOpen={showUpgradeModal || showTrialExpiredModal}
+        onClose={() => {
+          setShowUpgradeModal(false)
+          setShowTrialExpiredModal(false)
+        }}
         currentPlan={subscriptionData?.subscription?.plan_type}
+        trialExpired={showTrialExpiredModal}
+        message={trialExpirationMessage}
       />
 
     </div >

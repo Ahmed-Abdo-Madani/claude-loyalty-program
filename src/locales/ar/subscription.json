@@ -105,7 +105,19 @@
     "free": {
       "name": "الخطة المجانية",
       "description": "تجربة مجانية للميزات الأساسية"
-    }
+    },
+    "current": "الخطة الحالية",
+    "active": "الخطة النشطة",
+    "loyalty": "برنامج الولاء",
+    "pos": "برنامج نقاط البيع"
+  },
+  "billing": {
+    "monthly": "شهري",
+    "annual": "سنوي",
+    "month": "شهر",
+    "savePercent": "وفر 15%",
+    "billedAnnually": "تفوتر سنوياً",
+    "billedMonthly": "تفوتر شهرياً"
   },
   "actions": {
     "currentPlan": "الخطة الحالية",
@@ -116,6 +128,7 @@
     "downgrade": "تخفيض",
     "upgradeNow": "ترقية الآن",
     "contactSales": "اتصل بالمبيعات",
+    "contactSupport": "اتصل بالدعم",
     "cancel": "إلغاء",
     "confirm": "تأكيد",
     "cancelSubscription": "إلغاء الاشتراك",

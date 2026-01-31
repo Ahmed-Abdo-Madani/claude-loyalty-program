@@ -209,13 +209,6 @@ export default function SubscriptionManagementPage() {
                       {t('subscription:actions.upgradePlan', 'Upgrade Plan')}
                     </button>
                   )}
-                  <button
-                    onClick={() => navigate('/subscription/plans')}
-                    className={`px-6 py-3 rounded-xl font-bold transition-colors shadow-lg border-2 ${!isFreePlan ? 'bg-transparent border-white text-white hover:bg-white/10' : 'bg-white text-primary hover:bg-gray-50 border-white'
-                      }`}
-                  >
-                    {isFreePlan ? t('subscription:actions.upgradeNow') : t('subscription:actions.changePlan', 'Change Plan')}
-                  </button>
                 </div>
               </div>
             </div>
@@ -248,7 +241,7 @@ export default function SubscriptionManagementPage() {
 
 
           {/* Usage Stats Grid */}
-          <div>
+          <div className="md:col-span-3">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{t('subscription:usage.title')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[

@@ -1369,7 +1369,7 @@ router.get('/my/offers', requireBusinessAuthLocal, async (req, res) => {
 })
 
 // Create new offer - SECURE VERSION
-router.post('/my/offers', requireBusinessAuthLocal, async (req, res) => {
+router.post('/my/offers', requireBusinessAuthLocal, checkTrialExpiration, async (req, res) => {
   try {
     const businessId = req.business.public_id
 
@@ -1406,7 +1406,7 @@ router.post('/my/offers', requireBusinessAuthLocal, async (req, res) => {
 })
 
 // Update existing offer - SECURE VERSION
-router.put('/my/offers/:id', requireBusinessAuthLocal, async (req, res) => {
+router.put('/my/offers/:id', requireBusinessAuthLocal, checkTrialExpiration, async (req, res) => {
   try {
     const { id } = req.params
     const businessId = req.business.public_id
@@ -1465,7 +1465,7 @@ router.put('/my/offers/:id', requireBusinessAuthLocal, async (req, res) => {
 })
 
 // Update offer status - SECURE VERSION
-router.patch('/my/offers/:id/status', requireBusinessAuthLocal, async (req, res) => {
+router.patch('/my/offers/:id/status', requireBusinessAuthLocal, checkTrialExpiration, async (req, res) => {
   try {
     const { id } = req.params
     const businessId = req.business.public_id

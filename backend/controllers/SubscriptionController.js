@@ -3,6 +3,7 @@ import LemonSqueezyService from '../services/LemonSqueezyService.js';
 import { Business, Subscription, Branch, Offer, Customer } from '../models/index.js';
 import logger from '../config/logger.js';
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js';
+import { PLAN_DEFINITIONS } from '../constants/plans.js';
 
 export const generateCheckout = async (req, res) => {
     try {
@@ -147,7 +148,13 @@ export const getSubscriptionDetails = async (req, res) => {
             order: [['created_at', 'DESC']]
         });
 
-        const limits = business.getPlanLimits();
+        const rawLimits = business.getPlanLimits();
+        const limits = Object.fromEntries(
+            Object.entries(rawLimits || {}).map(([k, v]) => [
+                k,
+                v === Infinity ? 'unlimited' : v
+            ])
+        );
 
         // Calculate usage
         const [offerCount, customerCount, branchCount] = await Promise.all([
@@ -246,6 +253,77 @@ export const getPortalUrl = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to generate management portal URL'
+        });
+    }
+};
+
+export const getAvailablePlans = async (req, res) => {
+    try {
+        const plans = [];
+        const categories = ['loyalty', 'pos'];
+
+        // Helper to format display name
+        const formatDisplayName = (key) => {
+            return key.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        };
+
+        // 1. Iterate and filter
+        Object.entries(PLAN_DEFINITIONS).forEach(([key, plan]) => {
+            if (plan.deprecated) return;
+
+            // 2. Determine category
+            let category = 'other';
+            if (key.startsWith('loyalty_')) category = 'loyalty';
+            else if (key.startsWith('pos_')) category = 'pos';
+
+            // Normalize limits to handle Infinity -> 'unlimited'
+            const normalizedLimits = Object.fromEntries(
+                Object.entries(plan.limits || {}).map(([k, v]) => [
+                    k,
+                    v === Infinity ? 'unlimited' : v
+                ])
+            );
+
+            // 3. Transform
+            plans.push({
+                name: key,
+                category,
+                displayName: formatDisplayName(key),
+                monthlyPrice: plan.monthlyPrice,
+                annualPrice: plan.annualPrice,
+                limits: normalizedLimits,
+                features: plan.features
+            });
+        });
+
+        // 4. Sort: Loyalty first, then POS. Within category by price.
+        plans.sort((a, b) => {
+            // Custom category order: loyalty first, then pos, then others
+            const catOrder = { 'loyalty': 1, 'pos': 2, 'other': 3 };
+            const catA = catOrder[a.category] || 99;
+            const catB = catOrder[b.category] || 99;
+
+            if (catA !== catB) return catA - catB;
+
+            // Sort by monthly price ascending
+            return a.monthlyPrice - b.monthlyPrice;
+        });
+
+        res.json({
+            success: true,
+            data: {
+                plans,
+                categories
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error fetching available plans:', error);
+        res.status(500).json({
+            success: false,
+            message: getLocalizedMessage('server.error', req.locale || 'en') // Fallback to generic error
         });
     }
 };
