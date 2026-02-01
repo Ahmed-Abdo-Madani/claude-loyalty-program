@@ -770,6 +770,52 @@ router.get('/public/logo/:businessId/:filename', async (req, res) => {
   }
 })
 
+// Public endpoint to serve business menu PDF by business ID
+router.get('/public/menu-pdf/:businessId', async (req, res) => {
+  try {
+    const { businessId } = req.params
+
+    // Find business by secure public_id
+    const business = await Business.findByPk(businessId, {
+      attributes: ['menu_pdf_filename', 'public_id']
+    })
+
+    if (!business || !business.menu_pdf_filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu PDF not found'
+      })
+    }
+
+    const filePath = path.join('./uploads/menus', business.menu_pdf_filename)
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu PDF file not found'
+      })
+    }
+
+    // Set appropriate headers
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
+    res.setHeader('Access-Control-Allow-Origin', '*') // Allow cross-origin access for customer pages
+    res.setHeader('Content-Disposition', `inline; filename="menu_${business.public_id}.pdf"`)
+
+    // Send file
+    res.sendFile(path.resolve(filePath))
+
+  } catch (error) {
+    console.error('❌ Public menu PDF serve error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve menu PDF',
+      error: error.message
+    })
+  }
+})
+
 // Get offer details for customer signup (public endpoint) - SECURE VERSION
 /**
  * API Contract: Asset URL Semantics
@@ -891,7 +937,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         include: [{
           model: Business,
           as: 'business',
-          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address']
+          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename']
         }]
       })
 
@@ -907,7 +953,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
     } else {
       // Fetch business details
       business = await Business.findByPk(identifier, {
-        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address']
+        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename']
       })
 
       if (!business) {
@@ -963,6 +1009,10 @@ router.get('/public/menu/:identifier', async (req, res) => {
           description: product.description,
           price: product.price,
           image_url: product.image_url,
+          image_original_url: product.image_original_url,
+          image_large_url: product.image_large_url,
+          image_thumbnail_url: product.image_thumbnail_url,
+          image_filename: product.image_filename,
           status: product.status
         })
       } else {
@@ -973,6 +1023,10 @@ router.get('/public/menu/:identifier', async (req, res) => {
           description: product.description,
           price: product.price,
           image_url: product.image_url,
+          image_original_url: product.image_original_url,
+          image_large_url: product.image_large_url,
+          image_thumbnail_url: product.image_thumbnail_url,
+          image_filename: product.image_filename,
           status: product.status
         })
       }
@@ -1059,8 +1113,12 @@ router.get('/public/menu/:identifier', async (req, res) => {
         city: business.city,
         district: business.district,
         region: business.region,
-        address: business.address
+        address: business.address,
+        menu_display_mode: business.menu_display_mode,
+        menu_pdf_url: business.menu_pdf_url,
+        menu_pdf_filename: business.menu_pdf_filename
       },
+      menuDisplayMode: business.menu_display_mode || 'grid',
       categories,
       uncategorizedProducts,
       cardDesign
@@ -2182,8 +2240,17 @@ router.put('/my/profile', requireBusinessAuth, async (req, res) => {
     // Allow updating specific fields
     const allowedFields = [
       'business_name', 'business_name_ar', 'business_type', 'description',
-      'license_number', 'owner_id', 'phone', 'region', 'city', 'district', 'address'
+      'license_number', 'owner_id', 'phone', 'region', 'city', 'district', 'address',
+      'menu_display_mode'
     ]
+
+    // Validation for menu_display_mode
+    if (updateData.menu_display_mode && !['grid', 'list', 'pdf'].includes(updateData.menu_display_mode)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid menu display mode. Must be one of: grid, list, pdf'
+      })
+    }
 
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) {
@@ -2771,6 +2838,209 @@ router.get('/my/logo-info', requireBusinessAuth, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get logo info',
+      error: error.message
+    })
+  }
+})
+
+// ===============================
+// BUSINESS PDF MENU ROUTES
+// ===============================
+import { upload as menuPdfUpload, handleUploadError as handleMenuPdfUploadError } from '../middleware/menuPdfUpload.js'
+
+// Upload PDF menu
+router.post('/my/menu-pdf', requireBusinessAuth, menuPdfUpload.single('menu'), handleMenuPdfUploadError, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No PDF file provided'
+      })
+    }
+
+    const business = req.business
+    const file = req.file
+
+    // Delete old PDF file if it exists
+    if (business.menu_pdf_filename && business.menu_pdf_url) {
+      const oldFilePath = path.join('./uploads/menus', business.menu_pdf_filename)
+      if (fs.existsSync(oldFilePath)) {
+        try {
+          fs.unlinkSync(oldFilePath)
+          console.log(`🗑️ Deleted old menu PDF: ${business.menu_pdf_filename}`)
+        } catch (deleteError) {
+          console.warn(`⚠️ Failed to delete old menu PDF: ${deleteError.message}`)
+        }
+      }
+    }
+
+    // Generate accessible URL paths
+    // 1. Authenticated shortcut: /api/business/my/menu-pdf
+    // 2. Public stable URL: /api/business/public/menu-pdf/${business.public_id}
+    const publicPdfUrl = `/api/business/public/menu-pdf/${business.public_id}`
+
+    // Update business with PDF information
+    await business.update({
+      menu_pdf_filename: file.filename,
+      menu_pdf_url: publicPdfUrl,
+      menu_pdf_uploaded_at: new Date()
+    })
+
+    console.log(`✅ Menu PDF uploaded for business ${business.public_id}: ${file.filename}`)
+    console.log(`🔗 Public PDF URL: ${publicPdfUrl}`)
+
+    res.json({
+      success: true,
+      message: 'Menu PDF uploaded successfully',
+      data: {
+        menu_pdf_url: publicPdfUrl,
+        menu_pdf_filename: file.filename,
+        menu_pdf_uploaded_at: business.menu_pdf_uploaded_at
+      }
+    })
+
+  } catch (error) {
+    console.error('❌ Menu PDF upload error:', error)
+
+    // Clean up uploaded file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (cleanupError) {
+        console.warn(`⚠️ Failed to cleanup uploaded file: ${cleanupError.message}`)
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload menu PDF',
+      error: error.message
+    })
+  }
+})
+
+// Get current business menu PDF
+router.get('/my/menu-pdf', requireBusinessAuth, (req, res) => {
+  try {
+    const business = req.business
+
+    if (!business.menu_pdf_filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'No menu PDF found for this business'
+      })
+    }
+
+    const filePath = path.join('./uploads/menus', business.menu_pdf_filename)
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu PDF file not found on disk'
+      })
+    }
+
+    // Set headers
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Content-Disposition', `inline; filename="${business.menu_pdf_filename}"`)
+
+    // Send file
+    res.sendFile(path.resolve(filePath))
+
+  } catch (error) {
+    console.error('❌ Menu PDF fetch error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch menu PDF',
+      error: error.message
+    })
+  }
+})
+
+// Serve PDF file by filename (Legacy support)
+router.get('/my/menu-pdf/:filename', requireBusinessAuth, (req, res) => {
+  try {
+    const filename = req.params.filename
+    const business = req.business
+
+    // Security check: verify this business owns this PDF file
+    if (business.menu_pdf_filename !== filename) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied to this PDF file'
+      })
+    }
+
+    const filePath = path.join('./uploads/menus', filename)
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu PDF not found'
+      })
+    }
+
+    // Set headers
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Cache-Control', 'public, max-age=31536000') // 1 year cache
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`)
+
+    // Send file
+    res.sendFile(path.resolve(filePath))
+
+  } catch (error) {
+    console.error('❌ Menu PDF serve error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve menu PDF',
+      error: error.message
+    })
+  }
+})
+
+// Delete PDF menu
+router.delete('/my/menu-pdf', requireBusinessAuth, async (req, res) => {
+  try {
+    const business = req.business
+
+    if (!business.menu_pdf_filename) {
+      return res.status(404).json({
+        success: false,
+        message: 'No menu PDF found to delete'
+      })
+    }
+
+    // Delete file from filesystem
+    const filePath = path.join('./uploads/menus', business.menu_pdf_filename)
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath)
+        console.log(`🗑️ Deleted menu PDF: ${business.menu_pdf_filename}`)
+      } catch (deleteError) {
+        console.warn(`⚠️ Failed to delete menu PDF: ${deleteError.message}`)
+      }
+    }
+
+    // Clear PDF information from database
+    await business.update({
+      menu_pdf_filename: null,
+      menu_pdf_url: null,
+      menu_pdf_uploaded_at: null
+    })
+
+    res.json({
+      success: true,
+      message: 'Menu PDF deleted successfully'
+    })
+
+  } catch (error) {
+    console.error('❌ Menu PDF delete error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete menu PDF',
       error: error.message
     })
   }

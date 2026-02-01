@@ -6,6 +6,11 @@ import i18n from '../i18n/config.js'
 
 /**
  * Get stored authentication data
+ * 
+ * Authentication Storage Keys:
+ * - 'sessionToken' (NOT 'businessSessionToken')
+ * - 'businessId' (secure format: biz_*)
+ * Always use getSecureAuthHeaders() instead of manual localStorage access
  */
 export function getAuthData() {
   return {

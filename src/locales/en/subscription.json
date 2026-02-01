@@ -115,6 +115,7 @@
     "monthly": "Monthly",
     "annual": "Annual",
     "month": "mo",
+    "year": "yr",
     "savePercent": "Save 15%",
     "billedAnnually": "Billed annually",
     "billedMonthly": "Billed monthly"
@@ -154,7 +155,7 @@
     "notIncluded": "Not Included"
   },
   "checkout": {
-    "title": "Checkout",
+    "title": "Checkout - {{plan}}",
     "subtitle": "Complete your subscription payment",
     "planLabel": "Selected Plan",
     "total": "Total",
@@ -293,8 +294,10 @@
   },
   "modal": {
     "upgrade": {
-      "title": "Upgrade to {{plan}}",
-      "subtitle": "You're upgrading from {{currentPlan}} to {{newPlan}}",
+      "title": "Upgrade Plan",
+      "subtitle": "Unlock more features and grow your business",
+      "specificTitle": "Upgrade to {{plan}}",
+      "specificSubtitle": "You're upgrading from {{currentPlan}} to {{newPlan}}",
       "priceChange": "New monthly price: {{price}} SAR",
       "effectiveDate": "Effective immediately",
       "proceedToPayment": "Proceed to Payment",

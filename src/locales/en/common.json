@@ -148,7 +148,22 @@
     "downloadMenuQR": "Download Menu QR",
     "shareMenu": "Share Menu",
     "scanCode": "Scan Menu Code",
-    "menuQRGenerated": "Menu QR code generated successfully"
+    "menuQRGenerated": "Menu QR code generated successfully",
+    "viewMode": {
+      "list": "List View",
+      "grid": "Grid View",
+      "pdf": "PDF Menu"
+    },
+    "others": "Others",
+    "popular": "Popular",
+    "new": "New",
+    "pdfAvailable": "The professional PDF menu is ready for viewing.",
+    "pdfComingSoon": "PDF menu viewing will be available soon.",
+    "viewPdf": "Open PDF Menu",
+    "searchPlaceholder": "Search for dishes...",
+    "callBusiness": "Call Business",
+    "pdfDownload": "Download PDF",
+    "pdfLoading": "Loading PDF..."
   },
   "registration": {
     "manualEntry": {

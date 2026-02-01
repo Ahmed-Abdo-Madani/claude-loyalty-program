@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import ImageUpload from './ImageUpload'
+import api from '../config/api'
+import { getSecureAuthHeaders } from '../utils/secureAuth'
 
 export default function ProductModal({ isOpen, onClose, onSave, product, categories, branches }) {
   const { t } = useTranslation('dashboard')
-  
+
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
@@ -19,9 +22,15 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
     image_url: '',
     display_order: 0
   })
-  
+
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  // Image Upload State
+  const [imageMode, setImageMode] = useState('upload') // 'upload' | 'url'
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [pendingFile, setPendingFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
   // Initialize form data when product changes
   useEffect(() => {
@@ -58,29 +67,43 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
         display_order: 0
       })
     }
+
+    // Reset image state
+    setPendingFile(null)
+    setImagePreview(null)
     setErrors({})
+
+    // Set initial mode based on whether there is an image URL and which type
+    if (product?.image_url && !product?.image_uploaded_at) {
+      // Assuming if there is a URL but no upload timestamp, it might be an external URL
+      // But for simplicity, default to upload mode unless it's clearly an external link user wants to edit?
+      // Actually, backward compatibility: old images are just URLs. 
+      setImageMode(product.image_url.startsWith('http') ? 'url' : 'upload')
+    } else {
+      setImageMode('upload')
+    }
   }, [product, isOpen])
 
   // Validation
   const validateForm = () => {
     const newErrors = {}
-    
+
     if (!formData.name.trim()) {
       newErrors.name = t('products.modal.validation.nameRequired')
     }
-    
+
     if (!formData.price || parseFloat(formData.price) <= 0) {
       newErrors.price = t('products.modal.validation.pricePositive')
     }
-    
+
     if (formData.tax_rate && (parseFloat(formData.tax_rate) < 0 || parseFloat(formData.tax_rate) > 100)) {
       newErrors.tax_rate = t('products.modal.validation.taxRateRange')
     }
-    
+
     if (formData.display_order && parseInt(formData.display_order) < 0) {
       newErrors.display_order = t('products.modal.validation.displayOrderPositive')
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -89,7 +112,7 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
   const calculateTaxDisplay = () => {
     const price = parseFloat(formData.price) || 0
     const taxRate = parseFloat(formData.tax_rate) || 0
-    
+
     if (formData.tax_included) {
       const priceWithoutTax = price / (1 + taxRate / 100)
       return {
@@ -105,16 +128,115 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
     }
   }
 
+  // Handle Image Upload
+  const handleImageUpload = async (file, onProgress) => {
+    // If we are creating a new product, we defer the upload
+    if (!product?.public_id) {
+      setPendingFile(file)
+      // Create local preview
+      const reader = new FileReader()
+      reader.onload = (e) => setImagePreview(e.target.result)
+      reader.readAsDataURL(file)
+
+      // We simulate success for the UI
+      onProgress(100)
+      return Promise.resolve({ temporary: true })
+    }
+
+    // Existing product - upload immediately
+    return new Promise((resolve, reject) => {
+      const headers = getSecureAuthHeaders()
+
+      if (!headers['x-session-token'] || !headers['x-business-id']) {
+        reject(new Error(t('errors.authRequired')))
+        return
+      }
+
+      setUploadingImage(true)
+
+      const xhr = new XMLHttpRequest()
+      const formData = new FormData()
+      formData.append('image', file)
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const progress = Math.round((e.loaded / e.total) * 100)
+          onProgress(progress)
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        setUploadingImage(false)
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            if (response.success) {
+              const { image_original_url, image_large_url, image_thumbnail_url } = response.data
+
+              // Update form data with new image URLs
+              setFormData(prev => ({
+                ...prev,
+                image_url: image_large_url || image_original_url, // Prefer large, fallback to original
+                // We could store other URLs if we added them to formData state, 
+                // but for now we mainly update the display URL
+              }))
+
+              resolve(response.data)
+            } else {
+              reject(new Error(response.message || 'Upload failed'))
+            }
+          } catch (e) {
+            reject(new Error('Invalid response'))
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText}`))
+        }
+      })
+
+      xhr.addEventListener('error', () => {
+        setUploadingImage(false)
+        reject(new Error('Network error'))
+      })
+
+      xhr.open('POST', api.endpoints.posProductImage(product.public_id))
+      xhr.setRequestHeader('x-session-token', headers['x-session-token'])
+      xhr.setRequestHeader('x-business-id', headers['x-business-id'])
+      xhr.send(formData)
+    })
+  }
+
+  const handleImageRemove = async () => {
+    // If it's a pending file, just clear it
+    if (pendingFile) {
+      setPendingFile(null)
+      setImagePreview(null)
+      return
+    }
+
+    // If existing product has image, call API to delete
+    if (product?.public_id && product?.image_url) {
+      try {
+        await api.secureApi.delete(api.endpoints.posProductImage(product.public_id))
+      } catch (err) {
+        console.error('Failed to delete image:', err)
+        // We continue anyway to clear the UI
+      }
+    }
+
+    setFormData(prev => ({ ...prev, image_url: '' }))
+    setImagePreview(null)
+  }
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
-    
+
     setSaving(true)
-    
+
     try {
       // Prepare data
       const dataToSave = {
@@ -131,13 +253,49 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
         branch_id: formData.branch_id || null,
         image_url: formData.image_url?.trim() || null
       }
-      
+
       // Include public_id if editing
       if (product?.public_id) {
         dataToSave.public_id = product.public_id
       }
-      
-      await onSave(dataToSave)
+
+      // Save product first
+      const savedProduct = await onSave(dataToSave)
+
+      // Handle deferred image upload for new products
+      if (pendingFile && savedProduct?.public_id) {
+        // We need to upload the pending file now
+        try {
+          // Reuse logic? We can't reuse handleImageUpload exactly because it uses state.
+          // But we can just run the XHR here using the new ID.
+          await new Promise((resolve, reject) => {
+            const headers = getSecureAuthHeaders()
+
+            if (!headers['x-session-token'] || !headers['x-business-id']) {
+              reject(new Error('Authentication required'))
+              return
+            }
+
+            const xhr = new XMLHttpRequest()
+            const fd = new FormData()
+            fd.append('image', pendingFile)
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) resolve()
+              else reject(new Error('Image upload failed'))
+            })
+            xhr.addEventListener('error', () => reject(new Error('Network error')))
+
+            xhr.open('POST', api.endpoints.posProductImage(savedProduct.public_id))
+            xhr.setRequestHeader('x-session-token', headers['x-session-token'])
+            xhr.setRequestHeader('x-business-id', headers['x-business-id'])
+            xhr.send(fd)
+          })
+        } catch (uploadErr) {
+          console.error('Failed to upload image after save:', uploadErr)
+          alert(t('products.modal.imageUploadFailedAfterSave'))
+        }
+      }
     } catch (err) {
       console.error('Failed to save:', err)
       alert(err.message || t('products.messages.saveFailed'))
@@ -174,274 +332,272 @@ export default function ProductModal({ isOpen, onClose, onSave, product, categor
         {/* Form - Scrollable Content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="overflow-y-auto p-6 flex-1">
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('products.modal.basicInfo')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.productName')}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    placeholder={t('products.modal.productNamePlaceholder')}
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.productNameAr')}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name_ar}
-                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={t('products.modal.productNameArPlaceholder')}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.description')}
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={t('products.modal.descriptionPlaceholder')}
-                    rows="3"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.sku')}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={t('products.modal.skuPlaceholder')}
-                  />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('products.modal.skuHelper')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Category & Branch Assignment */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('products.modal.categoryBranch')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.category')}
-                  </label>
-                  <select
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="">{t('products.modal.noCategory')}</option>
-                    {categories.map(cat => (
-                      <option key={cat.public_id} value={cat.public_id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.branch')}
-                  </label>
-                  <select
-                    value={formData.branch_id}
-                    onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="">{t('products.modal.allBranches')}</option>
-                    {branches.map(branch => (
-                      <option key={branch.public_id} value={branch.public_id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('products.modal.branchHelper')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing & Tax */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('products.modal.pricingTax')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.price')}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.price ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    placeholder={t('products.modal.pricePlaceholder')}
-                  />
-                  {errors.price && (
-                    <p className="text-red-500 text-sm mt-1">{errors.price}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.cost')}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.cost}
-                    onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={t('products.modal.costPlaceholder')}
-                  />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('products.modal.costHelper')}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.taxRate')}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={formData.tax_rate}
-                    onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent ${
-                      errors.tax_rate ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                    placeholder={t('products.modal.taxRatePlaceholder')}
-                  />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('products.modal.taxRateHelper')}
-                  </p>
-                  {errors.tax_rate && (
-                    <p className="text-red-500 text-sm mt-1">{errors.tax_rate}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.taxIncluded')}
-                  </label>
-                  <div className="flex items-center h-10">
-                    <input
-                      type="checkbox"
-                      checked={formData.tax_included}
-                      onChange={(e) => setFormData({ ...formData, tax_included: e.target.checked })}
-                      className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <label className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      {t('products.modal.taxIncludedHelper')}
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('products.modal.basicInfo')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.productName')}
                     </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                      placeholder={t('products.modal.productNamePlaceholder')}
+                    />
+                    {errors.name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.productNameAr')}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name_ar}
+                      onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder={t('products.modal.productNameArPlaceholder')}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.description')}
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder={t('products.modal.descriptionPlaceholder')}
+                      rows="3"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.sku')}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.sku}
+                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder={t('products.modal.skuPlaceholder')}
+                    />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('products.modal.skuHelper')}
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                {formData.price && (
-                  <div className="md:col-span-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div className="text-sm text-blue-900 dark:text-blue-100">
-                      <span className="font-medium">{taxDisplay.label}:</span>{' '}
-                      <span className="font-bold">{taxDisplay.value} SAR</span>
+              {/* Category & Branch Assignment */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('products.modal.categoryBranch')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.category')}
+                    </label>
+                    <select
+                      value={formData.category_id}
+                      onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="">{t('products.modal.noCategory')}</option>
+                      {categories.map(cat => (
+                        <option key={cat.public_id} value={cat.public_id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.branch')}
+                    </label>
+                    <select
+                      value={formData.branch_id}
+                      onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="">{t('products.modal.allBranches')}</option>
+                      {branches.map(branch => (
+                        <option key={branch.public_id} value={branch.public_id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('products.modal.branchHelper')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing & Tax */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('products.modal.pricingTax')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.price')}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent ${errors.price ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                      placeholder={t('products.modal.pricePlaceholder')}
+                    />
+                    {errors.price && (
+                      <p className="text-red-500 text-sm mt-1">{errors.price}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.cost')}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.cost}
+                      onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder={t('products.modal.costPlaceholder')}
+                    />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('products.modal.costHelper')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.taxRate')}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.tax_rate}
+                      onChange={(e) => setFormData({ ...formData, tax_rate: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent ${errors.tax_rate ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                      placeholder={t('products.modal.taxRatePlaceholder')}
+                    />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('products.modal.taxRateHelper')}
+                    </p>
+                    {errors.tax_rate && (
+                      <p className="text-red-500 text-sm mt-1">{errors.tax_rate}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.taxIncluded')}
+                    </label>
+                    <div className="flex items-center h-10">
+                      <input
+                        type="checkbox"
+                        checked={formData.tax_included}
+                        onChange={(e) => setFormData({ ...formData, tax_included: e.target.checked })}
+                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      />
+                      <label className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        {t('products.modal.taxIncludedHelper')}
+                      </label>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* Display Settings */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('products.modal.displaySettings')}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.displayOrder')}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.display_order}
-                    onChange={(e) => setFormData({ ...formData, display_order: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={t('products.modal.displayOrderPlaceholder')}
-                  />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('products.modal.displayOrderHelper')}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.status')}
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="active">{t('products.modal.statusActive')}</option>
-                    <option value="inactive">{t('products.modal.statusInactive')}</option>
-                    <option value="out_of_stock">{t('products.modal.statusOutOfStock')}</option>
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('products.modal.imageUrl')}
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={t('products.modal.imageUrlPlaceholder')}
-                  />
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('products.modal.imageUrlHelper')}
-                  </p>
+                  {formData.price && (
+                    <div className="md:col-span-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="text-sm text-blue-900 dark:text-blue-100">
+                        <span className="font-medium">{taxDisplay.label}:</span>{' '}
+                        <span className="font-bold">{taxDisplay.value} SAR</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Display Settings */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('products.modal.displaySettings')}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.displayOrder')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.display_order}
+                      onChange={(e) => setFormData({ ...formData, display_order: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder={t('products.modal.displayOrderPlaceholder')}
+                    />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('products.modal.displayOrderHelper')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('products.modal.status')}
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="active">{t('products.modal.statusActive')}</option>
+                      <option value="inactive">{t('products.modal.statusInactive')}</option>
+                      <option value="out_of_stock">{t('products.modal.statusOutOfStock')}</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <ImageUpload
+                      imageUrl={imagePreview || formData.image_url}
+                      onUpload={handleImageUpload}
+                      onRemove={handleImageRemove}
+                      onUrlChange={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+                      uploading={uploadingImage}
+                      mode={imageMode}
+                      onModeChange={setImageMode}
+                      enableCompression={true}
+                      maxWidthOrHeight={1920}
+                      compressionQuality={0.85}
+                    />
+                    {/* Keep hidden field for backward compatibility compliance if needed */}
+                    <input type="hidden" name="image_url" value={formData.image_url || ''} />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
           </div>
 
           {/* Footer - Sticky */}

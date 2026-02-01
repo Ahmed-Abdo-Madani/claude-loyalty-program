@@ -64,6 +64,9 @@ export const endpoints = {
   myActivity: `${API_BASE_URL}/api/business/my/activity`,
   businessProfile: `${API_BASE_URL}/api/business/my/profile`,
   businessUpdateProfile: `${API_BASE_URL}/api/business/my/profile`,
+  businessMenuPdf: `${API_BASE_URL}/api/business/my/menu-pdf`,
+  businessMenuPdfUpload: `${API_BASE_URL}/api/business/my/menu-pdf`,
+  businessMenuPdfDelete: `${API_BASE_URL}/api/business/my/menu-pdf`,
 
   // Public Customer APIs
   publicOffer: `${API_BASE_URL}/api/business/public/offer`,
@@ -148,6 +151,7 @@ export const endpoints = {
   posProductUpdate: (productId) => `${API_BASE_URL}/api/pos/products/${productId}`,
   posProductDelete: (productId) => `${API_BASE_URL}/api/pos/products/${productId}`,
   posProductStatus: (productId) => `${API_BASE_URL}/api/pos/products/${productId}/status`,
+  posProductImage: (productId) => `${API_BASE_URL}/api/pos/products/${productId}/image`,
 
   // POS - Sales APIs (Branch Manager Access)
   posSales: `${API_BASE_URL}/api/pos/sales`,

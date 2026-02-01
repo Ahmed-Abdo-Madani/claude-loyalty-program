@@ -183,6 +183,34 @@ const Business = sequelize.define('Business', {
     allowNull: true,
     comment: 'File size in bytes'
   },
+  // Menu display settings
+  menu_display_mode: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'grid',
+    validate: {
+      isIn: {
+        args: [['grid', 'list', 'pdf']],
+        msg: 'menu_display_mode must be one of: grid, list, pdf'
+      }
+    },
+    comment: 'Controls how the public menu is displayed: grid (default), list, or pdf'
+  },
+  menu_pdf_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Accessible URL path to PDF menu file'
+  },
+  menu_pdf_filename: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Original filename of uploaded PDF'
+  },
+  menu_pdf_uploaded_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Timestamp when PDF was uploaded'
+  },
   current_plan: {
     type: DataTypes.ENUM(
       'free',

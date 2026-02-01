@@ -1,4 +1,5 @@
 {
+  "loading": "جاري التحميل...",
   "overview": {
     "title": "نظرة عامة",
     "loading": "جاري تحميل لوحة التحكم...",
@@ -31,6 +32,25 @@
     "switchToLightMode": "التبديل إلى الوضع الفاتح",
     "switchToDarkMode": "التبديل إلى الوضع الداكن"
   },
+  "imageUpload": {
+    "title": "صورة المنتج",
+    "uploadMode": "رفع ملف",
+    "urlMode": "إدخال رابط",
+    "dragDrop": "اسحب وأفلت الصورة هنا، أو",
+    "browseFiles": "تصفح الملفات",
+    "uploading": "جاري الرفع...",
+    "uploadProgress": "تقدم الرفع",
+    "remove": "إزالة",
+    "preview": "معاينة الصورة",
+    "fileTypes": "PNG أو JPG أو GIF أو WebP (حد أقصى 10 ميجابايت)",
+    "invalidType": "نوع ملف غير صالح. يرجى رفع PNG أو JPG أو GIF أو WebP.",
+    "fileTooLarge": "الملف كبير جدًا. الحد الأقصى للحجم هو 10 ميجابايت.",
+    "uploadFailed": "فشل الرفع. يرجى المحاولة مرة أخرى.",
+    "uploadSuccess": "تم رفع الصورة بنجاح",
+    "deleteConfirm": "هل أنت متأكد من إزالة هذه الصورة؟",
+    "urlPlaceholder": "https://example.com/image.jpg",
+    "urlInvalid": "يرجى إدخال رابط صالح"
+  },
   "sidebar": {
     "overview": "نظرة عامة",
     "myOffers": "عروضي",
@@ -49,7 +69,8 @@
     "approachingLimit": "لقد اقتربت من حدود خطتك. قم بالترقية الآن لفتح المزيد.",
     "upgradeRequired": "ترقية مطلوبة",
     "viewPlans": "عرض الخطط",
-    "viewMenu": "عرض القائمة العامة"
+    "viewMenu": "عرض القائمة العامة",
+    "settings": "الإعدادات"
   },
   "mobileNav": {
     "overview": "عام",
@@ -427,6 +448,12 @@
     "deleteProduct": "حذف المنتج",
     "manageCategories": "إدارة الفئات",
     "generateMenuQR": "إنشاء QR للقائمة",
+    "menuSettingsBanner": {
+      "title": "إعدادات عرض القائمة",
+      "description": "قم بتكوين كيفية عرض العملاء لقائمتك (شبكة، قائمة، أو PDF) وتحميل قائمة PDF احترافية.",
+      "action": "انتقل إلى إعدادات القائمة",
+      "dismiss": "إخفاء"
+    },
     "loading": "جاري تحميل المنتجات...",
     "searchProducts": "البحث عن منتج...",
     "searchPlaceholder": "البحث بالاسم أو رمز المنتج...",
@@ -601,6 +628,13 @@
       "list": "عرض القائمة",
       "grid": "عرض الشبكة",
       "table": "عرض الجدول"
+    }
+  },
+  "menu": {
+    "viewMode": {
+      "grid": "عرض الشبكة",
+      "list": "عرض القائمة",
+      "pdf": "قائمة PDF"
     }
   },
   "pos": {
@@ -969,7 +1003,10 @@
     "profile": "الملف الشخصي",
     "security": "الأمان",
     "notifications": "الإشعارات",
-    "branding": "العلامة التجارية",
+    "branding": {
+      "title": "العلامة التجارية والتخصيص",
+      "description": "في المرحلة 5، ستتمكن من تخصيص ألوان قائمتك، والعناوين، وارفع قوائم PDF احترافية من هذا القسم."
+    },
     "integrations": "التكاملات",
     "businessName": "اسم النشاط التجاري",
     "businessLogo": "شعار النشاط التجاري",
@@ -984,7 +1021,32 @@
     "saveSettings": "حفظ الإعدادات",
     "saving": "جاري الحفظ...",
     "saved": "تم حفظ الإعدادات بنجاح",
-    "saveFailed": "فشل حفظ الإعدادات"
+    "saveFailed": "فشل حفظ الإعدادات",
+    "menuDisplay": {
+      "title": "وضع عرض القائمة",
+      "description": "اختر كيف يرى العملاء قائمتك بشكل افتراضي",
+      "gridDesc": "شبكة حديثة من عمودين مع صور المنتجات والبطاقات",
+      "listDesc": "قائمة رأسية أنيقة تركز على التصميم الطباعي",
+      "pdfDesc": "عرض وثيقة PDF احترافية لقائمتك"
+    },
+    "pdfUpload": {
+      "title": "تحميل قائمة PDF",
+      "description": "قم بتحميل قائمتك الاحترافية كملف PDF (بحد أقصى 10 ميجابايت)",
+      "tooLarge": "حجم الملف كبير جداً. الحد الأقصى هو 10 ميجابايت.",
+      "success": "تم تحميل قائمة PDF بنجاح!",
+      "error": "فشل تحميل PDF",
+      "confirmDelete": "هل أنت متأكد أنك تريد حذف قائمة PDF هذه؟",
+      "deleteSuccess": "تم حذف قائمة PDF بنجاح",
+      "deleteError": "فشل حذف PDF",
+      "delete": "حذف PDF"
+    },
+    "uploading": "جاري تحميل PDF...",
+    "clickToUpload": "انقر للتحميل",
+    "dragAndDrop": "أو اسحب وأفلت",
+    "uploadedOn": "تم التحميل في",
+    "errorLoading": "فشل تحميل الإعدادات. يرجى المحاولة مرة أخرى.",
+    "updateSuccess": "تم تحديث إعدادات العرض بنجاح!",
+    "updateError": "فشل تحديث إعدادات العرض."
   },
   "demo": {
     "banner": {

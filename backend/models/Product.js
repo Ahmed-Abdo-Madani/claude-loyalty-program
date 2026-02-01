@@ -81,6 +81,36 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING(500),
     allowNull: true
   },
+  image_original_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Full-resolution uploaded image URL'
+  },
+  image_large_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Large version (800px) optimized for desktop display'
+  },
+  image_thumbnail_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Thumbnail version (200px) for mobile/lazy loading'
+  },
+  image_filename: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    comment: 'Original filename of uploaded image'
+  },
+  image_uploaded_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: 'Timestamp when image was uploaded'
+  },
+  image_file_size: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'File size in bytes'
+  },
   display_order: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
@@ -110,6 +140,7 @@ const Product = sequelize.define('Product', {
   tableName: 'products',
   timestamps: true,
   underscored: true,
+  // Index for efficient querying of products by image upload date, useful for image management features
   indexes: [
     {
       fields: ['business_id']
@@ -133,46 +164,50 @@ const Product = sequelize.define('Product', {
       where: {
         sku: { [sequelize.Sequelize.Op.ne]: null }
       }
+    },
+    // Index for efficient querying of products by image upload date, useful for image management features
+    {
+      fields: ['image_uploaded_at']
     }
   ]
 })
 
 // Instance methods
-Product.prototype.calculateTaxAmount = function() {
-  const basePrice = this.tax_included 
+Product.prototype.calculateTaxAmount = function () {
+  const basePrice = this.tax_included
     ? parseFloat(this.price) / (1 + parseFloat(this.tax_rate) / 100)
     : parseFloat(this.price)
-  
+
   const taxAmount = basePrice * (parseFloat(this.tax_rate) / 100)
   return Math.round(taxAmount * 100) / 100
 }
 
-Product.prototype.calculatePriceWithTax = function() {
+Product.prototype.calculatePriceWithTax = function () {
   if (this.tax_included) {
     return parseFloat(this.price)
   }
-  
+
   const taxAmount = this.calculateTaxAmount()
   return Math.round((parseFloat(this.price) + taxAmount) * 100) / 100
 }
 
-Product.prototype.calculatePriceWithoutTax = function() {
+Product.prototype.calculatePriceWithoutTax = function () {
   if (!this.tax_included) {
     return parseFloat(this.price)
   }
-  
+
   const basePrice = parseFloat(this.price) / (1 + parseFloat(this.tax_rate) / 100)
   return Math.round(basePrice * 100) / 100
 }
 
-Product.prototype.incrementSold = async function(quantity, revenue, options = {}) {
+Product.prototype.incrementSold = async function (quantity, revenue, options = {}) {
   this.total_sold += quantity
   this.total_revenue = parseFloat(this.total_revenue) + parseFloat(revenue)
   await this.save(options)
   return this
 }
 
-Product.prototype.isAvailable = function() {
+Product.prototype.isAvailable = function () {
   return this.status === 'active'
 }
 

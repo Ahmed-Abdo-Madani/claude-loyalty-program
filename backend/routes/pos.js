@@ -19,6 +19,10 @@ import CustomerService from '../services/CustomerService.js'
 import CustomerProgress from '../models/CustomerProgress.js'
 import Offer from '../models/Offer.js'
 import POSAnalyticsController from '../controllers/posAnalyticsController.js'
+import { upload as productImageUpload, handleUploadError as handleProductImageUploadError } from '../middleware/productImageUpload.js'
+import ImageProcessingService from '../services/ImageProcessingService.js'
+import path from 'path'
+import fs from 'fs'
 
 const router = express.Router()
 
@@ -386,6 +390,7 @@ router.get('/products/:productId', requireBusinessAuth, async (req, res) => {
 /**
  * POST /api/pos/products
  * Create new product
+ * Note: Supports both image_url (external URL) and file upload via separate /products/:productId/image endpoint
  */
 router.post('/products', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
@@ -526,6 +531,7 @@ router.post('/products', requireBusinessAuth, checkTrialExpiration, async (req, 
 /**
  * PUT /api/pos/products/:productId
  * Update product
+ * Note: Supports both image_url (external URL) and file upload via separate /products/:productId/image endpoint
  */
 router.put('/products/:productId', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
   const transaction = await sequelize.transaction()
@@ -645,7 +651,14 @@ router.put('/products/:productId', requireBusinessAuth, checkTrialExpiration, as
     if (tax_rate !== undefined) product.tax_rate = parseFloat(tax_rate)
     if (tax_included !== undefined) product.tax_included = tax_included
     if (status && ['active', 'inactive', 'out_of_stock'].includes(status)) product.status = status
-    if (image_url !== undefined) product.image_url = image_url?.trim()
+
+    // Handle image_url update - allow it to be cleared but don't affect uploaded images
+    if (image_url !== undefined) {
+      product.image_url = image_url?.trim()
+      // Note: We intentionally do NOT clear uploaded image fields here to allow both to coexist
+      // Uploaded images are managed via the dedicated image endpoints
+    }
+
     if (display_order !== undefined) product.display_order = display_order
 
     await product.save({ transaction })
@@ -690,6 +703,187 @@ router.put('/products/:productId', requireBusinessAuth, checkTrialExpiration, as
       error: 'Failed to update product',
       code: 'UPDATE_PRODUCT_ERROR'
     })
+  }
+})
+
+/**
+ * POST /api/pos/products/:productId/image
+ * Upload product image
+ */
+router.post('/products/:productId/image',
+  requireBusinessAuth,
+  checkTrialExpiration,
+  productImageUpload.single('image'),
+  handleProductImageUploadError,
+  async (req, res) => {
+    try {
+      const businessId = req.businessId
+      const { productId } = req.params
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No image file provided'
+        })
+      }
+
+      // Verify product exists and belongs to business
+      const product = await Product.findOne({
+        where: {
+          public_id: productId,
+          business_id: businessId
+        }
+      })
+
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        })
+      }
+
+      // Delete old images if they exist
+      if (product.image_filename) {
+        const oldFiles = [
+          product.image_original_url,
+          product.image_large_url,
+          product.image_thumbnail_url
+        ].filter(Boolean)
+
+        await ImageProcessingService.deleteProductImages(oldFiles)
+      }
+
+      // Process new image
+      const processed = await ImageProcessingService.processProductImage(
+        req.file.buffer,
+        req.file.originalname,
+        productId
+      )
+
+      // Update product
+      product.image_original_url = processed.original.url
+      product.image_large_url = processed.large.url
+      product.image_thumbnail_url = processed.thumbnail.url
+      product.image_filename = req.file.originalname
+      product.image_uploaded_at = processed.original.uploaded_at
+      product.image_file_size = processed.original.size
+
+      await product.save()
+
+      logger.info(`Product image uploaded: ${productId}`)
+
+      res.json({
+        success: true,
+        message: 'Product image uploaded successfully',
+        data: {
+          image_original_url: product.image_original_url,
+          image_large_url: product.image_large_url,
+          image_thumbnail_url: product.image_thumbnail_url,
+          image_filename: product.image_filename,
+          image_file_size: product.image_file_size,
+          image_uploaded_at: product.image_uploaded_at
+        }
+      })
+
+    } catch (error) {
+      logger.error('Failed to upload product image:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process image',
+        error: error.message
+      })
+    }
+  })
+
+/**
+ * DELETE /api/pos/products/:productId/image
+ * Delete product image
+ */
+router.delete('/products/:productId/image', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
+  try {
+    const businessId = req.businessId
+    const { productId } = req.params
+
+    // Verify product exists and belongs to business
+    const product = await Product.findOne({
+      where: {
+        public_id: productId,
+        business_id: businessId
+      }
+    })
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found'
+      })
+    }
+
+    if (product.image_filename) {
+      // Delete files
+      const oldFiles = [
+        product.image_original_url,
+        product.image_large_url,
+        product.image_thumbnail_url
+      ].filter(Boolean)
+
+      await ImageProcessingService.deleteProductImages(oldFiles)
+
+      // Clear fields
+      product.image_original_url = null
+      product.image_large_url = null
+      product.image_thumbnail_url = null
+      product.image_filename = null
+      product.image_uploaded_at = null
+      product.image_file_size = null
+
+      await product.save()
+
+      logger.info(`Product image deleted: ${productId}`)
+    }
+
+    res.json({
+      success: true,
+      message: 'Product image deleted successfully'
+    })
+
+  } catch (error) {
+    logger.error('Failed to delete product image:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete product image'
+    })
+  }
+})
+
+/**
+ * GET /api/pos/products/images/:filename
+ * Serve product image
+ */
+router.get('/products/images/:filename', async (req, res) => {
+  try {
+    const { filename } = req.params
+    const uploadsRoot = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
+    const filePath = path.join(uploadsRoot, 'designs', 'products', filename)
+
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000')
+
+      const ext = path.extname(filename).toLowerCase()
+      let contentType = 'application/octet-stream'
+      if (ext === '.webp') contentType = 'image/webp'
+      else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg'
+      else if (ext === '.png') contentType = 'image/png'
+      else if (ext === '.gif') contentType = 'image/gif'
+
+      res.setHeader('Content-Type', contentType)
+      fs.createReadStream(filePath).pipe(res)
+    } else {
+      res.status(404).send('Image not found')
+    }
+  } catch (error) {
+    logger.error('Failed to serve product image:', error)
+    res.status(404).send('Image not found')
   }
 })
 

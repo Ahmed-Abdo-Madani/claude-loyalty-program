@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/20/solid'
@@ -23,6 +23,11 @@ export default function CheckoutPage() {
   const [allPlans, setAllPlans] = useState([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [plansError, setPlansError] = useState(null)
+
+  // Track last fetched parameters to prevent duplicate API calls from React.StrictMode
+  // This follows the same pattern as PaymentCallbackPage.jsx (lines 39-78)
+  // React.StrictMode intentionally double-invokes effects in development to detect side effects
+  const lastFetchParamsRef = useRef(null)
 
   // Get plan details from navigation state or query params
   const searchParams = new URLSearchParams(location.search)
@@ -116,8 +121,19 @@ export default function CheckoutPage() {
       return
     }
 
+    // Create composite key from plan parameters
+    const currentParams = `${planType}-${billingInterval}-${locationCount}`
+
+    // Prevent duplicate API calls (React.StrictMode, navigation, or refresh)
+    if (lastFetchParamsRef.current === currentParams) {
+      console.log('Skipping duplicate checkout URL fetch for same parameters')
+      return
+    }
+
+    // Mark parameters as processed before fetching
+    lastFetchParamsRef.current = currentParams
     fetchCheckoutUrl()
-  }, [getCurrentPlanDetails, plansLoading, allPlans.length])
+  }, [getCurrentPlanDetails, plansLoading, allPlans.length, planType, billingInterval, locationCount])
 
   const fetchCheckoutUrl = async () => {
     try {

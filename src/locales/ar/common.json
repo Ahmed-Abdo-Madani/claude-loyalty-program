@@ -144,7 +144,22 @@
     "downloadMenuQR": "تحميل رمز QR للقائمة",
     "shareMenu": "مشاركة القائمة",
     "scanCode": "مسح رمز القائمة",
-    "menuQRGenerated": "تم إنشاء رمز QR للقائمة بنجاح"
+    "menuQRGenerated": "تم إنشاء رمز QR للقائمة بنجاح",
+    "viewMode": {
+      "list": "عرض القائمة",
+      "grid": "عرض الشبكة",
+      "pdf": "قائمة PDF"
+    },
+    "others": "أخرى",
+    "popular": "الأكثر طلباً",
+    "new": "جديد",
+    "pdfAvailable": "قائمة الطعام الاحترافية بصيغة PDF جاهزة للعرض.",
+    "pdfComingSoon": "سيكون عرض قائمة PDF متاحاً قريباً.",
+    "viewPdf": "فتح قائمة PDF",
+    "searchPlaceholder": "بحث عن أطباق...",
+    "callBusiness": "اتصل بالنشاط التجاري",
+    "pdfDownload": "تحميل PDF",
+    "pdfLoading": "جاري تحميل PDF..."
   },
   "registration": {
     "manualEntry": {

@@ -114,7 +114,8 @@
   "billing": {
     "monthly": "شهري",
     "annual": "سنوي",
-    "month": "شهر",
+    "month": "شهرياً",
+    "year": "سنوياً",
     "savePercent": "وفر 15%",
     "billedAnnually": "تفوتر سنوياً",
     "billedMonthly": "تفوتر شهرياً"
@@ -154,7 +155,7 @@
     "notIncluded": "غير متضمن"
   },
   "checkout": {
-    "title": "الدفع",
+    "title": "الدفع - {{plan}}",
     "subtitle": "أكمل دفع اشتراكك",
     "planLabel": "الخطة المختارة",
     "total": "المجموع",
@@ -293,8 +294,10 @@
   },
   "modal": {
     "upgrade": {
-      "title": "الترقية إلى {{plan}}",
-      "subtitle": "أنت تقوم بالترقية من {{currentPlan}} إلى {{newPlan}}",
+      "title": "ترقية الخطة",
+      "subtitle": "افتح المزيد من الميزات وقم بتنمية عملك",
+      "specificTitle": "الترقية إلى {{plan}}",
+      "specificSubtitle": "أنت تقوم بالترقية من {{currentPlan}} إلى {{newPlan}}",
       "priceChange": "السعر الشهري الجديد: {{price}} ريال",
       "effectiveDate": "فعال فوراً",
       "proceedToPayment": "المتابعة للدفع",

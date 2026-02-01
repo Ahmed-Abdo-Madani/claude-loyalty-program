@@ -1,0 +1,25 @@
+{
+    "title": "القائمة",
+    "loading": "جاري تحميل القائمة...",
+    "error": "خطأ في تحميل القائمة",
+    "retry": "إعادة المحاولة",
+    "allCategories": "جميع الفئات",
+    "searchPlaceholder": "ابحث عن الأطباق...",
+    "addToCart": "أضف إلى السلة",
+    "viewMode": {
+        "grid": "شبكة",
+        "list": "قائمة",
+        "pdf": "قائمة PDF"
+    },
+    "pdfNotAvailable": "قائمة PDF غير متوفرة",
+    "pdfNotAvailableDesc": "لم يقم النشاط التجاري بتحميل قائمة PDF بعد.",
+    "pdfLoading": "جاري تحميل قائمة PDF...",
+    "pdfError": "فشل تحميل قائمة PDF",
+    "pdfDownload": "تحميل PDF",
+    "pdfPage": "صفحة",
+    "pdfOf": "من",
+    "pdfAvailable": "قائمة PDF الاحترافية جاهزة للعرض.",
+    "pdfComingSoon": "سيكون عرض قائمة PDF متاحاً قريباً.",
+    "viewPdf": "فتح قائمة PDF",
+    "poweredBy": "مشغل بواسطة"
+}

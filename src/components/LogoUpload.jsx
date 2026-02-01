@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getSecureAuthHeaders } from '../utils/secureAuth'
 
 function LogoUpload({ onLogoUpdate }) {
   const { t } = useTranslation('dashboard')
@@ -17,18 +18,14 @@ function LogoUpload({ onLogoUpdate }) {
 
   const loadLogoInfo = async () => {
     try {
-      const sessionToken = localStorage.getItem('businessSessionToken')
-      const businessId = localStorage.getItem('businessId')
+      const headers = getSecureAuthHeaders()
 
-      if (!sessionToken || !businessId) {
+      if (!headers['x-session-token'] || !headers['x-business-id']) {
         return
       }
 
       const response = await fetch('/api/business/my/logo-info', {
-        headers: {
-          'x-session-token': sessionToken,
-          'x-business-id': businessId
-        }
+        headers
       })
 
       if (response.ok) {
@@ -87,10 +84,9 @@ function LogoUpload({ onLogoUpdate }) {
     setUploadProgress(0)
 
     try {
-      const sessionToken = localStorage.getItem('businessSessionToken')
-      const businessId = localStorage.getItem('businessId')
+      const headers = getSecureAuthHeaders()
 
-      if (!sessionToken || !businessId) {
+      if (!headers['x-session-token'] || !headers['x-business-id']) {
         throw new Error(t('logoUpload.authRequired'))
       }
 
@@ -121,8 +117,8 @@ function LogoUpload({ onLogoUpdate }) {
         })
 
         xhr.open('POST', '/api/business/my/logo')
-        xhr.setRequestHeader('x-session-token', sessionToken)
-        xhr.setRequestHeader('x-business-id', businessId)
+        xhr.setRequestHeader('x-session-token', headers['x-session-token'])
+        xhr.setRequestHeader('x-business-id', headers['x-business-id'])
         xhr.send(formData)
       })
 
@@ -164,19 +160,15 @@ function LogoUpload({ onLogoUpdate }) {
     }
 
     try {
-      const sessionToken = localStorage.getItem('businessSessionToken')
-      const businessId = localStorage.getItem('businessId')
+      const headers = getSecureAuthHeaders()
 
-      if (!sessionToken || !businessId) {
+      if (!headers['x-session-token'] || !headers['x-business-id']) {
         throw new Error(t('logoUpload.authRequired'))
       }
 
       const response = await fetch('/api/business/my/logo', {
         method: 'DELETE',
-        headers: {
-          'x-session-token': sessionToken,
-          'x-business-id': businessId
-        }
+        headers
       })
 
       const result = await response.json()
@@ -266,11 +258,10 @@ function LogoUpload({ onLogoUpdate }) {
         <div>
           {/* Upload Area */}
           <div
-            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 ${
-              dragActive
-                ? 'border-primary bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-            }`}
+            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 ${dragActive
+              ? 'border-primary bg-blue-50 dark:bg-blue-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}

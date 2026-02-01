@@ -1,0 +1,25 @@
+{
+    "title": "Menu",
+    "loading": "Loading menu...",
+    "error": "Error loading menu",
+    "retry": "Retry",
+    "allCategories": "All Categories",
+    "searchPlaceholder": "Search for dishes...",
+    "addToCart": "Add to Cart",
+    "viewMode": {
+        "grid": "Grid",
+        "list": "List",
+        "pdf": "PDF Menu"
+    },
+    "pdfNotAvailable": "PDF Menu Not Available",
+    "pdfNotAvailableDesc": "The business hasn't uploaded a PDF menu yet.",
+    "pdfLoading": "Loading PDF menu...",
+    "pdfError": "Failed to load PDF menu",
+    "pdfDownload": "Download PDF",
+    "pdfPage": "Page",
+    "pdfOf": "of",
+    "pdfAvailable": "The professional PDF menu is ready for viewing.",
+    "pdfComingSoon": "PDF menu viewing will be available soon.",
+    "viewPdf": "Open PDF Menu",
+    "poweredBy": "Powered by"
+}

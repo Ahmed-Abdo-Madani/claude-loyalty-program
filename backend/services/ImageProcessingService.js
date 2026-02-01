@@ -28,6 +28,7 @@ class ImageProcessingService {
     this.uploadDir = path.join(uploadsRoot, 'designs')
     this.logoDir = path.join(this.uploadDir, 'logos')
     this.heroDir = path.join(this.uploadDir, 'heroes')
+    this.productsDir = path.join(this.uploadDir, 'products')
     this.processedDir = path.join(this.uploadDir, 'processed')
 
     // Base URL for absolute image URLs (Phase 4: Wallet Integration Fix)
@@ -46,6 +47,7 @@ class ImageProcessingService {
       await fs.mkdir(this.uploadDir, { recursive: true })
       await fs.mkdir(this.logoDir, { recursive: true })
       await fs.mkdir(this.heroDir, { recursive: true })
+      await fs.mkdir(this.productsDir, { recursive: true })
       await fs.mkdir(this.processedDir, { recursive: true })
       logger.info('✅ Image upload directories initialized')
     } catch (error) {
@@ -462,6 +464,199 @@ class ImageProcessingService {
       throw error
     }
   }
+
+  /**
+   * Process product image (generate original, large 800px, thumbnail 200px)
+   * All outputs are WebP format
+   * @param {Buffer} imageBuffer - Original image buffer
+   * @param {string} originalFilename - Original filename
+   * @param {string} productId - Product ID (for filename generation)
+   * @returns {Promise<object>} { original, large, thumbnail } URLs and metadata
+   */
+  async processProductImage(imageBuffer, originalFilename, productId) {
+    try {
+      logger.info(`📸 Processing product image for product ${productId}...`)
+
+      // Validate image
+      const validation = await this.validateImage(imageBuffer, {
+        minWidth: 100,
+        minHeight: 100,
+        maxSizeBytes: 10 * 1024 * 1024, // 10MB limit
+        allowedFormats: ['jpeg', 'jpg', 'png', 'webp', 'gif']
+      })
+
+      if (!validation.isValid) {
+        throw new Error(`Image validation failed: ${validation.errors.join(', ')}`)
+      }
+
+      // Base filename: {productId}_{timestamp}
+      // Note: We use the productId in the filename as requested
+      const timestamp = Date.now()
+      const ext = '.webp' // Enforce WebP
+      const baseFilename = `${productId}_${timestamp}`
+
+      // Define filenames
+      const filenameOriginal = `${baseFilename}_original${ext}`
+      const filenameLarge = `${baseFilename}_large${ext}`
+      const filenameThumbnail = `${baseFilename}_thumb${ext}`
+
+      // Define paths
+      const pathOriginal = path.join(this.productsDir, filenameOriginal)
+      const pathLarge = path.join(this.productsDir, filenameLarge)
+      const pathThumbnail = path.join(this.productsDir, filenameThumbnail)
+
+      // 1. Process Original (WebP, Quality 90, Effort 6)
+      // explicit .withMetadata(false) to ensure stripping (default behavior but enforcing as per plan)
+      const infoOriginal = await sharp(imageBuffer)
+        .rotate()
+        .withMetadata(false)
+        .webp({ quality: 90, effort: 6, smartSubsample: true })
+        .toFile(pathOriginal)
+
+      // 2. Process Large (WebP, Quality 82, Effort 6, Resize 800px width max)
+      const infoLarge = await sharp(imageBuffer)
+        .rotate()
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .withMetadata(false)
+        .webp({ quality: 82, effort: 6, smartSubsample: true })
+        .toFile(pathLarge)
+
+      // 3. Process Thumbnail (WebP, Quality 75, Effort 6, Resize 200px width max)
+      const infoThumbnail = await sharp(imageBuffer)
+        .rotate()
+        .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
+        .withMetadata(false)
+        .webp({ quality: 75, effort: 6, smartSubsample: true })
+        .toFile(pathThumbnail)
+
+      logger.info(`✅ Product images processed for ${productId}`)
+
+      return {
+        original: {
+          url: `${this.baseUrl}/designs/products/${filenameOriginal}`,
+          filename: filenameOriginal,
+          size: infoOriginal.size,
+          width: infoOriginal.width,
+          height: infoOriginal.height,
+          uploaded_at: new Date().toISOString()
+        },
+        large: {
+          url: `${this.baseUrl}/designs/products/${filenameLarge}`,
+          filename: filenameLarge,
+          size: infoLarge.size,
+          width: infoLarge.width,
+          height: infoLarge.height
+        },
+        thumbnail: {
+          url: `${this.baseUrl}/designs/products/${filenameThumbnail}`,
+          filename: filenameThumbnail,
+          size: infoThumbnail.size,
+          width: infoThumbnail.width,
+          height: infoThumbnail.height
+        }
+      }
+
+    } catch (error) {
+      logger.error('❌ Failed to process product image:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Delete all versions of a product image
+   * @param {string} filename - Base filename or filename of one version (we will derive others or search)
+   * Note: The plan says "Accept productId or filename parameter", and "Delete all three versions".
+   * Implemented logic relies on the naming convention: {productId}_{timestamp}_{suffix}.webp
+   * If we get the stored 'image_filename' (which is the original filename or the one stored in DB),
+   * we might need to handle how we stored it.
+   * Plan Step 3 says: "image_filename: original filename".
+   * Wait, Step 3 says: "Process image... Update Product model with... image_filename: original filename".
+   * BUT Step 1 says: "Generate unique filenames using pattern: {productId}_{timestamp}.{ext}".
+   * AND Step 3 says "delete old product images if they exist (check image_filename field)".
+   * 
+   * Actually, if we look at ProcessProductImage above:
+   * We generate `filenameOriginal = ...`.
+   * The DB stores `image_original_url`.
+   * It also stores `image_filename`.
+   * 
+   * If `image_filename` stores the *uploaded* original filename (e.g. "photo.jpg"), that is NOT enough to find the files on disk if we renamed them to `{productId}_{timestamp}...`.
+   * However, `image_original_url` contains the generated filename.
+   * 
+   * I will implement `deleteProductImages` to take the URLs or the specific generated filenames.
+   * The Plan says: "Accept productId or filename parameter".
+   * If I pass the `image_original_url` or parse the filename from it, I can find the others.
+   * 
+   * Let's assume we pass the *generated* base filename or we extract it from the URL.
+   * Or better, since we have the convention `${productId}_${timestamp}_...`, if we know that, we can delete.
+   * 
+   * But Step 3 says Product model has fields `image_original_url`, `image_large_url` etc.
+   * And `image_filename` which holds "original filename".
+   * 
+   * So we should use the URLs to derive the file paths to delete.
+   * 
+   * Let's implement `deleteProductImages` to take an object of filenames or just look for files starting with a prefix?
+   * No, "Accept productId or filename parameter".
+   * If I pass the generated filename (e.g. from the url), I can find the siblings.
+   * 
+   * Implementation: Pass the full filename of the original (e.g. "prod123_1234_original.webp") OR just the base.
+   * I'll try to support deleting by the specific filenames found in the DB.
+   * 
+   * Actually, Step 3 says "Delete old product images... check image_filename... delete all three versions".
+   * If `image_filename` is just "photo.jpg", we can't find the file.
+   * We MUST rely on `image_original_url` to find the actual file on disk.
+   * 
+   * I'll implement `deleteProductImages(filenames)` where filenames is an array or object, 
+   * OR `deleteProductImages(baseFilename)` if I can derive them.
+   * 
+   * Let's look at the generated names: 
+   * `${baseFilename}_original.webp`
+   * `${baseFilename}_large.webp`
+   * `${baseFilename}_thumb.webp`
+   * 
+   * If I pass `${baseFilename}`, I can reconstruct the 3 names.
+   * How do I get `${baseFilename}`? It is `${productId}_${timestamp}`.
+   * 
+   * I will implement `deleteProductImages` to accept the 3 specific expected filenames (or urls) to be safe, 
+   * or simpler: accept the `image_original_url` (path part) and derive others? 
+   * 
+   * The Plan says: "Accept productId or filename parameter".
+   * I will implement it to accept `filename` which is expected to be the 'main' generated filename if possible, 
+   * but since the DB might not store the 'base', I'll make it accept the list of internal filenames to delete.
+   * 
+   * Wait, `pos.js` Step 3 says: "Delete old product images if they exist (check image_filename field, delete all three versions)".
+   * This is tricky if `image_filename` is the USER's original filename.
+   * BUT `image_original_url` contains the actual disk filename.
+   * 
+   * So in `pos.js`, I should probably extract the filenames from the URLs (original, large, thumbnail) and pass them to delete.
+   * 
+   * I will implement `deleteProductImages(filenames)` where filenames is an array of strings.
+   * OR allow it to take `productId` and find them? No, that's dangerous.
+   * 
+   * Let's go with `deleteProductImages(uris)` where uris is an array of filenames in the products dir.
+   */
+  async deleteProductImages(filenames) {
+    try {
+      if (!Array.isArray(filenames)) {
+        filenames = [filenames]
+      }
+
+      logger.info(`🗑️ Deleting product images: ${filenames.join(', ')}`)
+
+      const results = await Promise.all(filenames.map(async (filename) => {
+        if (!filename) return false
+        // Handle full URL or just filename
+        const name = path.basename(filename)
+        const filePath = path.join(this.productsDir, name)
+        return this.deleteImage(filePath)
+      }))
+
+      return results.every(r => r === true)
+    } catch (error) {
+      logger.error('❌ Failed to delete product images:', error)
+      return false
+    }
+  }
+
 }
 
 // Export singleton instance

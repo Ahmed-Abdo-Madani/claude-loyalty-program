@@ -5,6 +5,9 @@ import { ShoppingBagIcon, MapPinIcon, PhoneIcon, SparklesIcon, MagnifyingGlassIc
 import { apiBaseUrl, endpoints, publicApi } from '../config/api'
 import SEO from '../components/SEO'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import MenuListView from '../components/menu/MenuListView'
+import MenuGridView from '../components/menu/MenuGridView'
+import MenuPDFView from '../components/menu/MenuPDFView'
 
 function MenuPage({ type }) {
   const { businessId, branchId } = useParams()
@@ -17,6 +20,7 @@ function MenuPage({ type }) {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [cardDesign, setCardDesign] = useState(null)
+  const [viewMode, setViewMode] = useState('grid')
 
   const identifier = type === 'branch' ? branchId : businessId
 
@@ -34,6 +38,9 @@ function MenuPage({ type }) {
       if (data.success) {
         setMenu(data.data)
         setCardDesign(data.data.cardDesign || null)
+        if (data.data.menuDisplayMode) {
+          setViewMode(data.data.menuDisplayMode)
+        }
       } else {
         throw new Error(data.message || 'Failed to load menu')
       }
@@ -125,151 +132,158 @@ function MenuPage({ type }) {
               <LanguageSwitcher variant="minimal" />
             </div>
 
-            <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-start gap-6 mt-4 mb-8">
+            <div className="flex flex-col items-center sm:flex-row sm:items-start gap-4 mt-2 mb-6">
               {logoUrl ? (
                 <div className="relative group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-primary to-purple-600 rounded-full opacity-30 blur group-hover:opacity-50 transition duration-200"></div>
-                  <img src={logoUrl} alt={businessName} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white dark:border-gray-800 object-cover shadow-xl" />
+                  <img src={logoUrl} alt={businessName} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white dark:border-gray-800 object-cover shadow-lg" />
                 </div>
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-inner">
-                  <ShoppingBagIcon className="w-10 h-10 text-gray-400" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-inner">
+                  <ShoppingBagIcon className="w-8 h-8 text-gray-400" />
                 </div>
               )}
 
-              <div className="flex-1">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">
+              <div className="flex-1 text-center sm:text-left">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-1">
                   {businessName}
                 </h1>
                 {menu?.business?.description && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-lg mx-auto sm:mx-0 leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 max-w-lg mx-auto sm:mx-0 leading-relaxed line-clamp-2">
                     {menu.business.description}
                   </p>
                 )}
 
                 <div className="flex flex-wrap justify-center sm:justify-start gap-3">
                   {menu?.branch && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300">
-                      <MapPinIcon className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <MapPinIcon className="w-3 h-3" />
                       {menu.branch.name}
                     </div>
-                  )}
-                  {menu?.business?.phone && (
-                    <a href={`tel:${menu.business.phone}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-medium hover:bg-green-100 transition-colors">
-                      <PhoneIcon className="w-3.5 h-3.5" />
-                      {menu.business.phone}
-                    </a>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative max-w-lg mx-auto sm:mx-0 w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-3 border-none rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
-                placeholder={t('menu.searchPlaceholder') || "Search for dishes..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+
+          </div>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex justify-center -mt-6 mb-8 relative z-20 px-4">
+          <div className="inline-flex p-1 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
+            {[
+              { id: 'grid', label: t('menu.viewMode.grid') },
+              { id: 'list', label: t('menu.viewMode.list') },
+              { id: 'pdf', label: t('menu.viewMode.pdf') }
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setViewMode(mode.id)}
+                className={`relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${viewMode === mode.id
+                  ? 'bg-primary text-white shadow-lg shadow-primary/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Sticky Categories */}
-        <div className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 py-3">
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${selectedCategory === 'all'
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform scale-105'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-              >
-                {t('menu.allCategories')}
-              </button>
-              {menu?.categories?.map(category => (
+        {viewMode !== 'pdf' && (
+          <div className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="max-w-4xl mx-auto px-4 py-3">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
                 <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${selectedCategory === category.id
+                  onClick={() => setSelectedCategory('all')}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${selectedCategory === 'all'
                     ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform scale-105'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                 >
-                  {getCategoryName(category)}
+                  {t('menu.allCategories')}
                 </button>
-              ))}
+                {menu?.categories?.map(category => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${selectedCategory === category.id
+                      ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md transform scale-105'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                  >
+                    {getCategoryName(category)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Products Grid */}
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {products.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShoppingBagIcon className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('menu.noProducts')}</h3>
-              <p className="text-gray-500">{t('menu.noProductsDesc')}</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:gap-6">
-              {products.map(product => (
-                <div
-                  key={product.id}
-                  className="group bg-white dark:bg-gray-800 rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-200 flex gap-4"
-                >
-                  {/* Image */}
-                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={getProductName(product)}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                        onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.classList.add('flex', 'items-center', 'justify-center'); }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <ShoppingBagIcon className="w-8 h-8" />
-                      </div>
-                    )}
-                  </div>
+        {/* Products Content */}
+        <div className={`max-w-4xl mx-auto ${viewMode === 'pdf' ? 'px-0 py-4 sm:px-4 sm:py-8' : 'px-4 py-8'}`}>
+          {viewMode === 'grid' && (
+            <MenuGridView
+              products={products}
+              getProductName={getProductName}
+              formatPrice={formatPrice}
+              t={t}
+            />
+          )}
 
-                  {/* Content */}
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <div className="flex justify-between items-start gap-2">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">
-                          {getProductName(product)}
-                        </h3>
-                        <span className="flex-shrink-0 text-primary font-bold text-sm sm:text-base bg-primary/5 dark:bg-primary/20 px-2 py-1 rounded-lg">
-                          {formatPrice(product.price)}
-                          <span className="text-xs ml-1 font-normal opacity-80">{t('menu.sar')}</span>
-                        </span>
-                      </div>
+          {viewMode === 'list' && (
+            <MenuListView
+              products={products}
+              categories={menu?.categories || []}
+              uncategorizedProducts={menu?.uncategorizedProducts || []}
+              getProductName={getProductName}
+              getCategoryName={getCategoryName}
+              formatPrice={formatPrice}
+              isRTL={isRTL}
+              t={t}
+              selectedCategory={selectedCategory}
+            />
+          )}
 
-                      {product.description && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 line-clamp-2 leading-relaxed">
-                          {product.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+          {viewMode === 'pdf' && (
+            menu?.business?.menu_pdf_url ? (
+              <MenuPDFView
+                pdfUrl={menu.business.menu_pdf_url.startsWith('http') ? menu.business.menu_pdf_url : `${apiBaseUrl}${menu.business.menu_pdf_url}`}
+                businessName={businessName}
+                isRTL={isRTL}
+              />
+            ) : (
+              <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-300 dark:border-gray-700 shadow-inner">
+                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
                 </div>
-              ))}
-            </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('menu.pdfNotAvailable')}</h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                  {t('menu.pdfNotAvailableDesc') || "The business hasn't uploaded a PDF menu yet. Please check back later or view the menu in grid or list mode."}
+                </p>
+              </div>
+            )
           )}
         </div>
 
-        <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-600">
+        <div className="text-center py-8 text-xs text-gray-400 dark:text-gray-600 pb-12">
+          {menu?.business?.phone && (
+            <div className="flex justify-center mb-6">
+              <a
+                href={`tel:${menu.business.phone}`}
+                className="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-900 dark:text-white font-medium"
+              >
+                <PhoneIcon className="w-5 h-5" />
+                <span>{t('menu.callBusiness') || 'Call Business'}</span>
+                <span className="opacity-60 text-sm ml-1">{menu.business.phone}</span>
+              </a>
+            </div>
+          )}
+
           <div className="flex items-center justify-center gap-1.5 mb-2">
             <SparklesIcon className="w-4 h-4" />
             <span>{t('menu.poweredBy')}</span>

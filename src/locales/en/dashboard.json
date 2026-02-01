@@ -1,4 +1,5 @@
 {
+  "loading": "Loading...",
   "overview": {
     "title": "Overview",
     "loading": "Loading dashboard...",
@@ -22,6 +23,25 @@
     "subscription": "Subscription",
     "billingSubscription": "Billing & Subscription"
   },
+  "imageUpload": {
+    "title": "Product Image",
+    "uploadMode": "Upload File",
+    "urlMode": "Provide URL",
+    "dragDrop": "Drag and drop an image here, or",
+    "browseFiles": "browse files",
+    "uploading": "Uploading...",
+    "uploadProgress": "Upload Progress",
+    "remove": "Remove",
+    "preview": "Image Preview",
+    "fileTypes": "PNG, JPG, GIF, or WebP (max 10MB)",
+    "invalidType": "Invalid file type. Please upload PNG, JPG, GIF, or WebP.",
+    "fileTooLarge": "File too large. Maximum size is 10MB.",
+    "uploadFailed": "Upload failed. Please try again.",
+    "uploadSuccess": "Image uploaded successfully",
+    "deleteConfirm": "Are you sure you want to remove this image?",
+    "urlPlaceholder": "https://example.com/image.jpg",
+    "urlInvalid": "Please enter a valid URL"
+  },
   "header": {
     "dashboard": "Dashboard",
     "businessLogoActive": "🏢 Business Logo Active",
@@ -42,7 +62,8 @@
     "approachingLimit": "You are approaching your plan limits. Upgrade now to unlock more.",
     "upgradeRequired": "Upgrade Required",
     "viewPlans": "View Plans",
-    "viewMenu": "View Public Menu"
+    "viewMenu": "View Public Menu",
+    "settings": "Settings"
   },
   "mobileNav": {
     "overview": "Overview",
@@ -420,6 +441,12 @@
     "deleteProduct": "Delete Product",
     "manageCategories": "Manage Categories",
     "generateMenuQR": "Generate Menu QR",
+    "menuSettingsBanner": {
+      "title": "Menu Display Settings",
+      "description": "Configure how customers view your menu (Grid, List, or PDF) and upload a professional PDF menu.",
+      "action": "Go to Menu Settings",
+      "dismiss": "Dismiss"
+    },
     "loading": "Loading products...",
     "searchProducts": "Search for product...",
     "searchPlaceholder": "Search by name or SKU...",
@@ -488,8 +515,9 @@
       "statusInactive": "Inactive",
       "statusOutOfStock": "Out of Stock",
       "imageUrl": "Image URL",
-      "imageUrlPlaceholder": "https://example.com/image.jpg",
-      "imageUrlHelper": "Optional product image URL",
+      "imageUrlPlaceholder": "Enter image URL",
+      "imageUrlHelper": "Or provide a direct URL to an image",
+      "imageUploadFailedAfterSave": "Product saved but image upload failed. Please try editing the product to upload the image.",
       "validation": {
         "nameRequired": "Product name is required",
         "pricePositive": "Price must be greater than 0",
@@ -594,6 +622,13 @@
       "list": "List view",
       "grid": "Grid view",
       "table": "Table view"
+    }
+  },
+  "menu": {
+    "viewMode": {
+      "grid": "Grid View",
+      "list": "List View",
+      "pdf": "PDF Menu"
     }
   },
   "pos": {
@@ -962,7 +997,10 @@
     "profile": "Profile",
     "security": "Security",
     "notifications": "Notifications",
-    "branding": "Branding",
+    "branding": {
+      "title": "Branding & Customization",
+      "description": "In Phase 5, you will be able to customize your menu colors, headers, and upload professional PDF menus from this section."
+    },
     "integrations": "Integrations",
     "businessName": "Business Name",
     "businessLogo": "Business Logo",
@@ -977,7 +1015,32 @@
     "saveSettings": "Save Settings",
     "saving": "Saving...",
     "saved": "Settings saved successfully",
-    "saveFailed": "Failed to save settings"
+    "saveFailed": "Failed to save settings",
+    "menuDisplay": {
+      "title": "Menu Display Mode",
+      "description": "Choose how customers see your menu by default",
+      "gridDesc": "Modern 2-column grid with product images and cards",
+      "listDesc": "Elegant vertical list with typography focus",
+      "pdfDesc": "Classic professional PDF menu document"
+    },
+    "pdfUpload": {
+      "title": "PDF Menu Upload",
+      "description": "Upload your professional menu as a PDF document (max 10MB)",
+      "tooLarge": "File size too large. Maximum is 10MB.",
+      "success": "PDF menu uploaded successfully!",
+      "error": "Failed to upload PDF",
+      "confirmDelete": "Are you sure you want to delete this PDF menu?",
+      "deleteSuccess": "PDF menu deleted successfully",
+      "deleteError": "Failed to delete PDF",
+      "delete": "Delete PDF"
+    },
+    "uploading": "Uploading PDF...",
+    "clickToUpload": "Click to upload",
+    "dragAndDrop": "or drag and drop",
+    "uploadedOn": "Uploaded on",
+    "errorLoading": "Failed to load settings. Please try again.",
+    "updateSuccess": "Display settings updated successfully!",
+    "updateError": "Failed to update display settings."
   },
   "demo": {
     "banner": {

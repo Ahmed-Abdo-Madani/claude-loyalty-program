@@ -9,7 +9,8 @@ import {
   CreditCardIcon,
   SunIcon,
   MoonIcon,
-  ChevronDoubleLeftIcon
+  ChevronDoubleLeftIcon,
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline'
 
 function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut }) {
@@ -23,6 +24,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
     { id: 'branches', label: t('sidebar.branches'), icon: MapPinIcon },
     { id: 'products', label: t('sidebar.products'), icon: ShoppingBagIcon },
     { id: 'analytics', label: t('sidebar.analytics'), icon: ChartBarIcon },
+    { id: 'settings', label: t('sidebar.settings'), icon: Cog6ToothIcon },
     { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: CreditCardIcon }
   ]
 

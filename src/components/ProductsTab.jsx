@@ -10,10 +10,10 @@ import {
   TrashIcon, PencilSquareIcon, DocumentDuplicateIcon,
   Squares2X2Icon, TableCellsIcon, ArchiveBoxIcon,
   TagIcon, CurrencyDollarIcon, EllipsisVerticalIcon,
-  QrCodeIcon
+  QrCodeIcon, Cog6ToothIcon, XMarkIcon
 } from '@heroicons/react/24/outline'
 
-export default function ProductsTab({ demoData, onAddProduct }) {
+export default function ProductsTab({ demoData, onAddProduct, onNavigateToSettings }) {
   const { t, i18n } = useTranslation('dashboard')
 
   // State Management
@@ -38,6 +38,18 @@ export default function ProductsTab({ demoData, onAddProduct }) {
   const [sortDirection, setSortDirection] = useState('asc')
   const [expandedProductId, setExpandedProductId] = useState(null)
   const [viewMode, setViewMode] = useState('auto') // auto, mobile, tablet, desktop
+  const [showSettingsBanner, setShowSettingsBanner] = useState(false)
+
+  // Check if banner was dismissed
+  useEffect(() => {
+    const dismissed = localStorage.getItem('menuSettingsBannerDismissed')
+    if (!dismissed) setShowSettingsBanner(true)
+  }, [])
+
+  const handleDismissBanner = () => {
+    localStorage.setItem('menuSettingsBannerDismissed', 'true')
+    setShowSettingsBanner(false)
+  }
 
   // Detect view mode based on viewport
   useEffect(() => {
@@ -405,6 +417,14 @@ export default function ProductsTab({ demoData, onAddProduct }) {
             <span className="sm:hidden">Categories</span>
           </button>
           <button
+            onClick={() => onNavigateToSettings && onNavigateToSettings()}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md whitespace-nowrap"
+            title={t('products.menuSettingsBanner.title')}
+          >
+            <Cog6ToothIcon className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="hidden sm:inline">{t('sidebar.settings')}</span>
+          </button>
+          <button
             onClick={() => setShowMenuQRModal(true)}
             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm hover:shadow-md whitespace-nowrap"
           >
@@ -428,6 +448,41 @@ export default function ProductsTab({ demoData, onAddProduct }) {
           </button>
         </div>
       </div>
+
+
+
+      {/* Menu Settings Banner */}
+      {
+        showSettingsBanner && (
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl p-4 relative animate-in fade-in slide-in-from-top-2">
+            <button
+              onClick={handleDismissBanner}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+            <div className="flex items-start gap-4 pr-8">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 mt-1">
+                <Cog6ToothIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1">
+                  {t('products.menuSettingsBanner.title') || 'Menu Display Settings'}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 max-w-2xl">
+                  {t('products.menuSettingsBanner.description') || 'Configure how customers view your menu (Grid, List, or PDF) and upload a professional PDF menu.'}
+                </p>
+                <button
+                  onClick={() => onNavigateToSettings && onNavigateToSettings()}
+                  className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors shadow-sm"
+                >
+                  {t('products.menuSettingsBanner.action') || 'Go to Menu Settings'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       {/* Modern Stats Cards - 2 cols on mobile */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -516,218 +571,228 @@ export default function ProductsTab({ demoData, onAddProduct }) {
       </div>
 
       {/* Content Area */}
-      {sortedProducts.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-16 text-center">
-          <div className="w-24 h-24 bg-gray-50 dark:bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <MagnifyingGlassIcon className="w-12 h-12 text-gray-300 dark:text-gray-500" />
+      {
+        sortedProducts.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-16 text-center">
+            <div className="w-24 h-24 bg-gray-50 dark:bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MagnifyingGlassIcon className="w-12 h-12 text-gray-300 dark:text-gray-500" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              {products.length === 0 ? t('products.noProductsFound') : t('products.noProductsFound')}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">
+              {products.length === 0 ? t('products.noProductsDesc') : t('products.tryAdjustingFilters')}
+            </p>
+            {products.length === 0 && (
+              <button
+                onClick={() => {
+                  setSelectedProduct(null)
+                  setShowProductModal(true)
+                }}
+                className="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold transition-all shadow-lg shadow-primary/20 transform hover:-translate-y-1"
+              >
+                ➕ {t('products.addProduct')}
+              </button>
+            )}
           </div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {products.length === 0 ? t('products.noProductsFound') : t('products.noProductsFound')}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">
-            {products.length === 0 ? t('products.noProductsDesc') : t('products.tryAdjustingFilters')}
-          </p>
-          {products.length === 0 && (
-            <button
-              onClick={() => {
-                setSelectedProduct(null)
-                setShowProductModal(true)
-              }}
-              className="px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold transition-all shadow-lg shadow-primary/20 transform hover:-translate-y-1"
-            >
-              ➕ {t('products.addProduct')}
-            </button>
-          )}
-        </div>
-      ) : viewMode === 'mobile' ? (
-        // Mobile List View with Cards - Optimized
-        <div className="grid grid-cols-1 gap-3">
-          {sortedProducts.map(product => (
-            <ProductListView
-              key={product.public_id}
-              product={product}
-              categories={categories}
-              branches={branches}
-              viewMode="mobile"
-              isExpanded={expandedProductId === product.public_id}
-              onToggleExpand={() => setExpandedProductId(
-                expandedProductId === product.public_id ? null : product.public_id
-              )}
-              onEdit={() => {
-                setSelectedProduct(product)
-                setShowProductModal(true)
-              }}
-              onDuplicate={() => handleDuplicateProduct(product)}
-              onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
-              onDelete={() => {
-                setSelectedProduct(product)
-                setShowDeleteModal(true)
-              }}
-              t={t}
-              i18n={i18n}
-            />
-          ))}
-        </div>
-      ) : viewMode === 'grid' ? (
-        // Desktop Grid View
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {sortedProducts.map(product => (
-            <ProductListView
-              key={product.public_id}
-              product={product}
-              categories={categories}
-              branches={branches}
-              viewMode="grid"
-              isExpanded={expandedProductId === product.public_id}
-              onToggleExpand={() => setExpandedProductId(
-                expandedProductId === product.public_id ? null : product.public_id
-              )}
-              onEdit={() => {
-                setSelectedProduct(product)
-                setShowProductModal(true)
-              }}
-              onDuplicate={() => handleDuplicateProduct(product)}
-              onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
-              onDelete={() => {
-                setSelectedProduct(product)
-                setShowDeleteModal(true)
-              }}
-              t={t}
-              i18n={i18n}
-            />
-          ))}
-        </div>
-      ) : (
-        // Desktop Table View (keep as is)
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50/50 dark:bg-gray-900/50">
-                <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('products.table.columns.image')}
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center gap-1">
-                      {t('products.table.columns.name')}
-                      {sortColumn === 'name' && (
-                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </th>
-                  {viewMode === 'desktop' && (
+        ) : viewMode === 'mobile' ? (
+          // Mobile List View with Cards - Optimized
+          <div className="grid grid-cols-1 gap-3">
+            {sortedProducts.map(product => (
+              <ProductListView
+                key={product.public_id}
+                product={product}
+                categories={categories}
+                branches={branches}
+                viewMode="mobile"
+                isExpanded={expandedProductId === product.public_id}
+                onToggleExpand={() => setExpandedProductId(
+                  expandedProductId === product.public_id ? null : product.public_id
+                )}
+                onEdit={() => {
+                  setSelectedProduct(product)
+                  setShowProductModal(true)
+                }}
+                onDuplicate={() => handleDuplicateProduct(product)}
+                onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
+                onDelete={() => {
+                  setSelectedProduct(product)
+                  setShowDeleteModal(true)
+                }}
+                t={t}
+                i18n={i18n}
+              />
+            ))}
+          </div>
+        ) : viewMode === 'grid' ? (
+          // Desktop Grid View
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {sortedProducts.map(product => (
+              <ProductListView
+                key={product.public_id}
+                product={product}
+                categories={categories}
+                branches={branches}
+                viewMode="grid"
+                isExpanded={expandedProductId === product.public_id}
+                onToggleExpand={() => setExpandedProductId(
+                  expandedProductId === product.public_id ? null : product.public_id
+                )}
+                onEdit={() => {
+                  setSelectedProduct(product)
+                  setShowProductModal(true)
+                }}
+                onDuplicate={() => handleDuplicateProduct(product)}
+                onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
+                onDelete={() => {
+                  setSelectedProduct(product)
+                  setShowDeleteModal(true)
+                }}
+                t={t}
+                i18n={i18n}
+              />
+            ))}
+          </div>
+        ) : (
+          // Desktop Table View (keep as is)
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50/50 dark:bg-gray-900/50">
+                  <tr>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {t('products.table.columns.sku')}
+                      {t('products.table.columns.image')}
                     </th>
-                  )}
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                    onClick={() => handleSort('price')}
-                  >
-                    <div className="flex items-center gap-1">
-                      {t('products.table.columns.price')}
-                      {sortColumn === 'price' && (
-                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                      )}
-                    </div>
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('products.table.columns.category')}
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('products.table.columns.branch')}
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('products.table.columns.status')}
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('products.table.columns.actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                {sortedProducts.map(product => (
-                  <ProductListView
-                    key={product.public_id}
-                    product={product}
-                    categories={categories}
-                    branches={branches}
-                    viewMode={viewMode}
-                    onEdit={() => {
-                      setSelectedProduct(product)
-                      setShowProductModal(true)
-                    }}
-                    onDuplicate={() => handleDuplicateProduct(product)}
-                    onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
-                    onDelete={() => {
-                      setSelectedProduct(product)
-                      setShowDeleteModal(true)
-                    }}
-                    t={t}
-                    i18n={i18n}
-                  />
-                ))}
-              </tbody>
-            </table>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('products.table.columns.name')}
+                        {sortColumn === 'name' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                    {viewMode === 'desktop' && (
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        {t('products.table.columns.sku')}
+                      </th>
+                    )}
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => handleSort('price')}
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('products.table.columns.price')}
+                        {sortColumn === 'price' && (
+                          <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('products.table.columns.category')}
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('products.table.columns.branch')}
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('products.table.columns.status')}
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('products.table.columns.actions')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {sortedProducts.map(product => (
+                    <ProductListView
+                      key={product.public_id}
+                      product={product}
+                      categories={categories}
+                      branches={branches}
+                      viewMode={viewMode}
+                      onEdit={() => {
+                        setSelectedProduct(product)
+                        setShowProductModal(true)
+                      }}
+                      onDuplicate={() => handleDuplicateProduct(product)}
+                      onToggleStatus={() => handleToggleStatus(product.public_id, product.status)}
+                      onDelete={() => {
+                        setSelectedProduct(product)
+                        setShowDeleteModal(true)
+                      }}
+                      t={t}
+                      i18n={i18n}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Product Modal */}
-      {showProductModal && (
-        <ProductModal
-          isOpen={showProductModal}
-          onClose={() => {
-            setShowProductModal(false)
-            setSelectedProduct(null)
-          }}
-          onSave={handleSaveProduct}
-          product={selectedProduct}
-          categories={categories}
-          branches={branches}
-        />
-      )}
+      {
+        showProductModal && (
+          <ProductModal
+            isOpen={showProductModal}
+            onClose={() => {
+              setShowProductModal(false)
+              setSelectedProduct(null)
+            }}
+            onSave={handleSaveProduct}
+            product={selectedProduct}
+            categories={categories}
+            branches={branches}
+          />
+        )
+      }
 
       {/* Category Modal */}
-      {showCategoryModal && (
-        <CategoryModal
-          isOpen={showCategoryModal}
-          onClose={() => setShowCategoryModal(false)}
-          categories={categories}
-          onSave={handleSaveCategory}
-          onDelete={handleDeleteCategory}
-          t={t}
-        />
-      )}
+      {
+        showCategoryModal && (
+          <CategoryModal
+            isOpen={showCategoryModal}
+            onClose={() => setShowCategoryModal(false)}
+            categories={categories}
+            onSave={handleSaveCategory}
+            onDelete={handleDeleteCategory}
+            t={t}
+          />
+        )
+      }
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <DeleteConfirmModal
-          isOpen={showDeleteModal}
-          onClose={() => {
-            setShowDeleteModal(false)
-            setSelectedProduct(null)
-          }}
-          onConfirm={handleDeleteProduct}
-          productName={selectedProduct?.name}
-          t={t}
-        />
-      )}
+      {
+        showDeleteModal && (
+          <DeleteConfirmModal
+            isOpen={showDeleteModal}
+            onClose={() => {
+              setShowDeleteModal(false)
+              setSelectedProduct(null)
+            }}
+            onConfirm={handleDeleteProduct}
+            productName={selectedProduct?.name}
+            t={t}
+          />
+        )
+      }
 
       {/* Menu QR Code Modal */}
-      {showMenuQRModal && (
-        <QRCodeModal
-          type="menu"
-          identifier={getSecureBusinessId()}
-          onClose={() => setShowMenuQRModal(false)}
-        />
-      )}
-    </div>
+      {
+        showMenuQRModal && (
+          <QRCodeModal
+            type="menu"
+            identifier={getSecureBusinessId()}
+            onClose={() => setShowMenuQRModal(false)}
+          />
+        )
+      }
+    </div >
   )
 }
 
@@ -747,9 +812,9 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
         >
           {/* Product Image */}
           <div className="w-16 h-16 flex-shrink-0 bg-gray-100 dark:bg-gray-700/50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-gray-600">
-            {product.image_url ? (
+            {product.image_url || product.image_thumbnail_url ? (
               <img
-                src={product.image_url}
+                src={product.image_thumbnail_url || product.image_url}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -865,9 +930,9 @@ function ProductListView({ product, categories, branches, viewMode, isExpanded, 
     <tr className="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700/50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-gray-600">
-          {product.image_url ? (
+          {product.image_url || product.image_thumbnail_url ? (
             <img
-              src={product.image_url}
+              src={product.image_thumbnail_url || product.image_url}
               alt={product.name}
               className="w-full h-full object-cover"
             />

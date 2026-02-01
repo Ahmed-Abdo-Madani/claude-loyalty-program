@@ -16,6 +16,7 @@ import TodaysSnapshot from '../components/TodaysSnapshot'
 import QRCodeModal from '../components/QRCodeModal'
 import UsageMetrics from '../components/UsageMetrics'
 import PlanUpgradeModal from '../components/PlanUpgradeModal'
+import BusinessSettingsTab from '../components/BusinessSettingsTab'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
@@ -426,7 +427,10 @@ function Dashboard() {
               )}
 
               {activeTab === 'products' && (
-                <ProductsTab analytics={analytics} />
+                <ProductsTab
+                  analytics={analytics}
+                  onNavigateToSettings={() => handleTabChange('settings')}
+                />
               )}
 
               {activeTab === 'customers' && (
@@ -439,6 +443,10 @@ function Dashboard() {
 
               {activeTab === 'analytics' && (
                 <POSAnalytics />
+              )}
+
+              {activeTab === 'settings' && (
+                <BusinessSettingsTab onNavigateToProducts={() => handleTabChange('products')} />
               )}
 
               {resolvedTab === 'billing-subscription' && (

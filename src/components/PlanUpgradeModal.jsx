@@ -68,14 +68,9 @@ const PlanUpgradeModal = ({
     };
 
     const handleSelectPlan = (plan) => {
+        const url = `/subscription/checkout?plan=${plan.name}&interval=${billingInterval}`;
+        window.open(url, '_blank');
         onClose();
-        navigate('/subscription/checkout', {
-            state: {
-                selectedPlan: plan.name,
-                billingInterval,
-                category: plan.category
-            }
-        });
     };
 
     const isUpgrade = (planName) => {
@@ -153,7 +148,7 @@ const PlanUpgradeModal = ({
                             {billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice} SAR
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">
-                            /{t('subscription:billing.month', 'mo')}
+                            /{billingInterval === 'monthly' ? t('subscription:billing.month', 'mo') : t('subscription:billing.year', 'yr')}
                         </span>
                     </div>
                     {billingInterval === 'annual' && (
@@ -229,7 +224,7 @@ const PlanUpgradeModal = ({
 
                     {/* Pricing Toggle */}
                     <div className="flex justify-center items-center mt-6 gap-3">
-                        <span className={`text-sm font-medium ${billingInterval === 'monthly' ? 'text-white' : 'text-blue-200'}`}>
+                        <span className={`text-sm font-medium leading-relaxed py-1 ${billingInterval === 'monthly' ? 'text-white' : 'text-blue-200'}`}>
                             {t('subscription:billing.monthly', 'Monthly')}
                         </span>
                         <button
@@ -237,13 +232,15 @@ const PlanUpgradeModal = ({
                             className="relative w-14 h-7 bg-blue-500 rounded-full p-1 transition-colors duration-200 focus:outline-none ring-2 ring-blue-400 ring-offset-2 ring-offset-blue-600"
                         >
                             <div
-                                className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${billingInterval === 'annual' ? 'translate-x-7' : 'translate-x-0'
+                                className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${billingInterval === 'annual'
+                                    ? 'ltr:translate-x-7 rtl:-translate-x-7'
+                                    : 'translate-x-0'
                                     }`}
                             />
                         </button>
-                        <span className={`text-sm font-medium ${billingInterval === 'annual' ? 'text-white' : 'text-blue-200'}`}>
+                        <span className={`text-sm font-medium leading-relaxed py-1 inline-flex items-center gap-2 ${billingInterval === 'annual' ? 'text-white' : 'text-blue-200'}`}>
                             {t('subscription:billing.annual', 'Annual')}
-                            <span className="ml-1 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                            <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">
                                 {t('subscription:billing.savePercent', 'Save 15%')}
                             </span>
                         </span>
