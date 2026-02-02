@@ -360,31 +360,6 @@ function Dashboard() {
                           </div>
                         </div>
 
-                        {/* Mini Usage Stats */}
-                        <div className="w-full lg:w-1/3 bg-white/5 rounded-lg p-4 backdrop-blur-sm border border-white/10">
-                          <div className="space-y-3">
-                            {['customers', 'locations', 'offers'].map(metric => {
-                              const limit = subscriptionData.limits?.[metric];
-                              const current = subscriptionData.usage?.[metric] || 0;
-                              const pct = limit ? Math.min((current / limit) * 100, 100) : 0;
-
-                              return (
-                                <div key={metric}>
-                                  <div className="flex justify-between text-xs mb-1">
-                                    <span className="text-gray-400 capitalize">{t(`subscription:usage.${metric}`, metric)}</span>
-                                    <span className="text-gray-200">{current} / {limit || '∞'}</span>
-                                  </div>
-                                  <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full ${pct > 90 ? 'bg-red-500' : pct > 75 ? 'bg-amber-500' : 'bg-green-500'}`}
-                                      style={{ width: `${limit ? pct : 100}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
                       </div>
                     </div>
                   )}

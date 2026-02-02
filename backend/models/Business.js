@@ -211,6 +211,27 @@ const Business = sequelize.define('Business', {
     allowNull: true,
     comment: 'Timestamp when PDF was uploaded'
   },
+  // Social Media Links
+  facebook_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Facebook page or profile URL'
+  },
+  instagram_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Instagram profile URL'
+  },
+  twitter_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Twitter/X profile URL'
+  },
+  snapchat_url: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'Snapchat profile URL'
+  },
   current_plan: {
     type: DataTypes.ENUM(
       'free',

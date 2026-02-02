@@ -414,7 +414,7 @@ export default function ProductsTab({ demoData, onAddProduct, onNavigateToSettin
           >
             <Squares2X2Icon className="w-4 h-4 md:w-5 md:h-5" />
             <span className="hidden sm:inline">{t('products.manageCategories')}</span>
-            <span className="sm:hidden">Categories</span>
+            <span className="sm:hidden">{t('products.categoryBtn')}</span>
           </button>
           <button
             onClick={() => onNavigateToSettings && onNavigateToSettings()}
@@ -423,6 +423,7 @@ export default function ProductsTab({ demoData, onAddProduct, onNavigateToSettin
           >
             <Cog6ToothIcon className="w-4 h-4 md:w-5 md:h-5" />
             <span className="hidden sm:inline">{t('sidebar.settings')}</span>
+            <span className="sm:hidden">{t('sidebar.settings')}</span>
           </button>
           <button
             onClick={() => setShowMenuQRModal(true)}
@@ -430,7 +431,7 @@ export default function ProductsTab({ demoData, onAddProduct, onNavigateToSettin
           >
             <QrCodeIcon className="w-4 h-4 md:w-5 md:h-5" />
             <span className="hidden sm:inline">{t('products.generateMenuQR')}</span>
-            <span className="sm:hidden">Menu QR</span>
+            <span className="sm:hidden">{t('products.menuQRBtn')}</span>
           </button>
           <button
             onClick={() => {

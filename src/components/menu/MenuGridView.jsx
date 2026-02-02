@@ -2,8 +2,9 @@ import { apiBaseUrl } from '../../config/api'
 import LazyImage from '../LazyImage'
 import { useResponsiveImage } from '../../hooks/useResponsiveImage'
 
-const MenuGridItem = ({ product, getProductName, formatPrice, t }) => {
+const MenuGridItem = ({ product, getProductName, getProductDescription, formatPrice, isRTL, t }) => {
     const { imageUrl, thumbnailUrl, isMobile } = useResponsiveImage(product, apiBaseUrl)
+    const description = getProductDescription ? getProductDescription(product) : (product.description_ar && isRTL ? product.description_ar : product.description);
 
     return (
         <div
@@ -23,7 +24,7 @@ const MenuGridItem = ({ product, getProductName, formatPrice, t }) => {
                 <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
                     {product.is_new && (
                         <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
-                            {t('menu.new') || 'NEW'}
+                            {t('new')}
                         </span>
                     )}
                 </div>
@@ -35,9 +36,9 @@ const MenuGridItem = ({ product, getProductName, formatPrice, t }) => {
                     <h3 className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
                         {getProductName(product)}
                     </h3>
-                    {product.description && (
+                    {description && (
                         <p className="text-[10px] sm:text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2">
-                            {product.description}
+                            {description}
                         </p>
                     )}
                 </div>
@@ -47,7 +48,7 @@ const MenuGridItem = ({ product, getProductName, formatPrice, t }) => {
                     <span className="text-sm sm:text-xl font-black text-primary">
                         {formatPrice(product.price)}
                         <span className="text-[10px] sm:text-xs ml-1 font-normal opacity-70 serif text-gray-500 italic">
-                            {t('menu.sar')}
+                            {t('sar')}
                         </span>
                     </span>
                 </div>
@@ -59,7 +60,9 @@ const MenuGridItem = ({ product, getProductName, formatPrice, t }) => {
 function MenuGridView({
     products,
     getProductName,
+    getProductDescription,
     formatPrice,
+    isRTL,
     t
 }) {
     return (
@@ -69,7 +72,9 @@ function MenuGridView({
                     key={product.id}
                     product={product}
                     getProductName={getProductName}
+                    getProductDescription={getProductDescription}
                     formatPrice={formatPrice}
+                    isRTL={isRTL}
                     t={t}
                 />
             ))}

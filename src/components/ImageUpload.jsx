@@ -317,7 +317,10 @@ function ImageUpload({
 
             {/* Input Area (Upload or URL) */}
             <div className="mt-2">
-                {mode === 'upload' ? renderUploadMode() : renderUrlMode()}
+                {mode === 'upload'
+                    ? (!imageUrl && !preview && !uploading ? renderUploadMode() : null)
+                    : renderUrlMode()
+                }
             </div>
 
             {/* Preview Section - Shows existing image or new preview */}

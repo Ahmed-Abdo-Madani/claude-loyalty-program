@@ -106,7 +106,6 @@ function MenuPDFView({ pdfUrl, businessName, isRTL }) {
                                 <Page
                                     pageNumber={index + 1}
                                     scale={scale}
-                                    scale={scale}
                                     width={containerWidth ? (window.innerWidth < 640 ? containerWidth : Math.min(containerWidth, 800)) : undefined}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}

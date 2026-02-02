@@ -7,7 +7,7 @@ const englishIcon = '/assets/lang-icons/Lang-icon-English.svg'
 function LanguageSwitcher({ variant = 'button', className = '', showLabels = true }) {
   const { i18n } = useTranslation()
   const currentLanguage = i18n.language
-  
+
   // Normalize language to base code (e.g., 'en-US' -> 'en')
   const baseLang = (currentLanguage || '').split('-')[0] || 'en'
 
@@ -26,7 +26,7 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
         role="button"
       >
         <div className="w-5 h-5 sm:w-6 sm:h-6 aspect-square grid place-items-center rounded-md">
-          <img 
+          <img
             src={baseLang === 'ar' ? englishIcon : arabicIcon}
             alt="Language"
             className={`block w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] object-contain dark:invert ${baseLang === 'ar' ? '' : 'scale-110'}`}
@@ -47,7 +47,7 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
           role="menu"
         >
           <div className="w-5 h-5 sm:w-6 sm:h-6 aspect-square grid place-items-center rounded-md">
-            <img 
+            <img
               src={baseLang === 'ar' ? englishIcon : arabicIcon}
               alt="Language"
               className={`block w-[18px] h-[18px] sm:w-[20px] sm:h-[20px] object-contain dark:invert ${baseLang === 'ar' ? '' : 'scale-110'}`}
@@ -79,11 +79,10 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
       <div className={`flex rounded-lg p-1 bg-gray-100 dark:bg-gray-700 ${className}`}>
         <button
           onClick={() => i18n.changeLanguage('ar')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-            baseLang === 'ar'
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${baseLang === 'ar'
               ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-          }`}
+            }`}
           aria-label="Switch to Arabic"
           aria-pressed={baseLang === 'ar'}
         >
@@ -94,11 +93,10 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
         </button>
         <button
           onClick={() => i18n.changeLanguage('en')}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-            baseLang === 'en'
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${baseLang === 'en'
               ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-          }`}
+            }`}
           aria-label="Switch to English"
           aria-pressed={baseLang === 'en'}
         >
@@ -108,6 +106,28 @@ function LanguageSwitcher({ variant = 'button', className = '', showLabels = tru
           {showLabels ? 'English' : 'EN'}
         </button>
       </div>
+    )
+  }
+
+  // Minimal variant - Compact text/icon toggle
+  if (variant === 'minimal') {
+    return (
+      <button
+        onClick={toggleLanguage}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-200 group ${className}`}
+        aria-label="Toggle language"
+      >
+        <div className="w-5 h-5 flex items-center justify-center overflow-hidden">
+          <img
+            src={baseLang === 'ar' ? englishIcon : arabicIcon}
+            alt="Language"
+            className="w-full h-full object-contain dark:invert transition-transform duration-300 group-hover:scale-110"
+          />
+        </div>
+        <span className="text-xs font-bold text-gray-700 dark:text-white uppercase tracking-wider">
+          {baseLang === 'ar' ? 'EN' : 'AR'}
+        </span>
+      </button>
     )
   }
 

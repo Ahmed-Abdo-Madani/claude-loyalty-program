@@ -1,5 +1,7 @@
 {
   "loading": "جاري التحميل...",
+  "view": "عرض",
+  "delete": "حذف",
   "overview": {
     "title": "نظرة عامة",
     "loading": "جاري تحميل لوحة التحكم...",
@@ -447,7 +449,9 @@
     "editProduct": "تعديل المنتج",
     "deleteProduct": "حذف المنتج",
     "manageCategories": "إدارة الفئات",
+    "categoryBtn": "الفئات",
     "generateMenuQR": "إنشاء QR للقائمة",
+    "menuQRBtn": "QR المنيو",
     "menuSettingsBanner": {
       "title": "إعدادات عرض القائمة",
       "description": "قم بتكوين كيفية عرض العملاء لقائمتك (شبكة، قائمة، أو PDF) وتحميل قائمة PDF احترافية.",
@@ -628,13 +632,6 @@
       "list": "عرض القائمة",
       "grid": "عرض الشبكة",
       "table": "عرض الجدول"
-    }
-  },
-  "menu": {
-    "viewMode": {
-      "grid": "عرض الشبكة",
-      "list": "عرض القائمة",
-      "pdf": "قائمة PDF"
     }
   },
   "pos": {
@@ -998,6 +995,21 @@
     "currentPlan": "الخطة الحالية"
   },
   "settings": {
+    "socialMedia": {
+      "title": "روابط وسائل التواصل الاجتماعي",
+      "description": "أضف ملفات التواصل الاجتماعي الخاصة بك لعرضها في تذييل القائمة",
+      "facebook": "رابط صفحة فيسبوك",
+      "instagram": "رابط حساب إنستغرام",
+      "twitter": "رابط حساب تويتر/إكس",
+      "snapchat": "رابط حساب سناب شات",
+      "placeholder": {
+        "facebook": "https://facebook.com/yourbusiness",
+        "instagram": "https://instagram.com/yourbusiness",
+        "twitter": "https://twitter.com/yourbusiness",
+        "snapchat": "https://snapchat.com/add/yourbusiness"
+      },
+      "optional": "اختياري - اتركه فارغاً إذا لم يكن قابلاً للتطبيق"
+    },
     "title": "الإعدادات",
     "general": "عام",
     "profile": "الملف الشخصي",
@@ -1028,6 +1040,11 @@
       "gridDesc": "شبكة حديثة من عمودين مع صور المنتجات والبطاقات",
       "listDesc": "قائمة رأسية أنيقة تركز على التصميم الطباعي",
       "pdfDesc": "عرض وثيقة PDF احترافية لقائمتك"
+    },
+    "contact": {
+      "title": "معلومات الاتصال",
+      "description": "قم بتعيين رقم هاتف عملك للسماح للعملاء بالاتصال بك مباشرة من القائمة.",
+      "phone": "رقم هاتف العمل"
     },
     "pdfUpload": {
       "title": "تحميل قائمة PDF",

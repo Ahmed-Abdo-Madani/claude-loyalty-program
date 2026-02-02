@@ -12,10 +12,11 @@ import {
     ArrowLeftIcon,
     ShoppingBagIcon
 } from '@heroicons/react/24/outline'
+import { FaFacebookF, FaInstagram, FaXTwitter, FaSnapchat } from 'react-icons/fa6'
 import { endpoints, secureApi } from '../config/api'
 
 function BusinessSettingsTab({ onNavigateToProducts }) {
-    const { t } = useTranslation(['dashboard', 'common'])
+    const { t } = useTranslation(['dashboard', 'common', 'menu'])
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [business, setBusiness] = useState(null)
@@ -23,6 +24,13 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
     const [notification, setNotification] = useState(null)
     const [pdfUploading, setPdfUploading] = useState(false)
     const [pdfUrl, setPdfUrl] = useState(null)
+    const [phone, setPhone] = useState('')
+    const [socialMedia, setSocialMedia] = useState({
+        facebook: '',
+        instagram: '',
+        twitter: '',
+        snapchat: ''
+    })
 
 
 
@@ -39,6 +47,13 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                 setBusiness(result.data)
                 setDisplayMode(result.data.menu_display_mode || 'grid')
                 setPdfUrl(result.data.menu_pdf_url || null)
+                setPhone(result.data.phone || '')
+                setSocialMedia({
+                    facebook: result.data.facebook_url || '',
+                    instagram: result.data.instagram_url || '',
+                    twitter: result.data.twitter_url || '',
+                    snapchat: result.data.snapchat_url || ''
+                })
             }
         } catch (error) {
             console.error('Error fetching settings:', error)
@@ -125,10 +140,24 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
         try {
             setSaving(true)
             const response = await secureApi.put(endpoints.businessUpdateProfile, {
-                menu_display_mode: displayMode
+                menu_display_mode: displayMode,
+                phone: phone,
+                facebook_url: socialMedia.facebook,
+                instagram_url: socialMedia.instagram,
+                twitter_url: socialMedia.twitter,
+                snapchat_url: socialMedia.snapchat
             })
             const result = await response.json()
             if (result.success) {
+                setBusiness(prev => ({
+                    ...prev,
+                    menu_display_mode: displayMode,
+                    phone: phone,
+                    facebook_url: socialMedia.facebook,
+                    instagram_url: socialMedia.instagram,
+                    twitter_url: socialMedia.twitter,
+                    snapchat_url: socialMedia.snapchat
+                }))
                 showNotification('success', t('settings.updateSuccess') || 'Settings updated successfully!')
             } else {
                 throw new Error(result.message)
@@ -149,19 +178,19 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
     const modes = [
         {
             id: 'grid',
-            title: t('menu.viewMode.grid'),
+            title: t('viewMode.grid', { ns: 'menu' }),
             description: t('settings.menuDisplay.gridDesc') || 'Modern grid layout with product images',
             icon: Square2StackIcon
         },
         {
             id: 'list',
-            title: t('menu.viewMode.list'),
+            title: t('viewMode.list', { ns: 'menu' }),
             description: t('settings.menuDisplay.listDesc') || 'Elegant typography-focused vertical list',
             icon: ListBulletIcon
         },
         {
             id: 'pdf',
-            title: t('menu.viewMode.pdf'),
+            title: t('viewMode.pdf', { ns: 'menu' }),
             description: t('settings.menuDisplay.pdfDesc') || 'Classic professional PDF menu document',
             icon: DocumentTextIcon
         }
@@ -325,6 +354,138 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                 </div>
             )}
 
+            {/* Business Contact Section - Phone Number */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
+                <div className="mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="text-2xl">📞</span>
+                        {t('settings.contact.title') || 'Contact Information'}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t('settings.contact.description') || 'Set your business phone number to allow customers to call you directly from the menu.'}
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('settings.contact.phone') || 'Business Phone Number'}
+                        </label>
+                        <div className="relative" dir="ltr">
+                            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ paddingLeft: '1rem' }}>
+                                <span className="text-gray-400 font-bold">📱</span>
+                            </div>
+                            <input
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="+966 50 123 4567"
+                                style={{ paddingLeft: '2.5rem' }}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Social Media Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
+                <div className="mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="text-2xl">🔗</span>
+                        {t('settings.socialMedia.title')}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t('settings.socialMedia.description')}
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Facebook */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('settings.socialMedia.facebook')}
+                        </label>
+                        <div className="relative" dir="ltr">
+                            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ paddingLeft: '1rem' }}>
+                                <FaFacebookF className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="url"
+                                value={socialMedia.facebook}
+                                onChange={(e) => setSocialMedia(prev => ({ ...prev, facebook: e.target.value }))}
+                                placeholder={t('settings.socialMedia.placeholder.facebook')}
+                                style={{ paddingLeft: '2.5rem' }}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Instagram */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('settings.socialMedia.instagram')}
+                        </label>
+                        <div className="relative" dir="ltr">
+                            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ paddingLeft: '1rem' }}>
+                                <FaInstagram className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="url"
+                                value={socialMedia.instagram}
+                                onChange={(e) => setSocialMedia(prev => ({ ...prev, instagram: e.target.value }))}
+                                placeholder={t('settings.socialMedia.placeholder.instagram')}
+                                style={{ paddingLeft: '2.5rem' }}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Twitter/X */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('settings.socialMedia.twitter')}
+                        </label>
+                        <div className="relative" dir="ltr">
+                            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ paddingLeft: '1rem' }}>
+                                <FaXTwitter className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="url"
+                                value={socialMedia.twitter}
+                                onChange={(e) => setSocialMedia(prev => ({ ...prev, twitter: e.target.value }))}
+                                placeholder={t('settings.socialMedia.placeholder.twitter')}
+                                style={{ paddingLeft: '2.5rem' }}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Snapchat */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {t('settings.socialMedia.snapchat')}
+                        </label>
+                        <div className="relative" dir="ltr">
+                            <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none" style={{ paddingLeft: '1rem' }}>
+                                <FaSnapchat className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="url"
+                                value={socialMedia.snapchat}
+                                onChange={(e) => setSocialMedia(prev => ({ ...prev, snapchat: e.target.value }))}
+                                placeholder={t('settings.socialMedia.placeholder.snapchat')}
+                                style={{ paddingLeft: '2.5rem' }}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <p className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center">
+                    {t('settings.socialMedia.optional')}
+                </p>
+            </div>
+
             {/* Save Button */}
             <div className="pt-4 flex items-center justify-between border-t border-gray-100 dark:border-gray-800">
                 <div className="flex-1">
@@ -339,8 +500,20 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
 
                 <button
                     onClick={handleSave}
-                    disabled={saving || displayMode === business?.menu_display_mode}
-                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${saving || displayMode === business?.menu_display_mode
+                    disabled={saving || (displayMode === business?.menu_display_mode &&
+                        phone === (business?.phone || '') &&
+                        socialMedia.facebook === (business?.facebook_url || '') &&
+                        socialMedia.instagram === (business?.instagram_url || '') &&
+                        socialMedia.twitter === (business?.twitter_url || '') &&
+                        socialMedia.snapchat === (business?.snapchat_url || '')
+                    )}
+                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${saving || (displayMode === business?.menu_display_mode &&
+                        phone === (business?.phone || '') &&
+                        socialMedia.facebook === (business?.facebook_url || '') &&
+                        socialMedia.instagram === (business?.instagram_url || '') &&
+                        socialMedia.twitter === (business?.twitter_url || '') &&
+                        socialMedia.snapchat === (business?.snapchat_url || '')
+                    )
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-primary text-white hover:bg-primary-dark shadow-lg shadow-primary/20 transform hover:scale-[1.02]'
                         }`}
@@ -348,16 +521,6 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                     {saving && <ArrowPathIcon className="w-5 h-5 animate-spin" />}
                     {saving ? t('settings.saving') || 'Saving...' : t('settings.saveSettings') || 'Save Changes'}
                 </button>
-            </div>
-
-            <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20">
-                <h4 className="text-blue-800 dark:text-blue-300 font-bold mb-2 flex items-center gap-2">
-                    <Square2StackIcon className="w-5 h-5" />
-                    {t('settings.branding.title') || 'Branding & Customization'}
-                </h4>
-                <p className="text-sm text-blue-700 dark:text-blue-400/80 leading-relaxed">
-                    {t('settings.branding.description') || 'In Phase 5, you will be able to customize your menu colors, headers, and upload professional PDF menus from this section.'}
-                </p>
             </div>
 
             {/* Back to Products Link */}

@@ -937,7 +937,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         include: [{
           model: Business,
           as: 'business',
-          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename']
+          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url']
         }]
       })
 
@@ -953,7 +953,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
     } else {
       // Fetch business details
       business = await Business.findByPk(identifier, {
-        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename']
+        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url'] // Includes social media links
       })
 
       if (!business) {
@@ -1116,7 +1116,11 @@ router.get('/public/menu/:identifier', async (req, res) => {
         address: business.address,
         menu_display_mode: business.menu_display_mode,
         menu_pdf_url: business.menu_pdf_url,
-        menu_pdf_filename: business.menu_pdf_filename
+        menu_pdf_filename: business.menu_pdf_filename,
+        facebook_url: business.facebook_url,
+        instagram_url: business.instagram_url,
+        twitter_url: business.twitter_url,
+        snapchat_url: business.snapchat_url
       },
       menuDisplayMode: business.menu_display_mode || 'grid',
       categories,
@@ -2241,7 +2245,7 @@ router.put('/my/profile', requireBusinessAuth, async (req, res) => {
     const allowedFields = [
       'business_name', 'business_name_ar', 'business_type', 'description',
       'license_number', 'owner_id', 'phone', 'region', 'city', 'district', 'address',
-      'menu_display_mode'
+      'menu_display_mode', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url'
     ]
 
     // Validation for menu_display_mode

@@ -21,5 +21,16 @@
     "pdfAvailable": "قائمة PDF الاحترافية جاهزة للعرض.",
     "pdfComingSoon": "سيكون عرض قائمة PDF متاحاً قريباً.",
     "viewPdf": "فتح قائمة PDF",
-    "poweredBy": "مشغل بواسطة"
+    "poweredBy": "مشغل بواسطة",
+    "sar": "ريال",
+    "popular": "الأكثر طلباً",
+    "new": "جديد",
+    "others": "أخرى",
+    "callBusiness": "للتواصل معنا",
+    "noProducts": "لا توجد منتجات متاحة",
+    "noProductsDesc": "تحقق لاحقاً من عناصر القائمة",
+    "loadingMenu": "جاري تحميل القائمة...",
+    "errorLoading": "فشل تحميل القائمة",
+    "retryLoading": "إعادة المحاولة",
+    "followUs": "تابعونا على"
 }

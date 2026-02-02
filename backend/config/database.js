@@ -131,6 +131,7 @@ setInterval(() => {
 // Log initial pool configuration
 console.log('💾 Database pool initialized:', {
   environment: env,
+  database: sequelize.config.database, // Added for debugging
   maxConnections: sequelize.options.pool?.max || 'unknown',
   minConnections: sequelize.options.pool?.min || 'unknown'
 })

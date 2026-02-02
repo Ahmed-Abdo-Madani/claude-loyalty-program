@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
 import { getSubscriptionData, getSecureAuthHeaders } from '../utils/secureAuth'
+import { endpoints } from '../config/api'
 import LanguageSwitcher from './LanguageSwitcher'
 
 function DashboardHeader({ user }) {
@@ -130,7 +131,8 @@ function DashboardHeader({ user }) {
         return
       }
 
-      const response = await fetch('/api/business/my/logo-info', {
+      // Use endpoints.businessLogoInfo which includes absolute base URL
+      const response = await fetch(endpoints.businessLogoInfo, {
         headers
       })
 
@@ -194,8 +196,8 @@ function DashboardHeader({ user }) {
       {/* Payment Failure Banner - Higher priority than trial banner */}
       {showPaymentFailureBanner && paymentFailureData && (
         <div className={`sticky top-0 z-50 border-b transition-colors ${paymentFailureData.retry_count >= 3 || paymentFailureData.grace_period_end
-            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
           }`}>
           <div className="ml-0 lg:ml-64">
             <div className="px-4 py-3 sm:px-6">
@@ -244,8 +246,8 @@ function DashboardHeader({ user }) {
                   <button
                     onClick={handleUpdatePayment}
                     className={`flex-1 sm:flex-none px-4 py-2 rounded-lg transition-colors font-semibold text-sm whitespace-nowrap ${paymentFailureData.retry_count >= 3 || paymentFailureData.grace_period_end
-                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
                       }`}
                   >
                     {tSubscription('paymentBanner.updatePayment')}
@@ -266,10 +268,10 @@ function DashboardHeader({ user }) {
       {/* Trial Expiration Banner */}
       {showTrialBanner && subscriptionData?.trial_info && (
         <div className={`sticky top-0 z-40 border-b transition-colors ${subscriptionData.trial_info.days_remaining > 3
-            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-            : subscriptionData.trial_info.days_remaining > 0
-              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+          : subscriptionData.trial_info.days_remaining > 0
+            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
           }`}>
           <div className="ml-0 lg:ml-64">
             <div className="px-4 py-3 sm:px-6">

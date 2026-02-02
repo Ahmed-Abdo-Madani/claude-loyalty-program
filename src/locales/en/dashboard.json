@@ -1,5 +1,7 @@
 {
   "loading": "Loading...",
+  "view": "View",
+  "delete": "Delete",
   "overview": {
     "title": "Overview",
     "loading": "Loading dashboard...",
@@ -440,7 +442,9 @@
     "editProduct": "Edit Product",
     "deleteProduct": "Delete Product",
     "manageCategories": "Manage Categories",
+    "categoryBtn": "Categories",
     "generateMenuQR": "Generate Menu QR",
+    "menuQRBtn": "Menu QR",
     "menuSettingsBanner": {
       "title": "Menu Display Settings",
       "description": "Configure how customers view your menu (Grid, List, or PDF) and upload a professional PDF menu.",
@@ -622,13 +626,6 @@
       "list": "List view",
       "grid": "Grid view",
       "table": "Table view"
-    }
-  },
-  "menu": {
-    "viewMode": {
-      "grid": "Grid View",
-      "list": "List View",
-      "pdf": "PDF Menu"
     }
   },
   "pos": {
@@ -992,6 +989,21 @@
     "trialEnding": "Trial ends in {{days}} days"
   },
   "settings": {
+    "socialMedia": {
+      "title": "Social Media Links",
+      "description": "Add your social media profiles to display in your menu footer",
+      "facebook": "Facebook Page URL",
+      "instagram": "Instagram Profile URL",
+      "twitter": "Twitter/X Profile URL",
+      "snapchat": "Snapchat Profile URL",
+      "placeholder": {
+        "facebook": "https://facebook.com/yourbusiness",
+        "instagram": "https://instagram.com/yourbusiness",
+        "twitter": "https://twitter.com/yourbusiness",
+        "snapchat": "https://snapchat.com/add/yourbusiness"
+      },
+      "optional": "Optional - Leave blank if not applicable"
+    },
     "title": "Settings",
     "general": "General",
     "profile": "Profile",
@@ -1022,6 +1034,11 @@
       "gridDesc": "Modern 2-column grid with product images and cards",
       "listDesc": "Elegant vertical list with typography focus",
       "pdfDesc": "Classic professional PDF menu document"
+    },
+    "contact": {
+      "title": "Contact Information",
+      "description": "Set your business phone number to allow customers to call you directly from the menu.",
+      "phone": "Business Phone Number"
     },
     "pdfUpload": {
       "title": "PDF Menu Upload",

@@ -21,5 +21,16 @@
     "pdfAvailable": "The professional PDF menu is ready for viewing.",
     "pdfComingSoon": "PDF menu viewing will be available soon.",
     "viewPdf": "Open PDF Menu",
-    "poweredBy": "Powered by"
+    "poweredBy": "Powered by",
+    "sar": "SAR",
+    "popular": "Popular",
+    "new": "New",
+    "others": "Others",
+    "callBusiness": "Call Business",
+    "noProducts": "No products available",
+    "noProductsDesc": "Check back later for our menu items",
+    "loadingMenu": "Loading menu...",
+    "errorLoading": "Failed to load menu",
+    "retryLoading": "Retry",
+    "followUs": "Follow us"
 }
