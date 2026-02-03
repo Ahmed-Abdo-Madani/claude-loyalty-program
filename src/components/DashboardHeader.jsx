@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
 import { getSubscriptionData, getSecureAuthHeaders } from '../utils/secureAuth'
-import { endpoints } from '../config/api'
+import { endpoints, apiBaseUrl, secureApi } from '../config/api'
 import LanguageSwitcher from './LanguageSwitcher'
+import LogoUploadModal from './LogoUploadModal'
+import { CameraIcon } from '@heroicons/react/24/outline'
 
 function DashboardHeader({ user }) {
   const { t } = useTranslation('dashboard')
@@ -12,6 +14,7 @@ function DashboardHeader({ user }) {
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [logoInfo, setLogoInfo] = useState(null)
+  const [showLogoModal, setShowLogoModal] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState(null)
   const [showTrialBanner, setShowTrialBanner] = useState(false)
   const [showPaymentFailureBanner, setShowPaymentFailureBanner] = useState(false)
@@ -132,9 +135,7 @@ function DashboardHeader({ user }) {
       }
 
       // Use endpoints.businessLogoInfo which includes absolute base URL
-      const response = await fetch(endpoints.businessLogoInfo, {
-        headers
-      })
+      const response = await secureApi.get(endpoints.businessLogoInfo)
 
       if (response.ok) {
         const result = await response.json()
@@ -321,14 +322,29 @@ function DashboardHeader({ user }) {
               {/* Business Title with Logo */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 {/* Business Logo */}
-                {logoInfo && (
-                  <div className="flex-shrink-0">
+                {logoInfo ? (
+                  <div
+                    onClick={() => setShowLogoModal(true)}
+                    className="flex-shrink-0 cursor-pointer group relative"
+                    title={t('header.changeLogo', 'Change Logo')}
+                  >
                     <img
-                      src={`/api/business${logoInfo.logo_url}`}
+                      src={logoInfo.logo_url.startsWith('http') ? logoInfo.logo_url : `${apiBaseUrl}${logoInfo.logo_url}`}
                       alt={`${user?.businessName} Logo`}
-                      className="w-9 h-9 sm:w-11 sm:h-11 lg:w-14 lg:h-14 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-white shadow-sm"
+                      className="w-9 h-9 sm:w-11 sm:h-11 lg:w-14 lg:h-14 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-white shadow-sm transition-transform group-hover:scale-105 group-hover:shadow-md"
                     />
+                    <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <CameraIcon className="w-5 h-5 text-white" />
+                    </div>
                   </div>
+                ) : (
+                  <button
+                    onClick={() => setShowLogoModal(true)}
+                    className="flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 lg:w-14 lg:h-14 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:border-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center justify-center transition-all group"
+                    title={t('header.uploadLogo', 'Upload Logo')}
+                  >
+                    <CameraIcon className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                  </button>
                 )}
 
                 {/* Business Name and Dashboard Text */}
@@ -370,6 +386,19 @@ function DashboardHeader({ user }) {
           </div>
         </div>
       </header>
+
+      <LogoUploadModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onLogoUpdate={(data) => {
+          loadLogoInfo()
+          if (data && data.has_logo) {
+            setLogoInfo(data)
+          } else {
+            setLogoInfo(null)
+          }
+        }}
+      />
     </>
   )
 }

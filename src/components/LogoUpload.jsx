@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getSecureAuthHeaders } from '../utils/secureAuth'
+import { endpoints, apiBaseUrl, secureApi } from '../config/api'
 
 function LogoUpload({ onLogoUpdate }) {
   const { t } = useTranslation('dashboard')
@@ -18,15 +19,7 @@ function LogoUpload({ onLogoUpdate }) {
 
   const loadLogoInfo = async () => {
     try {
-      const headers = getSecureAuthHeaders()
-
-      if (!headers['x-session-token'] || !headers['x-business-id']) {
-        return
-      }
-
-      const response = await fetch('/api/business/my/logo-info', {
-        headers
-      })
+      const response = await secureApi.get(endpoints.businessLogoInfo)
 
       if (response.ok) {
         const result = await response.json()
@@ -116,7 +109,7 @@ function LogoUpload({ onLogoUpdate }) {
           reject(new Error('Upload failed'))
         })
 
-        xhr.open('POST', '/api/business/my/logo')
+        xhr.open('POST', endpoints.businessLogo)
         xhr.setRequestHeader('x-session-token', headers['x-session-token'])
         xhr.setRequestHeader('x-business-id', headers['x-business-id'])
         xhr.send(formData)
@@ -160,16 +153,7 @@ function LogoUpload({ onLogoUpdate }) {
     }
 
     try {
-      const headers = getSecureAuthHeaders()
-
-      if (!headers['x-session-token'] || !headers['x-business-id']) {
-        throw new Error(t('logoUpload.authRequired'))
-      }
-
-      const response = await fetch('/api/business/my/logo', {
-        method: 'DELETE',
-        headers
-      })
+      const response = await secureApi.delete(endpoints.businessLogo)
 
       const result = await response.json()
 
@@ -225,7 +209,7 @@ function LogoUpload({ onLogoUpdate }) {
           <div className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <div className="flex-shrink-0">
               <img
-                src={`/api/business${logoInfo.logo_url}`}
+                src={logoInfo.logo_url.startsWith('http') ? logoInfo.logo_url : `${apiBaseUrl}${logoInfo.logo_url}`}
                 alt="Business Logo"
                 className="w-16 h-16 object-contain rounded-lg border border-gray-200 dark:border-gray-600 bg-white"
               />

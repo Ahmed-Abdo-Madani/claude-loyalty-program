@@ -16,7 +16,9 @@ import TodaysSnapshot from '../components/TodaysSnapshot'
 import QRCodeModal from '../components/QRCodeModal'
 import UsageMetrics from '../components/UsageMetrics'
 import PlanUpgradeModal from '../components/PlanUpgradeModal'
+import LogoUploadModal from '../components/LogoUploadModal'
 import BusinessSettingsTab from '../components/BusinessSettingsTab'
+import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
@@ -41,6 +43,7 @@ function Dashboard() {
   const [showMenuQRModal, setShowMenuQRModal] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [showLogoModal, setShowLogoModal] = useState(false)
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false)
   const [trialExpirationMessage, setTrialExpirationMessage] = useState('')
 
@@ -242,8 +245,8 @@ function Dashboard() {
                           </h3>
                           <p className="text-blue-100/90 text-sm max-w-2xl">
                             {i18n.language === 'ar'
-                              ? 'نشاطك التجاري الآن في وضع البدء السريع. أكمل بياناتك (رقم السجل التجاري، الهوية الوطنية) لتتمكن من نشر العروض وتفعيل برنامج الولاء بشكل كامل.'
-                              : 'Your business is in Quick Start mode. Complete your details (CR Number, National ID) to publish offers and fully activate your loyalty program.'}
+                              ? 'نشاطك التجاري الآن في وضع البدء السريع. أكمل بياناتك (السجل التجاري، الهوية، شعار النشاط) للنشر.'
+                              : 'Your business is in Quick Start mode. Complete your details (CR Number, National ID, Business Logo) to publish offers.'}
                           </p>
                           <div className="mt-4 w-full max-w-xs bg-white/20 rounded-full h-2">
                             <div
@@ -251,16 +254,45 @@ function Dashboard() {
                               style={{ width: `${analytics.profileCompletion}%` }}
                             ></div>
                           </div>
-                          <span className="text-xs text-blue-100 mt-1 block">
-                            {analytics.profileCompletion}% {i18n.language === 'ar' ? 'مكتمل' : 'completed'}
-                          </span>
+
+                          <div className="flex items-center gap-4 mt-3">
+                            <span className="text-xs text-blue-100 block">
+                              {analytics.profileCompletion}% {i18n.language === 'ar' ? 'مكتمل' : 'completed'}
+                            </span>
+
+                            {/* Logo Status Indicator */}
+                            <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${analytics.has_logo ? 'bg-green-500/20 text-blue-50' : 'bg-amber-500/20 text-amber-100'}`}>
+                              {analytics.has_logo ? (
+                                <CheckCircleIcon className="w-3.5 h-3.5" />
+                              ) : (
+                                <ExclamationCircleIcon className="w-3.5 h-3.5" />
+                              )}
+                              {i18n.language === 'ar'
+                                ? (analytics.has_logo ? 'تم رفع الشعار' : 'الشعار مفقود')
+                                : (analytics.has_logo ? 'Logo Uploaded' : 'Missing Logo')
+                              }
+                            </div>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => navigate('/complete-profile')}
-                          className="px-6 py-2.5 bg-white text-blue-700 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap"
-                        >
-                          {i18n.language === 'ar' ? 'أكمل الآن' : 'Complete Now'}
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button
+                            onClick={() => setShowLogoModal(true)}
+                            className={`px-4 py-2.5 font-bold rounded-lg transition-colors shadow-md whitespace-nowrap text-sm flex items-center justify-center gap-2 ${analytics.has_logo
+                                ? 'bg-blue-800/30 text-white hover:bg-blue-800/40'
+                                : 'bg-white text-blue-700 hover:bg-blue-50'
+                              }`}
+                          >
+                            {!analytics.has_logo && <ExclamationCircleIcon className="w-4 h-4" />}
+                            {i18n.language === 'ar' ? (analytics.has_logo ? 'تغيير الشعار' : 'رفع الشعار') : (analytics.has_logo ? 'Change Logo' : 'Upload Logo')}
+                          </button>
+
+                          <button
+                            onClick={() => navigate('/complete-profile')}
+                            className="px-6 py-2.5 bg-blue-800/30 text-white font-bold rounded-lg hover:bg-blue-800/40 transition-colors shadow-md whitespace-nowrap text-sm border border-white/10"
+                          >
+                            {i18n.language === 'ar' ? 'أكمل البيانات' : 'Complete Details'}
+                          </button>
+                        </div>
                       </div>
                       {/* Decorative background element */}
                       <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
@@ -455,6 +487,15 @@ function Dashboard() {
         currentPlan={subscriptionData?.subscription?.plan_type}
         trialExpired={showTrialExpiredModal}
         message={trialExpirationMessage}
+      />
+
+      <LogoUploadModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onLogoUpdate={(data) => {
+          // Refresh dashboard data to update logo status/completion
+          loadDashboardData()
+        }}
       />
 
     </div >

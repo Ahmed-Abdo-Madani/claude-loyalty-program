@@ -103,6 +103,11 @@ function MenuPage({ type }) {
   const themeColor = cardDesign?.background_color || '#7C3AED'
   const hasSocialMedia = menu?.business?.facebook_url || menu?.business?.instagram_url || menu?.business?.twitter_url || menu?.business?.snapchat_url
 
+  // Use menu-specific phone number if set (even if empty string), otherwise fallback to main business phone
+  const displayPhone = (menu?.business?.menu_phone !== null && menu?.business?.menu_phone !== undefined)
+    ? menu.business.menu_phone
+    : menu?.business?.phone
+
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
@@ -339,15 +344,15 @@ function MenuPage({ type }) {
             </div>
           )}
 
-          {menu?.business?.phone && (
+          {displayPhone && (
             <div className="flex justify-center mb-6">
               <a
-                href={`tel:${menu.business.phone}`}
+                href={`tel:${displayPhone}`}
                 className="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-900 dark:text-white font-medium"
               >
                 <PhoneIcon className="w-5 h-5" />
                 <span>{t('callBusiness')}</span>
-                <span className="opacity-60 text-sm ml-1">{menu.business.phone}</span>
+                <span className="opacity-60 text-sm ml-1">{displayPhone}</span>
               </a>
             </div>
           )}

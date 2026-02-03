@@ -24,7 +24,7 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
     const [notification, setNotification] = useState(null)
     const [pdfUploading, setPdfUploading] = useState(false)
     const [pdfUrl, setPdfUrl] = useState(null)
-    const [phone, setPhone] = useState('')
+    const [menuPhone, setMenuPhone] = useState('')
     const [socialMedia, setSocialMedia] = useState({
         facebook: '',
         instagram: '',
@@ -47,7 +47,8 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                 setBusiness(result.data)
                 setDisplayMode(result.data.menu_display_mode || 'grid')
                 setPdfUrl(result.data.menu_pdf_url || null)
-                setPhone(result.data.phone || '')
+                // Initialize menu phone with fallback to main phone if not set yet
+                setMenuPhone(result.data.menu_phone !== null && result.data.menu_phone !== undefined ? result.data.menu_phone : result.data.phone || '')
                 setSocialMedia({
                     facebook: result.data.facebook_url || '',
                     instagram: result.data.instagram_url || '',
@@ -141,7 +142,7 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
             setSaving(true)
             const response = await secureApi.put(endpoints.businessUpdateProfile, {
                 menu_display_mode: displayMode,
-                phone: phone,
+                menu_phone: menuPhone,
                 facebook_url: socialMedia.facebook,
                 instagram_url: socialMedia.instagram,
                 twitter_url: socialMedia.twitter,
@@ -152,7 +153,7 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                 setBusiness(prev => ({
                     ...prev,
                     menu_display_mode: displayMode,
-                    phone: phone,
+                    menu_phone: menuPhone,
                     facebook_url: socialMedia.facebook,
                     instagram_url: socialMedia.instagram,
                     twitter_url: socialMedia.twitter,
@@ -377,8 +378,8 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                             </div>
                             <input
                                 type="tel"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
+                                value={menuPhone}
+                                onChange={(e) => setMenuPhone(e.target.value)}
                                 placeholder="+966 50 123 4567"
                                 style={{ paddingLeft: '2.5rem' }}
                                 className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors text-sm"
@@ -501,14 +502,14 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
                 <button
                     onClick={handleSave}
                     disabled={saving || (displayMode === business?.menu_display_mode &&
-                        phone === (business?.phone || '') &&
+                        menuPhone === (business?.menu_phone !== null && business?.menu_phone !== undefined ? business.menu_phone : business?.phone || '') &&
                         socialMedia.facebook === (business?.facebook_url || '') &&
                         socialMedia.instagram === (business?.instagram_url || '') &&
                         socialMedia.twitter === (business?.twitter_url || '') &&
                         socialMedia.snapchat === (business?.snapchat_url || '')
                     )}
                     className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${saving || (displayMode === business?.menu_display_mode &&
-                        phone === (business?.phone || '') &&
+                        menuPhone === (business?.menu_phone !== null && business?.menu_phone !== undefined ? business.menu_phone : business?.phone || '') &&
                         socialMedia.facebook === (business?.facebook_url || '') &&
                         socialMedia.instagram === (business?.instagram_url || '') &&
                         socialMedia.twitter === (business?.twitter_url || '') &&

@@ -60,6 +60,10 @@
       "title": "Admin Dashboard",
       "description": "Platform admin dashboard for managing businesses, users, and analytics."
     },
+    "checkout": {
+      "title": "Checkout - {{plan}}",
+      "description": "Complete your subscription payment securely."
+    },
     "paymentCallback": {
       "verifying": {
         "title": "Verifying Payment",

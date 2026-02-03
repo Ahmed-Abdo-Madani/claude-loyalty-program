@@ -23,6 +23,7 @@
     "test:status-integration": "node backend/test/status-validation-integration.test.js"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "axios": "^1.3.4",
     "barcode-detector": "^3.0.1",

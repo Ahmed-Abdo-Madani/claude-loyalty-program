@@ -937,7 +937,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         include: [{
           model: Business,
           as: 'business',
-          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url']
+          attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'menu_phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url']
         }]
       })
 
@@ -953,7 +953,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
     } else {
       // Fetch business details
       business = await Business.findByPk(identifier, {
-        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url'] // Includes social media links
+        attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'menu_phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url'] // Includes social media links
       })
 
       if (!business) {
@@ -1110,6 +1110,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         logo_url: business.logo_url ? `/api/business/public/logo/${business.public_id}/${business.logo_filename}` : null,
         description: business.description,
         phone: business.phone,
+        menu_phone: business.menu_phone,
         city: business.city,
         district: business.district,
         region: business.region,
@@ -2138,7 +2139,9 @@ router.get('/my/analytics', requireBusinessAuth, async (req, res) => {
       is_verified: req.business.is_verified,
       profile_completion: req.business.profile_completion,
       planLimits: req.business.getPlanLimits(),
-      currentPlan: req.business.current_plan
+      currentPlan: req.business.current_plan,
+      has_logo: !!req.business.logo_filename,
+      logo_url: req.business.logo_url
     }
 
     res.json({
@@ -2244,7 +2247,7 @@ router.put('/my/profile', requireBusinessAuth, async (req, res) => {
     // Allow updating specific fields
     const allowedFields = [
       'business_name', 'business_name_ar', 'business_type', 'description',
-      'license_number', 'owner_id', 'phone', 'region', 'city', 'district', 'address',
+      'license_number', 'owner_id', 'phone', 'menu_phone', 'region', 'city', 'district', 'address',
       'menu_display_mode', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url'
     ]
 
@@ -2270,6 +2273,7 @@ router.put('/my/profile', requireBusinessAuth, async (req, res) => {
     if (business.address) completion += 10;
     if (business.city) completion += 10;
     if (business.region) completion += 5;
+    if (business.logo_filename) completion += 5;
 
     business.profile_completion = Math.min(completion, 100)
 
@@ -2668,7 +2672,7 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
     }
 
     // Generate accessible URL path
-    const logoUrl = `/api/business/my/logo/${file.filename}`
+    const logoUrl = `/api/business/public/logo/${file.filename}`
 
     // Update business with logo information
     await business.update({
@@ -2677,6 +2681,19 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
       logo_uploaded_at: new Date(),
       logo_file_size: file.size
     })
+
+    // Recalculate profile completion
+    let completion = 30; // base
+    if (business.license_number) completion += 20;
+    if (business.owner_id) completion += 20;
+    if (business.phone) completion += 10;
+    if (business.address) completion += 10;
+    if (business.city) completion += 10;
+    if (business.region) completion += 5;
+    if (business.logo_filename) completion += 5; // Now explicitly has logo
+
+    const profileCompletion = Math.min(completion, 100)
+    await business.update({ profile_completion: profileCompletion })
 
     console.log(`✅ Logo uploaded for business ${business.public_id}: ${file.filename}`)
 
@@ -2707,6 +2724,50 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
       success: false,
       message: 'Failed to upload logo',
       error: error.message
+    })
+  }
+})
+
+// Get business logo (public access)
+router.get('/public/logo/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename
+
+    // Sanitize filename to prevent directory traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid filename'
+      })
+    }
+
+    const filePath = path.join('./uploads/logos', filename)
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Logo file not found'
+      })
+    }
+
+    // Determine content type
+    const ext = path.extname(filename).toLowerCase()
+    let contentType = 'image/png' // default
+    if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg'
+    if (ext === '.gif') contentType = 'image/gif'
+    if (ext === '.webp') contentType = 'image/webp'
+
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 1 day
+
+    const fileStream = fs.createReadStream(filePath)
+    fileStream.pipe(res)
+  } catch (error) {
+    console.error('Error serving logo:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to serve logo'
     })
   }
 })
@@ -2792,6 +2853,19 @@ router.delete('/my/logo', requireBusinessAuth, async (req, res) => {
       logo_uploaded_at: null,
       logo_file_size: null
     })
+
+    // Recalculate profile completion
+    let completion = 30; // base
+    if (business.license_number) completion += 20;
+    if (business.owner_id) completion += 20;
+    if (business.phone) completion += 10;
+    if (business.address) completion += 10;
+    if (business.city) completion += 10;
+    if (business.region) completion += 5;
+    // Logo removed, so no +5
+
+    const profileCompletion = Math.min(completion, 100)
+    await business.update({ profile_completion: profileCompletion })
 
     res.json({
       success: true,

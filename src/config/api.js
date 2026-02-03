@@ -1,7 +1,7 @@
 import { getSecureAuthHeaders, secureApiRequest } from '../utils/secureAuth'
 import i18n from '../i18n/config.js'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
 
 /**
  * API Asset URL Contract (Standardized)
@@ -68,6 +68,7 @@ export const endpoints = {
   businessMenuPdf: `${API_BASE_URL}/api/business/my/menu-pdf`,
   businessMenuPdfUpload: `${API_BASE_URL}/api/business/my/menu-pdf`,
   businessMenuPdfDelete: `${API_BASE_URL}/api/business/my/menu-pdf`,
+  businessLogo: `${API_BASE_URL}/api/business/my/logo`,
 
   // Public Customer APIs
   publicOffer: `${API_BASE_URL}/api/business/public/offer`,

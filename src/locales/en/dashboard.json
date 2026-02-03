@@ -48,7 +48,9 @@
     "dashboard": "Dashboard",
     "businessLogoActive": "🏢 Business Logo Active",
     "switchToLightMode": "Switch to light mode",
-    "switchToDarkMode": "Switch to dark mode"
+    "switchToDarkMode": "Switch to dark mode",
+    "changeLogo": "Change Logo",
+    "uploadLogo": "Upload Logo"
   },
   "sidebar": {
     "overview": "Overview",
@@ -145,7 +147,9 @@
     "authRequired": "Authentication required",
     "uploadFailed": "Upload failed",
     "deleteFailed": "Failed to delete logo",
-    "uploaded": "Uploaded"
+    "uploaded": "Uploaded",
+    "modalTitle": "Business Logo",
+    "clickToUpload": "Click to upload/change logo"
   },
   "navigation": {
     "home": "Home",
@@ -1093,9 +1097,21 @@
     "onPlan": "You're on the",
     "plan": "plan",
     "upgradeTo": "Upgrade to",
-    "maybeLater": "Maybe Later"
+    "maybeLater": "Maybe Later",
+    "limitReached": "Limit reached! Upgrade to add more.",
+    "approaching": "Approaching limit. Consider upgrading soon."
   },
   "usage": {
-    "offers": "Offers"
+    "offers": "Offers",
+    "locations": "Locations"
+  },
+  "dashboard": {
+    "subscription": {
+      "title": "Your Subscription",
+      "usageSummary": "Manage your plan and usage limits.",
+      "trialEnding": "Trial ends in {{days}} days",
+      "upgradePrompt": "Upgrade Plan",
+      "manageBilling": "Manage Billing"
+    }
   }
 }

@@ -60,6 +60,10 @@
       "title": "لوحة تحكم المسؤول",
       "description": "لوحة تحكم المسؤول لإدارة المنصة والشركات والتحليلات."
     },
+    "checkout": {
+      "title": "لدفع - {{plan}}",
+      "description": "أكمل دفع اشتراكك بأمان."
+    },
     "paymentCallback": {
       "verifying": {
         "title": "التحقق من الدفع",

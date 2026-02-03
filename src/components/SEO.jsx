@@ -2,27 +2,28 @@ import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 
-const SEO = ({ 
-  titleKey, 
-  descriptionKey, 
-  title, 
-  description, 
-  image = '/og-image-v2.png', 
+const SEO = ({
+  titleKey,
+  descriptionKey,
+  title,
+  description,
+  placeholders = {},
+  image = '/og-image-v2.png',
   type = 'website',
-  noindex = false 
+  noindex = false
 }) => {
   const { t, i18n } = useTranslation('seo')
   const location = useLocation()
 
   // Get site URL from environment variable (for build-time templating) or fallback to window.location.origin
   const siteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin
-  
+
   // Build full URL
   const fullUrl = `${siteUrl}${location.pathname}`
-  
+
   // Build full image URL
-  const fullImageUrl = image.startsWith('http') 
-    ? image 
+  const fullImageUrl = image.startsWith('http')
+    ? image
     : `${siteUrl}${image}`
 
   // Determine locale
@@ -38,6 +39,14 @@ const SEO = ({
     pageTitle = title
   } else if (titleKey) {
     pageTitle = t(titleKey)
+
+    // Handle interpolation manually if placeholders are provided
+    // This addresses the issue where t(titleKey) remains as "Checkout - {{plan}}"
+    if (Object.keys(placeholders).length > 0) {
+      Object.entries(placeholders).forEach(([key, value]) => {
+        pageTitle = pageTitle.replace(`{{${key}}}`, value)
+      })
+    }
   } else {
     pageTitle = siteName
   }
@@ -63,12 +72,12 @@ const SEO = ({
         and i18n config to avoid duplicate control and attribute churn.
         This ensures a single source of truth for language/direction management.
       */}
-      
+
       {/* Primary Meta Tags */}
       <title>{fullTitle}</title>
       <meta name="title" content={fullTitle} />
       <meta name="description" content={pageDescription} />
-      
+
       {/* Canonical URL */}
       <link rel="canonical" href={fullUrl} />
 

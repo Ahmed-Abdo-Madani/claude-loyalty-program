@@ -196,6 +196,11 @@ const Business = sequelize.define('Business', {
     },
     comment: 'Controls how the public menu is displayed: grid (default), list, or pdf'
   },
+  menu_phone: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    comment: 'Phone number specifically for the public menu display'
+  },
   menu_pdf_url: {
     type: DataTypes.STRING(500),
     allowNull: true,

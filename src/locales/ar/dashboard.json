@@ -32,7 +32,9 @@
     "dashboard": "لوحة التحكم",
     "businessLogoActive": "🏢 شعار النشاط التجاري نشط",
     "switchToLightMode": "التبديل إلى الوضع الفاتح",
-    "switchToDarkMode": "التبديل إلى الوضع الداكن"
+    "switchToDarkMode": "التبديل إلى الوضع الداكن",
+    "changeLogo": "تغيير الشعار",
+    "uploadLogo": "رفع الشعار"
   },
   "imageUpload": {
     "title": "صورة المنتج",
@@ -152,7 +154,9 @@
     "authRequired": "المصادقة مطلوبة",
     "uploadFailed": "فشل رفع الشعار",
     "deleteFailed": "فشل حذف الشعار",
-    "uploaded": "تم الرفع"
+    "uploaded": "تم الرفع",
+    "modalTitle": "شعار النشاط التجاري",
+    "clickToUpload": "انقر لرفع/تغيير الشعار"
   },
   "navigation": {
     "home": "الرئيسية",
@@ -1099,6 +1103,21 @@
     "onPlan": "أنت على خطة",
     "plan": "",
     "upgradeTo": "الترقية إلى",
-    "maybeLater": "ربما لاحقاً"
+    "maybeLater": "ربما لاحقاً",
+    "limitReached": "تم الوصول للحد الأقصى! قم بالترقية لإضافة المزيد.",
+    "approaching": "اقتربت من الحد الأقصى. يرجى الترقية قريباً."
+  },
+  "usage": {
+    "offers": "العروض",
+    "locations": "الفروع"
+  },
+  "dashboard": {
+    "subscription": {
+      "title": "اشتراكك",
+      "usageSummary": "إدارة خطتك وحدود الاستخدام الخاصة بك.",
+      "trialEnding": "ينتهي الإصدار التجريبي خلال {{days}} يوم",
+      "upgradePrompt": "ترقية الخطة",
+      "manageBilling": "إدارة الفواتير"
+    }
   }
 }

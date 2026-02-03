@@ -26,11 +26,15 @@ SET row_security = off;
 -- Name: enum_businesses_current_plan; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_businesses_current_plan AS ENUM (
-    'free',
-    'professional',
-    'enterprise'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_current_plan') THEN
+        CREATE TYPE public.enum_businesses_current_plan AS ENUM (
+            'free',
+            'professional',
+            'enterprise'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_businesses_current_plan OWNER TO loyalty_user;
@@ -39,13 +43,17 @@ ALTER TYPE public.enum_businesses_current_plan OWNER TO loyalty_user;
 -- Name: enum_businesses_subscription_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_businesses_subscription_status AS ENUM (
-    'trial',
-    'active',
-    'past_due',
-    'cancelled',
-    'expired'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_subscription_status') THEN
+        CREATE TYPE public.enum_businesses_subscription_status AS ENUM (
+            'trial',
+            'active',
+            'past_due',
+            'cancelled',
+            'expired'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_businesses_subscription_status OWNER TO loyalty_user;
@@ -54,12 +62,16 @@ ALTER TYPE public.enum_businesses_subscription_status OWNER TO loyalty_user;
 -- Name: enum_customer_segments_calculation_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_customer_segments_calculation_status AS ENUM (
-    'pending',
-    'calculating',
-    'completed',
-    'error'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_customer_segments_calculation_status') THEN
+        CREATE TYPE public.enum_customer_segments_calculation_status AS ENUM (
+            'pending',
+            'calculating',
+            'completed',
+            'error'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_customer_segments_calculation_status OWNER TO loyalty_user;
@@ -68,12 +80,16 @@ ALTER TYPE public.enum_customer_segments_calculation_status OWNER TO loyalty_use
 -- Name: enum_customer_segments_gender; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_customer_segments_gender AS ENUM (
-    'male',
-    'female',
-    'other',
-    'any'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_customer_segments_gender') THEN
+        CREATE TYPE public.enum_customer_segments_gender AS ENUM (
+            'male',
+            'female',
+            'other',
+            'any'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_customer_segments_gender OWNER TO loyalty_user;
@@ -82,13 +98,17 @@ ALTER TYPE public.enum_customer_segments_gender OWNER TO loyalty_user;
 -- Name: enum_customer_segments_loyalty_tier; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_customer_segments_loyalty_tier AS ENUM (
-    'new',
-    'bronze',
-    'silver',
-    'gold',
-    'platinum'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_customer_segments_loyalty_tier') THEN
+        CREATE TYPE public.enum_customer_segments_loyalty_tier AS ENUM (
+            'new',
+            'bronze',
+            'silver',
+            'gold',
+            'platinum'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_customer_segments_loyalty_tier OWNER TO loyalty_user;
@@ -97,13 +117,17 @@ ALTER TYPE public.enum_customer_segments_loyalty_tier OWNER TO loyalty_user;
 -- Name: enum_customer_segments_refresh_frequency; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_customer_segments_refresh_frequency AS ENUM (
-    'real_time',
-    'hourly',
-    'daily',
-    'weekly',
-    'manual'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_customer_segments_refresh_frequency') THEN
+        CREATE TYPE public.enum_customer_segments_refresh_frequency AS ENUM (
+            'real_time',
+            'hourly',
+            'daily',
+            'weekly',
+            'manual'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_customer_segments_refresh_frequency OWNER TO loyalty_user;
@@ -112,13 +136,17 @@ ALTER TYPE public.enum_customer_segments_refresh_frequency OWNER TO loyalty_user
 -- Name: enum_customer_segments_type; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_customer_segments_type AS ENUM (
-    'static',
-    'dynamic',
-    'behavioral',
-    'demographic',
-    'engagement'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_customer_segments_type') THEN
+        CREATE TYPE public.enum_customer_segments_type AS ENUM (
+            'static',
+            'dynamic',
+            'behavioral',
+            'demographic',
+            'engagement'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_customer_segments_type OWNER TO loyalty_user;
@@ -127,13 +155,17 @@ ALTER TYPE public.enum_customer_segments_type OWNER TO loyalty_user;
 -- Name: enum_invoices_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_invoices_status AS ENUM (
-    'draft',
-    'issued',
-    'paid',
-    'overdue',
-    'cancelled'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_invoices_status') THEN
+        CREATE TYPE public.enum_invoices_status AS ENUM (
+            'draft',
+            'issued',
+            'paid',
+            'overdue',
+            'cancelled'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_invoices_status OWNER TO loyalty_user;
@@ -142,10 +174,14 @@ ALTER TYPE public.enum_invoices_status OWNER TO loyalty_user;
 -- Name: enum_notification_campaigns_ab_test_variant; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_notification_campaigns_ab_test_variant AS ENUM (
-    'A',
-    'B'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_notification_campaigns_ab_test_variant') THEN
+        CREATE TYPE public.enum_notification_campaigns_ab_test_variant AS ENUM (
+            'A',
+            'B'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_notification_campaigns_ab_test_variant OWNER TO loyalty_user;
@@ -154,13 +190,17 @@ ALTER TYPE public.enum_notification_campaigns_ab_test_variant OWNER TO loyalty_u
 -- Name: enum_notification_campaigns_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_notification_campaigns_status AS ENUM (
-    'draft',
-    'active',
-    'paused',
-    'completed',
-    'cancelled'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_notification_campaigns_status') THEN
+        CREATE TYPE public.enum_notification_campaigns_status AS ENUM (
+            'draft',
+            'active',
+            'paused',
+            'completed',
+            'cancelled'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_notification_campaigns_status OWNER TO loyalty_user;
@@ -169,12 +209,16 @@ ALTER TYPE public.enum_notification_campaigns_status OWNER TO loyalty_user;
 -- Name: enum_notification_campaigns_target_type; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_notification_campaigns_target_type AS ENUM (
-    'all_customers',
-    'segment',
-    'individual',
-    'custom_filter'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_notification_campaigns_target_type') THEN
+        CREATE TYPE public.enum_notification_campaigns_target_type AS ENUM (
+            'all_customers',
+            'segment',
+            'individual',
+            'custom_filter'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_notification_campaigns_target_type OWNER TO loyalty_user;
@@ -183,14 +227,18 @@ ALTER TYPE public.enum_notification_campaigns_target_type OWNER TO loyalty_user;
 -- Name: enum_notification_campaigns_trigger_type; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_notification_campaigns_trigger_type AS ENUM (
-    'birthday',
-    'progress_milestone',
-    'reward_completion',
-    'inactivity',
-    'new_customer',
-    'custom'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_notification_campaigns_trigger_type') THEN
+        CREATE TYPE public.enum_notification_campaigns_trigger_type AS ENUM (
+            'birthday',
+            'progress_milestone',
+            'reward_completion',
+            'inactivity',
+            'new_customer',
+            'custom'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_notification_campaigns_trigger_type OWNER TO loyalty_user;
@@ -199,11 +247,15 @@ ALTER TYPE public.enum_notification_campaigns_trigger_type OWNER TO loyalty_user
 -- Name: enum_notification_campaigns_type; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_notification_campaigns_type AS ENUM (
-    'manual',
-    'automated',
-    'scheduled'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_notification_campaigns_type') THEN
+        CREATE TYPE public.enum_notification_campaigns_type AS ENUM (
+            'manual',
+            'automated',
+            'scheduled'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_notification_campaigns_type OWNER TO loyalty_user;
@@ -216,11 +268,15 @@ ALTER TYPE public.enum_notification_campaigns_type OWNER TO loyalty_user;
 -- Name: enum_payments_payment_method; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_payments_payment_method AS ENUM (
-    'card',
-    'apple_pay',
-    'stc_pay'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_payments_payment_method') THEN
+        CREATE TYPE public.enum_payments_payment_method AS ENUM (
+            'card',
+            'apple_pay',
+            'stc_pay'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_payments_payment_method OWNER TO loyalty_user;
@@ -229,13 +285,17 @@ ALTER TYPE public.enum_payments_payment_method OWNER TO loyalty_user;
 -- Name: enum_payments_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_payments_status AS ENUM (
-    'pending',
-    'paid',
-    'failed',
-    'refunded',
-    'cancelled'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_payments_status') THEN
+        CREATE TYPE public.enum_payments_status AS ENUM (
+            'pending',
+            'paid',
+            'failed',
+            'refunded',
+            'cancelled'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_payments_status OWNER TO loyalty_user;
@@ -244,11 +304,15 @@ ALTER TYPE public.enum_payments_status OWNER TO loyalty_user;
 -- Name: enum_platform_admins_role; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_platform_admins_role AS ENUM (
-    'super_admin',
-    'admin',
-    'support'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_platform_admins_role') THEN
+        CREATE TYPE public.enum_platform_admins_role AS ENUM (
+            'super_admin',
+            'admin',
+            'support'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_platform_admins_role OWNER TO loyalty_user;
@@ -257,11 +321,15 @@ ALTER TYPE public.enum_platform_admins_role OWNER TO loyalty_user;
 -- Name: enum_platform_admins_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_platform_admins_status AS ENUM (
-    'active',
-    'inactive',
-    'suspended'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_platform_admins_status') THEN
+        CREATE TYPE public.enum_platform_admins_status AS ENUM (
+            'active',
+            'inactive',
+            'suspended'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_platform_admins_status OWNER TO loyalty_user;
@@ -270,10 +338,14 @@ ALTER TYPE public.enum_platform_admins_status OWNER TO loyalty_user;
 -- Name: enum_product_categories_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_product_categories_status AS ENUM (
-    'active',
-    'inactive'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_product_categories_status') THEN
+        CREATE TYPE public.enum_product_categories_status AS ENUM (
+            'active',
+            'inactive'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_product_categories_status OWNER TO loyalty_user;
@@ -282,11 +354,15 @@ ALTER TYPE public.enum_product_categories_status OWNER TO loyalty_user;
 -- Name: enum_products_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_products_status AS ENUM (
-    'active',
-    'inactive',
-    'out_of_stock'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_products_status') THEN
+        CREATE TYPE public.enum_products_status AS ENUM (
+            'active',
+            'inactive',
+            'out_of_stock'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_products_status OWNER TO loyalty_user;
@@ -295,11 +371,15 @@ ALTER TYPE public.enum_products_status OWNER TO loyalty_user;
 -- Name: enum_receipts_format; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_receipts_format AS ENUM (
-    'thermal',
-    'a4',
-    'digital'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_receipts_format') THEN
+        CREATE TYPE public.enum_receipts_format AS ENUM (
+            'thermal',
+            'a4',
+            'digital'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_receipts_format OWNER TO loyalty_user;
@@ -308,12 +388,16 @@ ALTER TYPE public.enum_receipts_format OWNER TO loyalty_user;
 -- Name: enum_sales_payment_method; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_sales_payment_method AS ENUM (
-    'cash',
-    'card',
-    'gift_offer',
-    'mixed'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_sales_payment_method') THEN
+        CREATE TYPE public.enum_sales_payment_method AS ENUM (
+            'cash',
+            'card',
+            'gift_offer',
+            'mixed'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_sales_payment_method OWNER TO loyalty_user;
@@ -322,11 +406,15 @@ ALTER TYPE public.enum_sales_payment_method OWNER TO loyalty_user;
 -- Name: enum_sales_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_sales_status AS ENUM (
-    'completed',
-    'cancelled',
-    'refunded'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_sales_status') THEN
+        CREATE TYPE public.enum_sales_status AS ENUM (
+            'completed',
+            'cancelled',
+            'refunded'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_sales_status OWNER TO loyalty_user;
@@ -335,11 +423,15 @@ ALTER TYPE public.enum_sales_status OWNER TO loyalty_user;
 -- Name: enum_subscriptions_plan_type; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_subscriptions_plan_type AS ENUM (
-    'free',
-    'professional',
-    'enterprise'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_subscriptions_plan_type') THEN
+        CREATE TYPE public.enum_subscriptions_plan_type AS ENUM (
+            'free',
+            'professional',
+            'enterprise'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_subscriptions_plan_type OWNER TO loyalty_user;
@@ -348,13 +440,17 @@ ALTER TYPE public.enum_subscriptions_plan_type OWNER TO loyalty_user;
 -- Name: enum_subscriptions_status; Type: TYPE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TYPE public.enum_subscriptions_status AS ENUM (
-    'trial',
-    'active',
-    'past_due',
-    'cancelled',
-    'expired'
-);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_subscriptions_status') THEN
+        CREATE TYPE public.enum_subscriptions_status AS ENUM (
+            'trial',
+            'active',
+            'past_due',
+            'cancelled',
+            'expired'
+        );
+    END IF;
+END $$;
 
 
 ALTER TYPE public.enum_subscriptions_status OWNER TO loyalty_user;

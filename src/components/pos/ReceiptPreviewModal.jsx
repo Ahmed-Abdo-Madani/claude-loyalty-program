@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { endpoints } from '../../config/api'
+import { endpoints, apiBaseUrl } from '../../config/api'
 import { managerApiRequest } from '../../utils/secureAuth'
 
 /**
@@ -133,7 +133,7 @@ export default function ReceiptPreviewModal({ isOpen, onClose, saleId, receiptDa
               <div className="text-center border-b border-gray-200 dark:border-gray-700 pb-4">
                 {receipt.business.logo_url && (
                   <img
-                    src={receipt.business.logo_url}
+                    src={receipt.business.logo_url.startsWith('http') ? receipt.business.logo_url : `${apiBaseUrl}${receipt.business.logo_url}`}
                     alt="Business Logo"
                     className="h-16 mx-auto mb-3 object-contain"
                   />

@@ -1,5 +1,9 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
+import { getSecureAuthHeaders } from '../utils/secureAuth'
+import { endpoints, apiBaseUrl, secureApi } from '../config/api'
+import LogoUploadModal from './LogoUploadModal'
 import {
   HomeIcon,
   GiftIcon,
@@ -16,6 +20,28 @@ import {
 function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut }) {
   const { t } = useTranslation('dashboard')
   const { isDark, toggleTheme } = useTheme()
+  const [logoInfo, setLogoInfo] = useState(null)
+  const [showLogoModal, setShowLogoModal] = useState(false)
+
+  // Load business logo info
+  useEffect(() => {
+    loadLogoInfo()
+  }, [])
+
+  const loadLogoInfo = async () => {
+    try {
+      const response = await secureApi.get(endpoints.businessLogoInfo)
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data.has_logo) {
+          setLogoInfo(result.data)
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load logo info:', error)
+    }
+  }
 
   // Navigation items with Heroicons
   const navigationItems = [
@@ -141,12 +167,27 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
       {/* Sidebar Footer */}
       <div className="p-4 mt-auto border-t border-white/10 bg-black/20">
         {/* User Card */}
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 mb-4 group cursor-pointer hover:bg-white/10 transition-colors">
-          <div className="w-9 h-9 bg-gradient-to-tr from-slate-700 to-slate-600 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white/10">
-            <span className="text-white font-bold text-xs">
-              {user?.businessName?.charAt(0)?.toUpperCase()}
-            </span>
-          </div>
+        <div
+          onClick={() => setShowLogoModal(true)}
+          className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 mb-4 group cursor-pointer hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-[1.02]"
+          title={t('logoUpload.clickToUpload', 'Click to upload/change logo')}
+        >
+          {logoInfo ? (
+            <div className="w-10 h-10 rounded-full border-2 border-white/10 group-hover:border-primary/50 overflow-hidden flex-shrink-0 bg-white transition-colors duration-300">
+              <img
+                src={logoInfo.logo_url.startsWith('http') ? logoInfo.logo_url : `${apiBaseUrl}${logoInfo.logo_url}`}
+                alt={user?.businessName}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-gradient-to-tr from-slate-700 to-slate-600 rounded-full flex items-center justify-center flex-shrink-0 ring-2 ring-white/10 group-hover:ring-primary/50 transition-all">
+              <span className="text-white font-bold text-xs group-hover:scale-110 transition-transform">
+                {user?.businessName?.charAt(0)?.toUpperCase()}
+              </span>
+            </div>
+          )}
+
           <div className="min-w-0 flex-1">
             <p className="text-white font-semibold text-xs truncate group-hover:text-primary-light transition-colors">{user?.businessName}</p>
             <p className="text-white/40 text-[10px] truncate">{user?.userEmail}</p>
@@ -172,6 +213,18 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
           </button>
         </div>
       </div>
+      <LogoUploadModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onLogoUpdate={(data) => {
+          loadLogoInfo()
+          if (data && data.has_logo) {
+            setLogoInfo(data)
+          } else {
+            setLogoInfo(null)
+          }
+        }}
+      />
     </aside>
   )
 }

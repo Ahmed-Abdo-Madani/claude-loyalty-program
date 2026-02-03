@@ -155,6 +155,8 @@
     "notIncluded": "غير متضمن"
   },
   "checkout": {
+    "loading": "جاري تجهيز الدفع الآمن...",
+    "posOperations": "عمليات نقاط البيع",
     "title": "الدفع - {{plan}}",
     "subtitle": "أكمل دفع اشتراكك",
     "planLabel": "الخطة المختارة",
@@ -184,6 +186,7 @@
     "terminals": "الأجهزة",
     "whyChooseMadna": "لماذا تختار مدنا مقابل المنافسين؟",
     "compareWithCompetitors": "مقارنة مع المنافسين",
+    "plansFetchError": "فشل تحميل تفاصيل الخطة. يرجى التحقق من الاتصال.",
     "invalidPlan": "الخطة المختارة غير متوفرة",
     "networkError": "فشل الاتصال. يرجى التحقق من الإنترنت وإعادة المحاولة.",
     "whatsIncluded": "ماذا تتضمن",

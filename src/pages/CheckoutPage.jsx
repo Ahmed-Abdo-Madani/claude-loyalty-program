@@ -174,8 +174,8 @@ export default function CheckoutPage() {
     }
   }
 
-  const handleBillingIntervalChange = (val) => {
-    setBillingInterval(val ? 'annual' : 'monthly')
+  const handleBillingIntervalChange = () => {
+    setBillingInterval(prev => prev === 'annual' ? 'monthly' : 'annual')
   }
 
   const handleProceed = () => {
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12" dir={i18n.dir()}>
-      <SEO titleKey="checkout.title" placeholders={{ plan: getCurrentPlanDetails.name }} noindex={true} />
+      <SEO titleKey="pages.checkout.title" placeholders={{ plan: getCurrentPlanDetails.name }} noindex={true} />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -234,48 +234,55 @@ export default function CheckoutPage() {
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
           {/* Header */}
-          <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 bg-[url('/patterns/grid.svg')]"></div>
+          <div className="bg-gradient-to-br from-primary via-blue-600 to-primary-dark px-6 py-10 text-center relative overflow-hidden">
+            <div className="absolute inset-0 opacity-15 bg-[url('/patterns/grid.svg')] mix-blend-overlay"></div>
+            <div className="absolute inset-0 bg-black/5"></div>
 
-            <h1 className="text-2xl font-bold text-white mb-2 relative z-10">
-              {t('checkout.title') || 'Secure Checkout'}
+            <h1 className="text-2xl md:text-3xl font-extrabold text-white mb-3 relative z-10 drop-shadow-sm">
+              {t('checkout.title', { plan: getCurrentPlanDetails.name }) || 'Secure Checkout'}
             </h1>
-            <p className="text-blue-100 relative z-10 text-sm md:text-base">
+            <p className="text-blue-50/90 relative z-10 text-sm md:text-base max-w-lg mx-auto leading-relaxed font-medium">
               {t('checkout.secureNote') || 'Complete your subscription securely with Lemon Squeezy'}
             </p>
           </div>
 
           <div className="p-6 md:p-8">
             {/* Billing Toggle */}
-            <div className="flex flex-col items-center justify-center mb-8 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-              <span className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            <div className="flex flex-col items-center justify-center mb-8 bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
+              <span className="text-sm font-bold text-gray-900 dark:text-white mb-4 uppercase tracking-wider">
                 {t('checkout.billingInterval') || 'Billing Frequency'}
               </span>
-              <div className="flex items-center space-x-4 rtl:space-x-reverse">
-                <span className={`text-sm ${billingInterval === 'monthly' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {t('checkout.monthly') || 'Monthly'}
-                </span>
 
-                <button
-                  onClick={handleBillingIntervalChange}
-                  className={`${billingInterval === 'annual' ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-600'
-                    } relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
-                >
-                  <span
-                    className={`${billingInterval === 'annual' ? 'translate-x-6 rtl:-translate-x-6' : 'translate-x-1 rtl:-translate-x-1'
-                      } inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform`}
-                  />
-                </button>
+              <div dir="ltr" className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm transition-colors ${billingInterval === 'monthly' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {t('checkout.monthly') || 'Monthly'}
+                  </span>
 
-                <span className={`text-sm ${billingInterval === 'annual' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {t('checkout.annual') || 'Annual'}
-                </span>
+                  <button
+                    onClick={handleBillingIntervalChange}
+                    className={`${billingInterval === 'annual' ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+                      } relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 hover:opacity-90`}
+                  >
+                    <span
+                      className={`${billingInterval === 'annual' ? 'translate-x-6' : 'translate-x-1'
+                        } inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out`}
+                    />
+                  </button>
+
+                  <span className={`text-sm transition-colors ${billingInterval === 'annual' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {t('checkout.annual') || 'Annual'}
+                  </span>
+                </div>
 
                 {/* Savings Badge */}
                 {billingInterval === 'annual' && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 animate-pulse">
-                    {t('checkout.savings', { amount: getCurrentPlanDetails.savings, months: 2 }) || `Save ${getCurrentPlanDetails.savings} SAR`}
-                  </span>
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-300">
+                    <span dir="ltr" className="inline-flex items-center px-3 py-1 rounded-full text-[10px] md:text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400 border border-green-200 dark:border-green-800/50 shadow-sm whitespace-nowrap">
+                      <span className="mr-1.5 flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                      {t('checkout.savings', { amount: getCurrentPlanDetails.savings.toLocaleString(), months: 2 }) || `Save ${getCurrentPlanDetails.savings.toLocaleString()} SAR`}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

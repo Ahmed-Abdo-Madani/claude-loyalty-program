@@ -155,6 +155,8 @@
     "notIncluded": "Not Included"
   },
   "checkout": {
+    "loading": "Preparing secure checkout...",
+    "posOperations": "POS Operations",
     "title": "Checkout - {{plan}}",
     "subtitle": "Complete your subscription payment",
     "planLabel": "Selected Plan",
@@ -184,6 +186,7 @@
     "terminals": "Terminals",
     "whyChooseMadna": "Why choose Madna vs Competitors?",
     "compareWithCompetitors": "Compare with competitors",
+    "plansFetchError": "Failed to load plan details. Please check your connection.",
     "invalidPlan": "Selected plan is not available",
     "networkError": "Connection failed. Please check your internet and retry.",
     "whatsIncluded": "What's Included",
