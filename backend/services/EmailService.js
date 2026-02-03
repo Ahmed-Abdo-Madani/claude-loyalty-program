@@ -1,0 +1,260 @@
+import { Resend } from 'resend';
+import { randomUUID } from 'crypto';
+import logger from '../config/logger.js';
+
+/**
+ * EmailService - Email processing service using Resend
+ * Handles transactional emails, receipts, and business notifications
+ * 
+ * API Documentation: https://resend.com/docs
+ * Authentication: Bearer Token (API Key)
+ */
+class EmailService {
+  static HEADERS = {
+    'X-Entity-Ref-ID': randomUUID(), // Tracking ID for logs
+  };
+
+  static resendClient = null;
+
+  /**
+   * Get Resend API client instance (Singleton pattern)
+   * @returns {Resend} Resend client instance
+   * @throws {Error} If RESEND_API_KEY is not configured
+   */
+  static getResendClient() {
+    if (this.resendClient) {
+      return this.resendClient;
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+
+    if (!apiKey) {
+      const error = new Error('RESEND_API_KEY is not configured in environment variables');
+      logger.error('Resend configuration error', { error: error.message });
+      throw error;
+    }
+
+    this.resendClient = new Resend(apiKey);
+    logger.debug('Resend client initialized');
+
+    return this.resendClient;
+  }
+
+  /**
+   * Validate required email configuration
+   * @returns {boolean} True if configuration is valid
+   * @throws {Error} If configuration is missing
+   */
+  static validateConfig() {
+    const requiredVars = ['RESEND_API_KEY', 'EMAIL_FROM'];
+    const missingVars = requiredVars.filter(v => !process.env[v]);
+
+    if (missingVars.length > 0) {
+      const error = new Error(`Missing required email configuration: ${missingVars.join(', ')}`);
+      logger.error('Email configuration error', { missingVars });
+      throw error;
+    }
+
+    return true;
+  }
+
+  /**
+   * Send a payment receipt to a customer
+   * @param {string} customerEmail - Customer email address
+   * @param {Buffer} receiptPdf - PDF buffer of the receipt
+   * @param {Object} receiptData - Receipt metadata
+   * @param {string} receiptData.receiptNumber - Receipt reference number
+   * @param {string} receiptData.businessName - Name of the business
+   * @param {string} receiptData.saleDate - Date of sale
+   * @param {string} receiptData.total - Total amount formatted
+   * @returns {Promise<Object>} Send result
+   */
+  static async sendReceipt(customerEmail, receiptPdf, receiptData) {
+    const { receiptNumber, businessName } = receiptData;
+
+    const subject = `Receipt #${receiptNumber} - ${businessName}`;
+
+    // Simple HTML template for receipt
+    // In Phase 5, this will be replaced with a robust template engine
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Receipt from ${businessName}</h2>
+        <p>Thank you for your business. Here is your receipt.</p>
+        <p><strong>Receipt Number:</strong> ${receiptNumber}</p>
+        <p><strong>Date:</strong> ${receiptData.saleDate}</p>
+        <p><strong>Total:</strong> ${receiptData.total}</p>
+        <hr>
+        <p>Please find the PDF receipt attached.</p>
+      </div>
+    `;
+
+    const text = `Receipt from ${businessName}\n\nThank you for your business. Please find your receipt #${receiptNumber} attached.\n\nDate: ${receiptData.saleDate}\nTotal: ${receiptData.total}`;
+
+    return this.sendTransactional({
+      to: customerEmail,
+      subject,
+      html,
+      text,
+      attachments: [
+        {
+          filename: `receipt-${receiptNumber}.pdf`,
+          content: receiptPdf
+        }
+      ]
+    });
+  }
+
+  /**
+   * Send a notification to a business owner
+   * @param {string} businessEmail - Business owner email
+   * @param {string} subject - Email subject
+   * @param {string} message - Email body (HTML)
+   * @param {Object} options - Optional parameters
+   * @returns {Promise<Object>} Send result
+   */
+  static async sendBusinessNotification(businessEmail, subject, message, options = {}) {
+    const { priority } = options;
+
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h3>Business Notification</h3>
+        <div style="padding: 15px; border: 1px solid #eee; border-radius: 5px;">
+          ${message}
+        </div>
+        <p style="font-size: 12px; color: #888; margin-top: 20px;">
+          Sent by Madn Notification System
+        </p>
+      </div>
+    `;
+
+    return this.sendTransactional({
+      to: businessEmail,
+      subject,
+      html,
+      text: message.replace(/<[^>]*>?/gm, ''), // Strip HTML for text version
+      priority,
+      ...options
+    });
+  }
+
+  /**
+   * Send a transactional email via Resend
+   * @param {Object} emailData - Email details
+   * @param {string} emailData.to - Recipient email
+   * @param {string} emailData.subject - Subject line
+   * @param {string} emailData.html - HTML content
+   * @param {string} emailData.text - Plain text content (optional, auto-generated if missing)
+   * @param {Array} emailData.attachments - Attachments array usually { filename, content }
+   * @param {string} emailData.priority - 'high', 'normal', 'low' (default: normal)
+   * @returns {Promise<Object>} Result with success status and message ID
+   */
+  static async sendTransactional(emailData) {
+    const {
+      to,
+      subject,
+      html,
+      text,
+      attachments = [],
+      priority
+    } = emailData;
+
+    try {
+      this.validateConfig();
+
+      // Validate inputs
+      if (!to || !subject) {
+        throw new Error('Missing required fields: to, subject');
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(to)) {
+        throw new Error(`Invalid email address format: ${to}`);
+      }
+
+      const client = this.getResendClient();
+      const from = process.env.EMAIL_FROM;
+      const replyTo = process.env.EMAIL_REPLY_TO || from;
+
+      logger.debug('Sending email via Resend', {
+        to,
+        subject,
+        attachmentCount: attachments.length
+      });
+
+      const payload = {
+        from,
+        to,
+        subject,
+        html,
+        text: text || html.replace(/<[^>]*>?/gm, ''), // Fallback text generation
+        reply_to: replyTo,
+        attachments,
+        headers: priority === 'high' ? { 'X-Priority': '1' } : undefined
+      };
+
+      const result = await client.emails.send(payload);
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      logger.info('Email sent successfully', {
+        messageId: result.data?.id,
+        to
+      });
+
+      return {
+        success: true,
+        externalId: result.data?.id,
+        provider: 'resend'
+      };
+
+    } catch (error) {
+      logger.error('Failed to send email', {
+        to,
+        subject,
+        error: error.message,
+        name: error.name
+      });
+
+      throw this.handleResendError(error);
+    }
+  }
+
+  /**
+   * Handle Resend API errors and standardize output
+   * @param {Error} error - Original error object
+   * @returns {Error} Standardized error object
+   */
+  static handleResendError(error) {
+    // Already a standard error?
+    if (error.type && error.code) return error;
+
+    let message = error.message || 'Unknown email error';
+    let code = 'EMAIL_SEND_FAILED';
+
+    // Map common Resend errors
+    // Resend SDK errors often have a 'name' or 'statusCode'
+    if (message.includes('API key') || error.statusCode === 401) {
+      message = 'Invalid Resend API key';
+      code = 'AUTH_ERROR';
+    } else if (error.statusCode === 429) {
+      message = 'Resend rate limit exceeded';
+      code = 'RATE_LIMIT';
+    } else if (error.statusCode === 400) {
+      code = 'VALIDATION_ERROR';
+    } else if (message.includes('timeout') || message.includes('network')) {
+      message = 'Resend API timeout or network error';
+      code = 'NETWORK_ERROR';
+    }
+
+    const standardError = new Error(message);
+    standardError.code = code;
+    standardError.originalError = error;
+
+    return standardError;
+  }
+}
+
+export default EmailService;

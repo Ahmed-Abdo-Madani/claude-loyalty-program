@@ -2,6 +2,7 @@ import { NotificationCampaign, NotificationLog, Customer, Business } from '../mo
 import logger from '../config/logger.js'
 import { Op } from 'sequelize'
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
+import EmailService from './EmailService.js'
 
 class NotificationService {
   constructor() {
@@ -438,33 +439,26 @@ class NotificationService {
     try {
       logger.info(`📧 Sending email to ${customer.email}`, { subject: message.subject })
 
-      // Extract attachment if provided
       const { attachments = [] } = options
 
-      // In real implementation, integrate with email service:
-      // const emailService = new EmailService() // SendGrid, AWS SES, etc.
-      // const result = await emailService.send({
-      //   to: customer.email,
-      //   subject: message.subject,
-      //   html: message.html,
-      //   text: message.text,
-      //   attachments: attachments // [{ filename, content, contentType }]
-      // })
+      // Use EmailService for real email delivery
+      const result = await EmailService.sendTransactional({
+        to: customer.email,
+        subject: message.subject,
+        html: message.html || message.body, // Support both html and body properties
+        text: message.text,
+        attachments
+      })
 
-      // Simulate successful send
-      const externalId = `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-      // Log attachment info if present
-      if (attachments.length > 0) {
-        logger.info(`📎 Email includes ${attachments.length} attachment(s)`, {
-          filenames: attachments.map(a => a.filename)
-        })
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
+      // Return consistent format required by NotificationLog
       return {
         success: true,
-        externalId,
-        provider: 'sendgrid'
+        externalId: result.externalId,
+        provider: result.provider || 'resend'
       }
 
     } catch (error) {
@@ -580,8 +574,8 @@ class NotificationService {
       ])
 
       return dailyCount < limits.maxPerDay &&
-             weeklyCount < limits.maxPerWeek &&
-             monthlyCount < limits.maxPerMonth
+        weeklyCount < limits.maxPerWeek &&
+        monthlyCount < limits.maxPerMonth
 
     } catch (error) {
       logger.error('Rate limit check failed', { error: error.message })
@@ -787,9 +781,9 @@ class NotificationService {
 
         // If campaign has linked_offer_id, record offer conversion
         if (campaign.linked_offer_id) {
-          logger.info('Campaign conversion linked to offer', { 
-            campaign_id: campaignId, 
-            offer_id: campaign.linked_offer_id 
+          logger.info('Campaign conversion linked to offer', {
+            campaign_id: campaignId,
+            offer_id: campaign.linked_offer_id
           })
         }
       }
@@ -857,7 +851,7 @@ class NotificationService {
 
       // Send through email and SMS for maximum reach
       const channels = ['email', 'sms']
-      
+
       // Simulate sending (reuse existing channel logic)
       const results = []
       for (const channel of channels) {
@@ -929,7 +923,7 @@ class NotificationService {
       // Send via email and SMS
       const results = []
       const channels = ['email', 'sms']
-      
+
       for (const channel of channels) {
         try {
           let result
@@ -1039,7 +1033,7 @@ class NotificationService {
       // Send via email and SMS for confirmation
       const results = []
       const channels = ['email', 'sms']
-      
+
       for (const channel of channels) {
         try {
           let result
@@ -1080,14 +1074,22 @@ class NotificationService {
     try {
       logger.info(`📧 Sending business email to ${business.email}`, { subject: message.subject })
 
-      // In production, integrate with email service (SendGrid, AWS SES, etc.)
-      // For now, simulate successful send
-      const externalId = `business_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      // Use EmailService for business notifications
+      const result = await EmailService.sendBusinessNotification(
+        business.email,
+        message.subject,
+        message.body,
+        { priority: 'high' }
+      )
+
+      if (!result.success) {
+        throw new Error(result.error)
+      }
 
       return {
         success: true,
-        externalId,
-        provider: 'sendgrid'
+        externalId: result.externalId,
+        provider: result.provider || 'resend'
       }
 
     } catch (error) {
@@ -1105,6 +1107,8 @@ class NotificationService {
     try {
       logger.info(`📱 Sending business SMS to ${business.phone}`, { message: message.body?.substring(0, 50) })
 
+      // TODO: Integrate with SMS provider (Twilio, AWS SNS, etc.) in future phase
+      // For now, this remains a placeholder simulation
       // In production, integrate with SMS service (Twilio, AWS SNS, etc.)
       // For now, simulate successful send
       const externalId = `business_sms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
