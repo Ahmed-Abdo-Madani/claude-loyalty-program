@@ -352,11 +352,6 @@ function DashboardHeader({ user }) {
                   <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 dark:text-gray-200 truncate">
                     {user?.businessName?.toUpperCase() || 'BUSINESS'} <span className="font-normal hidden sm:inline">{t('header.dashboard').toUpperCase()}</span>
                   </h1>
-                  {logoInfo && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-                      {t('header.businessLogoActive')}
-                    </p>
-                  )}
                 </div>
               </div>
 

@@ -459,7 +459,7 @@ ALTER TYPE public.enum_subscriptions_status OWNER TO loyalty_user;
 -- Name: ensure_main_branch(); Type: FUNCTION; Schema: public; Owner: loyalty_user
 --
 
-CREATE FUNCTION public.ensure_main_branch() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.ensure_main_branch() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -493,7 +493,7 @@ ALTER FUNCTION public.ensure_main_branch() OWNER TO loyalty_user;
 -- Name: prevent_main_branch_deletion(); Type: FUNCTION; Schema: public; Owner: loyalty_user
 --
 
-CREATE FUNCTION public.prevent_main_branch_deletion() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.prevent_main_branch_deletion() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -517,7 +517,7 @@ ALTER FUNCTION public.prevent_main_branch_deletion() OWNER TO loyalty_user;
 -- Name: update_branch_stats(); Type: FUNCTION; Schema: public; Owner: loyalty_user
 --
 
-CREATE FUNCTION public.update_branch_stats() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.update_branch_stats() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -545,7 +545,7 @@ ALTER FUNCTION public.update_branch_stats() OWNER TO loyalty_user;
 -- Name: update_offer_stats(); Type: FUNCTION; Schema: public; Owner: loyalty_user
 --
 
-CREATE FUNCTION public.update_offer_stats() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.update_offer_stats() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -579,7 +579,7 @@ ALTER FUNCTION public.update_offer_stats() OWNER TO loyalty_user;
 -- Name: update_offer_status(); Type: FUNCTION; Schema: public; Owner: loyalty_user
 --
 
-CREATE FUNCTION public.update_offer_status() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.update_offer_status() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
@@ -608,7 +608,7 @@ SET default_table_access_method = heap;
 -- Name: branches; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.branches (
+CREATE TABLE IF NOT EXISTS public.branches (
     id integer NOT NULL,
     business_id character varying(50),
     name character varying(255) NOT NULL,
@@ -648,7 +648,7 @@ ALTER TABLE public.branches OWNER TO loyalty_user;
 -- Name: businesses; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.businesses (
+CREATE TABLE IF NOT EXISTS public.businesses (
     id integer NOT NULL,
     email character varying(255) NOT NULL,
     password_hash character varying(255) NOT NULL,
@@ -703,7 +703,7 @@ ALTER TABLE public.businesses OWNER TO loyalty_user;
 -- Name: offers; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.offers (
+CREATE TABLE IF NOT EXISTS public.offers (
     id integer NOT NULL,
     business_id character varying(50),
     branch_id character varying(50),
@@ -740,7 +740,7 @@ ALTER TABLE public.offers OWNER TO loyalty_user;
 -- Name: wallet_passes; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.wallet_passes (
+CREATE TABLE IF NOT EXISTS public.wallet_passes (
     id SERIAL PRIMARY KEY,
     customer_id character varying(50) NOT NULL,
     progress_id integer NOT NULL,
@@ -775,7 +775,7 @@ ALTER TABLE public.wallet_passes OWNER TO loyalty_user;
 -- Name: devices; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.devices (
+CREATE TABLE IF NOT EXISTS public.devices (
     id SERIAL PRIMARY KEY,
     device_library_identifier character varying(100) NOT NULL UNIQUE,
     push_token character varying(200) NOT NULL,
@@ -791,7 +791,7 @@ ALTER TABLE public.devices OWNER TO loyalty_user;
 -- Name: device_registrations; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.device_registrations (
+CREATE TABLE IF NOT EXISTS public.device_registrations (
     id SERIAL PRIMARY KEY,
     device_id integer NOT NULL,
     wallet_pass_id integer NOT NULL,
@@ -820,7 +820,7 @@ COMMENT ON COLUMN public.offers.apple_pass_type IS 'Apple Wallet pass style: sto
 -- Name: active_offers; Type: VIEW; Schema: public; Owner: loyalty_user
 --
 
-CREATE VIEW public.active_offers AS
+CREATE OR REPLACE VIEW public.active_offers AS
  SELECT o.id,
     o.business_id,
     o.branch_id,
@@ -857,7 +857,7 @@ ALTER TABLE public.active_offers OWNER TO loyalty_user;
 -- Name: admin_sessions; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.admin_sessions (
+CREATE TABLE IF NOT EXISTS public.admin_sessions (
     id integer NOT NULL,
     admin_id integer NOT NULL,
     session_token character varying(255) NOT NULL,
@@ -875,7 +875,7 @@ ALTER TABLE public.admin_sessions OWNER TO loyalty_user;
 -- Name: admin_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.admin_sessions_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.admin_sessions_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -897,7 +897,7 @@ ALTER SEQUENCE public.admin_sessions_id_seq OWNED BY public.admin_sessions.id;
 -- Name: auto_engagement_configs; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.auto_engagement_configs (
+CREATE TABLE IF NOT EXISTS public.auto_engagement_configs (
     id integer NOT NULL,
     config_id character varying(30) NOT NULL,
     business_id character varying(50) NOT NULL,
@@ -1020,7 +1020,7 @@ COMMENT ON COLUMN public.auto_engagement_configs.updated_at IS 'Record last upda
 -- Name: auto_engagement_configs_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.auto_engagement_configs_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.auto_engagement_configs_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1042,7 +1042,7 @@ ALTER SEQUENCE public.auto_engagement_configs_id_seq OWNED BY public.auto_engage
 -- Name: branch_actions; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.branch_actions (
+CREATE TABLE IF NOT EXISTS public.branch_actions (
     id integer NOT NULL,
     branch_id integer,
     business_id integer,
@@ -1058,7 +1058,7 @@ ALTER TABLE public.branch_actions OWNER TO loyalty_user;
 -- Name: branch_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.branch_actions_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.branch_actions_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1080,7 +1080,7 @@ ALTER SEQUENCE public.branch_actions_id_seq OWNED BY public.branch_actions.id;
 -- Name: branch_offer_summary; Type: VIEW; Schema: public; Owner: loyalty_user
 --
 
-CREATE VIEW public.branch_offer_summary AS
+CREATE OR REPLACE VIEW public.branch_offer_summary AS
  SELECT b.public_id AS branch_id,
     b.name AS branch_name,
     o.public_id AS offer_id,
@@ -1099,7 +1099,7 @@ ALTER TABLE public.branch_offer_summary OWNER TO loyalty_user;
 -- Name: branch_performance; Type: VIEW; Schema: public; Owner: loyalty_user
 --
 
-CREATE VIEW public.branch_performance AS
+CREATE OR REPLACE VIEW public.branch_performance AS
  SELECT b.public_id AS id,
     b.name,
     b.status,
@@ -1126,7 +1126,7 @@ ALTER TABLE public.branch_performance OWNER TO loyalty_user;
 -- Name: branches_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.branches_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.branches_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1148,7 +1148,7 @@ ALTER SEQUENCE public.branches_id_seq OWNED BY public.branches.id;
 -- Name: business_sessions; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.business_sessions (
+CREATE TABLE IF NOT EXISTS public.business_sessions (
     id integer NOT NULL,
     business_id character varying(50) NOT NULL,
     session_token character varying(255) NOT NULL,
@@ -1217,7 +1217,7 @@ COMMENT ON COLUMN public.business_sessions.last_used_at IS 'Updated on each succ
 -- Name: business_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.business_sessions_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.business_sessions_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1239,7 +1239,7 @@ ALTER SEQUENCE public.business_sessions_id_seq OWNED BY public.business_sessions
 -- Name: businesses_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.businesses_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.businesses_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1261,7 +1261,7 @@ ALTER SEQUENCE public.businesses_id_seq OWNED BY public.businesses.id;
 -- Name: counters; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.counters (
+CREATE TABLE IF NOT EXISTS public.counters (
     id integer NOT NULL,
     counter_type character varying(50) NOT NULL,
     year integer NOT NULL,
@@ -1314,7 +1314,7 @@ COMMENT ON COLUMN public.counters.last_value IS 'Last used counter value';
 -- Name: counters_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.counters_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.counters_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1336,7 +1336,7 @@ ALTER SEQUENCE public.counters_id_seq OWNED BY public.counters.id;
 -- Name: customer_cards; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.customer_cards (
+CREATE TABLE IF NOT EXISTS public.customer_cards (
     id integer NOT NULL,
     customer_id integer,
     offer_id integer,
@@ -1354,7 +1354,7 @@ ALTER TABLE public.customer_cards OWNER TO loyalty_user;
 -- Name: customer_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.customer_cards_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.customer_cards_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1376,7 +1376,7 @@ ALTER SEQUENCE public.customer_cards_id_seq OWNED BY public.customer_cards.id;
 -- Name: customer_progress; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.customer_progress (
+CREATE TABLE IF NOT EXISTS public.customer_progress (
     id integer NOT NULL,
     customer_id character varying(50) NOT NULL,
     offer_id character varying(50) NOT NULL,
@@ -1408,7 +1408,7 @@ ALTER TABLE public.customer_progress OWNER TO loyalty_user;
 -- Name: customer_progress_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.customer_progress_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.customer_progress_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1430,7 +1430,7 @@ ALTER SEQUENCE public.customer_progress_id_seq OWNED BY public.customer_progress
 -- Name: customer_segments; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.customer_segments (
+CREATE TABLE IF NOT EXISTS public.customer_segments (
     id integer NOT NULL,
     segment_id character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
@@ -1483,7 +1483,7 @@ ALTER TABLE public.customer_segments OWNER TO loyalty_user;
 -- Name: customer_segments_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.customer_segments_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.customer_segments_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1505,7 +1505,7 @@ ALTER SEQUENCE public.customer_segments_id_seq OWNED BY public.customer_segments
 -- Name: customers; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.customers (
+CREATE TABLE IF NOT EXISTS public.customers (
     id integer NOT NULL,
     first_name character varying(100) NOT NULL,
     last_name character varying(100) NOT NULL,
@@ -1547,7 +1547,7 @@ ALTER TABLE public.customers OWNER TO loyalty_user;
 -- Name: customers_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.customers_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.customers_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1569,7 +1569,7 @@ ALTER SEQUENCE public.customers_id_seq OWNED BY public.customers.id;
 -- Name: invoices; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.invoices (
+CREATE TABLE IF NOT EXISTS public.invoices (
     id integer NOT NULL,
     invoice_number character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
@@ -1596,7 +1596,7 @@ ALTER TABLE public.invoices OWNER TO loyalty_user;
 -- Name: invoices_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.invoices_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.invoices_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1618,7 +1618,7 @@ ALTER SEQUENCE public.invoices_id_seq OWNED BY public.invoices.id;
 -- Name: notification_campaigns; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.notification_campaigns (
+CREATE TABLE IF NOT EXISTS public.notification_campaigns (
     id integer NOT NULL,
     campaign_id character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
@@ -1673,7 +1673,7 @@ ALTER TABLE public.notification_campaigns OWNER TO loyalty_user;
 -- Name: notification_campaigns_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.notification_campaigns_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.notification_campaigns_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1695,7 +1695,7 @@ ALTER SEQUENCE public.notification_campaigns_id_seq OWNED BY public.notification
 -- Name: offer_actions; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.offer_actions (
+CREATE TABLE IF NOT EXISTS public.offer_actions (
     id integer NOT NULL,
     offer_id integer,
     business_id integer,
@@ -1711,7 +1711,7 @@ ALTER TABLE public.offer_actions OWNER TO loyalty_user;
 -- Name: offer_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.offer_actions_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.offer_actions_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1733,7 +1733,7 @@ ALTER SEQUENCE public.offer_actions_id_seq OWNED BY public.offer_actions.id;
 -- Name: offers_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.offers_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.offers_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1755,7 +1755,7 @@ ALTER SEQUENCE public.offers_id_seq OWNED BY public.offers.id;
 -- Name: payments; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.payments (
+CREATE TABLE IF NOT EXISTS public.payments (
     public_id character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
     subscription_id character varying(50),
@@ -1782,7 +1782,7 @@ ALTER TABLE public.payments OWNER TO loyalty_user;
 -- Name: platform_admins; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.platform_admins (
+CREATE TABLE IF NOT EXISTS public.platform_admins (
     id integer NOT NULL,
     email character varying(255) NOT NULL,
     password_hash character varying(255) NOT NULL,
@@ -1802,7 +1802,7 @@ ALTER TABLE public.platform_admins OWNER TO loyalty_user;
 -- Name: platform_admins_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.platform_admins_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.platform_admins_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1824,7 +1824,7 @@ ALTER SEQUENCE public.platform_admins_id_seq OWNED BY public.platform_admins.id;
 -- Name: product_categories; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.product_categories (
+CREATE TABLE IF NOT EXISTS public.product_categories (
     public_id character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
     name character varying(255) NOT NULL,
@@ -1844,7 +1844,7 @@ ALTER TABLE public.product_categories OWNER TO loyalty_user;
 -- Name: products; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.products (
+CREATE TABLE IF NOT EXISTS public.products (
     public_id character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
     branch_id character varying(50),
@@ -1873,7 +1873,7 @@ ALTER TABLE public.products OWNER TO loyalty_user;
 -- Name: receipts; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.receipts (
+CREATE TABLE IF NOT EXISTS public.receipts (
     id integer NOT NULL,
     sale_id character varying(50) NOT NULL,
     receipt_number character varying(50) NOT NULL,
@@ -1894,7 +1894,7 @@ ALTER TABLE public.receipts OWNER TO loyalty_user;
 -- Name: receipts_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.receipts_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.receipts_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1916,7 +1916,7 @@ ALTER SEQUENCE public.receipts_id_seq OWNED BY public.receipts.id;
 -- Name: sale_items; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.sale_items (
+CREATE TABLE IF NOT EXISTS public.sale_items (
     id integer NOT NULL,
     sale_id character varying(50) NOT NULL,
     product_id character varying(50) NOT NULL,
@@ -1941,7 +1941,7 @@ ALTER TABLE public.sale_items OWNER TO loyalty_user;
 -- Name: sale_items_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.sale_items_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.sale_items_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1963,7 +1963,7 @@ ALTER SEQUENCE public.sale_items_id_seq OWNED BY public.sale_items.id;
 -- Name: sales; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.sales (
+CREATE TABLE IF NOT EXISTS public.sales (
     public_id character varying(50) NOT NULL,
     sale_number character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
@@ -1992,7 +1992,7 @@ ALTER TABLE public.sales OWNER TO loyalty_user;
 -- Name: schema_migrations_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.schema_migrations_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.schema_migrations_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -2007,7 +2007,7 @@ ALTER TABLE public.schema_migrations_id_seq OWNER TO loyalty_user;
 -- Name: subscriptions; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.subscriptions (
+CREATE TABLE IF NOT EXISTS public.subscriptions (
     public_id character varying(50) NOT NULL,
     business_id character varying(50) NOT NULL,
     plan_type public.enum_subscriptions_plan_type DEFAULT 'free'::public.enum_subscriptions_plan_type NOT NULL,
@@ -2073,7 +2073,7 @@ COMMENT ON COLUMN public.subscriptions.lemon_squeezy_status IS 'Raw status from 
 -- Name: wallet_passes; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.wallet_passes (
+CREATE TABLE IF NOT EXISTS public.wallet_passes (
     id integer NOT NULL,
     customer_id character varying(50) NOT NULL,
     progress_id integer NOT NULL,
@@ -2098,7 +2098,7 @@ ALTER TABLE public.wallet_passes OWNER TO loyalty_user;
 -- Name: wallet_passes_id_seq; Type: SEQUENCE; Schema: public; Owner: loyalty_user
 --
 
-CREATE SEQUENCE public.wallet_passes_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.wallet_passes_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -2120,7 +2120,7 @@ ALTER SEQUENCE public.wallet_passes_id_seq OWNED BY public.wallet_passes.id;
 -- Name: webhook_logs; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
-CREATE TABLE public.webhook_logs (
+CREATE TABLE IF NOT EXISTS public.webhook_logs (
     public_id character varying(50) NOT NULL,
     webhook_event_id character varying(255) NOT NULL,
     event_type character varying(50) NOT NULL,

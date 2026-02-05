@@ -222,11 +222,6 @@ function LogoUpload({ onLogoUpdate }) {
                 {formatFileSize(logoInfo.logo_file_size)} • Uploaded {new Date(logoInfo.logo_uploaded_at).toLocaleDateString()}
               </p>
             </div>
-            <div className="flex-shrink-0">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                {t('logoUpload.active')}
-              </span>
-            </div>
           </div>
 
           {/* Replace Button */}

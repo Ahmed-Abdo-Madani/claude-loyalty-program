@@ -83,6 +83,17 @@ export async function up(queryInterface, Sequelize) {
                 console.log(`   ⏳ Progress: ${i}/${statements.length} statements...`)
             }
         } catch (error) {
+            // Check for "already exists" errors (tables, functions, types, constraints, etc.)
+            const isAlreadyExistsError =
+                error.message.includes('already exists') ||
+                error.message.includes('duplicate key value violates unique constraint') ||
+                error.message.includes('multiple primary keys');
+
+            if (isAlreadyExistsError) {
+                console.log(`   ⚠️  Skipping statement (entity already exists): ${error.message.split('\n')[0]}`)
+                continue
+            }
+
             console.error(`❌ Failure in statement ${i}:`)
             console.error(statement.substring(0, 500) + '...')
             console.error(`Error: ${error.message}`)
