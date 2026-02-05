@@ -5062,8 +5062,7 @@ router.post('/subscription/reactivate', requireBusinessAuth, async (req, res) =>
 
     // Step 9: Send Notification (non-blocking)
     try {
-      const NotificationService = (await import('../services/NotificationService.js')).default
-      const notificationService = new NotificationService()
+      const notificationService = (await import('../services/NotificationService.js')).default
 
       await notificationService.sendReactivationSuccessNotification(businessId, {
         plan_type: subscription.plan_type,

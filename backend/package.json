@@ -5,8 +5,8 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "tsx server.js",
+    "dev": "nodemon --exec tsx server.js",
     "test": "node ../tests/subscription-plans.test.js && node test/StampImageGenerator.test.js",
     "test:subscription-plans": "node ../tests/subscription-plans.test.js",
     "test:stamps": "node test/StampImageGenerator.test.js",
@@ -31,6 +31,8 @@
     "drop-businesses": "node scripts/drop-all-businesses.js"
   },
   "dependencies": {
+    "@react-email/components": "^1.0.7",
+    "@react-email/render": "^2.0.4",
     "@walletpass/pass-js": "^6.9.1",
     "apn": "^2.2.0",
     "archiver": "^5.3.2",
@@ -51,10 +53,13 @@
     "pg": "^8.16.3",
     "prerender-node": "^3.3.0",
     "qrcode": "^1.5.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "resend": "^6.9.1",
     "sequelize": "^6.37.7",
     "sequelize-cli": "^6.6.3",
     "sharp": "^0.32.6",
+    "tsx": "^4.21.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {

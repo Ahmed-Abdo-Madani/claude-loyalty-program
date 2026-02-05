@@ -212,7 +212,7 @@ router.put('/campaigns/:campaignId', requireBusinessAuth, async (req, res) => {
       // Only allow certain fields to be updated after sending
       const allowedFields = ['name', 'description', 'tags', 'notes', 'status']
       const restrictedFields = ['target_type', 'target_segment_id', 'target_criteria', 'message_template', 'campaign_type']
-      
+
       const attemptedRestrictedFields = restrictedFields.filter(field => field in updateData)
       if (attemptedRestrictedFields.length > 0) {
         return res.status(400).json({
@@ -364,8 +364,8 @@ router.patch('/campaigns/:campaignId/status', requireBusinessAuth, async (req, r
       updated_at: new Date()
     })
 
-    logger.info('Campaign status updated', { 
-      campaign_id: campaignId, 
+    logger.info('Campaign status updated', {
+      campaign_id: campaignId,
       business_id: businessId,
       from: currentStatus,
       to: status
@@ -417,8 +417,8 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
       })
     }
 
-    // Instantiate NotificationService
-    const notificationService = new NotificationService()
+    // Use NotificationService singleton
+    const notificationService = NotificationService
 
     // Send campaign using NotificationService
     let result
@@ -430,7 +430,7 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
       })
     } else {
       result = await notificationService.sendCampaign(campaignId)
-      
+
       // Update campaign status after successful send
       const newStatus = result.total_recipients > 0 ? 'active' : 'completed'
       await campaign.update({
@@ -438,8 +438,8 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
         updated_at: new Date()
       })
 
-      logger.info('Campaign sent', { 
-        campaign_id: campaignId, 
+      logger.info('Campaign sent', {
+        campaign_id: campaignId,
         business_id: businessId,
         recipients: result.total_recipients,
         status: newStatus
@@ -607,8 +607,8 @@ router.post('/campaigns/promotional', requireBusinessAuth, async (req, res) => {
       campaign.status = 'active'
       await campaign.save()
 
-      // Instantiate NotificationService
-      const notificationService = new NotificationService()
+      // Use NotificationService singleton
+      const notificationService = NotificationService
 
       // Send campaign
       sendResults = await notificationService.sendCampaign(campaign.campaign_id)
@@ -861,8 +861,8 @@ router.post('/send-quick', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    // Instantiate NotificationService
-    const notificationService = new NotificationService()
+    // Use NotificationService singleton
+    const notificationService = NotificationService
 
     // Send quick notification (service will validate and filter customers)
     const result = await notificationService.sendQuickNotification({

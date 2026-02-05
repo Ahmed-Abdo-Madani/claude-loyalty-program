@@ -229,5 +229,69 @@
     "accessDenied": "You do not have access to this invoice",
     "downloadFailed": "Failed to download invoice. Please try again later",
     "generationFailed": "Failed to generate invoice PDF"
+  },
+  "email": {
+    "receipt": {
+      "title": "Receipt from {{businessName}}",
+      "thankYou": "Thank you for your business!",
+      "receiptNumber": "Receipt #",
+      "date": "Date",
+      "branch": "Branch",
+      "item": "Item",
+      "qty": "Qty",
+      "price": "Price",
+      "total": "Total",
+      "subtotal": "Subtotal",
+      "tax": "Tax (15%)",
+      "discount": "Discount",
+      "paymentMethod": "Payment Method",
+      "cashReceived": "Cash Received",
+      "change": "Change",
+      "joinLoyalty": "Join Our Loyalty Program"
+    },
+    "welcome": {
+      "subject": "Welcome to {{businessName}} Loyalty Program!",
+      "greeting": "Hi {{firstName}},",
+      "intro": "Welcome to our loyalty program! We're excited to have you.",
+      "howItWorks": "How it works",
+      "earnStamps": "Earn stamps with every purchase",
+      "unlockRewards": "Unlock rewards and exclusive offers",
+      "getStarted": "Get Started"
+    },
+    "loyaltyMilestone": {
+      "subject": "Congratulations! You've reached a new milestone",
+      "congrats": "Congratulations, {{firstName}}!",
+      "achievement": "You've earned {{stampsEarned}} stamps",
+      "tierReached": "You've reached {{tierName}} tier",
+      "rewardUnlocked": "Reward unlocked: {{rewardName}}",
+      "keepGoing": "Keep going to unlock more rewards!"
+    },
+    "contact": {
+      "adminSubject": "New Contact Form Submission: {{subject}}",
+      "confirmationSubject": "We received your message - {{subject}}",
+      "thankYou": "Thank you for contacting us",
+      "receivedMessage": "We've received your message and will get back to you soon",
+      "responseTime": "Our typical response time is within 24 hours",
+      "summary": "Submission Summary",
+      "labels": {
+        "Name": "Name",
+        "Email": "Email",
+        "Subject": "Subject",
+        "Company": "Company",
+        "Message": "Message"
+      }
+    },
+    "paymentFailure": {
+      "bannerNormal": "Payment Failed",
+      "bannerFinal": "Action Required: Final Notice",
+      "greeting": "Dear {{businessName}},",
+      "mainMessage": "We were unable to process your payment of <strong>{{amount}} {{currency}}</strong> for the <strong>{{planType}}</strong> plan.",
+      "attempt": "Attempt:",
+      "of": "of 3",
+      "nextRetry": "Next retry:",
+      "gracePeriod": "Grace Period Ends:",
+      "closing": "Please update your payment method to ensure uninterrupted service.",
+      "cta": "Update Payment Method"
+    }
   }
 }

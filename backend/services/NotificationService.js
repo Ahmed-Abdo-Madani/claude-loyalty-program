@@ -3,16 +3,37 @@ import logger from '../config/logger.js'
 import { Op } from 'sequelize'
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 import EmailService from './EmailService.js'
+import EmailQueueService from './EmailQueueService.js'
+import cron from 'node-cron'
 
 class NotificationService {
+  static initialized = false
+
   constructor() {
-    // Rate limiting for notifications (per customer)
     this.rateLimits = {
       email: { maxPerDay: 5, maxPerWeek: 15, maxPerMonth: 50 },
       sms: { maxPerDay: 3, maxPerWeek: 10, maxPerMonth: 30 },
       push: { maxPerDay: 10, maxPerWeek: 30, maxPerMonth: 100 },
       wallet: { maxPerDay: 3, maxPerWeek: 10, maxPerMonth: 25 }
     }
+  }
+
+  /**
+   * Initialize the singleton instance and schedule cron jobs
+   */
+  init() {
+    if (NotificationService.initialized) {
+      return this
+    }
+
+    // Schedule retry job for failed emails
+    if (process.env.EMAIL_RETRY_ENABLED !== 'false') {
+      cron.schedule('*/30 * * * *', () => this.retryFailedNotifications())
+      logger.info('Scheduled email retry cron job (every 30 mins)')
+    }
+
+    NotificationService.initialized = true
+    return this
   }
 
   /**
@@ -74,10 +95,12 @@ class NotificationService {
 
       for (let i = 0; i < customerIds.length; i += batchSize) {
         const batch = customerIds.slice(i, i + batchSize)
-        const batchPromises = batch.map(customerId =>
-          this.sendNotification(customerId, businessId, message, channels, options)
+        const batchPromises = batch.map(customerId => {
+          // Use queue for bulk emails to respect rate limits
+          const opts = { ...options, useQueue: channels.includes('email') }
+          return this.sendNotification(customerId, businessId, message, channels, opts)
             .catch(error => ({ success: false, customer_id: customerId, error: error.message }))
-        )
+        })
 
         const batchResults = await Promise.all(batchPromises)
         results.push(...batchResults)
@@ -375,39 +398,61 @@ class NotificationService {
    */
   async sendThroughChannel(customer, channel, message, options = {}) {
     try {
-      // Create notification log entry
-      const logEntry = await NotificationLog.create({
-        campaign_id: options.campaign_id || null,
-        customer_id: customer.customer_id,
-        business_id: customer.business_id,
-        notification_type: options.notification_type || (options.campaign_id ? 'campaign' : 'manual'),
-        channel,
-        subject: message.subject,
-        message_content: message.content || message.body,
-        recipient_email: customer.email,
-        recipient_phone: customer.phone,
-        recipient_name: customer.name,
-        ab_test_variant: options.ab_variant || null,
-        personalization_data: this.getPersonalizationData(customer, message)
-      })
+      // Use existing log entry if provided (for retries), otherwise create new
+      let logEntry = options.logEntry
+
+      if (!logEntry) {
+        logEntry = await NotificationLog.create({
+          campaign_id: options.campaign_id || null,
+          customer_id: customer.customer_id,
+          business_id: customer.business_id,
+          notification_type: options.notification_type || (options.campaign_id ? 'campaign' : 'manual'),
+          channel,
+          subject: message.subject,
+          message_content: message.content || message.body,
+          recipient_email: customer.email,
+          recipient_phone: customer.phone,
+          recipient_name: customer.name,
+          ab_test_variant: options.ab_variant || null,
+          personalization_data: this.getPersonalizationData(customer, message)
+        })
+      }
 
       let success = false
       let externalId = null
       let provider = null
+      let error = null
+      let sendResult = null
 
       // Send through appropriate channel
       switch (channel) {
         case 'email':
-          ({ success, externalId, provider } = await this.sendEmail(customer, message, options))
+          sendResult = await this.sendEmail(customer, message, options)
+          success = sendResult.success
+          externalId = sendResult.externalId
+          provider = sendResult.provider
+          error = sendResult.error
           break
         case 'sms':
-          ({ success, externalId, provider } = await this.sendSMS(customer, message, options))
+          sendResult = await this.sendSMS(customer, message, options)
+          success = sendResult.success
+          externalId = sendResult.externalId
+          provider = sendResult.provider
+          error = sendResult.error
           break
         case 'push':
-          ({ success, externalId, provider } = await this.sendPushNotification(customer, message, options))
+          sendResult = await this.sendPushNotification(customer, message, options)
+          success = sendResult.success
+          externalId = sendResult.externalId
+          provider = sendResult.provider
+          error = sendResult.error
           break
         case 'wallet':
-          ({ success, externalId, provider } = await this.sendWalletNotification(customer, message, options))
+          sendResult = await this.sendWalletNotification(customer, message, options)
+          success = sendResult.success
+          externalId = sendResult.externalId
+          provider = sendResult.provider
+          error = sendResult.error
           break
         default:
           throw new Error(`Unsupported channel: ${channel}`)
@@ -416,7 +461,23 @@ class NotificationService {
       if (success) {
         await logEntry.markAsSent(externalId, provider)
       } else {
-        await logEntry.markAsFailed('Failed to send through external provider')
+        const errorContext = {
+          provider_error: error,
+          is_retryable: sendResult.isRetryable || false,
+          attempts: sendResult.attempts || 0,
+          provider
+        }
+        await logEntry.markAsFailed(
+          error || 'Failed to send through external provider',
+          sendResult.errorCode || null,
+          errorContext
+        )
+
+        // Handle retries for email
+        if (channel === 'email' && logEntry.shouldRetry && await logEntry.shouldRetry()) {
+          await logEntry.incrementRetry()
+          logger.info(`Valid failure for retry logic: marked for retry (count: ${logEntry.retry_count})`, { logId: logEntry.id })
+        }
       }
 
       return {
@@ -441,6 +502,26 @@ class NotificationService {
 
       const { attachments = [] } = options
 
+      // Use queue if requested (e.g. for bulk campaigns)
+      if (options.useQueue) {
+        logger.debug('Queuing email instead of direct send', { to: customer.email })
+        const queueResult = await EmailQueueService.enqueue({
+          to: customer.email,
+          subject: message.subject,
+          html: message.html || message.body,
+          text: message.text,
+          attachments,
+          logId: options.log_id || logEntry.id
+        })
+
+        return {
+          success: true,
+          externalId: queueResult.id,
+          provider: 'internal_queue',
+          error: null
+        }
+      }
+
       // Use EmailService for real email delivery
       const result = await EmailService.sendTransactional({
         to: customer.email,
@@ -462,8 +543,18 @@ class NotificationService {
       }
 
     } catch (error) {
-      logger.error('Email sending failed', { error: error.message })
-      return { success: false, error: error.message }
+      logger.error('Email sending failed', {
+        error: error.message,
+        code: error.code,
+        isRetryable: error.isRetryable
+      })
+      return {
+        success: false,
+        error: error.message,
+        errorCode: error.code || 'EMAIL_SEND_FAILED',
+        isRetryable: error.isRetryable || false,
+        attempts: error.attempts || 0
+      }
     }
   }
 
@@ -721,6 +812,9 @@ class NotificationService {
 
       // Update based on webhook data
       switch (data.status) {
+        case 'sent':
+          await logEntry.markAsSent(data.messageId, data.provider)
+          break
         case 'delivered':
           await logEntry.markAsDelivered(new Date(data.timestamp))
           break
@@ -733,6 +827,13 @@ class NotificationService {
         case 'bounced':
         case 'failed':
           await logEntry.markAsFailed(data.reason, data.errorCode)
+          break
+        case 'complained':
+          if (typeof logEntry.markAsComplained === 'function') {
+            await logEntry.markAsComplained()
+          } else {
+            await logEntry.markAsFailed('Spam complaint', 'complained')
+          }
           break
       }
 
@@ -792,6 +893,85 @@ class NotificationService {
 
     } catch (error) {
       logger.error('Failed to track campaign conversion', { error: error.message })
+      throw error
+    }
+  }
+
+  /**
+   * Retry failed notifications
+   */
+  async retryFailedNotifications() {
+    try {
+      logger.info('Running retry job for failed notifications')
+
+      // Find failed emails that should be retried
+      const failedLogs = await NotificationLog.findAll({
+        where: {
+          channel: 'email',
+          status: 'failed',
+          retry_count: { [Op.lt]: parseInt(process.env.EMAIL_RETRY_MAX_ATTEMPTS_PERSISTENT || '3', 10) }
+        },
+        limit: 10, // Process in small batches
+        order: [['created_at', 'ASC']]
+      })
+
+      if (failedLogs.length === 0) {
+        return { success: true, retried: 0 }
+      }
+
+      logger.info(`Found ${failedLogs.length} failed notifications to retry`)
+
+      let successful = 0
+      let failed = 0
+
+      for (const logEntry of failedLogs) {
+        try {
+          // Check if it should be retried logic (grace period etc) if model has logic
+          if (logEntry.shouldRetry && !(await logEntry.shouldRetry())) {
+            continue
+          }
+
+          // Get customer
+          const customer = await Customer.findByPk(logEntry.customer_id)
+          if (!customer) {
+            logger.warn(`Cannot retry notification ${logEntry.id}: Customer not found`)
+            await logEntry.markAsFailed('Customer not found during retry', 'customer_not_found')
+            continue
+          }
+
+          // Reconstruct message
+          const message = {
+            subject: logEntry.subject,
+            body: logEntry.message_content,
+            html: logEntry.message_content,
+            content: logEntry.message_content
+          }
+
+          // Retry sending
+          logger.info(`Retrying notification ${logEntry.id} (Attempt ${logEntry.retry_count + 1})`)
+          const result = await this.sendThroughChannel(customer, 'email', message, {
+            logEntry,
+            notification_type: logEntry.notification_type,
+            campaign_id: logEntry.campaign_id
+          })
+
+          if (result.success) {
+            successful++
+          } else {
+            failed++
+          }
+
+        } catch (retryError) {
+          logger.error(`Error retrying notification ${logEntry.id}`, { error: retryError.message })
+          failed++
+        }
+      }
+
+      logger.info(`Retry job completed: ${successful} successful, ${failed} failed`)
+      return { success: true, retried: failedLogs.length, successful, failed }
+
+    } catch (error) {
+      logger.error('Failed to run retry job', { error: error.message })
       throw error
     }
   }
@@ -1126,4 +1306,6 @@ class NotificationService {
   }
 }
 
-export default NotificationService
+const notificationService = new NotificationService()
+export default notificationService
+export { NotificationService }

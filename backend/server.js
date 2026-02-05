@@ -35,6 +35,12 @@ import AutoEngagementService from './services/AutoEngagementService.js'
 import SubscriptionService from './services/SubscriptionService.js'
 import { extractLanguage, getLocalizedMessage } from './middleware/languageMiddleware.js'
 import AutoMigrationRunner from './services/AutoMigrationRunner.js'
+import EmailAlertService from './services/EmailAlertService.js'
+import NotificationService from './services/NotificationService.js'
+
+// Initialize singletons and cron jobs
+EmailAlertService.init()
+NotificationService.init()
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url)

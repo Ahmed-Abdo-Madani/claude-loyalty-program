@@ -26,8 +26,14 @@ import Payment from '../models/Payment.js'
 import Subscription from '../models/Subscription.js'
 import Business from '../models/Business.js'
 import SubscriptionService from '../services/SubscriptionService.js'
+import NotificationLog from '../models/NotificationLog.js'
+import { Resend } from 'resend'
 
 const router = express.Router()
+
+// Initialize Resend for webhook verification
+// Note: EmailService handles the primary API instance for sending emails
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 /**
  * Verify Moyasar webhook signature using HMAC-SHA256
@@ -94,9 +100,9 @@ router.post('/moyasar', async (req, res) => {
 
     if (!webhookSecret) {
       logger.error('❌ MOYASAR_WEBHOOK_SECRET not configured')
-      return res.status(500).json({ 
-        received: false, 
-        error: 'Webhook secret not configured' 
+      return res.status(500).json({
+        received: false,
+        error: 'Webhook secret not configured'
       })
     }
 
@@ -106,7 +112,7 @@ router.post('/moyasar', async (req, res) => {
 
     // Verify signature
     const isValidSignature = verifyWebhookSignature(bodyString, signature, webhookSecret)
-    
+
 
     if (!isValidSignature) {
       logger.warn('⚠️ Webhook signature verification failed', {
@@ -144,9 +150,9 @@ router.post('/moyasar', async (req, res) => {
         logger.error('Failed to log invalid-signature webhook', { error: logErr.message });
       }
 
-      return res.status(401).json({ 
-        received: false, 
-        error: 'Invalid signature' 
+      return res.status(401).json({
+        received: false,
+        error: 'Invalid signature'
       })
     }
 
@@ -193,7 +199,7 @@ router.post('/moyasar', async (req, res) => {
     // 3. Idempotency check - prevent duplicate processing
     // =================================================================
     const existingLog = await WebhookLog.findByEventId(eventId)
-    
+
     if (existingLog) {
       logger.info('⚠️ Duplicate webhook event detected', {
         eventId,
@@ -202,9 +208,9 @@ router.post('/moyasar', async (req, res) => {
       })
 
       await existingLog.markAsDuplicate()
-      
-      return res.status(200).json({ 
-        received: true, 
+
+      return res.status(200).json({
+        received: true,
         duplicate: true,
         message: 'Event already processed'
       })
@@ -231,8 +237,8 @@ router.post('/moyasar', async (req, res) => {
     if (!moyasarPaymentId) {
       logger.warn('⚠️ Webhook payload missing payment ID', { eventId, eventType })
       await webhookLog.markAsFailed('Payment ID not found in webhook payload')
-      return res.status(200).json({ 
-        received: true, 
+      return res.status(200).json({
+        received: true,
         processed: false,
         error: 'Payment ID missing'
       })
@@ -243,15 +249,15 @@ router.post('/moyasar', async (req, res) => {
     })
 
     if (!payment) {
-      logger.warn('⚠️ Payment record not found', { 
-        moyasarPaymentId, 
-        eventId, 
-        eventType 
+      logger.warn('⚠️ Payment record not found', {
+        moyasarPaymentId,
+        eventId,
+        eventType
       })
       await webhookLog.markAsFailed('Payment record not found in database')
       // Return 200 OK to acknowledge receipt (payment may not exist yet)
-      return res.status(200).json({ 
-        received: true, 
+      return res.status(200).json({
+        received: true,
         processed: false,
         error: 'Payment not found'
       })
@@ -261,7 +267,7 @@ router.post('/moyasar', async (req, res) => {
     webhookLog.payment_id = payment.public_id
     await webhookLog.save()
 
-    logger.info('✅ Payment record found', { 
+    logger.info('✅ Payment record found', {
       paymentId: payment.public_id,
       businessId: payment.business_id,
       subscriptionId: payment.subscription_id
@@ -357,8 +363,8 @@ router.post('/moyasar', async (req, res) => {
  */
 async function handlePaymentPaid(payment, eventData, webhookLog) {
   try {
-    logger.info('💰 Processing payment.paid event', { 
-      paymentId: payment.public_id 
+    logger.info('💰 Processing payment.paid event', {
+      paymentId: payment.public_id
     })
 
     // Mark payment as paid
@@ -374,12 +380,12 @@ async function handlePaymentPaid(payment, eventData, webhookLog) {
     })
 
     if (!subscription) {
-      logger.warn('⚠️ No subscription found for payment', { 
-        paymentId: payment.public_id 
+      logger.warn('⚠️ No subscription found for payment', {
+        paymentId: payment.public_id
       })
-      return { 
-        success: true, 
-        message: 'Payment marked as paid, but no subscription found' 
+      return {
+        success: true,
+        message: 'Payment marked as paid, but no subscription found'
       }
     }
 
@@ -390,9 +396,9 @@ async function handlePaymentPaid(payment, eventData, webhookLog) {
     )
 
     if (!activationResult.success) {
-      return { 
-        success: false, 
-        error: activationResult.error || 'Failed to activate subscription' 
+      return {
+        success: false,
+        error: activationResult.error || 'Failed to activate subscription'
       }
     }
 
@@ -401,17 +407,17 @@ async function handlePaymentPaid(payment, eventData, webhookLog) {
       businessId: subscription.business_id
     })
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: 'Payment completed and subscription activated',
       subscription: activationResult.subscription,
       invoice: activationResult.invoice
     }
 
   } catch (error) {
-    logger.error('❌ Error handling payment.paid', { 
+    logger.error('❌ Error handling payment.paid', {
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     })
     return { success: false, error: error.message }
   }
@@ -423,8 +429,8 @@ async function handlePaymentPaid(payment, eventData, webhookLog) {
  */
 async function handlePaymentFailed(payment, eventData, webhookLog) {
   try {
-    logger.info('⚠️ Processing payment.failed event', { 
-      paymentId: payment.public_id 
+    logger.info('⚠️ Processing payment.failed event', {
+      paymentId: payment.public_id
     })
 
     // Extract failure reason
@@ -440,9 +446,9 @@ async function handlePaymentFailed(payment, eventData, webhookLog) {
     )
 
     if (!failureResult.success) {
-      return { 
-        success: false, 
-        error: failureResult.error || 'Failed to handle payment failure' 
+      return {
+        success: false,
+        error: failureResult.error || 'Failed to handle payment failure'
       }
     }
 
@@ -452,17 +458,17 @@ async function handlePaymentFailed(payment, eventData, webhookLog) {
       retryCount: failureResult.retryCount
     })
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: `Payment failure handled: ${failureResult.action}`,
       action: failureResult.action,
       retryCount: failureResult.retryCount
     }
 
   } catch (error) {
-    logger.error('❌ Error handling payment.failed', { 
+    logger.error('❌ Error handling payment.failed', {
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     })
     return { success: false, error: error.message }
   }
@@ -474,8 +480,8 @@ async function handlePaymentFailed(payment, eventData, webhookLog) {
  */
 async function handlePaymentRefunded(payment, eventData, webhookLog) {
   try {
-    logger.info('💸 Processing payment.refunded event', { 
-      paymentId: payment.public_id 
+    logger.info('💸 Processing payment.refunded event', {
+      paymentId: payment.public_id
     })
 
     // Extract refund amount
@@ -488,9 +494,9 @@ async function handlePaymentRefunded(payment, eventData, webhookLog) {
     )
 
     if (!refundResult.success) {
-      return { 
-        success: false, 
-        error: refundResult.error || 'Failed to process refund' 
+      return {
+        success: false,
+        error: refundResult.error || 'Failed to process refund'
       }
     }
 
@@ -500,17 +506,17 @@ async function handlePaymentRefunded(payment, eventData, webhookLog) {
       fullRefund: refundResult.fullRefund
     })
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: `Refund processed: ${refundResult.fullRefund ? 'full' : 'partial'}`,
       refundAmount,
       fullRefund: refundResult.fullRefund
     }
 
   } catch (error) {
-    logger.error('❌ Error handling payment.refunded', { 
+    logger.error('❌ Error handling payment.refunded', {
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     })
     return { success: false, error: error.message }
   }
@@ -522,8 +528,8 @@ async function handlePaymentRefunded(payment, eventData, webhookLog) {
  */
 async function handlePaymentAuthorized(payment, eventData, webhookLog) {
   try {
-    logger.info('🔒 Processing payment.authorized event', { 
-      paymentId: payment.public_id 
+    logger.info('🔒 Processing payment.authorized event', {
+      paymentId: payment.public_id
     })
 
     // Update payment metadata with authorization info
@@ -539,15 +545,15 @@ async function handlePaymentAuthorized(payment, eventData, webhookLog) {
       paymentId: payment.public_id
     })
 
-    return { 
-      success: true, 
-      message: 'Payment authorization recorded' 
+    return {
+      success: true,
+      message: 'Payment authorization recorded'
     }
 
   } catch (error) {
-    logger.error('❌ Error handling payment.authorized', { 
+    logger.error('❌ Error handling payment.authorized', {
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     })
     return { success: false, error: error.message }
   }
@@ -559,8 +565,8 @@ async function handlePaymentAuthorized(payment, eventData, webhookLog) {
  */
 async function handlePaymentCaptured(payment, eventData, webhookLog) {
   try {
-    logger.info('✅ Processing payment.captured event', { 
-      paymentId: payment.public_id 
+    logger.info('✅ Processing payment.captured event', {
+      paymentId: payment.public_id
     })
 
     // Mark payment as paid (captured = paid)
@@ -588,18 +594,276 @@ async function handlePaymentCaptured(payment, eventData, webhookLog) {
       }
     }
 
-    return { 
-      success: true, 
-      message: 'Payment captured and subscription activated' 
+    return {
+      success: true,
+      message: 'Payment captured and subscription activated'
     }
 
   } catch (error) {
-    logger.error('❌ Error handling payment.captured', { 
+    logger.error('❌ Error handling payment.captured', {
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     })
     return { success: false, error: error.message }
   }
 }
+
+// ========================================
+// RESEND WEBHOOK HANDLER
+// ========================================
+
+/**
+ * Verify Resend webhook signature using Resend SDK
+ * Uses existing Resend instance or creates one for verification
+ */
+const verifyResendWebhookSignature = (payload, headers, secret) => {
+  try {
+    const evt = resend.webhooks.verify({
+      payload: (Buffer.isBuffer(payload) || typeof payload === 'string') ? payload : JSON.stringify(payload),
+      headers,
+      webhookSecret: secret,
+    })
+    return evt
+  } catch (err) {
+    throw new Error(`Webhook verification failed: ${err.message}`)
+  }
+}
+
+/**
+ * Resend Webhook Endpoint
+ * Path: POST /api/webhooks/resend
+ */
+router.post('/resend', async (req, res) => {
+  const payload = req.body
+  const headers = req.headers
+  const secret = process.env.RESEND_WEBHOOK_SECRET
+
+  // 1. Validation
+  if (!secret) {
+    logger.error('RESEND_WEBHOOK_SECRET is not configured')
+    return res.status(500).json({ error: 'Webhook configuration error' })
+  }
+
+  // 2. Verification
+  let event
+  try {
+    // Extract Svix headers
+    const svixHeaders = {
+      'svix-id': headers['svix-id'],
+      'svix-timestamp': headers['svix-timestamp'],
+      'svix-signature': headers['svix-signature'],
+    }
+
+    // Verify signature
+    // Note: req.body must be raw buffer for verification
+    event = verifyResendWebhookSignature(payload, svixHeaders, secret)
+
+  } catch (err) {
+    logger.warn('Resend webhook signature verification failed', {
+      error: err.message,
+      ip: req.ip
+    })
+    return res.status(401).json({ error: 'Invalid signature' })
+  }
+
+  // 3. Idempotency Check
+  const { type, data } = event
+  const emailId = data.email_id
+
+  if (emailId) {
+    try {
+      // Check if we've already processed this event or if the state is already final
+      // Note: We update the same log entry for different events (sent -> delivered -> opened)
+      // So we don't return "duplicate" just because the log exists, but we rely on
+      // the event handlers to apply state transitions correctly.
+    } catch (err) {
+      logger.error('Error checking duplicate webhook', { error: err.message })
+    }
+  }
+
+  logger.info(`Received Resend webhook: ${type}`, { email_id: emailId })
+
+  // 4. Acknowledge Receipt Immediately
+  // We return 200 OK to prevent Resend from retrying while we process
+  res.status(200).json({ received: true })
+
+  // 5. Async Processing
+  // Process in background to keep response fast
+  try {
+    switch (type) {
+      case 'email.sent':
+        await handleEmailSent(data)
+        break
+      case 'email.delivered':
+        await handleEmailDelivered(data)
+        break
+      case 'email.bounced':
+        await handleEmailBounced(data)
+        break
+      case 'email.opened':
+        await handleEmailOpened(data)
+        break
+      case 'email.clicked':
+        await handleEmailClicked(data)
+        break
+      case 'email.complained':
+        await handleEmailComplained(data)
+        break
+      default:
+        logger.info(`Unhandled Resend event type: ${type}`)
+    }
+  } catch (error) {
+    logger.error(`Error processing Resend webhook event ${type}`, {
+      email_id: emailId,
+      error: error.message
+    })
+    // No need to return error response as we already sent 200 OK
+  }
+})
+
+// ----------------------------------------
+// Event Handlers
+// ----------------------------------------
+
+async function handleEmailSent(data) {
+  try {
+    const emailId = data.email_id
+    if (!emailId) return
+
+    const logEntry = await NotificationLog.findOne({ where: { external_id: emailId } })
+    if (!logEntry) {
+      logger.warn(`Notification log not found for sent event: ${emailId}`)
+      return
+    }
+
+    await logEntry.markAsSent(emailId, 'resend')
+    logger.info(`Email marked as sent: ${emailId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
+async function handleEmailDelivered(data) {
+  try {
+    const emailId = data.email_id
+    if (!emailId) return
+
+    const logEntry = await NotificationLog.findOne({ where: { external_id: emailId } })
+    if (!logEntry) {
+      logger.warn(`Notification log not found for delivered event: ${emailId}`)
+      return
+    }
+
+    await logEntry.markAsDelivered(new Date(data.created_at))
+    logger.info(`Email marked as delivered: ${emailId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
+async function handleEmailBounced(data) {
+  try {
+    const emailId = data.email_id
+    if (!emailId) return
+
+    const logEntry = await NotificationLog.findOne({ where: { external_id: emailId } })
+    if (!logEntry) {
+      logger.warn(`Notification log not found for bounced event: ${emailId}`)
+      return
+    }
+
+    const bounceType = data.bounce?.type || 'unknown'
+    const bounceMessage = data.bounce?.message || 'Email bounced'
+    const errorMessage = `Bounced (${bounceType}): ${bounceMessage}`
+
+    await logEntry.markAsFailed(errorMessage, 'bounced')
+
+    // Explicitly update external_status to bounced if not handled by markAsFailed
+    logEntry.external_status = 'bounced'
+    await logEntry.save()
+
+    logger.info(`Email marked as bounced: ${emailId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
+async function handleEmailOpened(data) {
+  try {
+    const emailId = data.email_id
+    if (!emailId) return
+
+    const logEntry = await NotificationLog.findOne({ where: { external_id: emailId } })
+    if (!logEntry) {
+      logger.warn(`Notification log not found for opened event: ${emailId}`)
+      return
+    }
+
+    // Extract device info if available
+    const userAgent = data.user_agent
+    // Resend doesn't always provide device type explicitly, can implement parser if needed
+    // For now passing null for deviceType
+
+    await logEntry.markAsOpened(new Date(data.created_at), null, userAgent)
+    logger.info(`Email marked as opened: ${emailId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
+async function handleEmailClicked(data) {
+  try {
+    const emailId = data.email_id
+    if (!emailId) return
+
+    const logEntry = await NotificationLog.findOne({ where: { external_id: emailId } })
+    if (!logEntry) {
+      logger.warn(`Notification log not found for clicked event: ${emailId}`)
+      return
+    }
+
+    const clickData = {
+      link: data.link,
+      clicked_at: data.created_at,
+      user_agent: data.user_agent
+    }
+
+    await logEntry.markAsClicked(clickData)
+    logger.info(`Email marked as clicked: ${emailId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
+async function handleEmailComplained(data) {
+  try {
+    const emailId = data.email_id
+    if (!emailId) return
+
+    const logEntry = await NotificationLog.findOne({ where: { external_id: emailId } })
+    if (!logEntry) {
+      logger.warn(`Notification log not found for complained event: ${emailId}`)
+      return
+    }
+
+    const feedbackType = data.complaint?.complaintFeedbackType || 'spam'
+
+    // Use markAsComplained if available, otherwise markAsFailed
+    if (typeof logEntry.markAsComplained === 'function') {
+      await logEntry.markAsComplained()
+    } else {
+      await logEntry.markAsFailed(`Recipient reported as ${feedbackType}`, 'complained')
+      logEntry.external_status = 'complained'
+      await logEntry.save()
+    }
+
+    // TODO: Update customer preferences to unsubscribe (future enhancement)
+
+    logger.info(`Email marked as complained: ${emailId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
 
 export default router

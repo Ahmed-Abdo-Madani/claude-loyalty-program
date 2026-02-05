@@ -67,7 +67,7 @@ const NotificationLog = sequelize.define('NotificationLog', {
   },
   // Delivery Status and Tracking
   status: {
-    type: DataTypes.ENUM('pending', 'sent', 'delivered', 'opened', 'clicked', 'converted', 'failed', 'bounced', 'unsubscribed'),
+    type: DataTypes.ENUM('pending', 'sent', 'delivered', 'opened', 'clicked', 'converted', 'failed', 'bounced', 'complained', 'unsubscribed'),
     defaultValue: 'pending'
   },
   // Timestamps for tracking delivery pipeline
@@ -244,7 +244,7 @@ const NotificationLog = sequelize.define('NotificationLog', {
 })
 
 // Instance methods
-NotificationLog.prototype.markAsSent = async function(externalId = null, provider = null) {
+NotificationLog.prototype.markAsSent = async function (externalId = null, provider = null) {
   this.status = 'sent'
   this.sent_at = new Date()
   if (externalId) this.external_id = externalId
@@ -253,7 +253,7 @@ NotificationLog.prototype.markAsSent = async function(externalId = null, provide
   return this
 }
 
-NotificationLog.prototype.markAsDelivered = async function(deliveredAt = null) {
+NotificationLog.prototype.markAsDelivered = async function (deliveredAt = null) {
   this.status = 'delivered'
   this.delivered_at = deliveredAt || new Date()
 
@@ -266,7 +266,7 @@ NotificationLog.prototype.markAsDelivered = async function(deliveredAt = null) {
   return this
 }
 
-NotificationLog.prototype.markAsOpened = async function(openedAt = null, deviceType = null, userAgent = null) {
+NotificationLog.prototype.markAsOpened = async function (openedAt = null, deviceType = null, userAgent = null) {
   this.status = 'opened'
   this.opened_at = openedAt || new Date()
 
@@ -282,7 +282,7 @@ NotificationLog.prototype.markAsOpened = async function(openedAt = null, deviceT
   return this
 }
 
-NotificationLog.prototype.markAsClicked = async function(clickData = null) {
+NotificationLog.prototype.markAsClicked = async function (clickData = null) {
   this.status = 'clicked'
   this.clicked_at = new Date()
 
@@ -292,7 +292,7 @@ NotificationLog.prototype.markAsClicked = async function(clickData = null) {
   return this
 }
 
-NotificationLog.prototype.markAsConverted = async function(conversionData = null) {
+NotificationLog.prototype.markAsConverted = async function (conversionData = null) {
   this.status = 'converted'
   this.converted_at = new Date()
 
@@ -302,30 +302,50 @@ NotificationLog.prototype.markAsConverted = async function(conversionData = null
   return this
 }
 
-NotificationLog.prototype.markAsFailed = async function(errorMessage, errorCode = null) {
+NotificationLog.prototype.markAsFailed = async function (errorMessage, errorCode = null, additionalContext = {}) {
   this.status = 'failed'
   this.failed_at = new Date()
   this.error_message = errorMessage
   if (errorCode) this.error_code = errorCode
 
+  // Merge additional context if provided
+  if (additionalContext && Object.keys(additionalContext).length > 0) {
+    this.context_data = {
+      ...(this.context_data || {}),
+      ...additionalContext,
+      last_failed_at: new Date()
+    }
+  }
+
   await this.save()
   return this
 }
 
-NotificationLog.prototype.shouldRetry = function() {
-  return this.status === 'failed' &&
-         this.retry_count < this.max_retries &&
-         !['bounced', 'unsubscribed'].includes(this.external_status)
+NotificationLog.prototype.markAsComplained = async function () {
+  this.status = 'complained'
+  this.external_status = 'complained'
+  this.failed_at = new Date()
+  this.error_message = 'Marked as spam by recipient'
+  this.error_code = 'complained'
+
+  await this.save()
+  return this
 }
 
-NotificationLog.prototype.incrementRetry = async function() {
+NotificationLog.prototype.shouldRetry = function () {
+  return this.status === 'failed' &&
+    this.retry_count < this.max_retries &&
+    !['bounced', 'unsubscribed'].includes(this.external_status)
+}
+
+NotificationLog.prototype.incrementRetry = async function () {
   this.retry_count += 1
   this.status = 'pending'
   await this.save()
   return this
 }
 
-NotificationLog.prototype.generateUnsubscribeToken = function() {
+NotificationLog.prototype.generateUnsubscribeToken = function () {
   if (!this.unsubscribe_token) {
     this.unsubscribe_token = crypto
       .createHash('sha256')
@@ -336,7 +356,7 @@ NotificationLog.prototype.generateUnsubscribeToken = function() {
 }
 
 // Static methods
-NotificationLog.getDeliveryStats = async function(campaignId = null, businessId = null, dateRange = null) {
+NotificationLog.getDeliveryStats = async function (campaignId = null, businessId = null, dateRange = null) {
   const whereClause = {}
 
   if (campaignId) whereClause.campaign_id = campaignId

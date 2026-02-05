@@ -2,6 +2,7 @@ import express from 'express'
 import AdminAuthController from '../controllers/adminAuthController.js'
 import AdminBusinessController from '../controllers/adminBusinessController.js'
 import AdminAnalyticsController from '../controllers/adminAnalyticsController.js'
+import AdminEmailStatsController from '../controllers/adminEmailStatsController.js'
 import AdminIconsController from '../controllers/adminIconsController.js'
 import {
   requireAdmin,
@@ -151,6 +152,25 @@ router.get('/analytics/export',
   requireAdminOrSuper,
   logAdminAction('export_analytics', 'analytics'),
   AdminAnalyticsController.exportAnalytics
+)
+
+// Email analytics routes
+router.get('/analytics/email/stats',
+  requireAdmin(),
+  logAdminAction('view_email_stats', 'analytics'),
+  AdminEmailStatsController.getEmailStats
+)
+
+router.get('/analytics/email/usage',
+  requireAdmin(),
+  logAdminAction('view_email_usage', 'analytics'),
+  AdminEmailStatsController.getEmailUsage
+)
+
+router.get('/analytics/email/health',
+  requireAdmin(),
+  logAdminAction('view_email_health', 'analytics'),
+  AdminEmailStatsController.getEmailHealth
 )
 
 // =================

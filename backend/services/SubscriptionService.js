@@ -12,6 +12,7 @@ import Invoice from '../models/Invoice.js';
 import Counter from '../models/Counter.js';
 import MoyasarService from './MoyasarService.js';
 import { PLAN_DEFINITIONS, PLAN_HIERARCHY } from '../constants/plans.js';
+import NotificationService from './NotificationService.js';
 
 /**
  * SubscriptionService - Centralized subscription and plan management
@@ -1182,8 +1183,7 @@ class SubscriptionService {
 
         // Comment 2: Send payment failure notification for retry attempts
         try {
-          const NotificationService = (await import('./NotificationService.js')).default
-          const notificationService = new NotificationService()
+          const notificationService = NotificationService
 
           const paymentDetails = {
             amount: subscription.amount || 0,
@@ -1237,8 +1237,7 @@ class SubscriptionService {
 
         // Comment 2: Send grace period notification when max retries reached
         try {
-          const NotificationService = (await import('./NotificationService.js')).default
-          const notificationService = new NotificationService()
+          const notificationService = NotificationService
 
           await notificationService.sendGracePeriodNotification(
             subscription.business_id,
@@ -1365,8 +1364,7 @@ class SubscriptionService {
 
       // Send suspension notification (non-blocking)
       try {
-        const NotificationService = (await import('./NotificationService.js')).default;
-        const notificationService = new NotificationService();
+        const notificationService = NotificationService;
 
         await notificationService.sendAccountSuspensionNotification(
           businessId,
@@ -1556,8 +1554,7 @@ class SubscriptionService {
 
         // Send payment failure notification (non-blocking)
         try {
-          const NotificationService = (await import('./NotificationService.js')).default;
-          const notificationService = new NotificationService();
+          const notificationService = NotificationService;
 
           const paymentDetails = {
             amount: payment.amount,
@@ -1630,7 +1627,7 @@ class SubscriptionService {
           // Send grace period notification (non-blocking)
           try {
             const NotificationService = (await import('./NotificationService.js')).default;
-            const notificationService = new NotificationService();
+            const notificationService = NotificationService;
 
             await notificationService.sendGracePeriodNotification(
               business.public_id,

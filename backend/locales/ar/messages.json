@@ -229,5 +229,69 @@
     "accessDenied": "ليس لديك صلاحية الوصول إلى هذه الفاتورة",
     "downloadFailed": "فشل تحميل الفاتورة. يرجى المحاولة مرة أخرى لاحقاً",
     "generationFailed": "فشل إنشاء ملف PDF للفاتورة"
+  },
+  "email": {
+    "receipt": {
+      "title": "إيصال من {{businessName}}",
+      "thankYou": "شكراً لتعاملكم معنا!",
+      "receiptNumber": "إيصال رقم",
+      "date": "التاريخ",
+      "branch": "الفرع",
+      "item": "الصنف",
+      "qty": "الكمية",
+      "price": "السعر",
+      "total": "المجموع",
+      "subtotal": "المجموع الفرعي",
+      "tax": "الضريبة (15%)",
+      "discount": "الخصم",
+      "paymentMethod": "طريقة الدفع",
+      "cashReceived": "المبلغ المستلم",
+      "change": "المتبقي",
+      "joinLoyalty": "انضم لبرنامج الولاء"
+    },
+    "welcome": {
+      "subject": "مرحباً بكم في برنامج ولاء {{businessName}}!",
+      "greeting": "مرحباً {{firstName}}،",
+      "intro": "مرحباً بكم في برنامج الولاء الخاص بنا! نحن سعداء بانضمامك.",
+      "howItWorks": "كيف يعمل",
+      "earnStamps": "اجمع الطوابع مع كل شراء",
+      "unlockRewards": "افتح المكافآت والعروض الحصرية",
+      "getStarted": "ابدأ الآن"
+    },
+    "loyaltyMilestone": {
+      "subject": "تهانينا! لقد وصلت إلى إنجاز جديد",
+      "congrats": "تهانينا، {{firstName}}!",
+      "achievement": "لقد كسبت {{stampsEarned}} طوابع",
+      "tierReached": "لقد وصلت إلى مستوى {{tierName}}",
+      "rewardUnlocked": "تم فتح المكافأة: {{rewardName}}",
+      "keepGoing": "استمر للحصول على المزيد من المكافآت!"
+    },
+    "contact": {
+      "adminSubject": "رسالة جديدة من نموذج الاتصال: {{subject}}",
+      "confirmationSubject": "لقد استلمنا رسالتك - {{subject}}",
+      "thankYou": "شكراً لاتصالك بنا",
+      "receivedMessage": "لقد استلمنا رسالتك وسنرد عليك قريباً",
+      "responseTime": "وقت الرد المعتاد لدينا هو خلال 24 ساعة",
+      "summary": "ملخص الرسالة",
+      "labels": {
+        "Name": "الاسم",
+        "Email": "البريد الإلكتروني",
+        "Subject": "الموضوع",
+        "Company": "الشركة",
+        "Message": "الرسالة"
+      }
+    },
+    "paymentFailure": {
+      "bannerNormal": "فشل عملية الدفع",
+      "bannerFinal": "مطلوب إجراء: إشعار نهائي",
+      "greeting": "عزيزي {{businessName}}،",
+      "mainMessage": "لم نتمكن من معالجة دفعتك بمبلغ <strong>{{amount}} {{currency}}</strong> لخطة <strong>{{planType}}</strong>.",
+      "attempt": "محاولة:",
+      "of": "من 3",
+      "nextRetry": "المحاولة التالية:",
+      "gracePeriod": "تنتهي فترة السماح في:",
+      "closing": "يرجى تحديث طريقة الدفع الخاصة بك لضمان استمرار الخدمة دون انقطاع.",
+      "cta": "تحديث طريقة الدفع"
+    }
   }
 }
