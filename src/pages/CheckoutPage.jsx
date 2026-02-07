@@ -333,7 +333,7 @@ export default function CheckoutPage() {
                           {t(`checkout.${key}`) || key}
                         </span>
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {value === -1 || value === 'unlimited' ? '∞' : value.toLocaleString()}
+                          {value === -1 || value === null || value === 'unlimited' || !Number.isFinite(value) ? '∞' : value.toLocaleString()}
                         </span>
                       </div>
                     ))}

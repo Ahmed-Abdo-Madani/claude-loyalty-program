@@ -16,6 +16,7 @@ import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, B
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 import appleWalletController from '../controllers/appleWalletController.js'
+import BusinessMessagingController from '../controllers/businessMessagingController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
@@ -544,6 +545,35 @@ router.patch('/offers/:id/status', (req, res) => {
     })
   }
 })
+
+// =================
+// MESSAGING ROUTES (Authenticated)
+// =================
+
+// Get all conversations for business
+router.get('/messages/conversations',
+  requireBusinessAuth,
+  BusinessMessagingController.getConversations
+)
+
+// Get conversation by ID with messages
+router.get('/messages/conversations/:id',
+  requireBusinessAuth,
+  BusinessMessagingController.getConversationById
+)
+
+// Send message/inquiry to admin
+router.post('/messages/send',
+  requireBusinessAuth,
+  BusinessMessagingController.sendMessage
+)
+
+// Mark message as read
+router.patch('/messages/:id/read',
+  requireBusinessAuth,
+  BusinessMessagingController.markAsRead
+)
+
 
 // ===============================
 // BRANCHES ROUTES
@@ -1432,7 +1462,7 @@ router.get('/my/offers', requireBusinessAuthLocal, async (req, res) => {
 })
 
 // Create new offer - SECURE VERSION
-router.post('/my/offers', requireBusinessAuthLocal, checkTrialExpiration, async (req, res) => {
+router.post('/my/offers', requireBusinessAuthLocal, checkTrialExpiration, checkSubscriptionLimit('offers'), async (req, res) => {
   try {
     const businessId = req.business.public_id
 
@@ -1815,30 +1845,15 @@ router.get('/my/branches', requireBusinessAuth, async (req, res) => {
 
 
 // Create new branch - SECURE VERSION
-router.post('/my/branches', requireBusinessAuth, async (req, res) => {
+router.post('/my/branches', requireBusinessAuth, checkSubscriptionLimit('locations'), async (req, res) => {
   try {
     const businessId = req.business.public_id
     const business = req.business
 
-    // Check plan limits
+    // Check plan limits (handled by middleware)
     const currentBranchCount = await Branch.count({ where: { business_id: businessId } })
-    const limits = business.getPlanLimits()
 
-    if (currentBranchCount >= limits.locations && limits.locations !== Infinity) {
-      return res.status(403).json({
-        success: false,
-        code: 'PLAN_LIMIT_REACHED',
-        limitType: 'branches',
-        message: getLocalizedMessage('permissions.upgradeRequired', req.locale || 'ar'),
-        error: 'Plan limit reached',
-        limits: {
-          current: currentBranchCount,
-          max: limits.locations,
-          plan: business.current_plan,
-          suggestedPlan: business.current_plan === 'free' ? 'professional' : 'enterprise'
-        }
-      })
-    }
+    // Limits check removed - handled by middleware
 
     // Handle POS (Enterprise) Billing
     if (business.current_plan === 'enterprise') {

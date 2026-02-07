@@ -151,6 +151,36 @@ class SecureIDGenerator {
   }
 
   /**
+   * Generate a secure message ID
+   * @returns {string} Message ID in format: msg_[20chars]
+   */
+  static generateMessageID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `msg_${randomString}`
+  }
+
+  /**
+   * Generate a secure conversation ID
+   * @returns {string} Conversation ID in format: conv_[20chars]
+   */
+  static generateConversationID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `conv_${randomString}`
+  }
+
+  /**
+   * Generate a secure template ID
+   * @returns {string} Template ID in format: tmpl_[20chars]
+   */
+  static generateTemplateID() {
+    const randomBytes = crypto.randomBytes(12)
+    const randomString = randomBytes.toString('hex').substring(0, 20)
+    return `tmpl_${randomString}`
+  }
+
+  /**
    * Validate if an ID follows secure format
    * @param {string} id - The ID to validate
    * @param {string} type - The expected type (business, offer, customer, branch, product, category, sale)
@@ -173,7 +203,10 @@ class SecureIDGenerator {
       subscription: /^sub_[a-f0-9]{20}$/,
       payment: /^pay_[a-f0-9]{20}$/,
       invoice: /^inv_[a-f0-9]{20}$/,
-      webhook_log: /^whl_[a-f0-9]{16}$/
+      webhook_log: /^whl_[a-f0-9]{16}$/,
+      message: /^msg_[a-f0-9]{20}$/,
+      conversation: /^conv_[a-f0-9]{20}$/,
+      template: /^tmpl_[a-f0-9]{20}$/
     };
 
     return patterns[type]?.test(id) || false
@@ -201,6 +234,9 @@ class SecureIDGenerator {
     if (id.startsWith('pay_')) return 'payment'
     if (id.startsWith('inv_')) return 'invoice'
     if (id.startsWith('whl_')) return 'webhook_log'
+    if (id.startsWith('msg_')) return 'message'
+    if (id.startsWith('conv_')) return 'conversation'
+    if (id.startsWith('tmpl_')) return 'template'
 
     return null
   }
@@ -226,7 +262,10 @@ class SecureIDGenerator {
       subscription: this.generateSubscriptionID,
       payment: this.generatePaymentID,
       invoice: this.generateInvoiceID,
-      webhook_log: this.generateWebhookLogID
+      webhook_log: this.generateWebhookLogID,
+      message: this.generateMessageID,
+      conversation: this.generateConversationID,
+      template: this.generateTemplateID
     };
 
     const generator = generators[type]
@@ -261,6 +300,9 @@ export const {
   generatePaymentID,
   generateInvoiceID,
   generateWebhookLogID,
+  generateMessageID,
+  generateConversationID,
+  generateTemplateID,
   validateSecureID,
   getIDType,
   generateBatch

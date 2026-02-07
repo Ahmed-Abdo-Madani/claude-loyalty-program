@@ -137,7 +137,7 @@ function PlanLimitModal({
         navigate('/subscription/plans') // Explicitly using /plans just in case, but usually path handles it
     }
 
-    const usagePercentage = planLimit > 0 && planLimit !== Infinity
+    const usagePercentage = (planLimit > 0 && planLimit !== Infinity && planLimit !== -1)
         ? Math.min((currentUsage / planLimit) * 100, 100)
         : (planLimit === 0 ? 100 : 0)
 
@@ -169,7 +169,7 @@ function PlanLimitModal({
                             {t('dashboard:planLimits.currentUsage', 'Current Usage')}
                         </span>
                         <span className="text-sm font-bold text-gray-900 dark:text-white">
-                            {currentUsage} / {planLimit === Infinity ? '∞' : planLimit}
+                            {currentUsage} / {planLimit === Infinity || planLimit === -1 ? '∞' : planLimit}
                         </span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
@@ -222,8 +222,8 @@ function PlanLimitModal({
                         <button
                             onClick={handleUpgrade}
                             className={`w-full py-3 px-4 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg ${isPosPlan
-                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
-                                    : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
+                                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+                                : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700'
                                 }`}
                         >
                             {t('subscription:actions.upgradeNow', 'Upgrade Now')} →

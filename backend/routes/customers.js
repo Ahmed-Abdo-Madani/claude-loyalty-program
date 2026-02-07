@@ -6,7 +6,7 @@ import { Customer, CustomerProgress, Business, Offer } from '../models/index.js'
 
 const router = express.Router()
 
-import { requireBusinessAuth, checkTrialExpiration } from '../middleware/hybridBusinessAuth.js'
+import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 
 // ===============================
 // CUSTOMER MANAGEMENT ROUTES
@@ -143,7 +143,7 @@ router.get('/:customerId', requireBusinessAuth, async (req, res) => {
 })
 
 // POST /api/customers - Create new customer
-router.post('/', requireBusinessAuth, checkTrialExpiration, async (req, res) => {
+router.post('/', requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit('customers'), async (req, res) => {
   try {
     const businessId = req.business.public_id
     const customerData = {

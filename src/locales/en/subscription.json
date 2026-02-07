@@ -45,9 +45,11 @@
       "description": "Essential loyalty features for small businesses",
       "features": [
         "Up to 500 Customers",
+        "Online Menu",
+        "Menu QR Code",
+        "QR Code Scanning",
         "1 Active Offer",
-        "1 Location",
-        "Basic Analytics"
+        "1 Location"
       ]
     },
     "loyalty_growth": {
@@ -55,10 +57,11 @@
       "description": "Advanced tools for growing businesses",
       "features": [
         "Up to 2,000 Customers",
+        "Online Menu",
+        "Menu QR Code",
+        "QR Code Scanning",
         "5 Active Offers",
-        "Up to 3 Locations",
-        "Advanced Analytics",
-        "Priority Support"
+        "Up to 3 Locations"
       ]
     },
     "loyalty_professional": {
@@ -66,40 +69,50 @@
       "description": "Complete loyalty solution for established brands",
       "features": [
         "Unlimited Customers",
+        "Online Menu",
+        "Menu QR Code",
+        "QR Code Scanning",
         "Unlimited Offers",
-        "Unlimited Locations",
-        "Custom Branding",
-        "API Access"
+        "Unlimited Locations"
       ]
     },
     "pos_business": {
       "name": "POS Business",
       "description": "Streamlined POS for retail and service",
       "features": [
-        "1 Register",
-        "Inventory Management",
-        "Sales Reporting",
-        "Employee Management"
+        "Up to 1,000 Customers",
+        "Online Menu",
+        "QR Code Scanning",
+        "1 Active Offer",
+        "1 Location",
+        "Unlimited POS Operations",
+        "Sales Analytics"
       ]
     },
     "pos_enterprise": {
       "name": "POS Enterprise",
       "description": "Powerful POS for high-volume businesses",
       "features": [
-        "Unlimited Registers",
-        "Multi-location Support",
-        "Advanced Inventory",
-        "Kitchen Display System"
+        "Unlimited Customers",
+        "Online Menu",
+        "QR Code Scanning",
+        "5 Active Offers",
+        "Up to 3 Locations",
+        "Unlimited POS Operations",
+        "Sales Analytics"
       ]
     },
     "pos_premium": {
       "name": "POS Premium",
       "description": "Ultimate control and customization",
       "features": [
-        "All Enterprise Features",
-        "White-label Option",
-        "Custom Development",
-        "SLA Guarantees"
+        "Unlimited Customers",
+        "Online Menu",
+        "QR Code Scanning",
+        "Unlimited Offers",
+        "Unlimited Locations",
+        "Unlimited POS Operations",
+        "Sales Analytics"
       ]
     },
     "free": {

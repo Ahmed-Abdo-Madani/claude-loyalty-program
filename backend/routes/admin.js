@@ -4,6 +4,7 @@ import AdminBusinessController from '../controllers/adminBusinessController.js'
 import AdminAnalyticsController from '../controllers/adminAnalyticsController.js'
 import AdminEmailStatsController from '../controllers/adminEmailStatsController.js'
 import AdminIconsController from '../controllers/adminIconsController.js'
+import AdminMessagingController from '../controllers/adminMessagingController.js'
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -174,6 +175,59 @@ router.get('/analytics/email/health',
 )
 
 // =================
+// MESSAGING ROUTES
+// =================
+
+// Get all conversations
+router.get('/messages/conversations',
+  requireAdminOrSuper,
+  logAdminAction('view_conversations', 'messaging'),
+  AdminMessagingController.getConversations
+)
+
+// Get conversation by ID with messages
+router.get('/messages/conversations/:id',
+  requireAdminOrSuper,
+  logAdminAction('view_conversation_details', 'messaging'),
+  AdminMessagingController.getConversationById
+)
+
+// Send message to business
+router.post('/messages/send',
+  requireAdminOrSuper,
+  logAdminAction('send_message', 'messaging'),
+  AdminMessagingController.sendMessage
+)
+
+// Mark message as read
+router.patch('/messages/:id/read',
+  requireAdminOrSuper,
+  logAdminAction('mark_message_read', 'messaging'),
+  AdminMessagingController.markAsRead
+)
+
+// Update conversation status
+router.patch('/messages/conversations/:id/status',
+  requireAdminOrSuper,
+  logAdminAction('update_conversation_status', 'messaging'),
+  AdminMessagingController.updateConversationStatus
+)
+
+// Create message template
+router.post('/messages/templates',
+  requireAdminOrSuper,
+  logAdminAction('create_message_template', 'messaging'),
+  AdminMessagingController.createTemplate
+)
+
+// Get message templates
+router.get('/messages/templates',
+  requireAdminOrSuper,
+  logAdminAction('view_message_templates', 'messaging'),
+  AdminMessagingController.getTemplates
+)
+
+// =================
 // SYSTEM ADMINISTRATION ROUTES (Super Admin Only)
 // =================
 
@@ -340,6 +394,7 @@ router.use('*', (req, res) => {
       'GET /api/admin/businesses',
       'GET /api/admin/analytics/overview',
       'POST /api/admin/icons',
+      'GET /api/admin/messages/conversations',
       'PUT /api/admin/icons/:id',
       'DELETE /api/admin/icons/:id',
       'GET /api/admin/health'

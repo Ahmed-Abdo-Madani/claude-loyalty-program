@@ -263,9 +263,9 @@ export default function SubscriptionManagementPage() {
                   </div>
                   <div className="flex items-end gap-2 mb-3">
                     <span className="text-3xl font-bold text-gray-900 dark:text-white">{item.current || 0}</span>
-                    <span className="text-gray-400 mb-1">/ {item.limit === null ? '∞' : item.limit}</span>
+                    <span className="text-gray-400 mb-1">/ {item.limit === null || item.limit === -1 || item.limit === Infinity ? '∞' : item.limit}</span>
                   </div>
-                  {item.limit !== null && (
+                  {item.limit !== null && item.limit !== -1 && item.limit !== Infinity && (
                     <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full transition-all ${getProgressColor((item.current || 0) / item.limit * 100)}`}
