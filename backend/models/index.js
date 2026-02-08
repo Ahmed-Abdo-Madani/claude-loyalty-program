@@ -675,60 +675,6 @@ Business.hasMany(Message, {
 
 
 
-// =================
-// MESSAGING ASSOCIATIONS (CONTINUED)
-// =================
-
-// PlatformAdmin - Conversation
-PlatformAdmin.hasMany(Conversation, {
-  foreignKey: 'admin_id',
-  sourceKey: 'id',
-  as: 'conversations',
-  onDelete: 'SET NULL'
-})
-
-Conversation.belongsTo(PlatformAdmin, {
-  foreignKey: 'admin_id',
-  targetKey: 'id',
-  as: 'admin'
-})
-
-// Conversation - Message
-Conversation.hasMany(Message, {
-  foreignKey: 'conversation_id',
-  sourceKey: 'conversation_id',
-  as: 'messages',
-  onDelete: 'CASCADE'
-})
-
-Message.belongsTo(Conversation, {
-  foreignKey: 'conversation_id',
-  targetKey: 'conversation_id',
-  as: 'conversation'
-})
-
-// Business - Message (Sent Messages)
-Business.hasMany(Message, {
-  foreignKey: 'sender_id',
-  sourceKey: 'public_id',
-  as: 'sentMessages',
-  constraints: false,
-  scope: {
-    sender_type: 'business'
-  }
-})
-
-// PlatformAdmin - Message (Sent Messages)
-PlatformAdmin.hasMany(Message, {
-  foreignKey: 'sender_id',
-  sourceKey: 'id',
-  as: 'sentMessages',
-  constraints: false,
-  scope: {
-    sender_type: 'admin'
-  }
-})
-
 // Export models and sequelize instance
 export {
   sequelize,
