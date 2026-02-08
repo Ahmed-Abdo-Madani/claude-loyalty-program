@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns'
 import { arSA } from 'date-fns/locale'
-import { endpoints, secureApi } from '../../config/api'
+import { endpoints } from '../../config/api'
+import { adminApi } from '../../utils/adminAuth'
+
 import MessageThread from './MessageThread'
 import MessageComposer from './MessageComposer'
 import MessageTemplateManager from './MessageTemplateManager'
@@ -68,7 +70,8 @@ const MessagingInbox = () => {
             if (filter.search) query.append('search', filter.search)
             if (filter.business_id) query.append('business_id', filter.business_id)
 
-            const response = await secureApi.get(`${endpoints.adminMessagesConversations}?${query.toString()}`)
+            const response = await adminApi.get(`${endpoints.adminMessagesConversations}?${query.toString()}`)
+
             if (response.ok) {
                 const data = await response.json()
                 setConversations(data.data.conversations || [])
@@ -82,7 +85,8 @@ const MessagingInbox = () => {
 
     const fetchBusinesses = async () => {
         try {
-            const response = await secureApi.get(`${endpoints.baseURL}/api/admin/businesses?limit=100`)
+            const response = await adminApi.get(`${endpoints.baseURL}/api/admin/businesses?limit=100`)
+
             if (response.ok) {
                 const data = await response.json()
                 setBusinesses(data.data.businesses || [])
@@ -95,7 +99,8 @@ const MessagingInbox = () => {
     const fetchMessages = async (conversationId, silent = false) => {
         try {
             if (!silent) setLoadingMessages(true)
-            const response = await secureApi.get(endpoints.adminMessagesConversationDetail(conversationId))
+            const response = await adminApi.get(endpoints.adminMessagesConversationDetail(conversationId))
+
             if (response.ok) {
                 const data = await response.json()
                 const msgs = data.data.messages || []
@@ -112,7 +117,8 @@ const MessagingInbox = () => {
                         .map(m => m.id)
 
                     if (unreadIds.length > 0) {
-                        Promise.all(unreadIds.map(id => secureApi.post(endpoints.adminMessagesMarkRead(id))))
+                        Promise.all(unreadIds.map(id => adminApi.post(endpoints.adminMessagesMarkRead(id))))
+
                             .then(() => {
                                 // Update local read status
                                 setConversations(prev => prev.map(c =>
@@ -166,7 +172,7 @@ const MessagingInbox = () => {
                 default: return
             }
 
-            const response = await secureApi.post(
+            const response = await adminApi.post(
                 endpoints.adminMessagesConversationStatus(selectedConversation.id),
                 { status }
             )

@@ -69,7 +69,7 @@ class AdminMessagingController {
                         [Op.in]: sequelize.literal(`(
                       SELECT MAX(id) 
                       FROM messages AS m2 
-                      WHERE m2.conversation_id = messages.conversation_id
+                      WHERE m2.conversation_id = "Message"."conversation_id"
                   )`)
                     }
                 },

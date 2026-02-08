@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { endpoints, secureApi } from '../../config/api'
+import { endpoints } from '../../config/api'
+import { adminApi } from '../../utils/adminAuth'
+
 
 const MessageTemplateManager = () => {
     const { t } = useTranslation('admin')
@@ -23,7 +25,8 @@ const MessageTemplateManager = () => {
     const fetchTemplates = async () => {
         try {
             setLoading(true)
-            const response = await secureApi.get(endpoints.adminMessagesTemplates)
+            const response = await adminApi.get(endpoints.adminMessagesTemplates)
+
             if (response.ok) {
                 const data = await response.json()
                 setTemplates(data.data.templates || [])
@@ -62,7 +65,8 @@ const MessageTemplateManager = () => {
         if (!window.confirm(t('messaging.confirmDeleteTemplate'))) return
 
         try {
-            const response = await secureApi.delete(`${endpoints.adminMessagesTemplates}/${id}`)
+            const response = await adminApi.delete(`${endpoints.adminMessagesTemplates}/${id}`)
+
             if (response.ok) {
                 setTemplates(templates.filter(t => t.id !== id))
                 alert(t('messaging.templateDeleted'))
@@ -79,10 +83,11 @@ const MessageTemplateManager = () => {
         try {
             let response
             if (selectedTemplate) {
-                response = await secureApi.put(`${endpoints.adminMessagesTemplates}/${selectedTemplate.id}`, formData)
+                response = await adminApi.put(`${endpoints.adminMessagesTemplates}/${selectedTemplate.id}`, formData)
             } else {
-                response = await secureApi.post(endpoints.adminMessagesTemplates, formData)
+                response = await adminApi.post(endpoints.adminMessagesTemplates, formData)
             }
+
 
             if (response.ok) {
                 await fetchTemplates()

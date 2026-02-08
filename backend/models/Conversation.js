@@ -58,7 +58,7 @@ const Conversation = sequelize.define('Conversation', {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     hooks: {
-        beforeCreate: async (conversation) => {
+        beforeValidate: async (conversation) => {
             if (!conversation.conversation_id) {
                 conversation.conversation_id = SecureIDGenerator.generateConversationID();
             }

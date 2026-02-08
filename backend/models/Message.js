@@ -89,7 +89,7 @@ const Message = sequelize.define('Message', {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     hooks: {
-        beforeCreate: async (message) => {
+        beforeValidate: async (message) => {
             if (!message.message_id) {
                 message.message_id = SecureIDGenerator.generateMessageID()
             }
