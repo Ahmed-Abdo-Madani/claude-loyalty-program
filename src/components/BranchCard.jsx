@@ -28,13 +28,11 @@ function BranchCard({
   const { t, i18n } = useTranslation('dashboard')
   const [showDeactivateWarning, setShowDeactivateWarning] = useState(false)
   const navigate = useNavigate()
-  const [planType, setPlanType] = useState(null)
+  const [planType, setPlanType] = useState('loyalty')
 
   useEffect(() => {
     if (isPOSPlan()) {
       setPlanType('pos')
-    } else if (isLoyaltyPlan()) {
-      setPlanType('loyalty')
     }
   }, [])
 
@@ -176,7 +174,21 @@ function BranchCard({
 
         {/* Action Button Group */}
         <div className="flex items-center space-x-2">
-          {planType === 'loyalty' ? (
+          {planType === 'pos' ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onManagerAccess(branch)
+              }}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 text-sm min-h-[40px] group"
+              title={t('branches.posAccess')}
+            >
+              <KeyIcon className="w-4 h-4 transition-transform group-hover:rotate-12" />
+              <span className="font-bold underline-offset-4">{t('branches.posAccess')}</span>
+            </button>
+          ) : (
             <button
               type="button"
               onClick={(e) => {
@@ -191,23 +203,10 @@ function BranchCard({
               <QrCodeIcon className="w-4 h-4 transition-transform group-hover:scale-110" />
               <span className="font-bold underline-offset-4">{t('branches.qrScanAccess')}</span>
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onManagerAccess(branch)
-              }}
-              className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 text-sm min-h-[40px] group"
-              title={t('branches.posAccess')}
-            >
-              <KeyIcon className="w-4 h-4 transition-transform group-hover:rotate-12" />
-              <span className="font-bold underline-offset-4">{t('branches.posAccess')}</span>
-            </button>
           )}
         </div>
       </div>
+
       {/* Deactivation Warning Modal */}
       {showDeactivateWarning && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
