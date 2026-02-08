@@ -4,6 +4,7 @@ import BranchGrid from './BranchGrid'
 import LocationAutocomplete from './LocationAutocomplete'
 
 import BranchManagerAccessModal from './BranchManagerAccessModal'
+import BranchQRScannerAccessModal from './BranchQRScannerAccessModal'
 import PlanLimitModal from './PlanLimitModal'
 import UsageIndicator from './UsageIndicator'
 import { endpoints, secureApi } from '../config/api'
@@ -388,13 +389,25 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
       )}
 
       {/* Manager Access Modal */}
+      {/* Manager Access Modal */}
       {showManagerAccessModal && (
-        <BranchManagerAccessModal
-          branch={showManagerAccessModal}
-          isOpen={!!showManagerAccessModal}
-          onClose={() => setShowManagerAccessModal(null)}
-          onSuccess={loadBranches}
-        />
+        <>
+          {showManagerAccessModal.accessIntent === 'scanner' ? (
+            <BranchQRScannerAccessModal
+              branch={showManagerAccessModal}
+              isOpen={!!showManagerAccessModal}
+              onClose={() => setShowManagerAccessModal(null)}
+              onSuccess={loadBranches}
+            />
+          ) : (
+            <BranchManagerAccessModal
+              branch={showManagerAccessModal}
+              isOpen={!!showManagerAccessModal}
+              onClose={() => setShowManagerAccessModal(null)}
+              onSuccess={loadBranches}
+            />
+          )}
+        </>
       )}
 
       {/* Plan Limit Modal */}

@@ -83,6 +83,24 @@ export function getSubscriptionData() {
 }
 
 /**
+ * Check if the current subscription plan type starts with 'pos_'
+ */
+export function isPOSPlan() {
+  const subscription = getSubscriptionData()
+  if (!subscription) return false
+  return subscription.plan_type && subscription.plan_type.startsWith('pos_')
+}
+
+/**
+ * Check if the current subscription plan type starts with 'loyalty_'
+ */
+export function isLoyaltyPlan() {
+  const subscription = getSubscriptionData()
+  if (!subscription) return false
+  return subscription.plan_type && subscription.plan_type.startsWith('loyalty_')
+}
+
+/**
  * Set subscription data in localStorage
  */
 export function setSubscriptionData(subscriptionData) {
@@ -302,7 +320,9 @@ export default {
   updateStatusAfterPayment,
   isTrialExpired,
   getTrialExpirationData,
-  clearTrialExpiration
+  clearTrialExpiration,
+  isPOSPlan,
+  isLoyaltyPlan
 }
 // ============================================
 // Branch Manager Authentication Functions

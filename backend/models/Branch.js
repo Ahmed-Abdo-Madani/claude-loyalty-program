@@ -106,6 +106,12 @@ const Branch = sequelize.define('Branch', {
     allowNull: false,
     comment: 'Whether POS access is enabled for this branch (independent of branch status)'
   },
+  scanner_access_enabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    allowNull: false,
+    comment: 'Whether QR scanner access is enabled for this branch'
+  },
   status: {
     type: DataTypes.ENUM('active', 'inactive', 'closed'),
     defaultValue: 'active'

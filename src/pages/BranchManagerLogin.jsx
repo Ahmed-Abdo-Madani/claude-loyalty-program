@@ -68,7 +68,12 @@ export default function BranchManagerLogin() {
       const result = await managerLogin(branchId, pin)
 
       if (result.success) {
-        navigate('/branch-pos')
+        const redirectParam = searchParams.get('redirect')
+        if (redirectParam === 'scanner') {
+          navigate('/branch-scanner')
+        } else {
+          navigate('/branch-pos')
+        }
       } else {
         // Map error codes to translations
         let errorMessage = result.error || t('branchManagerAuth.errors.loginFailed')

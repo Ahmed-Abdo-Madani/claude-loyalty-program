@@ -14,7 +14,6 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   const [pinSaving, setPinSaving] = useState(false)
   const [pinSaveError, setPinSaveError] = useState(null)
   const [pinSavedSuccessfully, setPinSavedSuccessfully] = useState(false)
-  const [managerPinEnabled, setManagerPinEnabled] = useState(branch?.manager_pin_enabled || false)
   const [posAccessEnabled, setPosAccessEnabled] = useState(branch?.pos_access_enabled ?? true)
   const [showPosDisableConfirm, setShowPosDisableConfirm] = useState(false)
   const [managerPin, setManagerPin] = useState('')
@@ -54,12 +53,11 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
   // Sync state with branch prop
   useEffect(() => {
     if (isOpen && branch) {
-      setManagerPinEnabled(branch.manager_pin_enabled || false)
       setPosAccessEnabled(branch.pos_access_enabled ?? true)
     }
   }, [isOpen, branch?.public_id])
 
-  // Generate QR code when modal opens, branch changes, or manager access is enabled
+  // Generate QR code when modal opens, branch changes, or pos access is enabled
   useEffect(() => {
     const generateManagerLoginQR = async () => {
       if (!branch?.public_id) return
@@ -85,10 +83,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
       }
     }
 
-    if (isOpen && branch?.public_id && managerPinEnabled) {
+    if (isOpen && branch?.public_id && posAccessEnabled) {
       generateManagerLoginQR()
     }
-  }, [isOpen, branch?.public_id, managerPinEnabled])
+  }, [isOpen, branch?.public_id, posAccessEnabled])
 
   // Defensive close handler
   const handleClose = () => {
@@ -144,47 +142,6 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
     setPinValidated(false)
     setPinSavedSuccessfully(false)
     setPinSaveError(null)
-  }
-
-  // Handle manager access toggle
-  const handleToggleManagerAccess = async (enabled) => {
-    if (!branch?.public_id) {
-      setManagerPinEnabled(enabled)
-      return
-    }
-
-    // Optimistically update UI immediately
-    setManagerPinEnabled(enabled)
-    setToggleSaving(true)
-
-    try {
-      const response = await secureApiRequest(`${endpoints.myBranches}/${branch.public_id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getSecureAuthHeaders()
-        },
-        body: JSON.stringify({
-          manager_pin_enabled: enabled
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        console.log('✅ Manager access updated:', data.data?.manager_pin_enabled)
-        // Keep optimistic state, don't call onSuccess to avoid branch list reload during modal interaction
-      } else {
-        throw new Error(data.message || 'Failed to update manager access')
-      }
-    } catch (error) {
-      console.error('Error updating manager access:', error)
-      // Revert toggle on error
-      setManagerPinEnabled(!enabled)
-      setPinSaveError(error.message || 'Failed to update manager access setting')
-    } finally {
-      setToggleSaving(false)
-    }
   }
 
   // Handle POS Access Toggle
@@ -281,10 +238,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
         <div className="flex-shrink-0 flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-              🔐 {t('branches.posAccess')}
+              🔐 {t('branches.posTerminalAccess')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {branch?.name || 'Branch'} - {t('branches.posAccessDesc')}
+              {branch?.name || 'Branch'} - {t('branches.posTerminalAccessDesc')}
             </p>
           </div>
           <button
@@ -301,16 +258,15 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-6">
 
-
             {/* Manager Access Section */}
             <div className={`p-4 rounded-lg border-2 border-purple-200 dark:border-purple-800 transition-opacity bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center">
-                    🔐 {t('branches.enablePosAccess')}
+                    🔐 {t('branches.enablePosTerminalAccess')}
                   </h3>
                   <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                    {t('branches.posAccessDesc')}
+                    {t('branches.posTerminalAccessDesc')}
                   </p>
                 </div>
                 <input
@@ -337,7 +293,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                       aria-hidden="true"
                     />
                     <label className="block text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                      📱 {t('branches.posPin')}
+                      📱 {t('branches.posTerminalPin')}
                     </label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -348,7 +304,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                           maxLength={6}
                           pattern="[0-9]{4,6}"
                           className="w-full px-4 py-3 min-h-[44px] border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all touch-target font-mono text-lg tracking-widest"
-                          placeholder={t('branches.posPinPlaceholder')}
+                          placeholder={t('branches.posTerminalPinPlaceholder')}
                         />
                         <button
                           type="button"
@@ -390,7 +346,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                   {branch?.public_id && (
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
                       <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">
-                        📱 {t('branches.posLoginQR')}
+                        📱 {t('branches.posTerminalLoginQR')}
                       </h4>
                       <div className="flex items-center gap-4">
                         <div className="bg-white p-2 rounded-lg border border-gray-200">
@@ -401,7 +357,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                           ) : managerQrData ? (
                             <img
                               src={managerQrData.qrCodeDataUrl}
-                              alt={t('branches.posLoginQRAlt')}
+                              alt={t('branches.posTerminalLoginQRAlt')}
                               className="w-[120px] h-[120px]"
                             />
                           ) : (
@@ -414,7 +370,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                         </div>
                         <div className="flex-1">
                           <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
-                            {t('branches.posLoginQRDesc')}
+                            {t('branches.posTerminalLoginQRDesc')}
                           </p>
                           <div className="bg-purple-50 dark:bg-purple-900/30 p-2 rounded border border-purple-200 dark:border-purple-700">
                             <code className="text-xs text-purple-900 dark:text-purple-200 break-all">
@@ -430,7 +386,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                           type="button"
                           onClick={handleCopyLoginLink}
                           disabled={!branch?.public_id || linkCopied}
-                          aria-label={t('branches.sharePosLoginLink')}
+                          aria-label={t('branches.sharePosTerminalLoginLink')}
                           className={`w-full px-4 py-3 min-h-[44px] rounded-lg font-semibold transition-all shadow-md flex items-center justify-center gap-2 ${linkCopied
                             ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
                             : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
@@ -454,7 +410,7 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                           </p>
                         )}
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 text-center">
-                          {t('branches.sharePosLoginLinkDesc')}
+                          {t('branches.sharePosTerminalLoginLinkDesc')}
                         </p>
                       </div>
                     </div>
@@ -488,10 +444,10 @@ function BranchManagerAccessModal({ branch, isOpen, onClose, onSuccess }) {
                 </svg>
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                {t('branches.disablePosAccessTitle')}
+                {t('branches.disablePosTerminalAccessTitle')}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                {t('branches.disablePosAccessMessage')}
+                {t('branches.disablePosTerminalAccessMessage')}
               </p>
               <div className="flex gap-3">
                 <button

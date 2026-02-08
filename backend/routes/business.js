@@ -1942,7 +1942,7 @@ router.put('/my/branches/:id', requireBusinessAuth, async (req, res) => {
     // Allowed fields to update
     const allowedFields = [
       'name', 'address', 'city', 'region', 'district',
-      'phone', 'email', 'manager_name', 'manager_pin_enabled', 'pos_access_enabled',
+      'phone', 'email', 'manager_name', 'manager_pin_enabled', 'pos_access_enabled', 'scanner_access_enabled',
       'status', 'operating_hours', 'location_id', 'location_type', 'location_hierarchy'
     ]
 

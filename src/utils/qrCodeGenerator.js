@@ -33,10 +33,10 @@ class QRCodeGenerator {
     const { type = 'business', source, ref } = options
     const baseUrl = import.meta.env.VITE_BASE_URL || 'https://app.madna.me'
     const url = new URL(`${baseUrl}/menu/${type}/${identifier}`)
-    
+
     if (source) url.searchParams.set('source', source)
     if (ref) url.searchParams.set('ref', ref)
-    
+
     return url.toString()
   }
 
@@ -82,7 +82,7 @@ class QRCodeGenerator {
   async generateMenuQRCode(identifier, options = {}) {
     try {
       const url = this.createMenuUrl(identifier, options)
-      
+
       const qrOptions = {
         errorCorrectionLevel: 'M',
         type: 'image/png',
@@ -94,9 +94,9 @@ class QRCodeGenerator {
         },
         width: options.size || 256
       }
-      
+
       const qrCodeDataUrl = await QRCode.toDataURL(url, qrOptions)
-      
+
       return {
         success: true,
         data: {
@@ -158,6 +158,54 @@ class QRCodeGenerator {
       }
     } catch (error) {
       console.error('Error generating manager login QR code:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  }
+
+  /**
+   * Generate manager login QR code for scanner access
+   * @param {string} branchId - Branch public ID
+   * @param {Object} options - QR code generation options
+   * @returns {Promise<Object>} Generated QR code data
+   */
+  async generateScannerLoginQRCode(branchId, options = {}) {
+    try {
+      if (!branchId) {
+        throw new Error('Branch ID is required')
+      }
+
+      const baseUrl = import.meta.env.VITE_BASE_URL || 'https://app.madna.me'
+      const loginUrl = `${baseUrl}/branch-manager-login?branch=${branchId}&redirect=scanner`
+
+      const qrOptions = {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: options.darkColor || '#000000',
+          light: options.lightColor || '#FFFFFF'
+        },
+        width: options.size || 256
+      }
+
+      const qrCodeDataUrl = await QRCode.toDataURL(loginUrl, qrOptions)
+
+      return {
+        success: true,
+        data: {
+          qrCodeDataUrl,
+          url: loginUrl,
+          branchId,
+          timestamp: new Date().toISOString(),
+          options: qrOptions
+        }
+      }
+    } catch (error) {
+      console.error('Error generating scanner login QR code:', error)
       return {
         success: false,
         error: error.message
@@ -360,9 +408,9 @@ class QRCodeGenerator {
     try {
       const urlObj = new URL(url)
       const isValidDomain = urlObj.hostname === new URL(this.baseUrl).hostname
-      const hasValidPath = urlObj.pathname.startsWith('/customer-signup/') || 
-                           urlObj.pathname.startsWith('/join/') ||
-                           urlObj.pathname.startsWith('/menu/')
+      const hasValidPath = urlObj.pathname.startsWith('/customer-signup/') ||
+        urlObj.pathname.startsWith('/join/') ||
+        urlObj.pathname.startsWith('/menu/')
 
       // Extract menu type and identifier if it's a menu path
       let menuType = null

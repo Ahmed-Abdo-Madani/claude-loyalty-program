@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { getManagerAuthData, managerLogout, isManagerAuthenticated } from '../utils/secureAuth'
+import {
+  getManagerAuthData,
+  managerLogout,
+  isManagerAuthenticated,
+  isPOSPlan,
+  isLoyaltyPlan
+} from '../utils/secureAuth'
 import EnhancedQRScanner from '../components/EnhancedQRScanner'
 import { endpoints } from '../config/api'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -16,8 +22,16 @@ export default function BranchScanner() {
   const [error, setError] = useState('')
   const [todayStats, setTodayStats] = useState({ scansToday: 0, rewardsEarned: 0 })
   const [branchInfo, setBranchInfo] = useState(null)
+  const [planType, setPlanType] = useState('loyalty')
 
   useEffect(() => {
+    // Detect plan type
+    if (isPOSPlan()) {
+      setPlanType('pos')
+    } else if (isLoyaltyPlan()) {
+      setPlanType('loyalty')
+    }
+
     // Check authentication
     if (!isManagerAuthenticated()) {
       navigate('/branch-manager-login')
@@ -206,14 +220,16 @@ export default function BranchScanner() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/branch-pos')}
-              className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 flex items-center gap-2"
-              aria-label="Open POS system"
-            >
-              <span>🛒</span>
-              <span className="hidden sm:inline">POS</span>
-            </button>
+            {planType === 'pos' && (
+              <button
+                onClick={() => navigate('/branch-pos')}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 flex items-center gap-2"
+                aria-label="Open POS system"
+              >
+                <span>🛒</span>
+                <span className="hidden sm:inline">POS</span>
+              </button>
+            )}
             <LanguageSwitcher variant="button" showLabels={false} className="" />
             <button
               onClick={handleLogout}
@@ -227,26 +243,29 @@ export default function BranchScanner() {
       )}
 
       {/* Deprecation Notice Banner */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-l-4 border-blue-500 p-4 mx-4 mt-4 rounded-lg">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">ℹ️</span>
-          <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              {t('branchScanner.deprecation.title')}
-            </h3>
-            <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-              {t('branchScanner.deprecation.message')}
-            </p>
-            <button
-              onClick={() => navigate('/branch-pos')}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
-            >
-              <span>🛒</span>
-              <span>{t('branchScanner.deprecation.tryPOS')}</span>
-            </button>
+      {/* Deprecation Notice Banner - Only for POS plans */}
+      {planType === 'pos' && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-l-4 border-blue-500 p-4 mx-4 mt-4 rounded-lg">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">ℹ️</span>
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                {t('branchScanner.deprecation.title')}
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                {t('branchScanner.deprecation.message')}
+              </p>
+              <button
+                onClick={() => navigate('/branch-pos')}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2"
+              >
+                <span>🛒</span>
+                <span>{t('branchScanner.deprecation.tryPOS')}</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
@@ -325,9 +344,9 @@ export default function BranchScanner() {
               {/* Offer Warning Alert Banner */}
               {scanResult.offerWarning && (
                 <div className={`mb-6 p-4 rounded-xl border-l-4 text-left ${scanResult.offerWarning.code === 'OFFER_PAUSED' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 text-yellow-800 dark:text-yellow-200' :
-                    scanResult.offerWarning.code === 'OFFER_INACTIVE' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-800 dark:text-orange-200' :
-                      scanResult.offerWarning.code === 'OFFER_EXPIRED' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200' :
-                        'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200'
+                  scanResult.offerWarning.code === 'OFFER_INACTIVE' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-800 dark:text-orange-200' :
+                    scanResult.offerWarning.code === 'OFFER_EXPIRED' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200' :
+                      'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200'
                   }`}>
                   <h4 className="font-bold flex items-center gap-2 mb-1">
                     {t(`branchScanner.offerWarnings.${scanResult.offerWarning.offerStatus}`)}

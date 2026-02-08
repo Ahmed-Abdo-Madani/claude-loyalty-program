@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import StatusBadge from './StatusBadge'
+import { isPOSPlan, isLoyaltyPlan } from '../utils/secureAuth'
 import {
   BuildingStorefrontIcon,
   HomeModernIcon,
@@ -11,7 +13,8 @@ import {
   PlayCircleIcon,
   TrashIcon,
   PencilSquareIcon,
-  KeyIcon
+  KeyIcon,
+  QrCodeIcon
 } from '@heroicons/react/24/outline'
 import { formatCurrency } from '../utils/formatUtils'
 
@@ -24,6 +27,16 @@ function BranchCard({
 }) {
   const { t, i18n } = useTranslation('dashboard')
   const [showDeactivateWarning, setShowDeactivateWarning] = useState(false)
+  const navigate = useNavigate()
+  const [planType, setPlanType] = useState(null)
+
+  useEffect(() => {
+    if (isPOSPlan()) {
+      setPlanType('pos')
+    } else if (isLoyaltyPlan()) {
+      setPlanType('loyalty')
+    }
+  }, [])
 
   const isActive = branch.status === 'active'
 
@@ -163,20 +176,36 @@ function BranchCard({
 
         {/* Action Button Group */}
         <div className="flex items-center space-x-2">
-          {/* Manager Access Button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onManagerAccess(branch);
-            }}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 text-sm min-h-[40px] group"
-            title={t('branches.posAccess')}
-          >
-            <KeyIcon className="w-4 h-4 transition-transform group-hover:rotate-12" />
-            <span className="font-bold underline-offset-4">{t('branches.posAccess')}</span>
-          </button>
+          {planType === 'loyalty' ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // Pass accessIntent to trigger the scanner authentication flow
+                onManagerAccess({ ...branch, accessIntent: 'scanner' })
+              }}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-md shadow-green-600/20 hover:shadow-lg hover:shadow-green-600/30 active:scale-[0.98] transition-all duration-200 text-sm min-h-[40px] group"
+              title={t('branches.qrScanAccessDesc')}
+            >
+              <QrCodeIcon className="w-4 h-4 transition-transform group-hover:scale-110" />
+              <span className="font-bold underline-offset-4">{t('branches.qrScanAccess')}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onManagerAccess(branch)
+              }}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] transition-all duration-200 text-sm min-h-[40px] group"
+              title={t('branches.posAccess')}
+            >
+              <KeyIcon className="w-4 h-4 transition-transform group-hover:rotate-12" />
+              <span className="font-bold underline-offset-4">{t('branches.posAccess')}</span>
+            </button>
+          )}
         </div>
       </div>
       {/* Deactivation Warning Modal */}
