@@ -147,7 +147,7 @@ const MessageComposer = ({ isOpen, onClose, onSuccess, businesses, selectedBusin
                         >
                             <option value="">{t('messaging.selectBusinessPlaceholder')}</option>
                             {businesses.map(business => (
-                                <option key={business.id} value={business.id}>
+                                <option key={business.public_id || business.id} value={business.public_id || business.id}>
                                     {business.business_name}
                                 </option>
                             ))}

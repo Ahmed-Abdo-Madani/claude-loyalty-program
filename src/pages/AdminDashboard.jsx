@@ -300,7 +300,7 @@ function AdminDashboard() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('overview.recentBusinesses')}</h3>
                 <div className="space-y-3">
                   {businesses.slice(0, 5).map((business) => (
-                    <div key={business.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+                    <div key={business.public_id || business.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
                       <div>
                         <h4 className="font-medium text-gray-900">{business.business_name}</h4>
                         <p className="text-sm text-gray-500">{business.email}</p>

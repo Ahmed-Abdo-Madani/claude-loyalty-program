@@ -276,7 +276,7 @@ const MessagingInbox = () => {
                             >
                                 <option value="">{t('businesses.all') || 'All Businesses'}</option>
                                 {businesses.map(b => (
-                                    <option key={b.id} value={b.id}>{b.business_name}</option>
+                                    <option key={b.public_id || b.id} value={b.public_id || b.id}>{b.business_name}</option>
                                 ))}
                             </select>
                         </div>
