@@ -117,7 +117,7 @@ class EmailService {
    * @throws {Error} If configuration is missing
    */
   static validateConfig() {
-    const requiredVars = ['RESEND_API_KEY', 'EMAIL_FROM'];
+    const requiredVars = ['RESEND_API_KEY', 'EMAIL_FROM', 'FRONTEND_URL'];
     const missingVars = requiredVars.filter(v => !process.env[v]);
 
     if (missingVars.length > 0) {
@@ -207,6 +207,58 @@ class EmailService {
       text: options.text || (typeof message === 'string' ? message.replace(/<[^>]*>?/gm, '') : 'Notification'),
       priority,
       ...options
+    });
+  }
+
+  /**
+   * Send a message notification email
+   * @param {string} recipientEmail - Recipient email
+   * @param {Object} notificationData - Data for the template
+   * @param {Object} options - Options (language, notificationType, unsubscribeToken)
+   * @returns {Promise<Object>} Send result
+   */
+  static async sendMessageNotification(recipientEmail, notificationData, options = {}) {
+    const { language = 'en', notificationType, unsubscribeToken } = options;
+
+    if (!['new-message', 'new-inquiry'].includes(notificationType)) {
+      throw new Error(`Invalid notification type: ${notificationType}`);
+    }
+
+    // Generate unsubscribe URL if token provided
+    const unsubscribeUrl = unsubscribeToken
+      ? `${process.env.FRONTEND_URL}/unsubscribe/messages/${unsubscribeToken}`
+      : null;
+
+    // Add unsubscribe URL to data
+    const data = {
+      ...notificationData,
+      unsubscribeUrl,
+      language
+    };
+
+    // Render HTML
+    const html = await TemplateRenderer.renderMessageNotificationTemplate(notificationType, data, language);
+
+    // Generate fallback text
+    let text = '';
+    if (notificationType === 'new-message') {
+      text = `New message from ${notificationData.adminName || 'Admin'}\n\n`;
+      text += `Subject: ${notificationData.subject}\n\n`;
+      text += `View message: ${notificationData.conversationUrl}\n\n`;
+      if (unsubscribeUrl) text += `Unsubscribe: ${unsubscribeUrl}`;
+    } else {
+      text = `New inquiry from ${notificationData.businessName}\n\n`;
+      text += `Subject: ${notificationData.subject}\n\n`;
+      text += `View in dashboard: ${notificationData.conversationUrl}`;
+    }
+
+    return this.sendTransactional({
+      to: recipientEmail,
+      subject: notificationData.subject,
+      html,
+      text,
+      priority: 'normal',
+      externalId: options.messageId || undefined // Use message ID for tracking if provided
     });
   }
 

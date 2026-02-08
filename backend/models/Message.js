@@ -63,6 +63,24 @@ const Message = sequelize.define('Message', {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW
+    },
+    // Email Notification Tracking
+    email_notification_sent: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    email_notification_sent_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    email_notification_status: {
+        type: DataTypes.ENUM('pending', 'sent', 'failed', 'bounced'),
+        allowNull: true
+    },
+    unsubscribe_token: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        unique: true
     }
 }, {
     tableName: 'messages',

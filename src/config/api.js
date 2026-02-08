@@ -135,6 +135,22 @@ export const endpoints = {
   adminIconsCategories: `${API_BASE_URL}/api/admin/icons/categories`,
   adminIconsRegeneratePreviews: `${API_BASE_URL}/api/admin/icons/regenerate-previews`,
 
+  // Admin Messaging APIs
+  adminMessagesConversations: `${API_BASE_URL}/api/admin/messages/conversations`,
+  adminMessagesConversationDetail: (conversationId) => `${API_BASE_URL}/api/admin/messages/conversations/${conversationId}`,
+  adminMessagesSend: `${API_BASE_URL}/api/admin/messages/send`,
+  adminMessagesMarkRead: (messageId) => `${API_BASE_URL}/api/admin/messages/${messageId}/read`,
+  adminMessagesTemplates: `${API_BASE_URL}/api/admin/messages/templates`,
+  adminMessagesTemplateDetail: (templateId) => `${API_BASE_URL}/api/admin/messages/templates/${templateId}`,
+  adminMessagesConversationStatus: (conversationId) => `${API_BASE_URL}/api/admin/messages/conversations/${conversationId}/status`,
+
+  // Business Messaging APIs
+  businessMessagesConversations: `${API_BASE_URL}/api/business/messages/conversations`,
+  businessMessagesConversationDetail: (conversationId) => `${API_BASE_URL}/api/business/messages/conversations/${conversationId}`,
+  businessMessagesSend: `${API_BASE_URL}/api/business/messages/send`,
+  businessMessagesMarkRead: (messageId) => `${API_BASE_URL}/api/business/messages/${messageId}/read`,
+
+
   // Branch Manager APIs
   branchManagerLogin: `${API_BASE_URL}/api/branch-manager/login`,
   branchManagerVerify: `${API_BASE_URL}/api/branch-manager/verify`,

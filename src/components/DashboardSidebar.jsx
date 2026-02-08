@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { getSecureAuthHeaders } from '../utils/secureAuth'
 import { endpoints, apiBaseUrl, secureApi } from '../config/api'
 import LogoUploadModal from './LogoUploadModal'
+import { useMessaging } from '../contexts/MessagingContext'
 import {
   HomeIcon,
   GiftIcon,
@@ -14,7 +15,8 @@ import {
   SunIcon,
   MoonIcon,
   ChevronDoubleLeftIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 
 function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut }) {
@@ -22,6 +24,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
   const { isDark, toggleTheme } = useTheme()
   const [logoInfo, setLogoInfo] = useState(null)
   const [showLogoModal, setShowLogoModal] = useState(false)
+  const { unreadCount } = useMessaging()
 
   // Load business logo info
   useEffect(() => {
@@ -49,6 +52,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
     { id: 'offers', label: t('sidebar.myOffers'), icon: GiftIcon },
     { id: 'branches', label: t('sidebar.branches'), icon: MapPinIcon },
     { id: 'products', label: t('sidebar.products'), icon: ShoppingBagIcon },
+    { id: 'messages', label: t('sidebar.messages'), icon: ChatBubbleLeftRightIcon, badge: unreadCount },
     { id: 'analytics', label: t('sidebar.analytics'), icon: ChartBarIcon },
     { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: CreditCardIcon }
   ]
@@ -127,6 +131,12 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
                 )}
                 <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                 <span className="font-medium text-sm tracking-wide">{item.label}</span>
+
+                {item.badge > 0 && (
+                  <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full border border-red-400 shadow-sm animate-pulse">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
 
                 {item.comingSoon && (
                   <span className="ml-auto text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full border border-white/10">

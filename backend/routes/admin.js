@@ -5,6 +5,8 @@ import AdminAnalyticsController from '../controllers/adminAnalyticsController.js
 import AdminEmailStatsController from '../controllers/adminEmailStatsController.js'
 import AdminIconsController from '../controllers/adminIconsController.js'
 import AdminMessagingController from '../controllers/adminMessagingController.js'
+import AdminMessagingAnalyticsController from '../controllers/adminMessagingAnalyticsController.js'
+import AdminSettingsController from '../controllers/adminSettingsController.js'
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -227,6 +229,49 @@ router.get('/messages/templates',
   AdminMessagingController.getTemplates
 )
 
+// Messaging Analytics Routes
+router.get('/messages/analytics/stats',
+  requireAdminOrSuper,
+  logAdminAction('view_messaging_stats', 'analytics'),
+  AdminMessagingAnalyticsController.getMessagingStats
+)
+
+router.get('/messages/analytics/response-times',
+  requireAdminOrSuper,
+  logAdminAction('view_response_time_metrics', 'analytics'),
+  AdminMessagingAnalyticsController.getResponseTimeMetrics
+)
+
+router.get('/messages/analytics/trends',
+  requireAdminOrSuper,
+  logAdminAction('view_conversation_trends', 'analytics'),
+  AdminMessagingAnalyticsController.getConversationTrends
+)
+
+router.get('/messages/analytics/status-distribution',
+  requireAdminOrSuper,
+  logAdminAction('view_status_distribution', 'analytics'),
+  AdminMessagingAnalyticsController.getConversationStatusDistribution
+)
+
+router.get('/messages/analytics/active-businesses',
+  requireAdminOrSuper,
+  logAdminAction('view_active_businesses', 'analytics'),
+  AdminMessagingAnalyticsController.getMostActiveBusinesses
+)
+
+router.get('/messages/analytics/export',
+  requireAdminOrSuper,
+  logAdminAction('export_messaging_history', 'analytics'),
+  AdminMessagingAnalyticsController.exportMessagingHistory
+)
+
+// Unread count endpoint
+router.get('/messages/unread-count',
+  requireAdminOrSuper,
+  AdminMessagingController.getUnreadCount
+)
+
 // =================
 // SYSTEM ADMINISTRATION ROUTES (Super Admin Only)
 // =================
@@ -279,6 +324,24 @@ router.post('/system/maintenance', requireSuperAdmin, (req, res) => {
     message: 'System maintenance endpoint - to be implemented'
   })
 })
+
+// =================
+// SETTINGS ROUTES
+// =================
+
+// Get notification preferences
+router.get('/settings/notifications',
+  requireAdmin(),
+  logAdminAction('view_notification_preferences', 'settings'),
+  AdminSettingsController.getNotificationPreferences
+)
+
+// Update notification preferences
+router.put('/settings/notifications',
+  requireAdmin(),
+  logAdminAction('update_notification_preferences', 'settings'),
+  AdminSettingsController.updateNotificationPreferences
+)
 
 // =================
 // ICON MANAGEMENT ROUTES (Super Admin Only)

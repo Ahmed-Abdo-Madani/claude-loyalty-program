@@ -292,6 +292,29 @@
       "gracePeriod": "Grace Period Ends:",
       "closing": "Please update your payment method to ensure uninterrupted service.",
       "cta": "Update Payment Method"
+    },
+    "messages": {
+      "newMessage": {
+        "subject": "New message from {{senderName}}",
+        "greeting": "Hello {{recipientName}},",
+        "intro": "You have received a new message regarding: {{subject}}",
+        "messagePreview": "Message Preview",
+        "viewFullMessage": "View Full Message",
+        "replyInDashboard": "Reply in your dashboard",
+        "unsubscribeNote": "Don't want to receive message notifications?",
+        "unsubscribeLink": "Unsubscribe from message notifications"
+      },
+      "newInquiry": {
+        "subject": "New inquiry from {{businessName}}",
+        "greeting": "Hello Admin,",
+        "intro": "{{businessName}} has sent a new inquiry",
+        "businessDetails": "Business Details",
+        "businessEmail": "Email",
+        "inquirySubject": "Subject",
+        "messagePreview": "Message Preview",
+        "replyToBusiness": "Reply to Business",
+        "viewInDashboard": "View in Admin Dashboard"
+      }
     }
   }
 }

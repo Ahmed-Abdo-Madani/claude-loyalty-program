@@ -6,6 +6,8 @@ import BusinessesTable from '../components/BusinessesTable'
 import IconLibraryManager from '../components/IconLibraryManager'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import SEO from '../components/SEO'
+import MessagingInbox from '../components/admin/MessagingInbox'
+import MessagingAnalytics from '../components/admin/MessagingAnalytics'
 
 function AdminDashboard() {
   const { t } = useTranslation('admin')
@@ -16,6 +18,7 @@ function AdminDashboard() {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
   const navigate = useNavigate()
 
   // Check admin authentication
@@ -41,8 +44,26 @@ function AdminDashboard() {
   useEffect(() => {
     if (adminInfo) {
       fetchPlatformData()
+      fetchUnreadCount()
+
+      const interval = setInterval(fetchUnreadCount, 60000)
+      return () => clearInterval(interval)
     }
   }, [adminInfo])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch(`${endpoints.baseURL}/api/admin/messages/unread-count`, {
+        headers: getAuthHeaders()
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUnreadCount(data.data.unread_count || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error)
+    }
+  }
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('adminAccessToken')
@@ -112,7 +133,7 @@ function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <SEO titleKey="pages.admin.title" descriptionKey="pages.admin.description" noindex={true} />
-      
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -150,20 +171,25 @@ function AdminDashboard() {
             {[
               { id: 'overview', name: t('tabs.overview'), icon: '📊' },
               { id: 'businesses', name: t('tabs.businesses'), icon: '🏢' },
+              { id: 'messages', name: t('tabs.messages'), icon: '💬' },
               { id: 'analytics', name: t('tabs.analytics'), icon: '📈' },
               { id: 'settings', name: t('tabs.settings'), icon: '⚙️' }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } transition-colors`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } transition-colors`}
               >
                 <span className="mr-2">{tab.icon}</span>
                 {tab.name}
+                {tab.id === 'messages' && unreadCount > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -280,13 +306,12 @@ function AdminDashboard() {
                         <p className="text-sm text-gray-500">{business.email}</p>
                       </div>
                       <div className="text-right">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          business.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : business.status === 'pending'
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${business.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : business.status === 'pending'
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-red-100 text-red-800'
-                        }`}>
+                          }`}>
                           {t(`businessManagement.statusBadge.${business.status}`)}
                         </span>
                       </div>
@@ -303,14 +328,31 @@ function AdminDashboard() {
           <BusinessesTable />
         )}
 
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <MessagingInbox />
+        )}
+
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📈</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('analytics.analyticsDashboard')}</h2>
-            <p className="text-gray-600">
-              {t('analytics.advancedAnalyticsComingSoon')}
-            </p>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('analytics.title')}</h2>
+
+            {/* Messaging Analytics Section */}
+            <div className="mb-8">
+              <MessagingAnalytics />
+            </div>
+
+            {/* Placeholder for other analytics */}
+            <div className="text-center py-12 mt-8 border-t border-gray-200">
+              <div className="text-6xl mb-4">📊</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {t('analytics.moreAnalytics')}
+              </h3>
+              <p className="text-gray-600">
+                {t('analytics.additionalAnalyticsComingSoon')}
+              </p>
+            </div>
           </div>
         )}
 
@@ -320,7 +362,7 @@ function AdminDashboard() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {t('settings.platformSettings')}
             </h2>
-            
+
             {/* Settings Sections */}
             <div className="space-y-6">
               {/* Icon Library Section */}
@@ -336,7 +378,7 @@ function AdminDashboard() {
                 </p>
                 <IconLibraryManager />
               </div>
-              
+
               {/* Future Settings Sections */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center mb-4">

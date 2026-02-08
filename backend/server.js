@@ -27,6 +27,7 @@ import migrationRoutes from './routes/migration.js'
 
 import webhookRoutes from './routes/webhooks.js'
 import contactRoutes from './routes/contact.js'
+import unsubscribeRoutes from './routes/unsubscribe.js'
 import appleCertificateValidator from './utils/appleCertificateValidator.js'
 import { initializeStampIcons } from './scripts/initialize-stamp-icons.js'
 import ManifestService from './services/ManifestService.js'
@@ -326,6 +327,7 @@ app.use('/api/receipts', receiptsRoutes)
 app.use('/api/subscriptions', subscriptionRoutes)
 app.use('/api/migration', migrationRoutes)
 app.use('/api/contact', contactRoutes)
+app.use('/api/unsubscribe', unsubscribeRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

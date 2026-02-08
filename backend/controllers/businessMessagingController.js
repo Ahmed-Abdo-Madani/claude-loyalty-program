@@ -1,4 +1,4 @@
-import { Conversation, Message, Business } from '../models/index.js'
+import { Conversation, Message, Business, PlatformAdmin } from '../models/index.js'
 import { Op } from 'sequelize'
 import sequelize from '../config/database.js'
 import EmailService from '../services/EmailService.js'
@@ -221,23 +221,63 @@ class BusinessMessagingController {
 
             // Send Email Notification to Admin
             try {
-                const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.EMAIL_FROM
-                await EmailService.sendTransactional({
-                    to: adminEmail,
-                    subject: `New inquiry from ${req.business.business_name}: ${subject || conversation.subject}`,
-                    html: `
-            <h3>New Business Inquiry</h3>
-            <p><strong>From:</strong> ${req.business.business_name} (${businessId})</p>
-            <p><strong>Subject:</strong> ${subject || conversation.subject}</p>
-            <p><strong>Message:</strong></p>
-            <p>${message_body.replace(/\n/g, '<br>')}</p>
-            <p><a href="${process.env.ADMIN_FRONTEND_URL}/messages/${conversation.conversation_id}">View Conversation</a></p>
-          `,
-                    text: `New inquiry from ${req.business.business_name}:\n\n${message_body}`
-                })
+                const isNotificationsEnabled = process.env.MESSAGE_NOTIFICATION_ENABLED !== 'false'
+                let shouldNotify = isNotificationsEnabled
+
+                const adminEmail = process.env.ADMIN_MESSAGE_RECIPIENT_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.EMAIL_FROM
+                let targetEmail = adminEmail
+                let targetAdmin = null
+
+                // If conversation has an assigned admin, try to notify them specifically
+                if (conversation.admin_id) {
+                    targetAdmin = await PlatformAdmin.findByPk(conversation.admin_id)
+                    if (targetAdmin) {
+                        targetEmail = targetAdmin.email
+                        shouldNotify = shouldNotify && targetAdmin.canReceiveInquiryNotifications()
+                    }
+                } else {
+                    // Check if default recipient is an admin and respect their preferences
+                    targetAdmin = await PlatformAdmin.findOne({ where: { email: adminEmail } })
+                    if (targetAdmin) {
+                        shouldNotify = shouldNotify && targetAdmin.canReceiveInquiryNotifications()
+                    }
+                }
+
+                if (shouldNotify) {
+                    await EmailService.sendMessageNotification(
+                        targetEmail,
+                        {
+                            businessName: req.business.business_name,
+                            subject: subject || conversation.subject,
+                            messageBody: message_body,
+                            conversationUrl: `${process.env.ADMIN_FRONTEND_URL}/messages/${conversation.conversation_id}`,
+                            businessEmail: req.business.email
+                        },
+                        {
+                            notificationType: 'new-inquiry',
+                            language: 'en' // Admin assumes English usually
+                        }
+                    )
+
+                    // Update message status
+                    await message.update({
+                        email_notification_sent: true,
+                        email_notification_sent_at: new Date(),
+                        email_notification_status: 'sent'
+                    })
+                } else {
+                    logger.info('Admin message notification skipped (disabled by preference or global toggle)', {
+                        conversationId: conversation.conversation_id,
+                        shouldNotify,
+                        isNotificationsEnabled
+                    })
+                }
+
             } catch (emailError) {
                 logger.error('Failed to send email notification to admin:', emailError)
-                // Don't fail the request, just log it
+                await message.update({
+                    email_notification_status: 'failed'
+                }).catch(err => logger.error('Failed to update message status:', err))
             }
 
             res.status(201).json({

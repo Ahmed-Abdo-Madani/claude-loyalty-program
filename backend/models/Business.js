@@ -268,6 +268,17 @@ const Business = sequelize.define('Business', {
     type: DataTypes.DATE,
     allowNull: true,
     comment: 'Date when paid subscription started'
+  },
+  notification_preferences: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: {
+      email_notifications: true,
+      message_notifications: true,
+      inquiry_responses: true,
+      admin_announcements: true
+    },
+    comment: 'User notification settings'
   }
 }, {
   tableName: 'businesses',
@@ -296,6 +307,20 @@ Business.prototype.updateStatus = async function (status, reason = null, adminId
 
   await this.save()
   return this
+}
+
+Business.prototype.updateNotificationPreferences = async function (preferences) {
+  this.notification_preferences = {
+    ...this.notification_preferences,
+    ...preferences
+  }
+  return await this.save()
+}
+
+Business.prototype.canReceiveMessageNotifications = function () {
+  return this.notification_preferences &&
+    this.notification_preferences.email_notifications !== false &&
+    this.notification_preferences.message_notifications !== false
 }
 
 // Calculate business analytics with secure associations

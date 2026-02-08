@@ -292,6 +292,29 @@
       "gracePeriod": "تنتهي فترة السماح في:",
       "closing": "يرجى تحديث طريقة الدفع الخاصة بك لضمان استمرار الخدمة دون انقطاع.",
       "cta": "تحديث طريقة الدفع"
+    },
+    "messages": {
+      "newMessage": {
+        "subject": "رسالة جديدة من {{senderName}}",
+        "greeting": "مرحباً {{recipientName}}،",
+        "intro": "لقد تلقيت رسالة جديدة بخصوص: {{subject}}",
+        "messagePreview": "معاينة الرسالة",
+        "viewFullMessage": "عرض الرسالة كاملة",
+        "replyInDashboard": "الرد في لوحة التحكم",
+        "unsubscribeNote": "لا ترغب في تلقي إشعارات الرسائل؟",
+        "unsubscribeLink": "إلغاء الاشتراك من إشعارات الرسائل"
+      },
+      "newInquiry": {
+        "subject": "استفسار جديد من {{businessName}}",
+        "greeting": "مرحباً المسؤول،",
+        "intro": "قام {{businessName}} بإرسال استفسار جديد",
+        "businessDetails": "تفاصيل الأعمال",
+        "businessEmail": "البريد الإلكتروني",
+        "inquirySubject": "الموضوع",
+        "messagePreview": "معاينة الرسالة",
+        "replyToBusiness": "الرد على الأعمال",
+        "viewInDashboard": "عرض في لوحة تحكم المسؤول"
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import { Op } from 'sequelize'
 import sequelize from '../config/database.js'
 import EmailService from '../services/EmailService.js'
 import logger from '../config/logger.js'
+import crypto from 'crypto'
 
 class AdminMessagingController {
     // Get all conversations with pagination, filtering, and search
@@ -240,28 +241,44 @@ class AdminMessagingController {
             // Send Email Notification
             try {
                 const business = await Business.findOne({ where: { public_id: conversation.business_id } })
-                if (business && business.email) {
+
+                // Check if business wants notifications
+                if (business && business.email && business.canReceiveMessageNotifications && business.canReceiveMessageNotifications()) {
                     const emailSubject = subject || conversation.subject || 'New message from platform admin'
 
-                    await EmailService.sendBusinessNotification(
+                    // Generate unsubscribe token
+                    const unsubscribeToken = crypto.createHash('sha256').update(business.public_id + Date.now().toString()).digest('hex');
+
+                    await EmailService.sendMessageNotification(
                         business.email,
-                        emailSubject,
-                        message_body, // This will be wrapped in HTML in EmailService
                         {
-                            notificationType: 'admin_message',
-                            notificationData: {
-                                businessName: business.business_name,
-                                subject: emailSubject,
-                                messageBody: message_body,
-                                conversationUrl: `${process.env.FRONTEND_URL}/dashboard/messages/${conversation.conversation_id}`
-                            },
-                            language: business.preferred_language || 'ar'
+                            businessName: business.business_name,
+                            subject: emailSubject,
+                            messageBody: message_body,
+                            conversationUrl: `${process.env.FRONTEND_URL}/dashboard/messages/${conversation.conversation_id}`,
+                            adminName: req.admin.full_name || 'Admin'
+                        },
+                        {
+                            notificationType: 'new-message',
+                            language: business.preferred_language || 'ar',
+                            unsubscribeToken
                         }
-                    )
+                    );
+
+                    // Update message with notification status
+                    await message.update({
+                        email_notification_sent: true,
+                        email_notification_sent_at: new Date(),
+                        email_notification_status: 'sent',
+                        unsubscribe_token: unsubscribeToken
+                    });
                 }
             } catch (emailError) {
                 logger.error('Failed to send email notification to business:', emailError)
                 // Don't fail the request, just log it
+                await message.update({
+                    email_notification_status: 'failed'
+                }).catch(err => logger.error('Failed to update message status:', err));
             }
 
             res.status(201).json({
@@ -389,6 +406,35 @@ class AdminMessagingController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to fetch templates',
+                error: error.message
+            })
+        }
+    }
+
+    // Get unread count
+    static async getUnreadCount(req, res) {
+        try {
+            // Sum all unread_count_admin across all conversations
+            const result = await Conversation.findOne({
+                attributes: [
+                    [sequelize.fn('SUM', sequelize.col('unread_count_admin')), 'total_unread']
+                ],
+                raw: true
+            })
+
+            const unreadCount = parseInt(result?.total_unread || 0)
+
+            res.json({
+                success: true,
+                data: {
+                    unread_count: unreadCount
+                }
+            })
+        } catch (error) {
+            logger.error('Get unread count error:', error)
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch unread count',
                 error: error.message
             })
         }

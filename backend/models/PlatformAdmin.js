@@ -42,11 +42,35 @@ const PlatformAdmin = sequelize.define('PlatformAdmin', {
       model: 'platform_admins',
       key: 'id'
     }
+  },
+  notification_preferences: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: {
+      email_notifications: true,
+      new_inquiries: true,
+      urgent_messages: true,
+      daily_digest: false
+    }
   }
 }, {
   tableName: 'platform_admins',
   timestamps: true,
   underscored: true
 })
+
+PlatformAdmin.prototype.updateNotificationPreferences = async function (preferences) {
+  this.notification_preferences = {
+    ...this.notification_preferences,
+    ...preferences
+  }
+  return await this.save()
+}
+
+PlatformAdmin.prototype.canReceiveInquiryNotifications = function () {
+  return this.notification_preferences &&
+    this.notification_preferences.email_notifications !== false &&
+    this.notification_preferences.new_inquiries !== false
+}
 
 export default PlatformAdmin

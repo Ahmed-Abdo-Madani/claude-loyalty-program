@@ -74,6 +74,7 @@
     "upgradeRequired": "ترقية مطلوبة",
     "viewPlans": "عرض الخطط",
     "viewMenu": "عرض القائمة العامة",
+    "messages": "الرسائل",
     "settings": "الإعدادات"
   },
   "mobileNav": {
@@ -1135,6 +1136,38 @@
       "trialEnding": "ينتهي الإصدار التجريبي خلال {{days}} يوم",
       "upgradePrompt": "ترقية الخطة",
       "manageBilling": "إدارة الفواتير"
+    },
+    "messaging": {
+      "title": "الرسائل",
+      "inbox": "صندوق الوارد",
+      "compose": "رسالة جديدة",
+      "selectConversation": "اختر محادثة لعرض الرسائل",
+      "noConversations": "لا توجد محادثات بعد",
+      "searchConversations": "البحث في المحادثات...",
+      "allStatuses": "جميع الحالات",
+      "open": "مفتوح",
+      "closed": "مغلق",
+      "archived": "مؤرشف",
+      "subject": "الموضوع",
+      "subjectPlaceholder": "أدخل موضوع الرسالة",
+      "messageBody": "الرسالة",
+      "messageBodyPlaceholder": "اكتب رسالتك هنا...",
+      "messageType": "نوع الرسالة",
+      "inquiry": "استفسار",
+      "question": "سؤال",
+      "feedback": "ملاحظات",
+      "send": "إرسال الرسالة",
+      "sending": "جاري الإرسال...",
+      "close": "إغلاق",
+      "subjectRequired": "الموضوع مطلوب",
+      "messageRequired": "الرسالة مطلوبة",
+      "sendFailed": "فشل إرسال الرسالة",
+      "sendSuccess": "تم إرسال الرسالة بنجاح",
+      "noMessages": "لا توجد رسائل",
+      "unreadMessages": "{{count}} غير مقروءة",
+      "support": "الدعم",
+      "you": "أنت",
+      "newMessage": "تم استلام رسالة جديدة",
+      "view": "عرض"
     }
   }
-}

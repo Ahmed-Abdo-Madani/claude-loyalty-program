@@ -12,6 +12,9 @@ import LoyaltyMilestoneEmail from '../templates/emails/notifications/LoyaltyMile
 import ContactFormNotificationEmail from '../templates/emails/contact/ContactFormNotificationEmail.jsx';
 import ContactFormConfirmationEmail from '../templates/emails/contact/ContactFormConfirmationEmail.jsx';
 
+import NewMessageNotificationEmail from '../templates/emails/messages/NewMessageNotificationEmail.jsx';
+import NewInquiryNotificationEmail from '../templates/emails/messages/NewInquiryNotificationEmail.jsx';
+
 const templates = {
     'receipts/ReceiptEmail': ReceiptEmail,
     'notifications/PaymentFailureEmail': PaymentFailureEmail,
@@ -19,6 +22,8 @@ const templates = {
     'notifications/LoyaltyMilestoneEmail': LoyaltyMilestoneEmail,
     'contact/ContactFormNotificationEmail': ContactFormNotificationEmail,
     'contact/ContactFormConfirmationEmail': ContactFormConfirmationEmail,
+    'messages/NewMessageNotificationEmail': NewMessageNotificationEmail,
+    'messages/NewInquiryNotificationEmail': NewInquiryNotificationEmail,
 };
 
 export const renderTemplate = async (templateName, props = {}, language = 'ar') => {
@@ -71,7 +76,9 @@ export const renderNotificationTemplate = async (type, data, language) => {
     const typeMap = {
         'payment-failure': 'notifications/PaymentFailureEmail',
         'welcome': 'notifications/WelcomeEmail',
-        'loyalty-milestone': 'notifications/LoyaltyMilestoneEmail'
+        'loyalty-milestone': 'notifications/LoyaltyMilestoneEmail',
+        'new-message': 'messages/NewMessageNotificationEmail',
+        'new-inquiry': 'messages/NewInquiryNotificationEmail'
     };
 
     const templateName = typeMap[type];
@@ -82,9 +89,24 @@ export const renderNotificationTemplate = async (type, data, language) => {
     return renderTemplate(templateName, data, language);
 };
 
+export const renderMessageNotificationTemplate = async (type, data, language) => {
+    const typeMap = {
+        'new-message': 'messages/NewMessageNotificationEmail',
+        'new-inquiry': 'messages/NewInquiryNotificationEmail'
+    };
+
+    const templateName = typeMap[type];
+    if (!templateName) {
+        throw new Error(`Unknown message notification type: ${type}`);
+    }
+
+    return renderTemplate(templateName, data, language);
+};
+
 export default {
     renderTemplate,
     getTranslations,
     renderReceiptTemplate,
-    renderNotificationTemplate
+    renderNotificationTemplate,
+    renderMessageNotificationTemplate
 };

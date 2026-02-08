@@ -1,14 +1,16 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { 
-  HomeIcon, 
-  GiftIcon, 
-  QrCodeIcon, 
+import { useMessaging } from '../contexts/MessagingContext'
+import {
+  HomeIcon,
+  GiftIcon,
+  QrCodeIcon,
   MapPinIcon,
   ShoppingBagIcon,
-  UsersIcon, 
+  UsersIcon,
   CreditCardIcon,
-  ChartBarIcon 
+  ChartBarIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import {
   HomeIcon as HomeIconSolid,
@@ -18,7 +20,8 @@ import {
   ShoppingBagIcon as ShoppingBagIconSolid,
   UsersIcon as UsersIconSolid,
   CreditCardIcon as CreditCardIconSolid,
-  ChartBarIcon as ChartBarIconSolid
+  ChartBarIcon as ChartBarIconSolid,
+  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid
 } from '@heroicons/react/24/solid'
 
 /**
@@ -28,9 +31,10 @@ import {
  */
 function MobileBottomNav() {
   const { t } = useTranslation('dashboard')
+  const { unreadCount } = useMessaging()
   const location = useLocation()
-  
-  // Navigation items - Streamlined to 6 primary tabs
+
+  // Navigation items - Streamlined to primary tabs
   const navigationItems = [
     {
       name: t('mobileNav.overview'),
@@ -47,11 +51,12 @@ function MobileBottomNav() {
       tabName: 'offers'
     },
     {
-      name: t('mobileNav.analytics'),
-      path: '/dashboard?tab=analytics',
-      icon: ChartBarIcon,
-      iconSolid: ChartBarIconSolid,
-      tabName: 'analytics'
+      name: t('mobileNav.messages'),
+      path: '/dashboard?tab=messages',
+      icon: ChatBubbleLeftRightIcon,
+      iconSolid: ChatBubbleLeftRightIconSolid,
+      tabName: 'messages',
+      badge: unreadCount
     },
     {
       name: t('mobileNav.branches'),
@@ -88,17 +93,17 @@ function MobileBottomNav() {
   const isActive = (item) => {
     const searchParams = new URLSearchParams(location.search)
     const currentTab = searchParams.get('tab')
-    
+
     // Treat both 'overview' and missing tab as active for Overview
     if (item.tabName === 'overview') {
       return !currentTab || currentTab === 'overview'
     }
-    
+
     return currentTab === item.tabName
   }
 
   return (
-    <nav 
+    <nav
       className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 safe-area-bottom"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
@@ -106,7 +111,7 @@ function MobileBottomNav() {
         {navigationItems.map((item) => {
           const active = isActive(item)
           const Icon = active ? item.iconSolid : item.icon
-          
+
           return (
             <Link
               key={item.name}
@@ -116,8 +121,9 @@ function MobileBottomNav() {
                 flex-1 min-h-[44px] min-w-[44px] px-2 py-2
                 transition-all duration-200
                 touch-target
-                ${active 
-                  ? 'text-primary dark:text-primary' 
+                relative
+                ${active
+                  ? 'text-primary dark:text-primary'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }
                 active:scale-95
@@ -125,7 +131,14 @@ function MobileBottomNav() {
               aria-label={item.name}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon className="w-7 h-7 mb-0.5" />
+              <div className="relative">
+                <Icon className="w-7 h-7 mb-0.5" />
+                {item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold text-white bg-red-500 rounded-full border border-white dark:border-gray-800 shadow-sm animate-pulse">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+              </div>
               <span className={`text-xs font-medium ${active ? 'font-semibold' : ''}`}>
                 {item.name}
               </span>

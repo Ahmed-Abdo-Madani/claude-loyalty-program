@@ -6,13 +6,15 @@ import { getSubscriptionData, getSecureAuthHeaders } from '../utils/secureAuth'
 import { endpoints, apiBaseUrl, secureApi } from '../config/api'
 import LanguageSwitcher from './LanguageSwitcher'
 import LogoUploadModal from './LogoUploadModal'
-import { CameraIcon } from '@heroicons/react/24/outline'
+import { useMessaging } from '../contexts/MessagingContext'
+import { CameraIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 
 function DashboardHeader({ user }) {
   const { t } = useTranslation('dashboard')
   const { t: tSubscription, i18n } = useTranslation('subscription')
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const { unreadCount } = useMessaging()
   const [logoInfo, setLogoInfo] = useState(null)
   const [showLogoModal, setShowLogoModal] = useState(false)
   const [subscriptionData, setSubscriptionData] = useState(null)
@@ -357,6 +359,21 @@ function DashboardHeader({ user }) {
 
               {/* Header Actions */}
               <div className="flex items-center flex-shrink-0 gap-2">
+                {/* Messages - Visible on Desktop since Sidebar also has it but Header is convenient */}
+                <button
+                  onClick={() => navigate('/dashboard?tab=messages')}
+                  className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors hidden sm:flex"
+                  title={t('messaging.title')}
+                >
+                  <ChatBubbleLeftRightIcon className="w-6 h-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                    </span>
+                  )}
+                </button>
+
                 {/* Language Switcher */}
                 <LanguageSwitcher variant="button" showLabels={false} className="" />
 

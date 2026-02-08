@@ -17,6 +17,7 @@ import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 import appleWalletController from '../controllers/appleWalletController.js'
 import BusinessMessagingController from '../controllers/businessMessagingController.js'
+import BusinessSettingsController from '../controllers/businessSettingsController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
@@ -574,6 +575,22 @@ router.patch('/messages/:id/read',
   BusinessMessagingController.markAsRead
 )
 
+
+// =================
+// SETTINGS ROUTES
+// =================
+
+// Get notification preferences
+router.get('/settings/notifications',
+  requireBusinessAuth,
+  BusinessSettingsController.getNotificationPreferences
+)
+
+// Update notification preferences
+router.put('/settings/notifications',
+  requireBusinessAuth,
+  BusinessSettingsController.updateNotificationPreferences
+)
 
 // ===============================
 // BRANCHES ROUTES
