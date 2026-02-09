@@ -235,8 +235,8 @@ const MessagingInbox = () => {
                                     key={conversation.id}
                                     onClick={() => handleConversationSelect(conversation)}
                                     className={`w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex justify-between items-start ${selectedConversation?.id === conversation.id
-                                            ? 'bg-primary/5 border-l-4 border-primary'
-                                            : 'border-l-4 border-transparent'
+                                        ? 'bg-primary/5 border-l-4 border-primary'
+                                        : 'border-l-4 border-transparent'
                                         }`}
                                 >
                                     <div className="flex-1 min-w-0 pr-2">
@@ -251,8 +251,8 @@ const MessagingInbox = () => {
                                         </div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium capitalize border ${conversation.status === 'open'
-                                                    ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
-                                                    : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
+                                                ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+                                                : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600'
                                                 }`}>
                                                 {t(`messaging.${conversation.status}`)}
                                             </span>
@@ -297,7 +297,7 @@ const MessagingInbox = () => {
                                         {selectedConversation.subject || t('messaging.support')}
                                     </h2>
                                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                        <span>#{selectedConversation.id.substring(0, 8)}</span>
+                                        <span>#{String(selectedConversation.id).substring(0, 8)}</span>
                                         <span>•</span>
                                         <span className={`capitalize ${selectedConversation.status === 'open' ? 'text-green-600' : 'text-gray-500'
                                             }`}>

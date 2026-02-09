@@ -108,7 +108,8 @@
       "western": "Western Region",
       "eastern": "Eastern Region",
       "allRegions": "Saudi Arabia - All Regions"
-    }
+    },
+    "all": "All Businesses"
   },
   "subscriptions": {
     "title": "Subscription Management",
@@ -278,9 +279,8 @@
       "messageVolume": "Message Volume",
       "statusDistribution": "Status Distribution",
       "mostActiveBusinesses": "Most Active Businesses",
-      "businessName": "Business Name",
       "totalMessages": "Total Messages",
-      "totalConversations": "Conversations",
+      "totalConversationsShort": "Conversations",
       "lastActivity": "Last Activity",
       "exportHistory": "Export History",
       "exporting": "Exporting...",
@@ -454,6 +454,8 @@
     "cancel": "Cancel",
     "deleteFailed": "Failed to delete template",
     "saveFailed": "Failed to save template",
-    "errorLoadingTemplates": "Failed to load templates"
+    "errorLoadingTemplates": "Failed to load templates",
+    "allBusinesses": "All Businesses",
+    "unknownBusiness": "Unknown Business"
   }
 }

@@ -84,8 +84,18 @@ class AdminMessagingController {
             const data = conversations.map(c => {
                 const plain = c.get({ plain: true })
                 const lastMsg = lastMessageMap[c.conversation_id]
-                plain.last_message_preview = lastMsg ? lastMsg.message_body.substring(0, 50) + '...' : ''
+
+                // Flatten business name for the frontend
+                plain.business_name = plain.business?.business_name || 'Unknown Business'
+
+                // Map unread count for admin
+                plain.unread_count = plain.unread_count_admin || 0
+
+                // Match frontend expected fields
+                plain.last_message_body = lastMsg ? lastMsg.message_body : ''
+                plain.last_message_preview = lastMsg ? lastMsg.message_body.substring(0, 50) + (lastMsg.message_body.length > 50 ? '...' : '') : ''
                 plain.last_sender = lastMsg ? lastMsg.sender_type : null
+
                 return plain
             })
 

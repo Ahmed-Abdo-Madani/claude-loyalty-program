@@ -198,7 +198,8 @@ const MessagingInbox = () => {
     }
 
     const filteredConversations = conversations.filter(c => {
-        const matchesSearch = c.business_name.toLowerCase().includes(filter.search.toLowerCase())
+        const busName = c.business_name || c.business?.business_name || ''
+        const matchesSearch = busName.toLowerCase().includes((filter.search || '').toLowerCase())
         const matchesStatus = filter.status === 'all' || c.status === filter.status
         const matchesBusiness = !filter.business_id || c.business_id === filter.business_id
         return matchesSearch && matchesStatus && matchesBusiness
@@ -274,7 +275,7 @@ const MessagingInbox = () => {
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 bg-white"
                             >
-                                <option value="">{t('businesses.all') || 'All Businesses'}</option>
+                                <option value="">{t('messaging.allBusinesses') || t('businesses.all') || 'All Businesses'}</option>
                                 {businesses.map(b => (
                                     <option key={b.public_id || b.id} value={b.public_id || b.id}>{b.business_name}</option>
                                 ))}
@@ -306,7 +307,7 @@ const MessagingInbox = () => {
                                         <div className="flex justify-between items-baseline mb-1">
                                             <h3 className={`text-sm font-semibold truncate ${conversation.unread_count > 0 ? 'text-gray-900' : 'text-gray-700'
                                                 }`}>
-                                                {conversation.business_name}
+                                                {conversation.business_name || conversation.business?.business_name || t('messaging.unknownBusiness')}
                                             </h3>
                                             <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
                                                 {conversation.last_message_at && formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: i18n.language === 'ar' ? arSA : undefined })}
@@ -343,7 +344,7 @@ const MessagingInbox = () => {
                                     ←
                                 </button>
                                 <div>
-                                    <h2 className="text-lg font-bold text-gray-900">{selectedConversation.business_name}</h2>
+                                    <h2 className="text-lg font-bold text-gray-900">{selectedConversation.business_name || selectedConversation.business?.business_name}</h2>
                                     <div className="flex items-center gap-2">
                                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize
                                     ${selectedConversation.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}

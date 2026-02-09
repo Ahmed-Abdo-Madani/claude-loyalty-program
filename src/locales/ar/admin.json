@@ -108,7 +108,8 @@
       "western": "المنطقة الغربية",
       "eastern": "المنطقة الشرقية",
       "allRegions": "جميع مناطق السعودية"
-    }
+    },
+    "all": "جميع الأعمال"
   },
   "subscriptions": {
     "title": "إدارة الاشتراكات",
@@ -278,9 +279,8 @@
       "messageVolume": "حجم الرسائل",
       "statusDistribution": "توزيع الحالات",
       "mostActiveBusinesses": "الأكثر نشاطاً",
-      "businessName": "اسم العمل",
       "totalMessages": "إجمالي الرسائل",
-      "totalConversations": "المحادثات",
+      "totalConversationsShort": "المحادثات",
       "lastActivity": "آخر نشاط",
       "exportHistory": "تصدير السجل",
       "exporting": "جاري التصدير...",
@@ -454,6 +454,8 @@
     "cancel": "إلغاء",
     "deleteFailed": "فشل حذف القالب",
     "saveFailed": "فشل حفظ القالب",
-    "errorLoadingTemplates": "فشل تحميل القوالب"
+    "errorLoadingTemplates": "فشل تحميل القوالب",
+    "allBusinesses": "جميع الأعمال",
+    "unknownBusiness": "عمل غير معروف"
   }
 }

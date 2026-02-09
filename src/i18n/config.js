@@ -31,84 +31,85 @@ import menuAr from '../locales/ar/menu.json';
 import menuEn from '../locales/en/menu.json';
 
 // Configure i18next
-i18n
-  .use(LanguageDetector) // Detect user language
-  .use(initReactI18next) // Pass i18n instance to react-i18next
-  .init({
-    // Resources with all translation files organized by language and namespace
-    resources: {
-      ar: {
-        common: commonAr,
-        auth: authAr,
-        dashboard: dashboardAr,
-        admin: adminAr,
-        customer: customerAr,
-        landing: landingAr,
-        cardDesign: cardDesignAr,
-        notification: notificationAr,
-        campaign: campaignAr,
-        seo: seoAr,
-        pos: posAr,
-        subscription: subscriptionAr,
-        menu: menuAr,
+if (!i18n.isInitialized) {
+  i18n
+    .use(LanguageDetector) // Detect user language
+    .use(initReactI18next) // Pass i18n instance to react-i18next
+    .init({
+      // Resources with all translation files organized by language and namespace
+      resources: {
+        ar: {
+          common: commonAr,
+          auth: authAr,
+          dashboard: dashboardAr,
+          admin: adminAr,
+          customer: customerAr,
+          landing: landingAr,
+          cardDesign: cardDesignAr,
+          notification: notificationAr,
+          campaign: campaignAr,
+          seo: seoAr,
+          pos: posAr,
+          subscription: subscriptionAr,
+          menu: menuAr,
+        },
+        en: {
+          common: commonEn,
+          auth: authEn,
+          dashboard: dashboardEn,
+          admin: adminEn,
+          customer: customerEn,
+          landing: landingEn,
+          cardDesign: cardDesignEn,
+          notification: notificationEn,
+          campaign: campaignEn,
+          seo: seoEn,
+          pos: posEn,
+          subscription: subscriptionEn,
+          menu: menuEn,
+        },
       },
-      en: {
-        common: commonEn,
-        auth: authEn,
-        dashboard: dashboardEn,
-        admin: adminEn,
-        customer: customerEn,
-        landing: landingEn,
-        cardDesign: cardDesignEn,
-        notification: notificationEn,
-        campaign: campaignEn,
-        seo: seoEn,
-        pos: posEn,
-        subscription: subscriptionEn,
-        menu: menuEn,
+
+      // Fallback language is Arabic (primary language for Saudi market)
+      fallbackLng: 'ar',
+
+      // Restrict to supported languages only
+      supportedLngs: ['ar', 'en'],
+
+      // Default namespace
+      defaultNS: 'common',
+
+      // Namespaces to load by default
+      ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign', 'notification', 'campaign', 'seo', 'pos', 'subscription', 'menu'],
+
+      // Language detection options
+      detection: {
+        // Order of language detection methods
+        order: ['localStorage', 'htmlTag', 'navigator'],
+
+        // Keys to look for in localStorage
+        lookupLocalStorage: 'i18nextLng',
+
+        // Cache user language selection
+        caches: ['localStorage'],
+
+        // Exclude certain paths from detection
+        excludeCacheFor: ['cimode'],
       },
-    },
 
-    // Fallback language is Arabic (primary language for Saudi market)
-    fallbackLng: 'ar',
+      // Interpolation options
+      interpolation: {
+        escapeValue: false, // React already escapes values
+      },
 
-    // Restrict to supported languages only
-    supportedLngs: ['ar', 'en'],
+      // React-specific options
+      react: {
+        useSuspense: false, // Disable suspense for better error handling
+      },
 
-    // Default namespace
-    defaultNS: 'common',
-
-    // Namespaces to load by default
-    ns: ['common', 'auth', 'dashboard', 'admin', 'customer', 'landing', 'cardDesign', 'notification', 'campaign', 'seo', 'pos', 'subscription', 'menu'],
-
-    // Language detection options
-    detection: {
-      // Order of language detection methods
-      order: ['localStorage', 'htmlTag', 'navigator'],
-
-      // Keys to look for in localStorage
-      lookupLocalStorage: 'i18nextLng',
-
-      // Cache user language selection
-      caches: ['localStorage'],
-
-      // Exclude certain paths from detection
-      excludeCacheFor: ['cimode'],
-    },
-
-    // Interpolation options
-    interpolation: {
-      escapeValue: false, // React already escapes values
-    },
-
-    // React-specific options
-    react: {
-      useSuspense: false, // Disable suspense for better error handling
-    },
-
-    // Debug mode (disable in production)
-    debug: import.meta.env.MODE === 'development',
-  });
+      debug: import.meta.env.MODE === 'development',
+    });
+}
 
 // Function to set HTML dir attribute based on language
 i18n.on('languageChanged', (lng) => {
