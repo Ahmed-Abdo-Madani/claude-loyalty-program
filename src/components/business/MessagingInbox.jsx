@@ -381,7 +381,7 @@ const MessagingInbox = () => {
                                                             )}
 
                                                             <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                                                                {message.body}
+                                                                {message.message_body}
                                                             </div>
 
                                                             <div className={`text-[10px] mt-1 flex items-center gap-1 opacity-70 ${isMe ? 'justify-end text-blue-100' : 'justify-start text-gray-400'}`}>

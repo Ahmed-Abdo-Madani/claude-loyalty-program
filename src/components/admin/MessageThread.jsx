@@ -59,8 +59,8 @@ const MessageThread = ({ messages, currentAdminId }) => {
 
                             <div
                                 className={`px-4 py-3 rounded-2xl shadow-sm ${isAdmin
-                                        ? 'bg-purple-100 dark:bg-purple-900/30 text-gray-800 dark:text-gray-100 rounded-br-none'
-                                        : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-100 rounded-bl-none'
+                                    ? 'bg-purple-100 dark:bg-purple-900/30 text-gray-800 dark:text-gray-100 rounded-br-none'
+                                    : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-100 rounded-bl-none'
                                     }`}
                             >
                                 {/* Subject if present and not a reply in a long thread? 
@@ -73,7 +73,7 @@ const MessageThread = ({ messages, currentAdminId }) => {
                                 )}
 
                                 <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                                    {message.body}
+                                    {message.message_body}
                                 </div>
 
                                 <div className={`text-[10px] mt-1 flex items-center gap-1 opacity-70 ${isAdmin ? 'justify-end' : 'justify-start'}`}>
