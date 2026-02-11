@@ -218,7 +218,7 @@ class EmailService {
    * @returns {Promise<Object>} Send result
    */
   static async sendMessageNotification(recipientEmail, notificationData, options = {}) {
-    const { language = 'en', notificationType, unsubscribeToken } = options;
+    const { language = 'en', notificationType, unsubscribeToken, replyTo } = options;
 
     if (!['new-message', 'new-inquiry'].includes(notificationType)) {
       throw new Error(`Invalid notification type: ${notificationType}`);
@@ -244,7 +244,8 @@ class EmailService {
     if (notificationType === 'new-message') {
       text = `New message from ${notificationData.adminName || 'Admin'}\n\n`;
       text += `Subject: ${notificationData.subject}\n\n`;
-      text += `View message: ${notificationData.conversationUrl}\n\n`;
+      text += `Message:\n${notificationData.messageBody}\n\n`;
+      text += `To reply, please send an email to: ${notificationData.supportEmail}\n\n`;
       if (unsubscribeUrl) text += `Unsubscribe: ${unsubscribeUrl}`;
     } else {
       text = `New inquiry from ${notificationData.businessName}\n\n`;
@@ -258,6 +259,7 @@ class EmailService {
       html,
       text,
       priority: 'normal',
+      replyTo: replyTo, // Pass replyTo if provided
       externalId: options.messageId || undefined // Use message ID for tracking if provided
     });
   }

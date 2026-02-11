@@ -48,7 +48,6 @@
     "sessionTokenRequired": "رمز الجلسة ومعرف المسؤول مطلوبان",
     "invalidTierConfiguration": "تكوين المستوى غير صالح",
     "invalidPlanType": "خطة الاشتراك المحددة غير صالحة.",
-    "paymentIdRequired": "معرف الدفع مطلوب.",
     "invalidPublishableKey": "تنسيق المفتاح العام غير صالح.",
     "paymentConfigurationIncomplete": "إعدادات بوابة الدفع غير مكتملة.",
     "noPaymentMethod": "لا توجد طريقة دفع مسجلة"
@@ -297,10 +296,9 @@
       "newMessage": {
         "subject": "رسالة جديدة من {{senderName}}",
         "greeting": "مرحباً {{recipientName}}،",
-        "intro": "لقد تلقيت رسالة جديدة بخصوص: {{subject}}",
-        "messagePreview": "معاينة الرسالة",
-        "viewFullMessage": "عرض الرسالة كاملة",
-        "replyInDashboard": "الرد في لوحة التحكم",
+        "intro": "لقد أرسل لك المسؤول رسالة بخصوص: {{subject}}",
+        "messagePreview": "محتوى الرسالة",
+        "replyInstructions": "للرد على هذه الرسالة، يرجى إرسال بريد إلكتروني إلى:",
         "unsubscribeNote": "لا ترغب في تلقي إشعارات الرسائل؟",
         "unsubscribeLink": "إلغاء الاشتراك من إشعارات الرسائل"
       },

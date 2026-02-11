@@ -3,6 +3,7 @@ import sequelize from '../config/database.js'
 import SecureIDGenerator from '../utils/secureIdGenerator.js'
 
 const Conversation = sequelize.define('Conversation', {
+    // Businesses receive email notifications; conversations are maintained for admin audit trail only
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -90,7 +91,8 @@ Conversation.prototype.incrementUnreadCount = async function (userType) {
     if (userType === 'admin') {
         this.unread_count_admin += 1
     } else if (userType === 'business') {
-        this.unread_count_business += 1
+        // DEPRECATED: Businesses receive emails, not inbox notifications
+        // this.unread_count_business += 1
     }
     return await this.save()
 }
@@ -99,7 +101,8 @@ Conversation.prototype.resetUnreadCount = async function (userType) {
     if (userType === 'admin') {
         this.unread_count_admin = 0
     } else if (userType === 'business') {
-        this.unread_count_business = 0
+        // DEPRECATED: Businesses receive emails, not inbox notifications
+        // this.unread_count_business = 0
     }
     return await this.save()
 }

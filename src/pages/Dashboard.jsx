@@ -22,10 +22,10 @@ import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/soli
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
-import { MessagingProvider } from '../contexts/MessagingContext'
+
 
 const SubscriptionManagementPage = lazy(() => import('./SubscriptionManagementPage'))
-const MessagingInbox = lazy(() => import('../components/business/MessagingInbox'))
+
 
 function Dashboard() {
   const { t, i18n } = useTranslation(['dashboard', 'subscription'])
@@ -210,144 +210,119 @@ function Dashboard() {
     : activeTab;
 
   return (
-    <MessagingProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 pb-20 lg:pb-0">
-        <SEO titleKey="pages.dashboard.title" descriptionKey="pages.dashboard.description" noindex={true} />
 
-        {/* Sidebar Navigation - Desktop Only */}
-        <DashboardSidebar
-          activeTab={activeTab}
-          setActiveTab={handleTabChange}
-          user={user}
-          analytics={analytics}
-          onSignOut={handleSignOut}
-        />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300 pb-20 lg:pb-0">
+      <SEO titleKey="pages.dashboard.title" descriptionKey="pages.dashboard.description" noindex={true} />
 
-        {/* Mobile Bottom Navigation - Mobile Only */}
-        <MobileBottomNav />
+      {/* Sidebar Navigation - Desktop Only */}
+      <DashboardSidebar
+        activeTab={activeTab}
+        setActiveTab={handleTabChange}
+        user={user}
+        analytics={analytics}
+        onSignOut={handleSignOut}
+      />
 
-        {/* Main Content Area */}
-        <div className="ml-0 lg:ml-64">
-          {/* Header */}
-          <DashboardHeader user={user} />
+      {/* Mobile Bottom Navigation - Mobile Only */}
+      <MobileBottomNav />
 
-          {/* Dashboard Content */}
-          <main className="p-3 sm:p-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-colors duration-300">
-              {/* Tab Content */}
-              <div className="p-3 sm:p-5">
-                {activeTab === 'overview' && (
-                  <div className="space-y-6">
-                    {/* Profile Completion Prompt */}
-                    {analytics && analytics.profileCompletion < 100 && (
-                      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden">
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex-1">
-                            <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-                              <span>🚀</span> {i18n.language === 'ar' ? 'أكمل ملفك الشخصي' : 'Complete Your Profile'}
-                            </h3>
-                            <p className="text-blue-100/90 text-sm max-w-2xl">
-                              {i18n.language === 'ar'
-                                ? 'نشاطك التجاري الآن في وضع البدء السريع. أكمل بياناتك (السجل التجاري، الهوية، شعار النشاط) للنشر.'
-                                : 'Your business is in Quick Start mode. Complete your details (CR Number, National ID, Business Logo) to publish offers.'}
-                            </p>
-                            <div className="mt-4 w-full max-w-xs bg-white/20 rounded-full h-2">
-                              <div
-                                className="bg-white h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${analytics.profileCompletion}%` }}
-                              ></div>
-                            </div>
+      {/* Main Content Area */}
+      <div className="ml-0 lg:ml-64">
+        {/* Header */}
+        <DashboardHeader user={user} />
 
-                            <div className="flex items-center gap-4 mt-3">
-                              <span className="text-xs text-blue-100 block">
-                                {analytics.profileCompletion}% {i18n.language === 'ar' ? 'مكتمل' : 'completed'}
-                              </span>
-
-                              {/* Logo Status Indicator */}
-                              <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${analytics.has_logo ? 'bg-green-500/20 text-blue-50' : 'bg-amber-500/20 text-amber-100'}`}>
-                                {analytics.has_logo ? (
-                                  <CheckCircleIcon className="w-3.5 h-3.5" />
-                                ) : (
-                                  <ExclamationCircleIcon className="w-3.5 h-3.5" />
-                                )}
-                                {i18n.language === 'ar'
-                                  ? (analytics.has_logo ? 'تم رفع الشعار' : 'الشعار مفقود')
-                                  : (analytics.has_logo ? 'Logo Uploaded' : 'Missing Logo')
-                                }
-                              </div>
-                            </div>
+        {/* Dashboard Content */}
+        <main className="p-3 sm:p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-colors duration-300">
+            {/* Tab Content */}
+            <div className="p-3 sm:p-5">
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  {/* Profile Completion Prompt */}
+                  {analytics && analytics.profileCompletion < 100 && (
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden">
+                      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
+                            <span>🚀</span> {i18n.language === 'ar' ? 'أكمل ملفك الشخصي' : 'Complete Your Profile'}
+                          </h3>
+                          <p className="text-blue-100/90 text-sm max-w-2xl">
+                            {i18n.language === 'ar'
+                              ? 'نشاطك التجاري الآن في وضع البدء السريع. أكمل بياناتك (السجل التجاري، الهوية، شعار النشاط) للنشر.'
+                              : 'Your business is in Quick Start mode. Complete your details (CR Number, National ID, Business Logo) to publish offers.'}
+                          </p>
+                          <div className="mt-4 w-full max-w-xs bg-white/20 rounded-full h-2">
+                            <div
+                              className="bg-white h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${analytics.profileCompletion}%` }}
+                            ></div>
                           </div>
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <button
-                              onClick={() => setShowLogoModal(true)}
-                              className={`px-4 py-2.5 font-bold rounded-lg transition-colors shadow-md whitespace-nowrap text-sm flex items-center justify-center gap-2 ${analytics.has_logo
-                                ? 'bg-blue-800/30 text-white hover:bg-blue-800/40'
-                                : 'bg-white text-blue-700 hover:bg-blue-50'
-                                }`}
-                            >
-                              {!analytics.has_logo && <ExclamationCircleIcon className="w-4 h-4" />}
-                              {i18n.language === 'ar' ? (analytics.has_logo ? 'تغيير الشعار' : 'رفع الشعار') : (analytics.has_logo ? 'Change Logo' : 'Upload Logo')}
-                            </button>
 
-                            <button
-                              onClick={() => navigate('/complete-profile')}
-                              className="px-6 py-2.5 bg-blue-800/30 text-white font-bold rounded-lg hover:bg-blue-800/40 transition-colors shadow-md whitespace-nowrap text-sm border border-white/10"
-                            >
-                              {i18n.language === 'ar' ? 'أكمل البيانات' : 'Complete Details'}
-                            </button>
+                          <div className="flex items-center gap-4 mt-3">
+                            <span className="text-xs text-blue-100 block">
+                              {analytics.profileCompletion}% {i18n.language === 'ar' ? 'مكتمل' : 'completed'}
+                            </span>
+
+                            {/* Logo Status Indicator */}
+                            <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${analytics.has_logo ? 'bg-green-500/20 text-blue-50' : 'bg-amber-500/20 text-amber-100'}`}>
+                              {analytics.has_logo ? (
+                                <CheckCircleIcon className="w-3.5 h-3.5" />
+                              ) : (
+                                <ExclamationCircleIcon className="w-3.5 h-3.5" />
+                              )}
+                              {i18n.language === 'ar'
+                                ? (analytics.has_logo ? 'تم رفع الشعار' : 'الشعار مفقود')
+                                : (analytics.has_logo ? 'Logo Uploaded' : 'Missing Logo')
+                              }
+                            </div>
                           </div>
                         </div>
-                        {/* Decorative background element */}
-                        <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button
+                            onClick={() => setShowLogoModal(true)}
+                            className={`px-4 py-2.5 font-bold rounded-lg transition-colors shadow-md whitespace-nowrap text-sm flex items-center justify-center gap-2 ${analytics.has_logo
+                              ? 'bg-blue-800/30 text-white hover:bg-blue-800/40'
+                              : 'bg-white text-blue-700 hover:bg-blue-50'
+                              }`}
+                          >
+                            {!analytics.has_logo && <ExclamationCircleIcon className="w-4 h-4" />}
+                            {i18n.language === 'ar' ? (analytics.has_logo ? 'تغيير الشعار' : 'رفع الشعار') : (analytics.has_logo ? 'Change Logo' : 'Upload Logo')}
+                          </button>
+
+                          <button
+                            onClick={() => navigate('/complete-profile')}
+                            className="px-6 py-2.5 bg-blue-800/30 text-white font-bold rounded-lg hover:bg-blue-800/40 transition-colors shadow-md whitespace-nowrap text-sm border border-white/10"
+                          >
+                            {i18n.language === 'ar' ? 'أكمل البيانات' : 'Complete Details'}
+                          </button>
+                        </div>
                       </div>
-                    )}
+                      {/* Decorative background element */}
+                      <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                    </div>
+                  )}
 
-                    {/* Trial Expiration Warning Banner */}
-                    {subscriptionData?.subscription?.trial_info?.is_trial && (
-                      <>
-                        {/* Approaching Expiration (1-2 days left) */}
-                        {subscriptionData.subscription.trial_info.days_remaining <= 2 &&
-                          subscriptionData.subscription.trial_info.days_remaining > 0 && (
-                            <div className="bg-gradient-to-r from-amber-600 to-orange-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden">
-                              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex-1">
-                                  <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-                                    <span>⏰</span> {i18n.language === 'ar' ? 'الفترة التجريبية تنتهي قريباً' : 'Trial Ending Soon'}
-                                  </h3>
-                                  <p className="text-amber-100/90 text-sm max-w-2xl">
-                                    {i18n.language === 'ar'
-                                      ? `فترتك التجريبية تنتهي خلال ${subscriptionData.subscription.trial_info.days_remaining} ${subscriptionData.subscription.trial_info.days_remaining === 1 ? 'يوم' : 'أيام'}. قم بالترقية الآن لتجنب انقطاع الخدمة.`
-                                      : `Your trial ends in ${subscriptionData.subscription.trial_info.days_remaining} day${subscriptionData.subscription.trial_info.days_remaining === 1 ? '' : 's'}. Upgrade now to avoid service interruption.`}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => setShowUpgradeModal(true)}
-                                  className="px-6 py-2.5 bg-white text-amber-700 font-bold rounded-lg hover:bg-amber-50 transition-colors shadow-md whitespace-nowrap"
-                                >
-                                  {i18n.language === 'ar' ? 'ترقية الآن' : 'Upgrade Now'}
-                                </button>
-                              </div>
-                              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                            </div>
-                          )}
-
-                        {/* Trial Expired */}
-                        {subscriptionData.subscription.trial_info.days_remaining <= 0 && (
-                          <div className="bg-gradient-to-r from-red-600 to-rose-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden border-2 border-red-400">
+                  {/* Trial Expiration Warning Banner */}
+                  {subscriptionData?.subscription?.trial_info?.is_trial && (
+                    <>
+                      {/* Approaching Expiration (1-2 days left) */}
+                      {subscriptionData.subscription.trial_info.days_remaining <= 2 &&
+                        subscriptionData.subscription.trial_info.days_remaining > 0 && (
+                          <div className="bg-gradient-to-r from-amber-600 to-orange-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden">
                             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                               <div className="flex-1">
                                 <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
-                                  <span>🚫</span> {i18n.language === 'ar' ? 'انتهت الفترة التجريبية' : 'Trial Period Expired'}
+                                  <span>⏰</span> {i18n.language === 'ar' ? 'الفترة التجريبية تنتهي قريباً' : 'Trial Ending Soon'}
                                 </h3>
-                                <p className="text-red-100/90 text-sm max-w-2xl">
+                                <p className="text-amber-100/90 text-sm max-w-2xl">
                                   {i18n.language === 'ar'
-                                    ? 'فترتك التجريبية انتهت. يرجى الترقية إلى خطة مدفوعة لمواصلة استخدام جميع الميزات.'
-                                    : 'Your trial period has ended. Please upgrade to a paid plan to continue using all features.'}
+                                    ? `فترتك التجريبية تنتهي خلال ${subscriptionData.subscription.trial_info.days_remaining} ${subscriptionData.subscription.trial_info.days_remaining === 1 ? 'يوم' : 'أيام'}. قم بالترقية الآن لتجنب انقطاع الخدمة.`
+                                    : `Your trial ends in ${subscriptionData.subscription.trial_info.days_remaining} day${subscriptionData.subscription.trial_info.days_remaining === 1 ? '' : 's'}. Upgrade now to avoid service interruption.`}
                                 </p>
                               </div>
                               <button
                                 onClick={() => setShowUpgradeModal(true)}
-                                className="px-6 py-2.5 bg-white text-red-700 font-bold rounded-lg hover:bg-red-50 transition-colors shadow-md whitespace-nowrap animate-pulse"
+                                className="px-6 py-2.5 bg-white text-amber-700 font-bold rounded-lg hover:bg-amber-50 transition-colors shadow-md whitespace-nowrap"
                               >
                                 {i18n.language === 'ar' ? 'ترقية الآن' : 'Upgrade Now'}
                               </button>
@@ -355,160 +330,181 @@ function Dashboard() {
                             <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                           </div>
                         )}
-                      </>
-                    )}
 
-                    {/* Subscription Summary Card - NEW */}
-                    {subscriptionData && (
-                      <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
-                        <div className="relative z-10 flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
-                          <div>
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-xl font-bold">{t('dashboard.subscription.title', 'Your Subscription')}</h3>
-                              <span className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded-full uppercase">
-                                {t(`subscription:plans.${subscriptionData.subscription?.plan_type || 'free'}.name`)}
-                              </span>
+                      {/* Trial Expired */}
+                      {subscriptionData.subscription.trial_info.days_remaining <= 0 && (
+                        <div className="bg-gradient-to-r from-red-600 to-rose-700 rounded-xl shadow-lg p-6 text-white mb-6 relative overflow-hidden border-2 border-red-400">
+                          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="text-xl font-bold mb-1 flex items-center gap-2">
+                                <span>🚫</span> {i18n.language === 'ar' ? 'انتهت الفترة التجريبية' : 'Trial Period Expired'}
+                              </h3>
+                              <p className="text-red-100/90 text-sm max-w-2xl">
+                                {i18n.language === 'ar'
+                                  ? 'فترتك التجريبية انتهت. يرجى الترقية إلى خطة مدفوعة لمواصلة استخدام جميع الميزات.'
+                                  : 'Your trial period has ended. Please upgrade to a paid plan to continue using all features.'}
+                              </p>
                             </div>
+                            <button
+                              onClick={() => setShowUpgradeModal(true)}
+                              className="px-6 py-2.5 bg-white text-red-700 font-bold rounded-lg hover:bg-red-50 transition-colors shadow-md whitespace-nowrap animate-pulse"
+                            >
+                              {i18n.language === 'ar' ? 'ترقية الآن' : 'Upgrade Now'}
+                            </button>
+                          </div>
+                          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        </div>
+                      )}
+                    </>
+                  )}
 
-                            <p className="text-gray-300 text-sm mb-4 max-w-md">
-                              {t('dashboard.subscription.usageSummary', 'Manage your plan and usage limits.')}
-                              {subscriptionData.subscription?.trial_info?.is_trial && (
-                                <span className="text-amber-400 ml-2 font-semibold">
-                                  {t('dashboard.subscription.trialEnding', 'Trial ends in {{days}} days', { days: subscriptionData.subscription.trial_info.days_remaining })}
-                                </span>
-                              )}
-                            </p>
-
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => setShowUpgradeModal(true)}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
-                              >
-                                {t('dashboard.subscription.upgradePrompt', 'Upgrade Plan')}
-                              </button>
-                              <button
-                                onClick={() => handleTabChange('billing-subscription')}
-                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors"
-                              >
-                                {t('dashboard.subscription.manageBilling', 'Manage Billing')}
-                              </button>
-                            </div>
+                  {/* Subscription Summary Card - NEW */}
+                  {subscriptionData && (
+                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
+                      <div className="relative z-10 flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-xl font-bold">{t('dashboard.subscription.title', 'Your Subscription')}</h3>
+                            <span className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded-full uppercase">
+                              {t(`subscription:plans.${subscriptionData.subscription?.plan_type || 'free'}.name`)}
+                            </span>
                           </div>
 
+                          <p className="text-gray-300 text-sm mb-4 max-w-md">
+                            {t('dashboard.subscription.usageSummary', 'Manage your plan and usage limits.')}
+                            {subscriptionData.subscription?.trial_info?.is_trial && (
+                              <span className="text-amber-400 ml-2 font-semibold">
+                                {t('dashboard.subscription.trialEnding', 'Trial ends in {{days}} days', { days: subscriptionData.subscription.trial_info.days_remaining })}
+                              </span>
+                            )}
+                          </p>
+
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setShowUpgradeModal(true)}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg transition-colors"
+                            >
+                              {t('dashboard.subscription.upgradePrompt', 'Upgrade Plan')}
+                            </button>
+                            <button
+                              onClick={() => handleTabChange('billing-subscription')}
+                              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                              {t('dashboard.subscription.manageBilling', 'Manage Billing')}
+                            </button>
+                          </div>
                         </div>
+
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Detailed Usage Metrics - NEW */}
-                    {subscriptionData && (
-                      <UsageMetrics
-                        usage={subscriptionData.usage}
-                        limits={subscriptionData.limits}
-                      />
-                    )}
-
-                    {/* Today's Snapshot - Real-time POS Metrics */}
-                    <TodaysSnapshot />
-
-                    {/* Quick Actions - Expanded to 8 Actions */}
-                    <QuickActions
-                      onNewOffer={handleNewOffer}
-                      onScanQR={handleScanQR}
-                      onViewReports={handleViewReports}
-                      onManageProducts={() => handleTabChange('products')}
-                      onManageBranches={() => handleTabChange('branches')}
-                      onGenerateMenuQR={handleGenerateMenuQR}
-                      onViewMenu={() => user?.businessId && window.open(`/menu/business/${user.businessId}`, '_blank')}
-                      onManageSubscription={() => handleTabChange('billing-subscription')}
+                  {/* Detailed Usage Metrics - NEW */}
+                  {subscriptionData && (
+                    <UsageMetrics
+                      usage={subscriptionData.usage}
+                      limits={subscriptionData.limits}
                     />
-                  </div>
-                )}
+                  )}
 
-                {activeTab === 'offers' && (
-                  <OffersTab analytics={analytics} user={user} />
-                )}
+                  {/* Today's Snapshot - Real-time POS Metrics */}
+                  <TodaysSnapshot />
 
-                {activeTab === 'scanner' && (
-                  <ScannerTab analytics={analytics} />
-                )}
-
-                {activeTab === 'branches' && (
-                  <BranchesTab analytics={analytics} />
-                )}
-
-                {activeTab === 'products' && (
-                  <ProductsTab
-                    analytics={analytics}
-                    onNavigateToSettings={() => handleTabChange('settings')}
+                  {/* Quick Actions - Expanded to 8 Actions */}
+                  <QuickActions
+                    onNewOffer={handleNewOffer}
+                    onScanQR={handleScanQR}
+                    onViewReports={handleViewReports}
+                    onManageProducts={() => handleTabChange('products')}
+                    onManageBranches={() => handleTabChange('branches')}
+                    onGenerateMenuQR={handleGenerateMenuQR}
+                    onViewMenu={() => user?.businessId && window.open(`/menu/business/${user.businessId}`, '_blank')}
+                    onManageSubscription={() => handleTabChange('billing-subscription')}
                   />
-                )}
+                </div>
+              )}
 
-                {activeTab === 'customers' && (
-                  <CustomersTab analytics={analytics} />
-                )}
+              {activeTab === 'offers' && (
+                <OffersTab analytics={analytics} user={user} />
+              )}
 
-                {activeTab === 'wallet' && (
-                  <WalletAnalytics />
-                )}
+              {activeTab === 'scanner' && (
+                <ScannerTab analytics={analytics} />
+              )}
 
-                {activeTab === 'analytics' && (
-                  <POSAnalytics />
-                )}
+              {activeTab === 'branches' && (
+                <BranchesTab analytics={analytics} />
+              )}
 
-                {activeTab === 'settings' && (
-                  <BusinessSettingsTab onNavigateToProducts={() => handleTabChange('products')} />
-                )}
+              {activeTab === 'products' && (
+                <ProductsTab
+                  analytics={analytics}
+                  onNavigateToSettings={() => handleTabChange('settings')}
+                />
+              )}
 
-                {activeTab === 'messages' && (
-                  <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
-                    <MessagingInbox />
-                  </Suspense>
-                )}
+              {activeTab === 'customers' && (
+                <CustomersTab analytics={analytics} />
+              )}
 
-                {resolvedTab === 'billing-subscription' && (
-                  <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
-                    <SubscriptionManagementPage />
-                  </Suspense>
-                )}
-              </div>
+              {activeTab === 'wallet' && (
+                <WalletAnalytics />
+              )}
+
+              {activeTab === 'analytics' && (
+                <POSAnalytics />
+              )}
+
+              {activeTab === 'settings' && (
+                <BusinessSettingsTab onNavigateToProducts={() => handleTabChange('products')} />
+              )}
+
+
+
+              {resolvedTab === 'billing-subscription' && (
+                <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>
+                  <SubscriptionManagementPage />
+                </Suspense>
+              )}
             </div>
-          </main>
-        </div >
-
-        {/* Menu QR Code Modal */}
-        {
-          showMenuQRModal && user && (
-            <QRCodeModal
-              type="menu"
-              identifier={user.businessId}
-              options={{ type: 'business' }}
-              onClose={() => setShowMenuQRModal(false)}
-            />
-          )
-        }
-        {/* Plan Upgrade Modal */}
-        <PlanUpgradeModal
-          isOpen={showUpgradeModal || showTrialExpiredModal}
-          onClose={() => {
-            setShowUpgradeModal(false)
-            setShowTrialExpiredModal(false)
-          }}
-          currentPlan={subscriptionData?.subscription?.plan_type}
-          trialExpired={showTrialExpiredModal}
-          message={trialExpirationMessage}
-        />
-
-        <LogoUploadModal
-          isOpen={showLogoModal}
-          onClose={() => setShowLogoModal(false)}
-          onLogoUpdate={(data) => {
-            // Refresh dashboard data to update logo status/completion
-            loadDashboardData()
-          }}
-        />
-
+          </div>
+        </main>
       </div >
-    </MessagingProvider>
+
+      {/* Menu QR Code Modal */}
+      {
+        showMenuQRModal && user && (
+          <QRCodeModal
+            type="menu"
+            identifier={user.businessId}
+            options={{ type: 'business' }}
+            onClose={() => setShowMenuQRModal(false)}
+          />
+        )
+      }
+      {/* Plan Upgrade Modal */}
+      <PlanUpgradeModal
+        isOpen={showUpgradeModal || showTrialExpiredModal}
+        onClose={() => {
+          setShowUpgradeModal(false)
+          setShowTrialExpiredModal(false)
+        }}
+        currentPlan={subscriptionData?.subscription?.plan_type}
+        trialExpired={showTrialExpiredModal}
+        message={trialExpirationMessage}
+      />
+
+      <LogoUploadModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onLogoUpdate={(data) => {
+          // Refresh dashboard data to update logo status/completion
+          loadDashboardData()
+        }}
+      />
+
+    </div >
+
   )
 }
 

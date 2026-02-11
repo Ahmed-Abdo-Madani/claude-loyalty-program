@@ -318,9 +318,12 @@ Business.prototype.updateNotificationPreferences = async function (preferences) 
 }
 
 Business.prototype.canReceiveMessageNotifications = function () {
-  return this.notification_preferences &&
-    this.notification_preferences.email_notifications !== false &&
-    this.notification_preferences.message_notifications !== false
+  // Always return true by default so businesses receive emails
+  // We can still check blocklist if implemented, but for now we want to ensure delivery
+  if (this.notification_preferences && this.notification_preferences.email_notifications === false) {
+    return false
+  }
+  return true
 }
 
 // Calculate business analytics with secure associations

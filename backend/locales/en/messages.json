@@ -48,7 +48,6 @@
     "sessionTokenRequired": "Session token and admin ID are required",
     "invalidTierConfiguration": "Invalid tier configuration",
     "invalidPlanType": "Invalid subscription plan selected.",
-    "paymentIdRequired": "Payment ID is required.",
     "invalidPublishableKey": "Invalid publishable key format.",
     "paymentConfigurationIncomplete": "Payment gateway configuration is incomplete.",
     "noPaymentMethod": "No payment method on file"
@@ -297,10 +296,9 @@
       "newMessage": {
         "subject": "New message from {{senderName}}",
         "greeting": "Hello {{recipientName}},",
-        "intro": "You have received a new message regarding: {{subject}}",
-        "messagePreview": "Message Preview",
-        "viewFullMessage": "View Full Message",
-        "replyInDashboard": "Reply in your dashboard",
+        "intro": "Admin has sent you a message regarding: {{subject}}",
+        "messagePreview": "Message Content",
+        "replyInstructions": "To reply to this message, please send an email to:",
         "unsubscribeNote": "Don't want to receive message notifications?",
         "unsubscribeLink": "Unsubscribe from message notifications"
       },

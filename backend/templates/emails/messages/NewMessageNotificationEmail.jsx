@@ -1,5 +1,5 @@
 import React from 'react';
-import { Section, Text, Button, Link } from '@react-email/components';
+import { Section, Text, Link } from '@react-email/components';
 import EmailLayout from '../components/EmailLayout';
 import EmailHeader from '../components/EmailHeader';
 import EmailFooter from '../components/EmailFooter';
@@ -8,8 +8,8 @@ export const NewMessageNotificationEmail = ({
     businessName,
     subject,
     messageBody,
-    conversationUrl,
     adminName = 'Admin',
+    supportEmail,
     language = 'ar',
     translations = {},
     unsubscribeUrl
@@ -52,32 +52,18 @@ export const NewMessageNotificationEmail = ({
                         margin: 0,
                         whiteSpace: 'pre-wrap'
                     }}>
-                        {messageBody && messageBody.length > 200
-                            ? `${messageBody.substring(0, 200)}...`
-                            : messageBody}
+                        {messageBody}
                     </Text>
                 </Section>
 
-                <Section align="center" style={{ marginTop: '30px', marginBottom: '30px' }}>
-                    <Button
-                        href={conversationUrl}
-                        style={{
-                            backgroundColor: '#000',
-                            color: '#fff',
-                            padding: '12px 24px',
-                            borderRadius: '4px',
-                            textDecoration: 'none',
-                            fontWeight: 'bold',
-                            fontSize: '16px'
-                        }}
-                    >
-                        {t.viewFullMessage}
-                    </Button>
+                <Section style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                    <Text style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 10px' }}>
+                        {t.replyInstructions || 'To reply to this message, please send an email to:'}
+                    </Text>
+                    <Text style={{ fontSize: '16px', fontWeight: 'bold', color: '#000', margin: 0 }}>
+                        {supportEmail}
+                    </Text>
                 </Section>
-
-                <Text style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center' }}>
-                    {t.replyInDashboard}
-                </Text>
             </Section>
 
             {unsubscribeUrl && (

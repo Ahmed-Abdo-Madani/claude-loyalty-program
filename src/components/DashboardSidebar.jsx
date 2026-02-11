@@ -4,7 +4,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { getSecureAuthHeaders } from '../utils/secureAuth'
 import { endpoints, apiBaseUrl, secureApi } from '../config/api'
 import LogoUploadModal from './LogoUploadModal'
-import { useMessaging } from '../contexts/MessagingContext'
+
 import {
   HomeIcon,
   GiftIcon,
@@ -16,7 +16,7 @@ import {
   MoonIcon,
   ChevronDoubleLeftIcon,
   Cog6ToothIcon,
-  ChatBubbleLeftRightIcon
+
 } from '@heroicons/react/24/outline'
 
 function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut }) {
@@ -24,7 +24,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
   const { isDark, toggleTheme } = useTheme()
   const [logoInfo, setLogoInfo] = useState(null)
   const [showLogoModal, setShowLogoModal] = useState(false)
-  const { unreadCount } = useMessaging()
+
 
   // Load business logo info
   useEffect(() => {
@@ -52,7 +52,7 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
     { id: 'offers', label: t('sidebar.myOffers'), icon: GiftIcon },
     { id: 'branches', label: t('sidebar.branches'), icon: MapPinIcon },
     { id: 'products', label: t('sidebar.products'), icon: ShoppingBagIcon },
-    { id: 'messages', label: t('sidebar.messages'), icon: ChatBubbleLeftRightIcon, badge: unreadCount },
+
     { id: 'analytics', label: t('sidebar.analytics'), icon: ChartBarIcon },
     { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: CreditCardIcon }
   ]

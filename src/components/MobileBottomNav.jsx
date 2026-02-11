@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useMessaging } from '../contexts/MessagingContext'
+
 import {
   HomeIcon,
   GiftIcon,
@@ -9,8 +9,7 @@ import {
   ShoppingBagIcon,
   UsersIcon,
   CreditCardIcon,
-  ChartBarIcon,
-  ChatBubbleLeftRightIcon
+  ChartBarIcon
 } from '@heroicons/react/24/outline'
 import {
   HomeIcon as HomeIconSolid,
@@ -20,8 +19,7 @@ import {
   ShoppingBagIcon as ShoppingBagIconSolid,
   UsersIcon as UsersIconSolid,
   CreditCardIcon as CreditCardIconSolid,
-  ChartBarIcon as ChartBarIconSolid,
-  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid
+  ChartBarIcon as ChartBarIconSolid
 } from '@heroicons/react/24/solid'
 
 /**
@@ -31,7 +29,7 @@ import {
  */
 function MobileBottomNav() {
   const { t } = useTranslation('dashboard')
-  const { unreadCount } = useMessaging()
+
   const location = useLocation()
 
   // Navigation items - Streamlined to primary tabs
@@ -50,14 +48,7 @@ function MobileBottomNav() {
       iconSolid: GiftIconSolid,
       tabName: 'offers'
     },
-    {
-      name: t('mobileNav.messages'),
-      path: '/dashboard?tab=messages',
-      icon: ChatBubbleLeftRightIcon,
-      iconSolid: ChatBubbleLeftRightIconSolid,
-      tabName: 'messages',
-      badge: unreadCount
-    },
+
     {
       name: t('mobileNav.branches'),
       path: '/dashboard?tab=branches',

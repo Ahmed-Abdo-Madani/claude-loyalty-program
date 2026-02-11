@@ -190,10 +190,18 @@ class AdminMessagingController {
         }
     }
 
-    // Send a message (reply or new conversation)
+    /**
+     * Send a message (reply or new conversation) - EMAIL ONLY
+     * 
+     * Architecture Note:
+     * - Messages are stored in the database for admin history/audit
+     * - Businesses receive email notifications to their registered email
+     * - The `conversationUrl` in the email is deprecated (businesses no longer have inbox access)
+     * - Email should be self-contained with full message content
+     */
     static async sendMessage(req, res) {
         try {
-            const { business_id, conversation_id, subject, message_body, message_type = 'response', attachments = [] } = req.body
+            const { business_id, conversation_id, subject, message_body, attachments = [] } = req.body
             const adminId = req.admin.adminId
 
             if (!message_body) {
@@ -203,100 +211,122 @@ class AdminMessagingController {
                 })
             }
 
-            let conversation
+            let conversation;
+            let targetBusinessId = business_id;
 
+            // 1. Find or Create Conversation for Audit Trail
             if (conversation_id) {
-                // Reply to existing conversation
-                conversation = await Conversation.findOne({ where: { conversation_id } })
+                conversation = await Conversation.findOne({ where: { conversation_id } });
                 if (!conversation) {
                     return res.status(404).json({
                         success: false,
                         message: 'Conversation not found'
-                    })
+                    });
                 }
+                targetBusinessId = conversation.business_id;
             } else {
-                // New conversation
-                if (!business_id || !subject) {
+                // New Conversation
+                if (!targetBusinessId || !subject) {
                     return res.status(400).json({
                         success: false,
-                        message: 'Business ID and Subject are required for new conversations'
-                    })
+                        message: 'Business ID and Subject required for new conversation'
+                    });
+                }
+
+                // Verify business exists
+                const businessCheck = await Business.findOne({ where: { public_id: targetBusinessId } });
+                if (!businessCheck) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Business not found'
+                    });
                 }
 
                 conversation = await Conversation.create({
-                    business_id,
-                    admin_id: adminId, // Assign current admin as owner/starter
+                    business_id: targetBusinessId,
                     subject,
-                    status: 'open'
-                })
+                    admin_id: adminId,
+                    status: 'open',
+                    unread_count_admin: 0,
+                    unread_count_business: 0 // DEPRECATED: Always 0
+                });
             }
 
-            // Create message
+            // 2. Create Message Record
             const message = await Message.create({
                 conversation_id: conversation.conversation_id,
                 sender_type: 'admin',
-                sender_id: adminId.toString(),
-                recipient_id: conversation.business_id,
-                subject: conversation_id ? null : subject, // Only store subject on first message if needed, or null
+                sender_id: String(adminId),
+                recipient_id: targetBusinessId,
+                subject: subject || conversation.subject,
                 message_body,
-                message_type,
+                message_type: 'response', // stored as response for audit
                 status: 'sent',
-                attachments
-            })
+                attachments,
+                email_notification_sent: true,
+                email_notification_sent_at: new Date(),
+                email_notification_status: 'pending' // Will be updated if email fails? or assume sent
+            });
 
-            // Update conversation metadata
-            await conversation.updateLastMessage()
-            await conversation.incrementUnreadCount('business')
+            // 3. Update Conversation Timestamps
+            await conversation.updateLastMessage();
 
-            // Send Email Notification
-            try {
-                const business = await Business.findOne({ where: { public_id: conversation.business_id } })
+            // 4. Send Email Notification
+            const business = await Business.findOne({ where: { public_id: targetBusinessId } })
 
-                // Check if business wants notifications
-                if (business && business.email && business.canReceiveMessageNotifications && business.canReceiveMessageNotifications()) {
-                    const emailSubject = subject || conversation.subject || 'New message from platform admin'
+            if (business && business.email && business.canReceiveMessageNotifications && business.canReceiveMessageNotifications()) {
+                const emailSubject = subject || conversation.subject || 'New message from platform admin'
 
-                    // Generate unsubscribe token
-                    const unsubscribeToken = crypto.createHash('sha256').update(business.public_id + Date.now().toString()).digest('hex');
+                // Generate unsubscribe token
+                const unsubscribeToken = crypto.createHash('sha256').update(business.public_id + Date.now().toString()).digest('hex');
 
+                // Use configured support email or sender
+                const supportEmail = process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM;
+
+                try {
                     await EmailService.sendMessageNotification(
                         business.email,
                         {
                             businessName: business.business_name,
                             subject: emailSubject,
-                            messageBody: message_body,
-                            conversationUrl: `${process.env.FRONTEND_URL}/dashboard/messages/${conversation.conversation_id}`,
-                            adminName: req.admin.full_name || 'Admin'
+                            messageBody: message_body, // Full message
+                            adminName: req.admin.full_name || 'Platform Admin',
+                            supportEmail: supportEmail
                         },
                         {
                             notificationType: 'new-message',
                             language: business.preferred_language || 'ar',
-                            unsubscribeToken
+                            unsubscribeToken,
+                            replyTo: supportEmail,
+                            messageId: message.message_id // Track with Resend if possible
                         }
                     );
 
-                    // Update message with notification status
+                    // Update message status
                     await message.update({
-                        email_notification_sent: true,
-                        email_notification_sent_at: new Date(),
-                        email_notification_status: 'sent',
-                        unsubscribe_token: unsubscribeToken
+                        email_notification_status: 'sent'
                     });
+
+                    logger.info(`Email message sent to business ${business.business_name} (${business.email})`);
+                } catch (emailError) {
+                    logger.error('Failed to send email notification:', emailError);
+                    await message.update({
+                        email_notification_status: 'failed'
+                    });
+                    // We don't fail the request, but log it.
                 }
-            } catch (emailError) {
-                logger.error('Failed to send email notification to business:', emailError)
-                // Don't fail the request, just log it
+            } else {
+                logger.info(`Skipping email to business - notifications disabled or no email`);
                 await message.update({
-                    email_notification_status: 'failed'
-                }).catch(err => logger.error('Failed to update message status:', err));
+                    email_notification_sent: false,
+                    email_notification_status: 'pending' // or skipped
+                });
             }
 
-            res.status(201).json({
+            res.status(200).json({
                 success: true,
-                data: {
-                    message,
-                    conversation_id: conversation.conversation_id
-                }
+                message: 'Message sent',
+                data: message
             })
         } catch (error) {
             logger.error('Send message error:', error)

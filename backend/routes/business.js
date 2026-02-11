@@ -16,7 +16,7 @@ import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, B
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
 import appleWalletController from '../controllers/appleWalletController.js'
-import BusinessMessagingController from '../controllers/businessMessagingController.js'
+
 import BusinessSettingsController from '../controllers/businessSettingsController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
@@ -547,33 +547,7 @@ router.patch('/offers/:id/status', (req, res) => {
   }
 })
 
-// =================
-// MESSAGING ROUTES (Authenticated)
-// =================
 
-// Get all conversations for business
-router.get('/messages/conversations',
-  requireBusinessAuth,
-  BusinessMessagingController.getConversations
-)
-
-// Get conversation by ID with messages
-router.get('/messages/conversations/:id',
-  requireBusinessAuth,
-  BusinessMessagingController.getConversationById
-)
-
-// Send message/inquiry to admin
-router.post('/messages/send',
-  requireBusinessAuth,
-  BusinessMessagingController.sendMessage
-)
-
-// Mark message as read
-router.patch('/messages/:id/read',
-  requireBusinessAuth,
-  BusinessMessagingController.markAsRead
-)
 
 
 // =================
