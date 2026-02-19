@@ -28,7 +28,11 @@
     "generate-icon-previews": "node utils/generateIconPreviews.js",
     "init-icons": "node scripts/initialize-stamp-icons.js",
     "verify-icons": "node -e \"const fs = require('fs'); const path = require('path'); const iconsPath = path.join(__dirname, 'uploads', 'icons', 'stamps'); const files = ['manifest.json', 'coffee-filled.svg', 'gift-filled.svg', 'previews/coffee-preview.png', 'previews/gift-preview.png']; const missing = files.filter(f => !fs.existsSync(path.join(iconsPath, f))); if (missing.length > 0) { console.error('❌ Missing files:', missing); process.exit(1); } else { console.log('✅ All icon files present'); process.exit(0); }\"",
-    "drop-businesses": "node scripts/drop-all-businesses.js"
+    "drop-businesses": "node scripts/drop-all-businesses.js",
+    "test:prod-copy": "node scripts/test-migrations-on-prod-copy.js",
+    "test:prod-copy:dry-run": "node scripts/test-migrations-on-prod-copy.js --dry-run",
+    "test:prod-copy:skip-dump": "node scripts/test-migrations-on-prod-copy.js --skip-dump",
+    "test:prod-copy:full": "node scripts/test-migrations-on-prod-copy.js --prod-copy"
   },
   "dependencies": {
     "@react-email/components": "^1.0.7",

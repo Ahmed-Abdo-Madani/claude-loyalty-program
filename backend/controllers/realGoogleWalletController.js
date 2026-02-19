@@ -245,17 +245,21 @@ class RealGoogleWalletController {
    * @returns {string} Formatted progress text with stars
    */
   generateProgressText(earned, required) {
-    const filledStars = '⭐'.repeat(earned)
-    const emptyStars = '☆'.repeat(required - earned)
+    // Guard against null/undefined inputs
+    const safeEarned = Math.max(0, earned || 0)
+    const safeRequired = Math.max(safeEarned, required || 10) // Default to 10 if missing, ensure not less than earned
+
+    const filledStars = '⭐'.repeat(safeEarned)
+    const emptyStars = '☆'.repeat(Math.max(0, safeRequired - safeEarned))
     const stars = filledStars + emptyStars
-    const remaining = required - earned
+    const remaining = safeRequired - safeEarned
 
     if (remaining === 0) {
-      return `🎉 Reward Ready!\n${stars}\nYou've collected all ${required} stamps!`
+      return `🎉 Reward Ready!\n${stars}\nYou've collected all ${safeRequired} stamps!`
     } else if (remaining === 1) {
-      return `${stars}\n${earned} of ${required} stamps collected\nOnly 1 more stamp to go! 🎯`
+      return `${stars}\n${safeEarned} of ${safeRequired} stamps collected\nOnly 1 more stamp to go! 🎯`
     } else {
-      return `${stars}\n${earned} of ${required} stamps collected\n${remaining} more stamps until reward! 🎁`
+      return `${stars}\n${safeEarned} of ${safeRequired} stamps collected\n${remaining} more stamps until reward! 🎁`
     }
   }
 

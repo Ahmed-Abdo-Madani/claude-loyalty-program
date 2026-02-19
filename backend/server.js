@@ -182,6 +182,31 @@ app.get('/health', (req, res) => {
   })
 })
 
+// Comment 4: Health check for migrations
+app.get('/health/migrations', async (req, res) => {
+  try {
+    // Ensure fresh data
+    res.setHeader('Cache-Control', 'no-cache')
+
+    // Get status from runner
+    const status = await AutoMigrationRunner.getMigrationStatus()
+
+    // Return 503 if there are failed migrations, otherwise 200
+    const statusCode = status.failed > 0 ? 503 : 200
+
+    res.status(statusCode).json({
+      status: status.failed > 0 ? 'unhealthy' : 'healthy',
+      ...status
+    })
+  } catch (error) {
+    logger.error('❌ Failed to get migration health:', error)
+    res.status(500).json({
+      status: 'error',
+      error: error.message
+    })
+  }
+})
+
 // Trust proxy for production deployment (needed for accurate IP detection)
 app.set('trust proxy', 1)
 
@@ -371,6 +396,9 @@ async function initializeDatabase() {
     // Initialize database first
     await initializeDatabase()
 
+    // Flag to track if auto-engagement table exists (Comment 2)
+    let autoEngagementTableExists = false
+
     // Auto-run pending migrations (production safety feature)
     if (process.env.AUTO_MIGRATE !== 'false') {
       try {
@@ -403,6 +431,14 @@ async function initializeDatabase() {
           })
         } else {
           logger.info('✅ Database schema is up to date (no pending migrations)')
+        }
+
+        // Comment 3: Log migration status summary
+        try {
+          const status = await AutoMigrationRunner.getMigrationStatus()
+          logger.info(`📊 Migration status: ${status.applied} applied, ${status.pending} pending, ${status.failed} failed`)
+        } catch (error) {
+          logger.warn('⚠️ Could not retrieve migration status summary', error.message)
         }
 
       } catch (error) {
@@ -481,8 +517,12 @@ async function initializeDatabase() {
             logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
 
             if (process.env.NODE_ENV === 'production') {
-              logger.error('🛑 Exiting in production due to schema mismatch')
-              process.exit(1)
+              if (process.env.ALLOW_SCHEMA_DRIFT === 'true') {
+                logger.warn('⚠️ Schema drift allowed: Ignoring missing constraint in production')
+              } else {
+                logger.error('🛑 Exiting in production due to schema mismatch')
+                process.exit(1)
+              }
             } else {
               logger.warn('⚠️ Continuing in development mode despite schema mismatch')
             }
@@ -495,8 +535,12 @@ async function initializeDatabase() {
             logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
 
             if (process.env.NODE_ENV === 'production') {
-              logger.error('🛑 Exiting in production due to multiple constraints')
-              process.exit(1)
+              if (process.env.ALLOW_SCHEMA_DRIFT === 'true') {
+                logger.warn('⚠️ Schema drift allowed: Ignoring multiple constraints in production')
+              } else {
+                logger.error('🛑 Exiting in production due to multiple constraints')
+                process.exit(1)
+              }
             } else {
               logger.warn('⚠️ Continuing in development mode despite multiple constraints')
             }
@@ -528,8 +572,12 @@ async function initializeDatabase() {
                 logger.error('   Command: node backend/run-migration.js 20250131-add-notification-campaign-fields.js')
 
                 if (process.env.NODE_ENV === 'production') {
-                  logger.error('🛑 Exiting in production due to schema mismatch')
-                  process.exit(1)
+                  if (process.env.ALLOW_SCHEMA_DRIFT === 'true') {
+                    logger.warn('⚠️ Schema drift allowed: Ignoring value mismatch in production')
+                  } else {
+                    logger.error('🛑 Exiting in production due to schema mismatch')
+                    process.exit(1)
+                  }
                 } else {
                   logger.warn('⚠️ Continuing in development mode despite schema mismatch')
                 }
@@ -562,13 +610,14 @@ async function initializeDatabase() {
           logger.error('   Run migration: node backend/run-migration.js 20250201-create-auto-engagement-configs-table.js')
 
           if (process.env.NODE_ENV === 'production') {
-            logger.error('🚨 Exiting to prevent runtime failures...')
-            process.exit(1)
+            // Comment 2: Do not exit, just warn and disable features
+            logger.warn('⚠️ Production warning: Auto-engagement features disabled due to missing table')
           } else {
             logger.warn('⚠️  Continuing in development mode, but auto-engagement will not work')
           }
         } else {
           logger.info('✅ auto_engagement_configs table validated')
+          autoEngagementTableExists = true
 
           // Verify critical columns exist
           const [columnCheck] = await sequelize.query(`
@@ -723,21 +772,25 @@ async function initializeDatabase() {
 
       // Initialize auto-engagement cron job
       if (process.env.DISABLE_AUTO_ENGAGEMENT !== 'true') {
-        // Run daily at 9:00 AM UTC
-        cron.schedule('0 9 * * *', async () => {
-          logger.info('🔔 Running scheduled auto-engagement check...');
-          try {
-            await AutoEngagementService.runDailyCheck();
-            logger.info('✅ Scheduled auto-engagement check completed');
-          } catch (error) {
-            logger.error('❌ Scheduled auto-engagement check failed', {
-              error: error.message,
-              stack: error.stack
-            });
-          }
-        });
+        if (autoEngagementTableExists) {
+          // Run daily at 9:00 AM UTC
+          cron.schedule('0 9 * * *', async () => {
+            logger.info('🔔 Running scheduled auto-engagement check...');
+            try {
+              await AutoEngagementService.runDailyCheck();
+              logger.info('✅ Scheduled auto-engagement check completed');
+            } catch (error) {
+              logger.error('❌ Scheduled auto-engagement check failed', {
+                error: error.message,
+                stack: error.stack
+              });
+            }
+          });
 
-        logger.info('⏰ Auto-engagement cron job initialized (daily at 9:00 AM UTC)');
+          logger.info('⏰ Auto-engagement cron job initialized (daily at 9:00 AM UTC)');
+        } else {
+          logger.warn('⚠️ Auto-engagement cron job skipped: auto_engagement_configs table missing');
+        }
       } else {
         logger.info('⏸️ Auto-engagement cron job disabled (DISABLE_AUTO_ENGAGEMENT=true)');
       }

@@ -2,10 +2,11 @@ import { DataTypes } from 'sequelize'
 
 export default {
     up: async (queryInterface, Sequelize) => {
-        // Set all business unread counts to 0
+        // Safe Update: Only initialize to 0 if NULL. Do NOT overwrite existing data.
         await queryInterface.sequelize.query(`
             UPDATE conversations 
             SET unread_count_business = 0
+            WHERE unread_count_business IS NULL
         `);
 
         // Add column comment if supported by dialect (Postgres supports it)
