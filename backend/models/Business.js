@@ -279,6 +279,14 @@ const Business = sequelize.define('Business', {
       admin_announcements: true
     },
     comment: 'User notification settings'
+  },
+  reset_password_token: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  reset_password_expires: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'businesses',

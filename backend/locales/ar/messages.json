@@ -11,6 +11,8 @@
     "logoutSuccess": "تم تسجيل الخروج بنجاح",
     "invalidOrExpiredToken": "رمز غير صالح أو منتهي الصلاحية",
     "invalidOrExpiredSession": "جلسة غير صالحة أو منتهية الصلاحية",
+    "forgotPasswordEmailSent": "إذا كان هناك حساب بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة التعيين.",
+    "resetPasswordSuccess": "تم إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.",
     "currentPasswordIncorrect": "كلمة المرور الحالية غير صحيحة",
     "passwordChangeSuccess": "تم تغيير كلمة المرور بنجاح",
     "invalidPin": "رمز PIN غير صالح",
@@ -20,6 +22,7 @@
   "validation": {
     "emailPasswordRequired": "البريد الإلكتروني وكلمة المرور مطلوبان",
     "missingRequiredFields": "الحقول المطلوبة مفقودة: {{fields}}",
+    "tokenAndPasswordRequired": "رمز إعادة التعيين وكلمة المرور الجديدة مطلوبان",
     "emailAlreadyExists": "الأعمال بهذا البريد الإلكتروني موجودة بالفعل",
     "customerIdOfferIdRequired": "معرف العميل ومعرف العرض مطلوبان",
     "invalidCustomerIdFormat": "تنسيق معرف العميل غير صالح. يجب أن يبدأ بـ cust_",

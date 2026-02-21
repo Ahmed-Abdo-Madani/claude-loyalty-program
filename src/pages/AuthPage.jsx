@@ -62,7 +62,7 @@ function AuthPage() {
             suspensionReason: data.data.suspension_reason || null,
             suspensionDate: data.data.suspension_date || null
           })
-          
+
           // Comment 1: Normalize subscription data to include retry/grace fields
           if (data.data.subscription) {
             const normalizedSubscription = {
@@ -77,7 +77,7 @@ function AuthPage() {
             // Clear any stale subscription data if backend doesn't send it
             setSubscriptionData(null)
           }
-          
+
           navigate('/dashboard')
         } else {
           setError(data.message || 'Login failed')
@@ -96,11 +96,11 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
-      <SEO 
+      <SEO
         titleKey={mode === 'signup' ? 'pages.auth.signup.title' : 'pages.auth.signin.title'}
         descriptionKey={mode === 'signup' ? 'pages.auth.signup.description' : 'pages.auth.signin.description'}
       />
-      
+
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
         {/* Logo Section */}
         <div className="text-center max-w-md mx-auto mb-8">
@@ -252,9 +252,9 @@ function AuthPage() {
                   </div>
 
                   <div className="text-sm">
-                    <a href="#" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                    <Link to="/forgot-password" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
                       {t('businessAuth.forgotPassword')}
-                    </a>
+                    </Link>
                   </div>
                 </div>
               )}

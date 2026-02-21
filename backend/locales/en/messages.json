@@ -11,6 +11,8 @@
     "logoutSuccess": "Logout successful",
     "invalidOrExpiredToken": "Invalid or expired token",
     "invalidOrExpiredSession": "Invalid or expired session",
+    "forgotPasswordEmailSent": "If an account with that email exists, a reset link has been sent.",
+    "resetPasswordSuccess": "Password has been reset successfully. You can now log in.",
     "currentPasswordIncorrect": "Current password is incorrect",
     "passwordChangeSuccess": "Password changed successfully",
     "invalidPin": "Invalid PIN",
@@ -20,6 +22,7 @@
   "validation": {
     "emailPasswordRequired": "Email and password are required",
     "missingRequiredFields": "Missing required fields: {{fields}}",
+    "tokenAndPasswordRequired": "Reset token and new password are required",
     "emailAlreadyExists": "Business with this email already exists",
     "customerIdOfferIdRequired": "Customer ID and offer ID are required",
     "invalidCustomerIdFormat": "Invalid customer ID format. Must start with cust_",

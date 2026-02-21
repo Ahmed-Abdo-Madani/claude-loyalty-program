@@ -47,6 +47,8 @@ export const endpoints = {
   // Business Authentication APIs
   businessLogin: `${API_BASE_URL}/api/business/login`,
   businessRegister: `${API_BASE_URL}/api/business/register`,
+  businessForgotPassword: `${API_BASE_URL}/api/business/forgot-password`,
+  businessResetPassword: `${API_BASE_URL}/api/business/reset-password`,
   businessCategories: `${API_BASE_URL}/api/business/categories`,
 
   // Business Dashboard APIs

@@ -12,6 +12,7 @@ import SubscriptionService from '../services/SubscriptionService.js'
 import MoyasarService from '../services/MoyasarService.js'
 import InvoiceService from '../services/InvoiceService.js'
 import LemonSqueezyService from '../services/LemonSqueezyService.js'
+import EmailService from '../services/EmailService.js'
 import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice, Sale } from '../models/index.js'
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
@@ -2310,6 +2311,111 @@ router.put('/my/profile', requireBusinessAuth, async (req, res) => {
 // ===============================
 // AUTHENTICATION ROUTES
 // ===============================
+
+// Business forgot password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.emailRequired', req.locale) || 'Email is required'
+      })
+    }
+
+    const business = await Business.findOne({ where: { email } })
+
+    if (business) {
+      const rawToken = crypto.randomBytes(32).toString('hex')
+      const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+
+      business.reset_password_token = hashedToken
+      // Valid for 1 hour
+      business.reset_password_expires = new Date(Date.now() + 60 * 60 * 1000)
+      await business.save()
+
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${rawToken}`
+
+      try {
+        await EmailService.sendTransactional({
+          to: business.email,
+          subject: 'Reset Your Password - Madna Loyalty',
+          html: `<p>Hello ${business.business_name},</p><p>You requested a password reset. Click the link below to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>This link will expire in 1 hour.</p><p>If you did not request this, please ignore this email.</p>`,
+          text: `Hello ${business.business_name},\n\nYou requested a password reset. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.`
+        })
+      } catch (emailError) {
+        logger.error('Failed to send reset password email', { email: business.email, error: emailError.message })
+      }
+    }
+
+    res.json({
+      success: true,
+      message: getLocalizedMessage('auth.forgotPasswordEmailSent', req.locale)
+    })
+  } catch (error) {
+    logger.error('Forgot password error', { error: error.message })
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.internalError', req.locale)
+    })
+  }
+})
+
+// Business reset password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.tokenAndPasswordRequired', req.locale)
+      })
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('validation.passwordMinLength', req.locale)
+      })
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+
+    const business = await Business.findOne({
+      where: {
+        reset_password_token: hashedToken,
+        reset_password_expires: {
+          [Op.gt]: new Date()
+        }
+      }
+    })
+
+    if (!business) {
+      return res.status(400).json({
+        success: false,
+        message: getLocalizedMessage('auth.invalidOrExpiredToken', req.locale)
+      })
+    }
+
+    business.password_hash = bcrypt.hashSync(password, 10)
+    business.reset_password_token = null
+    business.reset_password_expires = null
+    await business.save()
+
+    res.json({
+      success: true,
+      message: getLocalizedMessage('auth.resetPasswordSuccess', req.locale)
+    })
+  } catch (error) {
+    logger.error('Reset password error', { error: error.message })
+    res.status(500).json({
+      success: false,
+      message: getLocalizedMessage('server.internalError', req.locale)
+    })
+  }
+})
 
 // Business login endpoint - SECURE VERSION
 router.post('/login', async (req, res) => {

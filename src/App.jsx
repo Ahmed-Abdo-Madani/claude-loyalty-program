@@ -25,6 +25,8 @@ const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage'))
 const SuspendedAccountPage = lazy(() => import('./pages/SuspendedAccountPage'))
 const SubscriptionPlansPage = lazy(() => import('./pages/SubscriptionPlansPage'))
 const CompleteProfilePage = lazy(() => import('./pages/CompleteProfilePage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 
 // Lazy load marketing/info pages
 const FeaturesPage = lazy(() => import('./pages/FeaturesPage'))
@@ -55,6 +57,8 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Branch Manager Routes */}
             <Route path="/branch-manager-login" element={<BranchManagerLogin />} />
