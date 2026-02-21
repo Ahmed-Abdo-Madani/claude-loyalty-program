@@ -91,6 +91,7 @@ claude-loyalty-program/
 
 ### Quick Access
 - **[Documentation Index](docs/README.md)** - Complete documentation hub
+- **[No-Drop Migration Guide](docs/guides/NO_DROP_MIGRATION.md)** - Safe production deployment with live data
 - **[Development Guide](docs/guides/DEVELOPMENT.md)** - Setup and development workflow
 - **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
 - **[Testing Guide](tests/README.md)** - Testing tools and procedures
@@ -305,11 +306,12 @@ vercel --prod
 ### **Backend (Render with Docker)**
 The backend uses **Docker deployment** to ensure reliable emoji font support for Apple Wallet stamp images.
 
-```bash
-# Deploy API server
-git push origin main
-# Auto-deploys via webhook with Docker build
-```
+| Scenario | Command | DB Impact | Wallet Passes |
+|----------|---------|-----------|---------------|
+| **No-Drop (recommended for production with live data)** | `git push origin main` | Migrations applied incrementally; all data preserved | ✅ Unaffected |
+| **Fresh start (dev/staging only)** | Drop DB → `git push origin main` | All data wiped; schema rebuilt from scratch | ❌ All passes invalidated |
+
+> For production deployments with live customers, always use the **No-Drop** path. See [`docs/guides/NO_DROP_MIGRATION.md`](docs/guides/NO_DROP_MIGRATION.md) for the full guide.
 
 **Key Features:**
 - Docker-based deployment (see `backend/Dockerfile`)
@@ -478,6 +480,17 @@ const pool = new Pool(
       }
 )
 ```
+
+### **Wallet Passes After a Production Deploy**
+
+If you're deploying changes to production with live wallet passes, preserving the database is critical.
+
+- **Will existing Apple/Google Wallet passes stop working?** No, as long as the `wallet_passes` table and its columns (`authentication_token`, `last_updated_tag`, `wallet_object_id`) are preserved.
+- **Do customers need to re-add their passes?** No, passes update in-place via push notifications (Apple) or background sync (Google).
+- **What if a migration fails mid-way?** Render aborts the deploy; your old code keeps serving.
+- For complete details on deploying safely, refer to the [No-Drop Migration Guide](docs/guides/NO_DROP_MIGRATION.md).
+
+
 
 #### **Development Server Issues**
 

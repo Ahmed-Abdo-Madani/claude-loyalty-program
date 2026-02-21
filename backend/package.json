@@ -32,7 +32,8 @@
     "test:prod-copy": "node scripts/test-migrations-on-prod-copy.js",
     "test:prod-copy:dry-run": "node scripts/test-migrations-on-prod-copy.js --dry-run",
     "test:prod-copy:skip-dump": "node scripts/test-migrations-on-prod-copy.js --skip-dump",
-    "test:prod-copy:full": "node scripts/test-migrations-on-prod-copy.js --prod-copy"
+    "test:prod-copy:full": "node scripts/test-migrations-on-prod-copy.js --prod-copy",
+    "test:legacy-compat": "npx tsx tests/legacy-data-compat.test.js"
   },
   "dependencies": {
     "@react-email/components": "^1.0.7",

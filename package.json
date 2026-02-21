@@ -21,7 +21,7 @@
     "test:offer-status": "node backend/test/offer-status-validation.test.js",
     "test:branch-status": "node backend/test/branch-status-validation.test.js",
     "test:status-integration": "node backend/test/status-validation-integration.test.js",
-    "test:legacy-compat": "cd backend && npx tsx tests/legacy-data-compat.test.js"
+    "test:legacy-compat": "npx tsx backend/tests/legacy-data-compat.test.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

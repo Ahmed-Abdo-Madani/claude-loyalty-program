@@ -247,7 +247,8 @@ class RealGoogleWalletController {
   generateProgressText(earned, required) {
     // Guard against null/undefined inputs
     const safeEarned = Math.max(0, earned || 0)
-    const safeRequired = Math.max(safeEarned, required || 10) // Default to 10 if missing, ensure not less than earned
+    // Default to 10 stamps if required is not set (legacy data without stamps_required field)
+    const safeRequired = Math.max(safeEarned, (required != null ? required : 10))
 
     const filledStars = '⭐'.repeat(safeEarned)
     const emptyStars = '☆'.repeat(Math.max(0, safeRequired - safeEarned))

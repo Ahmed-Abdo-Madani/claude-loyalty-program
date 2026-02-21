@@ -16,14 +16,7 @@
  * Usage: npm run test:legacy-compat
  */
 
-import assert from 'assert';
-import { WalletPass, Business, Branch } from '../models/index.js';
-// Dynamic imports for controllers/services to handle potential mocking needs or circular deps if any
-// but standard import should work for these if they are standard ESM.
-// However, the plan mentions specific imports.
-import appleWalletController from '../controllers/appleWalletController.js';
-import realGoogleWalletController from '../controllers/realGoogleWalletController.js';
-import CustomerService from '../services/CustomerService.js';
+
 
 // Test results tracking
 let totalTests = 0;
@@ -77,7 +70,30 @@ async function runAsyncTest(name, testFn) {
     }
 }
 
+import assert from 'assert';
+
 (async () => {
+    // Validate environment before attempting DB connection via imports
+    if (!process.env.DATABASE_URL && !process.env.TEST_DATABASE_URL) {
+        console.error(`${colors.red}❌ Error: DATABASE_URL or TEST_DATABASE_URL environment variable must be set.${colors.reset}`);
+        console.error(`Please point your environment to a test database (e.g. by loading backend/.env.test).`);
+        process.exit(1);
+    }
+
+    // Dynamic imports to wait until environment validation passes
+    const { WalletPass, Business, Branch } = await import('../models/index.js');
+    // Using simple destructuring from module, or fallback for default export
+    let realGoogleWalletController;
+    let CustomerService;
+    try {
+        const rGwModule = await import('../controllers/realGoogleWalletController.js');
+        realGoogleWalletController = rGwModule.default || rGwModule;
+        const csModule = await import('../services/CustomerService.js');
+        CustomerService = csModule.default || csModule;
+    } catch (err) {
+        console.error(`${colors.yellow}Warning: some controllers/services could not be dynamically imported. Test results may vary.${colors.reset}`, err.message);
+    }
+
     console.log(`\n${colors.blue}═══════════════════════════════════════════════════════${colors.reset}`);
     console.log(`${colors.blue}STARTING LEGACY VALUE COMPATIBILITY TESTS${colors.reset}`);
     console.log(`${colors.blue}═══════════════════════════════════════════════════════${colors.reset}\n`);
@@ -132,14 +148,7 @@ async function runAsyncTest(name, testFn) {
 
     runTest('isActive() returns true for active pass', () => {
         const pass = new WalletPass();
-        pass.status = 'active'; // The property might be 'status' or 'pass_status', usually it's 'status' in model
-        // Plan says: isActive() with pass_status = 'active'. 
-        // Let's check if the model uses 'status' or 'pass_status'. 
-        // Usually models use 'status'. I will assume 'status' based on standard practice, 
-        // but if the plan says `pass_status` explicitly, maybe I should set that.
-        // However, WalletPass usually has a `status` field.
-        // I will set `status` as it's the standard field name in this project.
-        pass.status = 'active';
+        pass.pass_status = 'active';
         assert.strictEqual(pass.isActive(), true);
     });
 
@@ -271,10 +280,10 @@ async function runAsyncTest(name, testFn) {
     // =============================================================================
     console.log(`\n${colors.blue}SUITE 4: Apple Web Service - Pass-Fetch Logic${colors.reset}`);
 
-    // This suite tests logic, not actual controller execution if hard to mock.
-    // The plan says: "Extract the testable logic by importing appleWalletController".
-    // Since we can't easily run the controller method (req, res), we will verify 
-    // the conditional logic concepts described in the plan.
+    // NOTE: This suite tests the conditional logic using inline simulation rather than
+    // making actual HTTP requests to the route handler. This does not provide full
+    // integration-level regression protection. Future maintainers should see this 
+    // as a coverage gap for the Apple Web Service logic routing.
 
     // Test 1: If-None-Match with manifest_etag = null
     runTest('If-None-Match skipped when manifest_etag is null', () => {
@@ -377,17 +386,7 @@ async function runAsyncTest(name, testFn) {
     // Safest bet: import it. If undefined, we define the fallback logic to test it in isolation
     // as "this is how it *should* work".
 
-    // We will attempt to import. behavior:
-    let generateProgressText = realGoogleWalletController.generateProgressText;
-
-    // If it's not exported, we will mock the logic to verify the *logic* itself
-    if (!generateProgressText) {
-        // Fallback: define it as it appears in the codebase (assumed)
-        generateProgressText = (earned, required) => {
-            if (!required) return `${earned} Stamps`;
-            return `${earned}/${required} Stamps`;
-        };
-    }
+    let generateProgressText = (realGoogleWalletController.generateProgressText || Object.getPrototypeOf(realGoogleWalletController).generateProgressText).bind(realGoogleWalletController);
 
     runTest('generateProgressText(0, 10) returns valid string', () => {
         const text = generateProgressText(0, 10);
@@ -486,8 +485,7 @@ async function runAsyncTest(name, testFn) {
                     assert.strictEqual(result.rewardsClaimed, 0);
                 }
             } catch (e) {
-                // If it fails, we catch it.
-                // But goal is to ensure it treats null as 0.
+                assert.fail('Should not throw when rewards_claimed is null: ' + e.message);
             }
 
             CustomerProgress.findOne = originalFindOne;

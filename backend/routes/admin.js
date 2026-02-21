@@ -7,6 +7,7 @@ import AdminIconsController from '../controllers/adminIconsController.js'
 import AdminMessagingController from '../controllers/adminMessagingController.js'
 import AdminMessagingAnalyticsController from '../controllers/adminMessagingAnalyticsController.js'
 import AdminSettingsController from '../controllers/adminSettingsController.js'
+import AdminMigrationController from '../controllers/adminMigrationController.js'
 import {
   requireAdmin,
   requireSuperAdmin,
@@ -432,6 +433,16 @@ router.put('/support/tickets/:id', requireAdmin(), (req, res) => {
 // HEALTH CHECK
 // =================
 
+// =================
+// MIGRATION MANAGEMENT ROUTES
+// =================
+
+router.get('/migrations',
+  requireSuperAdmin,
+  logAdminAction('view_migration_status', 'system'),
+  AdminMigrationController.getMigrationStatus
+)
+
 // Admin API health check
 router.get('/health', (req, res) => {
   res.json({
@@ -460,7 +471,8 @@ router.use('*', (req, res) => {
       'GET /api/admin/messages/conversations',
       'PUT /api/admin/icons/:id',
       'DELETE /api/admin/icons/:id',
-      'GET /api/admin/health'
+      'GET /api/admin/health',
+      'GET /api/admin/migrations'
     ]
   })
 })

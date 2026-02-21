@@ -16,6 +16,7 @@ import {
   MoonIcon,
   ChevronDoubleLeftIcon,
   Cog6ToothIcon,
+  CircleStackIcon,
 
 } from '@heroicons/react/24/outline'
 
@@ -54,7 +55,8 @@ function DashboardSidebar({ activeTab, setActiveTab, user, analytics, onSignOut 
     { id: 'products', label: t('sidebar.products'), icon: ShoppingBagIcon },
 
     { id: 'analytics', label: t('sidebar.analytics'), icon: ChartBarIcon },
-    { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: CreditCardIcon }
+    { id: 'billing-subscription', label: t('sidebar.billingSubscription'), icon: CreditCardIcon },
+    { id: 'migrations', label: t('sidebar.migrationHealth', 'Migration Health'), icon: CircleStackIcon }
   ]
 
   const handleTabClick = (tabId) => {

@@ -1,80 +1,10 @@
-# 🚨 Production Deployment & Hotfix Guide
+﻿# ≡ƒÜ¿ Production Deployment & Hotfix Guide
 
-## 2026-02-13: No-Drop Migration Deployment
-
-### Summary
-Successfully deployed 14 migrations from dev branch without dropping production database.
-
-### Migrations Applied
-1. 20260126-add-pos-access-enabled-to-branches.js
-2. 20260130-add-new-subscription-plan-types.js (ENUM - irreversible)
-3. 20260131-add-menu-display-and-image-fields.js
-4. 20260202-add-social-media-links.js
-5. 20260203-add-menu-phone.js
-6. 20260205-add-complained-to-notification-logs-status.js (ENUM - irreversible)
-7. 20260207-create-conversations-table.js
-8. 20260207-create-message-templates-table.js
-9. 20260207-create-messages-table.js
-10. 20260208-add-notification-preferences.js
-11. 20260208-add-scanner-access-enabled.js
-12. 20260209-add-missing-notification-columns.js
-13. 20260211-cleanup-business-unread-counts.js
-14. 20250208_add_notification_tracking_to_messages.js
-
-### Data Impact
-- **Preserved**: All wallet passes, customers, businesses, offers
-- **Added**: Messaging infrastructure (conversations, messages, templates)
-- **Modified**: ENUM types (subscription plans, notification statuses)
-- **Reset**: conversations.unread_count_business to 0 (deprecated field)
-
-### Rollback Status
-- **Reversible**: Table/column additions (see rollback script)
-- **Irreversible**: ENUM value additions (keep new values)
-
-### Verification Results
-- ✅ All 14 migrations applied successfully
-- ✅ Server startup validations passed
-- ✅ Existing wallet passes generate correctly
-- ✅ New messaging endpoints operational
-- ✅ No increase in error rate
-
-### Deployment Time
-- Start: 2026-02-13 10:30:00 UTC
-- End: 2026-02-13 10:35:00 UTC
-- Duration: 5 minutes
-- Downtime: 0 seconds (zero-downtime deployment)
-
-## No-Drop Deployment Path
-
-**1. When to use this path**
-Use this path when existing live data (customers, wallet passes, businesses) must be preserved. It applies migrations incrementally without dropping the database.
-
-**2. Required env vars**
-| Key | Purpose | When to set | When to remove |
-|-----|---------|-------------|----------------|
-| `SKIP_SCHEMA_VALIDATION` | Bypasses `exit(1)` on schema drift during server startup. | Emergency only, if server cannot start due to validation failure. | Immediately after fixing the schema/data. |
-| `ALLOW_SCHEMA_DRIFT` | Logs a warning instead of crashing on `campaign_type` constraint mismatch. | Emergency only, if `campaign_type` CHECK constraint differs. | Immediately after fixing the constraint. |
-
-**3. Pre-deploy test script**
-Before pushing to main, test migrations on a production snapshot using `backend/scripts/test-migrations-on-prod-copy.js`.
-Available modes:
-- `npm run test:prod-copy:dry-run` (`--dry-run`): Validates schema and prints expected changes without applying them.
-- `npm run test:prod-copy` (`--prod-copy`): Applies migrations to the local test database and reports validation results.
-
-**4. Migration health endpoint**
-After deployment, call the `GET /health/migrations` endpoint to verify database health.
-- **Expected response**: `{"status": "ok", "pending": 0, ...}`
-- **"pending: 0"**: Confirms all migrations have been successfully applied and the schema is up to date.
-
-**5. Cross-reference**
-- See [`docs/guides/NO_DROP_MIGRATION.md`](docs/guides/NO_DROP_MIGRATION.md) for the full narrative guide.
-- See [`docs/guides/SAFE_MIGRATION_NO_DROP.md`](docs/guides/SAFE_MIGRATION_NO_DROP.md) for the detailed step-by-step checklist.
-
-## 📋 Overview
+## ≡ƒôï Overview
 
 This guide covers critical production issues, hotfixes, and troubleshooting for the Madna Loyalty Platform.
 
-## 🔥 Critical Hotfixes
+## ≡ƒöÑ Critical Hotfixes
 
 ### Google Wallet Pass Generation Failure (CRITICAL)
 
@@ -135,26 +65,26 @@ node migrations/20250125-fix-last-updated-tag-nullable.js
 
 **Expected Output**:
 ```
-🔄 Starting migration: Fix last_updated_tag nullable constraint...
-📊 Current column state:
+≡ƒöä Starting migration: Fix last_updated_tag nullable constraint...
+≡ƒôè Current column state:
    - Nullable: NO
    - Data type: character varying(50)
 
-🔧 Removing NOT NULL constraint...
-✅ NOT NULL constraint removed
+≡ƒöº Removing NOT NULL constraint...
+Γ£à NOT NULL constraint removed
 
-📝 Adding column documentation...
-✅ Column comment updated
+≡ƒô¥ Adding column documentation...
+Γ£à Column comment updated
 
-🔍 Verifying migration...
-✅ Migration complete: last_updated_tag is now nullable
+≡ƒöì Verifying migration...
+Γ£à Migration complete: last_updated_tag is now nullable
 
-📊 Final column state:
+≡ƒôè Final column state:
    - Nullable: YES
    - Data type: character varying(50)
    - Comment: Update tag for tracking pass changes...
 
-✅ Migration completed successfully in 0.234s
+Γ£à Migration completed successfully in 0.234s
 ```
 
 **Step 2: Verify Fix**
@@ -176,8 +106,8 @@ curl -X POST https://api.madna.me/api/google-wallet/generate-pass \
 
 Check application logs for successful Google Wallet pass creation:
 ```
-✅ Wallet pass created successfully (customer_id: xxx, offer_id: xxx, wallet_type: google)
-✅ Google Wallet pass generated successfully
+Γ£à Wallet pass created successfully (customer_id: xxx, offer_id: xxx, wallet_type: google)
+Γ£à Google Wallet pass generated successfully
 ```
 
 #### Prevention
@@ -198,7 +128,7 @@ The fix includes improved error handling that will catch similar issues:
 ```javascript
 // Detects constraint violations (error code 23502)
 if (error.name === 'SequelizeDatabaseError' && error.original?.code === '23502') {
-  logger.error(`❌ CRITICAL: Database constraint violation`, {
+  logger.error(`Γ¥î CRITICAL: Database constraint violation`, {
     error: error.message,
     constraint: error.original?.constraint,
     column: error.original?.column,
@@ -212,7 +142,7 @@ if (error.name === 'SequelizeDatabaseError' && error.original?.code === '23502')
 ```javascript
 // Runtime validation after wallet pass creation
 if (walletPass.last_updated_tag !== null) {
-  logger.warn('⚠️ Unexpected: last_updated_tag is not NULL for Google Wallet pass')
+  logger.warn('ΓÜá∩╕Å Unexpected: last_updated_tag is not NULL for Google Wallet pass')
 }
 
 // Error response includes fix information
@@ -236,7 +166,7 @@ node migrations/20250125-fix-last-updated-tag-nullable.js --rollback
 
 **Warning**: Rollback will break Google Wallet pass generation again. Only use if you encounter unexpected issues with the migration.
 
-## 🔍 Troubleshooting
+## ≡ƒöì Troubleshooting
 
 ### Google Wallet Pass Generation Errors
 
@@ -297,7 +227,7 @@ WHERE wallet_type = 'apple'
 AND authentication_token IS NOT NULL;
 ```
 
-## 📊 Production Health Checks
+## ≡ƒôè Production Health Checks
 
 ### Database Schema Validation
 
@@ -338,7 +268,7 @@ curl https://api.madna.me/api/google-wallet/health
 psql $DATABASE_URL -c "SELECT wallet_type, COUNT(*) FROM wallet_passes GROUP BY wallet_type;"
 ```
 
-## 🚀 Emergency Rollback Procedures
+## ≡ƒÜÇ Emergency Rollback Procedures
 
 ### If Google Wallet Pass Generation Breaks After Migration
 
@@ -361,12 +291,12 @@ AND column_name = 'last_updated_tag';
 - **Application Logs**: Render.com service logs
 - **Error Tracking**: Check application error logs for full stack traces
 
-## 📝 Migration History
+## ≡ƒô¥ Migration History
 
 ### 2025-01-25: Google Wallet Pass Generation Fix
 - **File**: `backend/migrations/20250125-fix-last-updated-tag-nullable.js`
 - **Purpose**: Remove NOT NULL constraint from Apple-specific fields
-- **Status**: ✅ Completed
+- **Status**: Γ£à Completed
 - **Impact**: Critical - Enables Google Wallet pass generation
 
 ### Previous Migrations
@@ -375,7 +305,7 @@ See `DEPLOYMENT.md` for full migration history and database setup instructions.
 
 ---
 
-## 🔔 Notification & Campaign System Deployment
+## ≡ƒöö Notification & Campaign System Deployment
 
 ### Required Migrations (CRITICAL)
 
@@ -454,7 +384,7 @@ WHERE table_name = 'auto_engagement_configs';
 
 ### Environment Variables (REQUIRED)
 
-**Already Configured in Render.com** ✅:
+**Already Configured in Render.com** Γ£à:
 - `JWT_SECRET` - Strong 64-char secret
 - `SESSION_SECRET` - Strong 64-char secret
 - `ENCRYPTION_KEY` - Strong 32-char secret
@@ -469,7 +399,7 @@ WHERE table_name = 'auto_engagement_configs';
 - `DATABASE_URL` - PostgreSQL connection string
 - `WALLET_NOTIFICATION_DAILY_LIMIT=10`
 
-**MISSING - Need to Add** ⚠️:
+**MISSING - Need to Add** ΓÜá∩╕Å:
 ```bash
 # QR Code Security (CRITICAL)
 QR_JWT_SECRET=<generate-with-openssl-rand-base64-64>
@@ -503,10 +433,10 @@ curl -X POST https://api.madna.me/api/notifications/campaigns/promotional \
 2. **Auto-Engagement Cron**:
 ```bash
 # Check server logs for:
-✅ Auto-engagement cron job scheduled (daily at 9:00 AM)
+Γ£à Auto-engagement cron job scheduled (daily at 9:00 AM)
 
 # Should NOT see:
-❌ Error: relation "auto_engagement_configs" does not exist
+Γ¥î Error: relation "auto_engagement_configs" does not exist
 ```
 
 3. **Segment Notifications**:

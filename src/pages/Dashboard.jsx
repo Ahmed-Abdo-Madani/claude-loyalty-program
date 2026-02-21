@@ -18,6 +18,7 @@ import UsageMetrics from '../components/UsageMetrics'
 import PlanUpgradeModal from '../components/PlanUpgradeModal'
 import LogoUploadModal from '../components/LogoUploadModal'
 import BusinessSettingsTab from '../components/BusinessSettingsTab'
+import MigrationHealthTab from '../components/MigrationHealthTab'
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid'
 import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
@@ -459,7 +460,9 @@ function Dashboard() {
                 <BusinessSettingsTab onNavigateToProducts={() => handleTabChange('products')} />
               )}
 
-
+              {activeTab === 'migrations' && (
+                <MigrationHealthTab />
+              )}
 
               {resolvedTab === 'billing-subscription' && (
                 <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>}>

@@ -40,5 +40,3 @@ const validate = async () => {
 };
 
 validate();
-
-validate();

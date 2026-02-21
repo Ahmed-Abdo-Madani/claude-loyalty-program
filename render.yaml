@@ -39,6 +39,12 @@ services:
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
+      # Emergency-only overrides. Set to true to bypass startup blocks.
+      # MUST be removed once schema is confirmed healthy.
+      - key: SKIP_SCHEMA_VALIDATION
+        sync: false
+      - key: ALLOW_SCHEMA_DRIFT
+        sync: false
     healthCheckPath: /health
     # Domain will be added after service is verified working
     # domains:
