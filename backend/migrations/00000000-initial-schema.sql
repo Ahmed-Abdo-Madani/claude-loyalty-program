@@ -703,6 +703,7 @@ ALTER TABLE public.businesses OWNER TO loyalty_user;
 -- Name: offers; Type: TABLE; Schema: public; Owner: loyalty_user
 --
 
+DROP TABLE IF EXISTS public.offers CASCADE;
 CREATE TABLE IF NOT EXISTS public.offers (
     id integer NOT NULL,
     business_id character varying(50),
@@ -815,8 +816,6 @@ COMMENT ON COLUMN public.offers.barcode_preference IS 'Barcode format for wallet
 
 COMMENT ON COLUMN public.offers.apple_pass_type IS 'Apple Wallet pass style: storeCard (strip image) or generic (thumbnail image)';
 
--- Ensure branch_id column exists on pre-existing offers tables
-ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS branch_id character varying(50);
 
 
 --
