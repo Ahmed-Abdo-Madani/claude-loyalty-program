@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { apiBaseUrl, secureApi } from '../config/api';
+import { apiBaseUrl } from '../config/api';
 
 function MigrationHealthTab() {
     const { t } = useTranslation();
@@ -20,7 +20,13 @@ function MigrationHealthTab() {
 
                 let adminData = null;
                 try {
-                    const adminRes = await secureApi.get(`${apiBaseUrl}/api/admin/migrations`);
+                    const adminRes = await fetch(`${apiBaseUrl}/api/admin/migrations`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('adminAccessToken')}`,
+                            'X-Session-Token': localStorage.getItem('adminSessionToken'),
+                            'Content-Type': 'application/json'
+                        }
+                    });
                     const adminJson = await adminRes.json();
                     if (adminJson.success) {
                         adminData = adminJson.data;
@@ -123,8 +129,8 @@ function MigrationHealthTab() {
             {/* Admin Integrity Banner */}
             {adminData?.integrity && (
                 <div className={`p-4 rounded-lg flex items-start gap-3 border ${adminData.integrity.valid
-                        ? 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/30 dark:text-blue-400'
-                        : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:border-red-800/30 dark:text-red-400'
+                    ? 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/30 dark:text-blue-400'
+                    : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:border-red-800/30 dark:text-red-400'
                     }`}>
                     <span className="text-xl">{adminData.integrity.valid ? '🛡️' : '⚠️'}</span>
                     <div>

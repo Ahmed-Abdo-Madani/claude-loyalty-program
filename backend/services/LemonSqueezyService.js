@@ -116,7 +116,9 @@ class LemonSqueezyService {
     verifyWebhook(signature, body) {
         const { webhookSecret } = getLSConfig();
         const hmac = crypto.createHmac('sha256', webhookSecret);
-        const digest = Buffer.from(hmac.update(JSON.stringify(body)).digest('hex'), 'utf8');
+
+        const rawString = Buffer.isBuffer(body) ? body.toString('utf8') : body;
+        const digest = Buffer.from(hmac.update(rawString).digest('hex'), 'utf8');
         const signatureBuffer = Buffer.from(signature || '', 'utf8');
 
         return digest.length === signatureBuffer.length && crypto.timingSafeEqual(digest, signatureBuffer);
@@ -291,6 +293,22 @@ class LemonSqueezyService {
             return response.data;
         } catch (error) {
             logger.error('Failed to update subscription quantity:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Cancel subscription via Lemon Squeezy API
+     * @param {string} lsSubscriptionId 
+     */
+    async cancelSubscription(lsSubscriptionId) {
+        try {
+            const api = getApi();
+            const response = await api.delete(`/subscriptions/${lsSubscriptionId}`);
+            logger.info(`Successfully cancelled Lemon Squeezy subscription: ${lsSubscriptionId}`);
+            return response.data;
+        } catch (error) {
+            logger.error('Failed to cancel LemonSqueezy subscription:', error.response?.data || error.message);
             throw error;
         }
     }

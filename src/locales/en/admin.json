@@ -12,7 +12,8 @@
     "businesses": "Businesses",
     "messages": "Messages",
     "analytics": "Analytics",
-    "settings": "Settings"
+    "settings": "Settings",
+    "migrations": "Migration Health"
   },
   "overview": {
     "title": "Platform Overview",

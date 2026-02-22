@@ -126,8 +126,10 @@ export const handleWebhook = async (req, res) => {
             return res.status(401).json({ error: 'Invalid signature' });
         }
 
+        const parsedPayload = JSON.parse(payload.toString('utf8'));
+
         // Process webhook in background to avoid timeouts
-        LemonSqueezyService.handleWebhook(payload)
+        LemonSqueezyService.handleWebhook(parsedPayload)
             .catch(err => logger.error('Webhook processing error:', err));
 
         // Return 200 OK immediately
@@ -144,7 +146,7 @@ export const getSubscriptionDetails = async (req, res) => {
         const businessId = business.public_id;
 
         const subscription = await Subscription.findOne({
-            where: { business_id: businessId, status: ['active', 'trial', 'past_due'] },
+            where: { business_id: businessId, status: ['active', 'trial', 'past_due', 'cancelled'] },
             order: [['created_at', 'DESC']]
         });
 
@@ -220,11 +222,30 @@ export const getSubscriptionDetails = async (req, res) => {
 export const cancelSubscription = async (req, res) => {
     try {
         const businessId = req.business.public_id;
-        // In a real implementation: Call Lemon Squeezy API to cancel
-        // For now, we might just mark it locally or fail if API not ready
-        // TODO: Implement LS Cancel API call in Service
+        const reason = req.body.reason;
 
-        res.status(501).json({ success: false, message: 'Cancellation via API not yet implemented' });
+        const subscription = await Subscription.findOne({
+            where: { business_id: businessId, status: ['active', 'trial', 'past_due'] },
+            order: [['created_at', 'DESC']]
+        });
+
+        if (!subscription) {
+            return res.status(404).json({ success: false, message: 'No active subscription found to cancel' });
+        }
+
+        if (!subscription.lemon_squeezy_subscription_id) {
+            return res.status(400).json({ success: false, message: 'Subscription is not linked to a payment provider' });
+        }
+
+        try {
+            await LemonSqueezyService.cancelSubscription(subscription.lemon_squeezy_subscription_id);
+        } catch (lsError) {
+            return res.status(502).json({ success: false, message: 'Failed to cancel subscription with payment provider' });
+        }
+
+        await subscription.markAsCancelled(reason);
+
+        res.json({ success: true, message: 'Subscription cancelled successfully. Access continues until the end of the current billing period.' });
     } catch (error) {
         logger.error('Error cancelling subscription:', error);
         res.status(500).json({ success: false, error: 'Cancellation failed' });
@@ -235,7 +256,7 @@ export const getPortalUrl = async (req, res) => {
     try {
         const business = req.business;
         const subscription = await Subscription.findOne({
-            where: { business_id: business.public_id, status: ['active', 'trial', 'past_due'] },
+            where: { business_id: business.public_id, status: ['active', 'trial', 'past_due', 'cancelled'] },
             order: [['created_at', 'DESC']]
         });
 

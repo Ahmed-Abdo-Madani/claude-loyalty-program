@@ -8,6 +8,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import SEO from '../components/SEO'
 import MessagingInbox from '../components/admin/MessagingInbox'
 import MessagingAnalytics from '../components/admin/MessagingAnalytics'
+import MigrationHealthTab from '../components/MigrationHealthTab'
 
 function AdminDashboard() {
   const { t } = useTranslation('admin')
@@ -173,7 +174,8 @@ function AdminDashboard() {
               { id: 'businesses', name: t('tabs.businesses'), icon: '🏢' },
               { id: 'messages', name: t('tabs.messages'), icon: '💬' },
               { id: 'analytics', name: t('tabs.analytics'), icon: '📈' },
-              { id: 'settings', name: t('tabs.settings'), icon: '⚙️' }
+              { id: 'settings', name: t('tabs.settings'), icon: '⚙️' },
+              { id: 'migrations', name: t('tabs.migrations'), icon: '🔄' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -393,6 +395,11 @@ function AdminDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Migrations Tab */}
+        {activeTab === 'migrations' && (
+          <MigrationHealthTab />
         )}
       </main>
     </div>
