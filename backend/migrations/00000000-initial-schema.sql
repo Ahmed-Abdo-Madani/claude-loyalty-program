@@ -2785,6 +2785,8 @@ CREATE INDEX customer_progress_offer_id ON public.customer_progress USING btree 
 -- Name: customer_progress_secure_customer_id; Type: INDEX; Schema: public; Owner: loyalty_user
 --
 
+ALTER TABLE public.customer_progress ADD COLUMN IF NOT EXISTS secure_customer_id character varying(50);
+
 CREATE INDEX customer_progress_secure_customer_id ON public.customer_progress USING btree (secure_customer_id);
 
 
