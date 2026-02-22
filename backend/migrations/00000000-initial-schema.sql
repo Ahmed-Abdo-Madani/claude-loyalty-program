@@ -1081,6 +1081,7 @@ ALTER SEQUENCE public.branch_actions_id_seq OWNED BY public.branch_actions.id;
 
 
 -- Ensure branches has necessary columns before view creation
+ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS id SERIAL;
 ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS is_main boolean DEFAULT false;
 ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS pos_access_enabled boolean DEFAULT true;
 ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS scanner_access_enabled boolean DEFAULT true;
