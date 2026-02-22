@@ -815,6 +815,9 @@ COMMENT ON COLUMN public.offers.barcode_preference IS 'Barcode format for wallet
 
 COMMENT ON COLUMN public.offers.apple_pass_type IS 'Apple Wallet pass style: storeCard (strip image) or generic (thumbnail image)';
 
+-- Ensure branch_id column exists on pre-existing offers tables
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS branch_id character varying(50);
+
 
 --
 -- Name: active_offers; Type: VIEW; Schema: public; Owner: loyalty_user
