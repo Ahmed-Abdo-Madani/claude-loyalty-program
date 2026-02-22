@@ -809,12 +809,16 @@ ALTER TABLE public.device_registrations OWNER TO loyalty_user;
 -- Name: COLUMN offers.barcode_preference; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
 
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS barcode_preference character varying(20) DEFAULT 'QR_CODE';
+
 COMMENT ON COLUMN public.offers.barcode_preference IS 'Barcode format for wallet passes (QR_CODE or PDF417)';
 
 
 --
 -- Name: COLUMN offers.apple_pass_type; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE public.offers ADD COLUMN IF NOT EXISTS apple_pass_type character varying(50) DEFAULT 'storeCard';
 
 COMMENT ON COLUMN public.offers.apple_pass_type IS 'Apple Wallet pass style: storeCard (strip image) or generic (thumbnail image)';
 
@@ -2049,12 +2053,16 @@ ALTER TABLE public.subscriptions OWNER TO loyalty_user;
 -- Name: COLUMN subscriptions.grace_period_end; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
 
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS grace_period_end timestamp with time zone;
+
 COMMENT ON COLUMN public.subscriptions.grace_period_end IS 'End date of grace period after payment failures';
 
 
 --
 -- Name: COLUMN subscriptions.lemon_squeezy_subscription_id; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS lemon_squeezy_subscription_id character varying(255);
 
 COMMENT ON COLUMN public.subscriptions.lemon_squeezy_subscription_id IS 'Subscription ID from Lemon Squeezy';
 
@@ -2063,6 +2071,8 @@ COMMENT ON COLUMN public.subscriptions.lemon_squeezy_subscription_id IS 'Subscri
 -- Name: COLUMN subscriptions.lemon_squeezy_customer_id; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
 
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS lemon_squeezy_customer_id character varying(255);
+
 COMMENT ON COLUMN public.subscriptions.lemon_squeezy_customer_id IS 'Customer ID from Lemon Squeezy';
 
 
@@ -2070,12 +2080,16 @@ COMMENT ON COLUMN public.subscriptions.lemon_squeezy_customer_id IS 'Customer ID
 -- Name: COLUMN subscriptions.lemon_squeezy_variant_id; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
 
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS lemon_squeezy_variant_id character varying(255);
+
 COMMENT ON COLUMN public.subscriptions.lemon_squeezy_variant_id IS 'Variant ID representing the plan';
 
 
 --
 -- Name: COLUMN subscriptions.lemon_squeezy_status; Type: COMMENT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE public.subscriptions ADD COLUMN IF NOT EXISTS lemon_squeezy_status character varying(50);
 
 COMMENT ON COLUMN public.subscriptions.lemon_squeezy_status IS 'Raw status from Lemon Squeezy';
 
