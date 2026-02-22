@@ -1264,6 +1264,7 @@ ALTER TABLE public.businesses_id_seq OWNER TO loyalty_user;
 -- Name: businesses_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: loyalty_user
 --
 
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS id SERIAL;
 ALTER SEQUENCE public.businesses_id_seq OWNED BY public.businesses.id;
 
 

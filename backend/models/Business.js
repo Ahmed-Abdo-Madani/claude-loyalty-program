@@ -5,9 +5,15 @@ import logger from '../config/logger.js'
 import SubscriptionService from '../services/SubscriptionService.js'
 
 const Business = sequelize.define('Business', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+    allowNull: false
+  },
   public_id: {
     type: DataTypes.STRING(50),
-    primaryKey: true,
+    unique: true,
     defaultValue: () => SecureIDGenerator.generateBusinessID()
   },
   email: {
