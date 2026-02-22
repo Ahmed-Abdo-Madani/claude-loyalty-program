@@ -2374,6 +2374,9 @@ ALTER TABLE ONLY public.wallet_passes ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.admin_sessions
+    DROP CONSTRAINT IF EXISTS admin_sessions_pkey;
+
+ALTER TABLE ONLY public.admin_sessions
     ADD CONSTRAINT admin_sessions_pkey PRIMARY KEY (id);
 
 
@@ -2406,6 +2409,9 @@ ALTER TABLE ONLY public.auto_engagement_configs
 --
 
 ALTER TABLE ONLY public.auto_engagement_configs
+    DROP CONSTRAINT IF EXISTS auto_engagement_configs_pkey;
+
+ALTER TABLE ONLY public.auto_engagement_configs
     ADD CONSTRAINT auto_engagement_configs_pkey PRIMARY KEY (id);
 
 
@@ -2414,12 +2420,18 @@ ALTER TABLE ONLY public.auto_engagement_configs
 --
 
 ALTER TABLE ONLY public.branch_actions
+    DROP CONSTRAINT IF EXISTS branch_actions_pkey;
+
+ALTER TABLE ONLY public.branch_actions
     ADD CONSTRAINT branch_actions_pkey PRIMARY KEY (id);
 
 
 --
 -- Name: branches branches_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.branches
+    DROP CONSTRAINT IF EXISTS branches_pkey;
 
 ALTER TABLE ONLY public.branches
     ADD CONSTRAINT branches_pkey PRIMARY KEY (id);
@@ -2436,6 +2448,9 @@ ALTER TABLE ONLY public.branches
 --
 -- Name: business_sessions business_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.business_sessions
+    DROP CONSTRAINT IF EXISTS business_sessions_pkey;
 
 ALTER TABLE ONLY public.business_sessions
     ADD CONSTRAINT business_sessions_pkey PRIMARY KEY (id);
@@ -2462,6 +2477,9 @@ ALTER TABLE ONLY public.businesses
 --
 
 ALTER TABLE ONLY public.businesses
+    DROP CONSTRAINT IF EXISTS businesses_pkey;
+
+ALTER TABLE ONLY public.businesses
     ADD CONSTRAINT businesses_pkey PRIMARY KEY (id);
 
 
@@ -2476,6 +2494,9 @@ ALTER TABLE ONLY public.businesses
 --
 -- Name: counters counters_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.counters
+    DROP CONSTRAINT IF EXISTS counters_pkey;
 
 ALTER TABLE ONLY public.counters
     ADD CONSTRAINT counters_pkey PRIMARY KEY (id);
@@ -2494,12 +2515,18 @@ ALTER TABLE ONLY public.customer_cards
 --
 
 ALTER TABLE ONLY public.customer_cards
+    DROP CONSTRAINT IF EXISTS customer_cards_pkey;
+
+ALTER TABLE ONLY public.customer_cards
     ADD CONSTRAINT customer_cards_pkey PRIMARY KEY (id);
 
 
 --
 -- Name: customer_progress customer_progress_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.customer_progress
+    DROP CONSTRAINT IF EXISTS customer_progress_pkey;
 
 ALTER TABLE ONLY public.customer_progress
     ADD CONSTRAINT customer_progress_pkey PRIMARY KEY (id);
@@ -2516,6 +2543,9 @@ ALTER TABLE ONLY public.customer_progress
 --
 -- Name: customer_segments customer_segments_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.customer_segments
+    DROP CONSTRAINT IF EXISTS customer_segments_pkey;
 
 ALTER TABLE ONLY public.customer_segments
     ADD CONSTRAINT customer_segments_pkey PRIMARY KEY (id);
@@ -2542,6 +2572,9 @@ ALTER TABLE ONLY public.customers
 --
 
 ALTER TABLE ONLY public.customers
+    DROP CONSTRAINT IF EXISTS customers_pkey;
+
+ALTER TABLE ONLY public.customers
     ADD CONSTRAINT customers_pkey PRIMARY KEY (id);
 
 
@@ -2556,6 +2589,9 @@ ALTER TABLE ONLY public.invoices
 --
 -- Name: invoices invoices_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.invoices
+    DROP CONSTRAINT IF EXISTS invoices_pkey;
 
 ALTER TABLE ONLY public.invoices
     ADD CONSTRAINT invoices_pkey PRIMARY KEY (id);
@@ -2574,6 +2610,9 @@ ALTER TABLE ONLY public.notification_campaigns
 --
 
 ALTER TABLE ONLY public.notification_campaigns
+    DROP CONSTRAINT IF EXISTS notification_campaigns_pkey;
+
+ALTER TABLE ONLY public.notification_campaigns
     ADD CONSTRAINT notification_campaigns_pkey PRIMARY KEY (id);
 
 
@@ -2582,12 +2621,18 @@ ALTER TABLE ONLY public.notification_campaigns
 --
 
 ALTER TABLE ONLY public.offer_actions
+    DROP CONSTRAINT IF EXISTS offer_actions_pkey;
+
+ALTER TABLE ONLY public.offer_actions
     ADD CONSTRAINT offer_actions_pkey PRIMARY KEY (id);
 
 
 --
 -- Name: offers offers_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.offers
+    DROP CONSTRAINT IF EXISTS offers_pkey;
 
 ALTER TABLE ONLY public.offers
     ADD CONSTRAINT offers_pkey PRIMARY KEY (id);
@@ -2630,6 +2675,9 @@ ALTER TABLE ONLY public.platform_admins
 --
 
 ALTER TABLE ONLY public.platform_admins
+    DROP CONSTRAINT IF EXISTS platform_admins_pkey;
+
+ALTER TABLE ONLY public.platform_admins
     ADD CONSTRAINT platform_admins_pkey PRIMARY KEY (id);
 
 
@@ -2654,6 +2702,9 @@ ALTER TABLE ONLY public.products
 --
 
 ALTER TABLE ONLY public.receipts
+    DROP CONSTRAINT IF EXISTS receipts_pkey;
+
+ALTER TABLE ONLY public.receipts
     ADD CONSTRAINT receipts_pkey PRIMARY KEY (id);
 
 
@@ -2676,6 +2727,9 @@ ALTER TABLE ONLY public.receipts
 --
 -- Name: sale_items sale_items_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.sale_items
+    DROP CONSTRAINT IF EXISTS sale_items_pkey;
 
 ALTER TABLE ONLY public.sale_items
     ADD CONSTRAINT sale_items_pkey PRIMARY KEY (id);
@@ -2716,6 +2770,9 @@ ALTER TABLE ONLY public.wallet_passes
 --
 -- Name: wallet_passes wallet_passes_pkey; Type: CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+ALTER TABLE ONLY public.wallet_passes
+    DROP CONSTRAINT IF EXISTS wallet_passes_pkey;
 
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT wallet_passes_pkey PRIMARY KEY (id);
