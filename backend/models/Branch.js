@@ -4,11 +4,17 @@ import SecureIDGenerator from '../utils/secureIdGenerator.js'
 import bcrypt from 'bcryptjs'
 
 const Branch = sequelize.define('Branch', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+    allowNull: false
+  },
   public_id: {
     type: DataTypes.STRING(50),
-    primaryKey: true,
     defaultValue: () => SecureIDGenerator.generateBranchID(),
-    allowNull: false
+    allowNull: false,
+    unique: true
   },
   business_id: {
     type: DataTypes.STRING(50),
