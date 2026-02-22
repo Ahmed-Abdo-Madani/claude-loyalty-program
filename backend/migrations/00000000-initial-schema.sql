@@ -638,7 +638,9 @@ CREATE TABLE IF NOT EXISTS public.branches (
     manager_last_login timestamp with time zone,
     active_offers integer DEFAULT 0,
     latitude numeric(10,7),
-    longitude numeric(10,7)
+    longitude numeric(10,7),
+    pos_access_enabled boolean DEFAULT true,
+    scanner_access_enabled boolean DEFAULT true
 );
 
 
@@ -1077,6 +1079,11 @@ ALTER TABLE public.branch_actions_id_seq OWNER TO loyalty_user;
 
 ALTER SEQUENCE public.branch_actions_id_seq OWNED BY public.branch_actions.id;
 
+
+-- Ensure branches has necessary columns before view creation
+ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS is_main boolean DEFAULT false;
+ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS pos_access_enabled boolean DEFAULT true;
+ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS scanner_access_enabled boolean DEFAULT true;
 
 --
 -- Name: branch_offer_summary; Type: VIEW; Schema: public; Owner: loyalty_user
