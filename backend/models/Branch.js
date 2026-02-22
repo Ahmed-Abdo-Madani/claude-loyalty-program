@@ -116,6 +116,11 @@ const Branch = sequelize.define('Branch', {
     type: DataTypes.ENUM('active', 'inactive', 'closed'),
     defaultValue: 'active'
   },
+  is_main: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Whether this is the main branch for the business'
+  },
   // Analytics fields for branch performance tracking
   customers: {
     type: DataTypes.INTEGER,
