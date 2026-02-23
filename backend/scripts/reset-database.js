@@ -13,10 +13,6 @@ import sequelize from '../config/database.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-
-const execAsync = promisify(exec)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -45,40 +41,103 @@ async function resetDatabase() {
 
         await sequelize.query('DROP SCHEMA public CASCADE', { raw: true })
         await sequelize.query('CREATE SCHEMA public', { raw: true })
-        await sequelize.query('GRANT ALL ON SCHEMA public TO postgres', { raw: true })
+        const dbUser = process.env.DB_USER || 'postgres'
+        await sequelize.query(`GRANT ALL ON SCHEMA public TO "${dbUser}"`, { raw: true })
         await sequelize.query('GRANT ALL ON SCHEMA public TO public', { raw: true })
         console.log('✅ All tables dropped')
 
-        // Close the connection before running psql
-        await sequelize.close()
-        console.log('🔌 Closed Sequelize connection')
-
-        // Use psql to execute the schema file
-        console.log('\n📦 Loading initial schema via psql...')
+        // Replace psql block with internal query execution logic from initial-schema.js
+        console.log('\n📦 Loading initial schema via Sequelize...')
         const schemaPath = path.join(__dirname, '../migrations/00000000-initial-schema.sql')
 
-        const psqlPath = 'C:\\Program Files\\PostgreSQL\\17\\bin\\psql.exe'
-        if (!fs.existsSync(psqlPath)) {
-            console.warn(`\n⚠️  psql.exe not found at ${psqlPath}`);
-            console.warn('⚠️  Please provide the correct path to your PostgreSQL installation in reset-database.js (line 62).');
-            console.warn('⚠️  The schema has been DROPPED, but the initial schema file has NOT been loaded.');
-            process.exit(1);
+        if (!fs.existsSync(schemaPath)) {
+            throw new Error(`Migration SQL file not found: ${schemaPath}`)
         }
 
-        const dbUser = process.env.DB_USER || 'postgres'
-        const dbName = process.env.DB_NAME || 'loyalty_program'
-        const dbHost = process.env.DB_HOST || 'localhost'
-        const dbPort = process.env.DB_PORT || '5432'
+        const sqlContent = fs.readFileSync(schemaPath, 'utf8')
+        const lines = sqlContent.split(/\r?\n/)
 
-        const command = `"${psqlPath}" -U ${dbUser} -h ${dbHost} -p ${dbPort} -d ${dbName} -f "${schemaPath}"`
+        const statements = []
+        let currentStatement = ''
+        let inDollarBlock = false
+        let dollarTag = ''
 
-        console.log(`🚀 Executing: psql -f ${path.basename(schemaPath)}`)
+        for (let line of lines) {
+            let trimmed = line.trim()
 
-        const env = { ...process.env, PGPASSWORD: process.env.DB_PASSWORD }
-        const { stdout, stderr } = await execAsync(command, { env, maxBuffer: 10 * 1024 * 1024 })
+            // Skip psql meta-commands and comments if not in block
+            if (!inDollarBlock && (trimmed.startsWith('\\') || trimmed.startsWith('--'))) continue
 
-        if (stderr && !stderr.includes('NOTICE') && !stderr.includes('does not exist, skipping')) {
-            console.warn('⚠️  psql warnings:', stderr)
+            // Skip OWNER TO statements entirely (Portability)
+            if (!inDollarBlock && trimmed.toUpperCase().includes('OWNER TO')) continue
+
+            // Skip search_path reset
+            if (!inDollarBlock && trimmed.includes("set_config('search_path', '', false)")) continue
+
+            if (!trimmed && !inDollarBlock) continue
+
+            currentStatement += line + '\n'
+
+            // Check for dollar blocks
+            if (!inDollarBlock) {
+                const match = trimmed.match(/\$[a-zA-Z0-9_]*\$/)
+                if (match) {
+                    inDollarBlock = true
+                    dollarTag = match[0]
+                }
+            } else {
+                if (trimmed.includes(dollarTag)) {
+                    inDollarBlock = false
+                    dollarTag = ''
+                }
+            }
+
+            // End of statement
+            if (!inDollarBlock && trimmed.endsWith(';')) {
+                const stmt = currentStatement.trim()
+                if (stmt && stmt !== ';') {
+                    // SKIP if it contains schema_migrations (managed by AutoMigrationRunner)
+                    if (!stmt.toLowerCase().includes('schema_migrations')) {
+                        statements.push(stmt)
+                    } else {
+                        console.log(`   ⏭️ Skipping schema_migrations related statement`)
+                    }
+                }
+                currentStatement = ''
+            }
+        }
+
+        if (currentStatement.trim() && currentStatement.trim() !== ';') {
+            if (!currentStatement.toLowerCase().includes('schema_migrations')) {
+                statements.push(currentStatement.trim())
+            }
+        }
+
+        console.log(`📋 Executing ${statements.length} SQL statements...`)
+
+        for (let i = 0; i < statements.length; i++) {
+            const statement = statements[i]
+            try {
+                await sequelize.query(statement)
+                if (i % 100 === 0 && i > 0) {
+                    console.log(`   ⏳ Progress: ${i}/${statements.length} statements...`)
+                }
+            } catch (error) {
+                // Check for "already exists" errors (tables, functions, types, constraints, etc.)
+                const isAlreadyExistsError =
+                    error.message.includes('already exists') ||
+                    error.message.includes('duplicate key value violates unique constraint') ||
+                    error.message.includes('multiple primary keys');
+
+                if (isAlreadyExistsError) {
+                    console.log(`   ⚠️  Skipping statement (entity already exists): ${error.message.split('\n')[0]}`)
+                    continue
+                }
+
+                console.error(`❌ Failure in statement ${i}:`)
+                console.error(statement.substring(0, 500) + '...')
+                throw error
+            }
         }
 
         console.log('✅ Initial schema applied successfully')
@@ -88,14 +147,26 @@ async function resetDatabase() {
 
     } catch (error) {
         console.error('\n❌ Database reset failed:')
-        console.error(error.message || error)
+        console.error(error)
+        console.error(error.original)
         if (error.stderr) {
             console.error('\nError stderr details:', error.stderr)
         }
         if (error.stack) {
             console.error('\nStack trace:', error.stack)
         }
+        try {
+            await sequelize.close()
+        } catch (closeError) {
+            console.error('⚠️ Could not close database connection:', closeError.message)
+        }
         process.exit(1)
+    } finally {
+        try {
+            await sequelize.close()
+        } catch (closeError) {
+            // Ignore if already closed or error handling it
+        }
     }
 }
 
