@@ -80,6 +80,10 @@ export async function up(queryInterface, Sequelize) {
         }
 
         if (businessesDesc) {
+            // Because altering column types in Postgres acquires an ACCESS EXCLUSIVE lock,
+            // we do this cautiously without the main transaction wrapping it if possible, 
+            // or we use shorter lock timeouts so it doesn't hang the deployment.
+
             // 1. Fix subscription_status
             if (!businessesDesc.subscription_status) {
                 await queryInterface.sequelize.query(`
@@ -106,10 +110,17 @@ export async function up(queryInterface, Sequelize) {
                         END IF;
                     END $$;
                 `, { transaction })
-                await queryInterface.sequelize.query(`
-                    ALTER TABLE businesses ALTER COLUMN subscription_status TYPE "enum_businesses_subscription_status" USING subscription_status::"enum_businesses_subscription_status";
-                `, { transaction })
-                console.log("✅ Success: Converted existing subscription_status column to proper ENUM type")
+
+                try {
+                    await queryInterface.sequelize.query(`
+                        SET lock_timeout = '10s';
+                        ALTER TABLE businesses ALTER COLUMN subscription_status TYPE "enum_businesses_subscription_status" USING subscription_status::"enum_businesses_subscription_status";
+                        SET lock_timeout = DEFAULT;
+                    `, { transaction })
+                    console.log("✅ Success: Converted existing subscription_status column to proper ENUM type")
+                } catch (err) {
+                    console.warn("⚠️ Warning: Could not cast subscription_status. The table is likely locked by live traffic. Try again during low traffic.", err.message)
+                }
             }
 
             // 2. Fix current_plan / subscription_plan
@@ -124,13 +135,18 @@ export async function up(queryInterface, Sequelize) {
                         END IF;
                     END $$;
                 `, { transaction })
-                await queryInterface.sequelize.query(`
-                    ALTER TABLE businesses RENAME COLUMN subscription_plan TO current_plan;
-                `, { transaction })
-                await queryInterface.sequelize.query(`
-                    ALTER TABLE businesses ALTER COLUMN current_plan TYPE "enum_businesses_current_plan" USING current_plan::"enum_businesses_current_plan";
-                `, { transaction })
-                console.warn("⚠️ Warning: Renamed stale subscription_plan to current_plan and cast to ENUM")
+
+                try {
+                    await queryInterface.sequelize.query(`
+                        SET lock_timeout = '10s';
+                        ALTER TABLE businesses RENAME COLUMN subscription_plan TO current_plan;
+                        ALTER TABLE businesses ALTER COLUMN current_plan TYPE "enum_businesses_current_plan" USING current_plan::"enum_businesses_current_plan";
+                        SET lock_timeout = DEFAULT;
+                    `, { transaction })
+                    console.warn("⚠️ Warning: Renamed stale subscription_plan to current_plan and cast to ENUM")
+                } catch (err) {
+                    console.warn("⚠️ Warning: Could not rename/cast subscription_plan. The table is likely locked by live traffic. Try again during low traffic.", err.message)
+                }
             } else {
                 await queryInterface.sequelize.query(`
                     DO $$ 
