@@ -3579,6 +3579,8 @@ CREATE TRIGGER trigger_update_offer_status BEFORE INSERT OR UPDATE ON public.off
 -- Name: admin_sessions admin_sessions_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.admin_sessions WHERE admin_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.platform_admins WHERE public.platform_admins.id = public.admin_sessions.admin_id);
+
 ALTER TABLE ONLY public.admin_sessions
     ADD CONSTRAINT admin_sessions_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.platform_admins(id) ON DELETE CASCADE;
 
@@ -3586,6 +3588,8 @@ ALTER TABLE ONLY public.admin_sessions
 --
 -- Name: branch_actions branch_actions_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.branch_actions WHERE branch_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.branches WHERE public.branches.id = public.branch_actions.branch_id);
 
 ALTER TABLE ONLY public.branch_actions
     ADD CONSTRAINT branch_actions_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(id) ON DELETE CASCADE;
@@ -3595,6 +3599,8 @@ ALTER TABLE ONLY public.branch_actions
 -- Name: branch_actions branch_actions_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.branch_actions WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.id = public.branch_actions.business_id);
+
 ALTER TABLE ONLY public.branch_actions
     ADD CONSTRAINT branch_actions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id) ON DELETE CASCADE;
 
@@ -3602,6 +3608,8 @@ ALTER TABLE ONLY public.branch_actions
 --
 -- Name: branches branches_business_id_public_fk; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.branches WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.branches.business_id);
 
 ALTER TABLE ONLY public.branches
     ADD CONSTRAINT branches_business_id_public_fk FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
@@ -3611,6 +3619,8 @@ ALTER TABLE ONLY public.branches
 -- Name: business_sessions business_sessions_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.business_sessions WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.business_sessions.business_id);
+
 ALTER TABLE ONLY public.business_sessions
     ADD CONSTRAINT business_sessions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3618,6 +3628,8 @@ ALTER TABLE ONLY public.business_sessions
 --
 -- Name: customer_cards customer_cards_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.customer_cards WHERE customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customers WHERE public.customers.id = public.customer_cards.customer_id);
 
 ALTER TABLE ONLY public.customer_cards
     ADD CONSTRAINT customer_cards_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE CASCADE;
@@ -3627,6 +3639,8 @@ ALTER TABLE ONLY public.customer_cards
 -- Name: customer_cards customer_cards_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.customer_cards WHERE offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.id = public.customer_cards.offer_id);
+
 ALTER TABLE ONLY public.customer_cards
     ADD CONSTRAINT customer_cards_offer_id_fkey FOREIGN KEY (offer_id) REFERENCES public.offers(id) ON DELETE CASCADE;
 
@@ -3634,6 +3648,8 @@ ALTER TABLE ONLY public.customer_cards
 --
 -- Name: customer_progress customer_progress_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.customer_progress WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.customer_progress.business_id);
 
 ALTER TABLE ONLY public.customer_progress
     ADD CONSTRAINT customer_progress_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
@@ -3643,6 +3659,8 @@ ALTER TABLE ONLY public.customer_progress
 -- Name: customer_progress customer_progress_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.customer_progress WHERE customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customers WHERE public.customers.customer_id = public.customer_progress.customer_id);
+
 ALTER TABLE ONLY public.customer_progress
     ADD CONSTRAINT customer_progress_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id) ON DELETE CASCADE;
 
@@ -3650,6 +3668,8 @@ ALTER TABLE ONLY public.customer_progress
 --
 -- Name: customer_progress customer_progress_fulfilled_by_branch_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.customer_progress WHERE fulfilled_by_branch IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.branches WHERE public.branches.public_id = public.customer_progress.fulfilled_by_branch);
 
 ALTER TABLE ONLY public.customer_progress
     ADD CONSTRAINT customer_progress_fulfilled_by_branch_fkey FOREIGN KEY (fulfilled_by_branch) REFERENCES public.branches(public_id);
@@ -3659,6 +3679,8 @@ ALTER TABLE ONLY public.customer_progress
 -- Name: customer_progress customer_progress_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.customer_progress WHERE offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.public_id = public.customer_progress.offer_id);
+
 ALTER TABLE ONLY public.customer_progress
     ADD CONSTRAINT customer_progress_offer_id_fkey FOREIGN KEY (offer_id) REFERENCES public.offers(public_id) ON DELETE CASCADE;
 
@@ -3666,6 +3688,8 @@ ALTER TABLE ONLY public.customer_progress
 --
 -- Name: customers customers_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.customers WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.customers.business_id);
 
 ALTER TABLE ONLY public.customers
     ADD CONSTRAINT customers_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
@@ -3675,6 +3699,8 @@ ALTER TABLE ONLY public.customers
 -- Name: auto_engagement_configs fk_auto_engagement_business; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.auto_engagement_configs WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.auto_engagement_configs.business_id);
+
 ALTER TABLE ONLY public.auto_engagement_configs
     ADD CONSTRAINT fk_auto_engagement_business FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
 
@@ -3682,6 +3708,8 @@ ALTER TABLE ONLY public.auto_engagement_configs
 --
 -- Name: notification_campaigns fk_notification_campaigns_offer; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.notification_campaigns WHERE linked_offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.public_id = public.notification_campaigns.linked_offer_id);
 
 ALTER TABLE ONLY public.notification_campaigns
     ADD CONSTRAINT fk_notification_campaigns_offer FOREIGN KEY (linked_offer_id) REFERENCES public.offers(public_id) ON DELETE SET NULL;
@@ -3691,6 +3719,8 @@ ALTER TABLE ONLY public.notification_campaigns
 -- Name: wallet_passes fk_wallet_passes_business; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.wallet_passes WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.wallet_passes.business_id);
+
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_business FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
 
@@ -3698,6 +3728,8 @@ ALTER TABLE ONLY public.wallet_passes
 --
 -- Name: wallet_passes fk_wallet_passes_customer; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.wallet_passes WHERE customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customers WHERE public.customers.customer_id = public.wallet_passes.customer_id);
 
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_customer FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id) ON DELETE CASCADE;
@@ -3707,6 +3739,8 @@ ALTER TABLE ONLY public.wallet_passes
 -- Name: wallet_passes fk_wallet_passes_offer; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.wallet_passes WHERE offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.public_id = public.wallet_passes.offer_id);
+
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_offer FOREIGN KEY (offer_id) REFERENCES public.offers(public_id) ON DELETE CASCADE;
 
@@ -3714,6 +3748,8 @@ ALTER TABLE ONLY public.wallet_passes
 --
 -- Name: wallet_passes fk_wallet_passes_progress; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.wallet_passes WHERE progress_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customer_progress WHERE public.customer_progress.id = public.wallet_passes.progress_id);
 
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_progress FOREIGN KEY (progress_id) REFERENCES public.customer_progress(id) ON DELETE CASCADE;
@@ -3723,6 +3759,8 @@ ALTER TABLE ONLY public.wallet_passes
 -- Name: webhook_logs fk_webhook_logs_payment; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.webhook_logs WHERE payment_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.payments WHERE public.payments.public_id = public.webhook_logs.payment_id);
+
 ALTER TABLE ONLY public.webhook_logs
     ADD CONSTRAINT fk_webhook_logs_payment FOREIGN KEY (payment_id) REFERENCES public.payments(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
@@ -3730,6 +3768,8 @@ ALTER TABLE ONLY public.webhook_logs
 --
 -- Name: invoices invoices_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.invoices WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.invoices.business_id);
 
 ALTER TABLE ONLY public.invoices
     ADD CONSTRAINT invoices_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
@@ -3739,6 +3779,8 @@ ALTER TABLE ONLY public.invoices
 -- Name: invoices invoices_payment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.invoices WHERE payment_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.payments WHERE public.payments.public_id = public.invoices.payment_id);
+
 ALTER TABLE ONLY public.invoices
     ADD CONSTRAINT invoices_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
@@ -3746,6 +3788,8 @@ ALTER TABLE ONLY public.invoices
 --
 -- Name: invoices invoices_subscription_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.invoices WHERE subscription_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.subscriptions WHERE public.subscriptions.public_id = public.invoices.subscription_id);
 
 ALTER TABLE ONLY public.invoices
     ADD CONSTRAINT invoices_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
@@ -3755,6 +3799,8 @@ ALTER TABLE ONLY public.invoices
 -- Name: offer_actions offer_actions_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.offer_actions WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.id = public.offer_actions.business_id);
+
 ALTER TABLE ONLY public.offer_actions
     ADD CONSTRAINT offer_actions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id) ON DELETE CASCADE;
 
@@ -3762,6 +3808,8 @@ ALTER TABLE ONLY public.offer_actions
 --
 -- Name: offer_actions offer_actions_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.offer_actions WHERE offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.id = public.offer_actions.offer_id);
 
 ALTER TABLE ONLY public.offer_actions
     ADD CONSTRAINT offer_actions_offer_id_fkey FOREIGN KEY (offer_id) REFERENCES public.offers(id) ON DELETE CASCADE;
@@ -3771,6 +3819,8 @@ ALTER TABLE ONLY public.offer_actions
 -- Name: offers offers_business_id_public_fk; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.offers WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.offers.business_id);
+
 ALTER TABLE ONLY public.offers
     ADD CONSTRAINT offers_business_id_public_fk FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3778,6 +3828,8 @@ ALTER TABLE ONLY public.offers
 --
 -- Name: payments payments_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.payments WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.payments.business_id);
 
 ALTER TABLE ONLY public.payments
     ADD CONSTRAINT payments_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
@@ -3787,6 +3839,8 @@ ALTER TABLE ONLY public.payments
 -- Name: payments payments_subscription_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.payments WHERE subscription_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.subscriptions WHERE public.subscriptions.public_id = public.payments.subscription_id);
+
 ALTER TABLE ONLY public.payments
     ADD CONSTRAINT payments_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
@@ -3794,6 +3848,8 @@ ALTER TABLE ONLY public.payments
 --
 -- Name: platform_admins platform_admins_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.platform_admins WHERE created_by IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.platform_admins WHERE public.platform_admins.id = public.platform_admins.created_by);
 
 ALTER TABLE ONLY public.platform_admins
     ADD CONSTRAINT platform_admins_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.platform_admins(id);
@@ -3803,6 +3859,8 @@ ALTER TABLE ONLY public.platform_admins
 -- Name: product_categories product_categories_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.product_categories WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.product_categories.business_id);
+
 ALTER TABLE ONLY public.product_categories
     ADD CONSTRAINT product_categories_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3810,6 +3868,8 @@ ALTER TABLE ONLY public.product_categories
 --
 -- Name: products products_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.products WHERE branch_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.branches WHERE public.branches.public_id = public.products.branch_id);
 
 ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
@@ -3819,6 +3879,8 @@ ALTER TABLE ONLY public.products
 -- Name: products products_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.products WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.products.business_id);
+
 ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3826,6 +3888,8 @@ ALTER TABLE ONLY public.products
 --
 -- Name: products products_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.products WHERE category_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.product_categories WHERE public.product_categories.public_id = public.products.category_id);
 
 ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.product_categories(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
@@ -3835,6 +3899,8 @@ ALTER TABLE ONLY public.products
 -- Name: receipts receipts_sale_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.receipts WHERE sale_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.sales WHERE public.sales.public_id = public.receipts.sale_id);
+
 ALTER TABLE ONLY public.receipts
     ADD CONSTRAINT receipts_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES public.sales(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3842,6 +3908,8 @@ ALTER TABLE ONLY public.receipts
 --
 -- Name: sale_items sale_items_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.sale_items WHERE product_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.products WHERE public.products.public_id = public.sale_items.product_id);
 
 ALTER TABLE ONLY public.sale_items
     ADD CONSTRAINT sale_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(public_id) ON UPDATE CASCADE ON DELETE RESTRICT;
@@ -3851,6 +3919,8 @@ ALTER TABLE ONLY public.sale_items
 -- Name: sale_items sale_items_sale_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.sale_items WHERE sale_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.sales WHERE public.sales.public_id = public.sale_items.sale_id);
+
 ALTER TABLE ONLY public.sale_items
     ADD CONSTRAINT sale_items_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES public.sales(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3858,6 +3928,8 @@ ALTER TABLE ONLY public.sale_items
 --
 -- Name: sales sales_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.sales WHERE branch_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.branches WHERE public.branches.public_id = public.sales.branch_id);
 
 ALTER TABLE ONLY public.sales
     ADD CONSTRAINT sales_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
@@ -3867,6 +3939,8 @@ ALTER TABLE ONLY public.sales
 -- Name: sales sales_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.sales WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.sales.business_id);
+
 ALTER TABLE ONLY public.sales
     ADD CONSTRAINT sales_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3874,6 +3948,8 @@ ALTER TABLE ONLY public.sales
 --
 -- Name: sales sales_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.sales WHERE customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customers WHERE public.customers.customer_id = public.sales.customer_id);
 
 ALTER TABLE ONLY public.sales
     ADD CONSTRAINT sales_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id) ON UPDATE CASCADE ON DELETE SET NULL;
@@ -3883,6 +3959,8 @@ ALTER TABLE ONLY public.sales
 -- Name: subscriptions subscriptions_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.subscriptions WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.subscriptions.business_id);
+
 ALTER TABLE ONLY public.subscriptions
     ADD CONSTRAINT subscriptions_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -3890,6 +3968,8 @@ ALTER TABLE ONLY public.subscriptions
 --
 -- Name: webhook_logs webhook_logs_payment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.webhook_logs WHERE payment_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.payments WHERE public.payments.public_id = public.webhook_logs.payment_id);
 
 ALTER TABLE ONLY public.webhook_logs
     ADD CONSTRAINT webhook_logs_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES public.payments(public_id) ON UPDATE CASCADE ON DELETE SET NULL;
@@ -3974,6 +4054,8 @@ CREATE INDEX idx_offer_card_designs_created ON public.offer_card_designs USING b
 -- Name: offer_card_designs fk_offer_card_designs_business; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.offer_card_designs WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.offer_card_designs.business_id);
+
 ALTER TABLE ONLY public.offer_card_designs
     ADD CONSTRAINT fk_offer_card_designs_business FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
 
@@ -3981,6 +4063,8 @@ ALTER TABLE ONLY public.offer_card_designs
 --
 -- Name: offer_card_designs fk_offer_card_designs_offer; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
+
+DELETE FROM public.offer_card_designs WHERE offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.public_id = public.offer_card_designs.offer_id);
 
 ALTER TABLE ONLY public.offer_card_designs
     ADD CONSTRAINT fk_offer_card_designs_offer FOREIGN KEY (offer_id) REFERENCES public.offers(public_id) ON DELETE CASCADE;
@@ -4170,14 +4254,22 @@ CREATE INDEX idx_device_registrations_wallet_pass ON public.device_registrations
 -- Name: wallet_passes_fks; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.wallet_passes WHERE customer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customers WHERE public.customers.customer_id = public.wallet_passes.customer_id);
+
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_customer FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id) ON DELETE CASCADE;
+
+DELETE FROM public.wallet_passes WHERE progress_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.customer_progress WHERE public.customer_progress.id = public.wallet_passes.progress_id);
 
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_progress FOREIGN KEY (progress_id) REFERENCES public.customer_progress(id) ON DELETE CASCADE;
 
+DELETE FROM public.wallet_passes WHERE business_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.businesses WHERE public.businesses.public_id = public.wallet_passes.business_id);
+
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_business FOREIGN KEY (business_id) REFERENCES public.businesses(public_id) ON DELETE CASCADE;
+
+DELETE FROM public.wallet_passes WHERE offer_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.offers WHERE public.offers.public_id = public.wallet_passes.offer_id);
 
 ALTER TABLE ONLY public.wallet_passes
     ADD CONSTRAINT fk_wallet_passes_offer FOREIGN KEY (offer_id) REFERENCES public.offers(public_id) ON DELETE CASCADE;
@@ -4187,8 +4279,12 @@ ALTER TABLE ONLY public.wallet_passes
 -- Name: device_registrations_fks; Type: FK CONSTRAINT; Schema: public; Owner: loyalty_user
 --
 
+DELETE FROM public.device_registrations WHERE device_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.devices WHERE public.devices.id = public.device_registrations.device_id);
+
 ALTER TABLE ONLY public.device_registrations
     ADD CONSTRAINT fk_device_registrations_device FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE CASCADE;
+
+DELETE FROM public.device_registrations WHERE wallet_pass_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.wallet_passes WHERE public.wallet_passes.id = public.device_registrations.wallet_pass_id);
 
 ALTER TABLE ONLY public.device_registrations
     ADD CONSTRAINT fk_device_registrations_wallet_pass FOREIGN KEY (wallet_pass_id) REFERENCES public.wallet_passes(id) ON DELETE CASCADE;
