@@ -17,6 +17,17 @@ export async function up(queryInterface, Sequelize) {
 
         for (const table of tables) {
             try {
+                // Step 0: Check if table exists first
+                const [tableExists] = await queryInterface.sequelize.query(`
+                    SELECT 1 FROM pg_tables 
+                    WHERE schemaname = 'public' AND tablename = '${table}'
+                `, { transaction })
+
+                if (tableExists.length === 0) {
+                    console.log(`ℹ️ Info: Table ${table} does not exist yet. Skipping 'id' column addition.`)
+                    continue
+                }
+
                 // Step A: Add column IF NOT EXISTS
                 await queryInterface.sequelize.query(`
                     ALTER TABLE public.${table} ADD COLUMN IF NOT EXISTS id SERIAL;
