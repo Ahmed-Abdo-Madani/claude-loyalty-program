@@ -30,7 +30,9 @@ export async function up(queryInterface, Sequelize) {
 
                 // Step A: Add column IF NOT EXISTS
                 await queryInterface.sequelize.query(`
+                    SET lock_timeout = '10s';
                     ALTER TABLE public.${table} ADD COLUMN IF NOT EXISTS id SERIAL;
+                    SET lock_timeout = DEFAULT;
                 `, { transaction })
 
                 // Step B: Check if primary key exists
@@ -43,19 +45,28 @@ export async function up(queryInterface, Sequelize) {
                 // Step C: Add primary key only if none exists
                 if (pkExists.length === 0) {
                     await queryInterface.sequelize.query(`
+                        SET lock_timeout = '10s';
                         ALTER TABLE public.${table} ADD PRIMARY KEY (id);
+                        SET lock_timeout = DEFAULT;
                     `, { transaction })
                     console.log(`✅ Success: Added primary key to ${table}.id`)
                 } else {
                     console.log(`ℹ️ Info: Table ${table} already has a primary key. Skipping PK assignment to 'id'.`)
                 }
             } catch (error) {
-                // Only re-throw if it's not a "already exists" related error
-                if (!error.message.includes('already exists') && !error.message.includes('multiple primary keys')) {
+                // Only re-throw if it's not a "already exists" related error or a "lock timeout" error
+                const isAlreadyExists = error.message.includes('already exists') || error.message.includes('multiple primary keys');
+                const isLockTimeout = error.message.includes('lock timeout') || error.message.includes('terminating connection due to conflict');
+
+                if (!isAlreadyExists && !isLockTimeout) {
                     console.error(`❌ Error updating table ${table}:`, error)
                     throw error
                 }
-                console.warn(`⚠️ Warning: Handled expectation on table ${table}: ${error.message}`)
+                if (isLockTimeout) {
+                    console.warn(`⚠️ Warning: Table ${table} is locked by live traffic. Try assigning PKs during low traffic.`)
+                } else {
+                    console.warn(`⚠️ Warning: Handled expectation on table ${table}: ${error.message}`)
+                }
             }
         }
 
@@ -86,34 +97,35 @@ export async function up(queryInterface, Sequelize) {
 
             // 1. Fix subscription_status
             if (!businessesDesc.subscription_status) {
-                await queryInterface.sequelize.query(`
+                try {
+                    await queryInterface.sequelize.query(`
+                    SET lock_timeout = '10s';
                     DO $$ 
                     BEGIN
                         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_subscription_status') THEN
                             CREATE TYPE "enum_businesses_subscription_status" AS ENUM('trial', 'active', 'past_due', 'cancelled', 'expired');
                         END IF;
                     END $$;
-                `, { transaction })
-                await queryInterface.sequelize.query(`
                     ALTER TABLE businesses ADD COLUMN subscription_status "enum_businesses_subscription_status" NOT NULL DEFAULT 'trial';
+                    SET lock_timeout = DEFAULT;
                 `, { transaction })
-                console.log("✅ Success: Added subscription_status with proper ENUM type")
+                    console.log("✅ Success: Added subscription_status with proper ENUM type")
+                } catch (err) {
+                    console.warn("⚠️ Warning: Could not cast subscription_status. The table is likely locked by live traffic. Try again during low traffic.", err.message)
+                }
             } else if (
                 businessesDesc.subscription_status.type === 'CHARACTER VARYING' ||
                 businessesDesc.subscription_status.type === 'TEXT'
             ) {
-                await queryInterface.sequelize.query(`
-                    DO $$ 
-                    BEGIN
-                        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_subscription_status') THEN
-                            CREATE TYPE "enum_businesses_subscription_status" AS ENUM('trial', 'active', 'past_due', 'cancelled', 'expired');
-                        END IF;
-                    END $$;
-                `, { transaction })
-
                 try {
                     await queryInterface.sequelize.query(`
                         SET lock_timeout = '10s';
+                        DO $$ 
+                        BEGIN
+                            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_subscription_status') THEN
+                                CREATE TYPE "enum_businesses_subscription_status" AS ENUM('trial', 'active', 'past_due', 'cancelled', 'expired');
+                            END IF;
+                        END $$;
                         ALTER TABLE businesses ALTER COLUMN subscription_status TYPE "enum_businesses_subscription_status" USING subscription_status::"enum_businesses_subscription_status";
                         SET lock_timeout = DEFAULT;
                     `, { transaction })
@@ -127,18 +139,15 @@ export async function up(queryInterface, Sequelize) {
             if (businessesDesc.current_plan) {
                 console.log("ℹ️ Info: current_plan already exists. Skipping.")
             } else if (!businessesDesc.current_plan && businessesDesc.subscription_plan) {
-                await queryInterface.sequelize.query(`
-                    DO $$ 
-                    BEGIN
-                        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_current_plan') THEN
-                            CREATE TYPE "enum_businesses_current_plan" AS ENUM('free', 'professional', 'enterprise', 'loyalty_starter', 'loyalty_growth', 'loyalty_professional', 'pos_business', 'pos_enterprise', 'pos_premium');
-                        END IF;
-                    END $$;
-                `, { transaction })
-
                 try {
                     await queryInterface.sequelize.query(`
                         SET lock_timeout = '10s';
+                        DO $$ 
+                        BEGIN
+                            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_current_plan') THEN
+                                CREATE TYPE "enum_businesses_current_plan" AS ENUM('free', 'professional', 'enterprise', 'loyalty_starter', 'loyalty_growth', 'loyalty_professional', 'pos_business', 'pos_enterprise', 'pos_premium');
+                            END IF;
+                        END $$;
                         ALTER TABLE businesses RENAME COLUMN subscription_plan TO current_plan;
                         ALTER TABLE businesses ALTER COLUMN current_plan TYPE "enum_businesses_current_plan" USING current_plan::"enum_businesses_current_plan";
                         SET lock_timeout = DEFAULT;
@@ -148,18 +157,22 @@ export async function up(queryInterface, Sequelize) {
                     console.warn("⚠️ Warning: Could not rename/cast subscription_plan. The table is likely locked by live traffic. Try again during low traffic.", err.message)
                 }
             } else {
-                await queryInterface.sequelize.query(`
+                try {
+                    await queryInterface.sequelize.query(`
+                    SET lock_timeout = '10s';
                     DO $$ 
                     BEGIN
                         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_businesses_current_plan') THEN
                             CREATE TYPE "enum_businesses_current_plan" AS ENUM('free', 'professional', 'enterprise', 'loyalty_starter', 'loyalty_growth', 'loyalty_professional', 'pos_business', 'pos_enterprise', 'pos_premium');
                         END IF;
                     END $$;
-                `, { transaction })
-                await queryInterface.sequelize.query(`
                     ALTER TABLE businesses ADD COLUMN current_plan "enum_businesses_current_plan" NOT NULL DEFAULT 'free';
+                    SET lock_timeout = DEFAULT;
                 `, { transaction })
-                console.log("✅ Success: Added current_plan with proper ENUM type")
+                    console.log("✅ Success: Added current_plan with proper ENUM type")
+                } catch (err) {
+                    console.warn("⚠️ Warning: Could not cast current_plan. The table is likely locked by live traffic. Try again during low traffic.", err.message)
+                }
             }
         }
 

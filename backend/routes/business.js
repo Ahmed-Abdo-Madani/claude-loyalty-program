@@ -1406,7 +1406,7 @@ const requireBusinessAuthLocal = async (req, res, next) => {
     }
 
     // Find business by secure public_id instead of integer id
-    const business = await Business.findByPk(businessId) // businessId is now secure string
+    const business = await Business.findOne({ where: { public_id: businessId } }) // businessId is now secure string
 
     if (!business || business.status !== 'active') {
       return res.status(401).json({
