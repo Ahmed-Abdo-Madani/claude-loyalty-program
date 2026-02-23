@@ -537,13 +537,15 @@ class AutoMigrationRunner {
     const files = fs.readdirSync(migrationsDir)
 
     // Helper to check if filename follows YYYYMMDD- format
-    const isDated = (filename) => /^\d{8}-/.test(filename)
+    // Excludes 00000000-initial-schema.js as it's a seed migration meant for fresh DB installs,
+    // not meant to be run automatically. It will clash with existing tables.
+    const isDated = (filename) => /^\d{8}-/.test(filename) && !filename.startsWith('00000000-')
 
     return files
       .filter(file => file.endsWith('.js'))
       .filter(file => file !== 'README.md')
       .filter(file => !file.includes('.test.'))
-      .filter(file => isDated(file)) // Exclude non-dated files (utility scripts)
+      .filter(file => isDated(file)) // Exclude non-dated files and initial-schema (utility scripts)
       .sort((a, b) => {
         // Extract dates from filenames (YYYYMMDD format)
         const dateA = a.substring(0, 8)

@@ -419,9 +419,13 @@ async function initializeDatabase() {
             failed: migrationResult.failed
           })
 
-          if (process.env.NODE_ENV === 'production') {
+          if (process.env.NODE_ENV === 'production' && stopOnError) {
             logger.error('🛑 Exiting to prevent serving with incomplete schema')
+            logger.error('   To bypass this safety check and force start, set MIGRATION_STOP_ON_ERROR=false')
             process.exit(1)
+          } else {
+            logger.warn('⚠️ Server continuing despite migration errors (MIGRATION_STOP_ON_ERROR=false or non-production environment)')
+            logger.warn('   Ensure the database schema is compatible with the latest code')
           }
         } else if (migrationResult.applied > 0) {
           logger.info('✅ Auto-migrations completed successfully', {

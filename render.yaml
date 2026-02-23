@@ -45,6 +45,9 @@ services:
         sync: false
       - key: ALLOW_SCHEMA_DRIFT
         sync: false
+      # Set to false to allow server startup even if auto-migrations fail
+      - key: MIGRATION_STOP_ON_ERROR
+        sync: false
     healthCheckPath: /health
     # Domain will be added after service is verified working
     # domains:

@@ -634,8 +634,11 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.co
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 GOOGLE_PROJECT_ID=your-google-cloud-project
 
-# Font Configuration (automatically set by Docker)
-FONTCONFIG_PATH=/etc/fonts
+# Emergency / Fallback
+SKIP_SCHEMA_VALIDATION=false
+ALLOW_SCHEMA_DRIFT=false
+# Set to false to allow server startup even if auto-migrations fail
+MIGRATION_STOP_ON_ERROR=true
 
 # Email (future)
 SENDGRID_API_KEY=your-sendgrid-key
@@ -645,6 +648,7 @@ SENDGRID_API_KEY=your-sendgrid-key
 - `ICONS_PATH` **MUST** be set to `/app/uploads/icons/stamps` for stamp card generation (Dockerfile ENV may not be inherited at runtime)
 - `FRONTEND_URL` is used for generating customer-facing URLs in test endpoints and notifications.
 - `FONTCONFIG_PATH` is automatically set to `/etc/fonts` in Docker deployment for system font support. Local development uses `backend/fonts/fonts.conf`.
+- `MIGRATION_STOP_ON_ERROR=false` can be used to recover the app if a non-critical schema migration fails on deployment, letting the server start without a full redeploy.
 
 ### Step 3: Font Configuration for Emoji Rendering
 
