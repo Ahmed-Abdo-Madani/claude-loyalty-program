@@ -1677,8 +1677,7 @@ CREATE TABLE IF NOT EXISTS public.notification_campaigns (
     tags json,
     notes text,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    CONSTRAINT check_campaign_type CHECK (((campaign_type)::text = ANY (ARRAY[('lifecycle'::character varying)::text, ('promotional'::character varying)::text, ('transactional'::character varying)::text, ('new_offer_announcement'::character varying)::text, ('custom_promotion'::character varying)::text, ('seasonal_campaign'::character varying)::text])))
+    updated_at timestamp with time zone NOT NULL
 );
 
 ALTER TABLE public.notification_campaigns 
@@ -1686,7 +1685,7 @@ ALTER TABLE public.notification_campaigns
 
 ALTER TABLE public.notification_campaigns 
     ADD CONSTRAINT check_campaign_type 
-    CHECK (((campaign_type)::text = ANY (ARRAY[('lifecycle'::character varying)::text, ('promotional'::character varying)::text, ('transactional'::character varying)::text, ('new_offer_announcement'::character varying)::text, ('custom_promotion'::character varying)::text, ('seasonal_campaign'::character varying)::text])));
+    CHECK ((campaign_type IN ('lifecycle', 'promotional', 'transactional', 'new_offer_announcement', 'custom_promotion', 'seasonal_campaign')));
 
 
 ALTER TABLE public.notification_campaigns OWNER TO loyalty_user;
