@@ -267,10 +267,10 @@ class AdminMessagingAnalyticsController {
                     {
                         model: Business,
                         as: 'business',
-                        attributes: ['business_name', 'email_address', 'phone_number']
+                        attributes: ['business_name', 'email', 'phone']
                     }
                 ],
-                group: ['business_id', 'business.public_id', 'business.id'],
+                group: ['business_id', sequelize.col('business.public_id'), sequelize.col('business.id')],
                 order: [[sequelize.col('conversation_count'), 'DESC']],
                 limit: parseInt(limit),
                 subQuery: false
@@ -290,7 +290,7 @@ class AdminMessagingAnalyticsController {
                 return {
                     business_id: b.business_id,
                     business_name: b.business?.business_name || 'Unknown',
-                    email: b.business?.email_address,
+                    email: b.business?.email,
                     conversation_count: parseInt(b.getDataValue('conversation_count')),
                     message_count: messageCount,
                     last_activity: b.getDataValue('last_activity')
@@ -347,7 +347,7 @@ class AdminMessagingAnalyticsController {
                     {
                         model: Business,
                         as: 'business',
-                        attributes: ['business_name', 'email_address']
+                        attributes: ['business_name', 'email']
                     }
                 ],
                 order: [['created_at', 'DESC']],
@@ -360,7 +360,7 @@ class AdminMessagingAnalyticsController {
                 ConversationID: c.conversation_id,
                 Date: new Date(c.created_at).toLocaleDateString(),
                 BusinessName: c.business.business_name,
-                BusinessEmail: c.business.email_address,
+                BusinessEmail: c.business.email,
                 Subject: c.subject,
                 Status: c.status,
                 LastMessage: c.last_message_at ? new Date(c.last_message_at).toLocaleString() : 'N/A',

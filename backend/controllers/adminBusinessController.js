@@ -38,7 +38,7 @@ class AdminBusinessController {
 
       // Build the same where clause used by BusinessService for accurate filtered count
       const whereClause = {}
-      
+
       if (status && status !== 'all') {
         whereClause.status = status
       }
@@ -66,34 +66,37 @@ class AdminBusinessController {
       // Fetch offer counts in a single aggregated query to avoid N+1
       const { Op } = await import('sequelize')
       const businessIds = businesses.map(b => b.public_id || b.id).filter(Boolean)
-      
-      const offerCounts = await Offer.findAll({
-        attributes: [
-          'business_id',
-          [Business.sequelize.fn('COUNT', Business.sequelize.literal('*')), 'total_offers'],
-          [Business.sequelize.fn('SUM', Business.sequelize.literal("CASE WHEN \"Offer\".\"status\" = 'active' THEN 1 ELSE 0 END")), 'active_offers']
-        ],
-        where: {
-          business_id: { [Op.in]: businessIds }
-        },
-        group: ['business_id'],
-        raw: true
-      })
 
-      // Create a map of business_id -> counts for efficient lookup
       const countsMap = {}
-      offerCounts.forEach(count => {
-        countsMap[count.business_id] = {
-          total_offers: parseInt(count.total_offers) || 0,
-          active_offers: parseInt(count.active_offers) || 0
-        }
-      })
+
+      if (businessIds.length > 0) {
+        const offerCounts = await Offer.findAll({
+          attributes: [
+            'business_id',
+            [Business.sequelize.fn('COUNT', Business.sequelize.literal('*')), 'total_offers'],
+            [Business.sequelize.fn('SUM', Business.sequelize.literal("CASE WHEN status = 'active' THEN 1 ELSE 0 END")), 'active_offers']
+          ],
+          where: {
+            business_id: { [Op.in]: businessIds }
+          },
+          group: ['business_id'],
+          raw: true
+        })
+
+        // Create a map of business_id -> counts for efficient lookup
+        offerCounts.forEach(count => {
+          countsMap[count.business_id] = {
+            total_offers: parseInt(count.total_offers) || 0,
+            active_offers: parseInt(count.active_offers) || 0
+          }
+        })
+      }
 
       // Enrich businesses with offer counts from the map
       const enrichedBusinesses = businesses.map(business => {
         const businessId = business.public_id || business.id
         const counts = countsMap[businessId] || { total_offers: 0, active_offers: 0 }
-        
+
         return {
           ...business.toJSON(),
           total_offers: counts.total_offers,
@@ -176,7 +179,7 @@ class AdminBusinessController {
   static async getBusinessById(req, res) {
     try {
       const { id } = req.params
-      
+
       // Try to find by both secure ID and legacy ID
       let business = await Business.findByPk(id)
       if (!business && !id.startsWith('biz_') && /^[0-9]+$/.test(id)) {
@@ -196,8 +199,8 @@ class AdminBusinessController {
 
       // Get related data using the correct business ID
       const businessId = business.public_id || business.id
-      const offers = await Offer.findAll({ 
-        where: { business_id: businessId } 
+      const offers = await Offer.findAll({
+        where: { business_id: businessId }
       })
 
       const enrichedBusiness = {
@@ -304,7 +307,7 @@ class AdminBusinessController {
   static async deleteBusiness(req, res) {
     try {
       const { id } = req.params
-      
+
       // Try to find by both secure ID and legacy ID
       let business = await Business.findByPk(id)
       if (!business && !id.startsWith('biz_') && /^[0-9]+$/.test(id)) {

@@ -149,7 +149,7 @@ const calculatePlatformOverview = async () => {
 
     // Get aggregated wallet stats across all businesses
     const { sequelize } = await import('../models/index.js')
-    const [walletStats] = await sequelize.query(`
+    const walletStats = await sequelize.query(`
       SELECT
         wallet_type,
         COUNT(*) as count
@@ -321,7 +321,9 @@ class AdminAnalyticsController {
         total_customers: businesses.reduce((sum, b) => sum + (b.total_customers || 0), 0),
         total_redemptions: businesses.reduce((sum, b) => sum + (b.total_redemptions || 0), 0),
         cards_issued: offers.reduce((sum, o) => sum + (o.customers || 0), 0),
-        rewards_redeemed: offers.reduce((sum, o) => sum + (o.redeemed || 0), 0)
+        rewards_redeemed: offers.reduce((sum, o) => sum + (o.redeemed || 0), 0),
+        apple_wallet_passes: 0,
+        google_wallet_passes: 0
       }
 
       // Calculate additional metrics
