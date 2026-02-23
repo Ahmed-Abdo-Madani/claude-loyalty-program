@@ -1681,6 +1681,13 @@ CREATE TABLE IF NOT EXISTS public.notification_campaigns (
     CONSTRAINT check_campaign_type CHECK (((campaign_type)::text = ANY (ARRAY[('lifecycle'::character varying)::text, ('promotional'::character varying)::text, ('transactional'::character varying)::text, ('new_offer_announcement'::character varying)::text, ('custom_promotion'::character varying)::text, ('seasonal_campaign'::character varying)::text])))
 );
 
+ALTER TABLE public.notification_campaigns 
+    DROP CONSTRAINT IF EXISTS check_campaign_type CASCADE;
+
+ALTER TABLE public.notification_campaigns 
+    ADD CONSTRAINT check_campaign_type 
+    CHECK (((campaign_type)::text = ANY (ARRAY[('lifecycle'::character varying)::text, ('promotional'::character varying)::text, ('transactional'::character varying)::text, ('new_offer_announcement'::character varying)::text, ('custom_promotion'::character varying)::text, ('seasonal_campaign'::character varying)::text])));
+
 
 ALTER TABLE public.notification_campaigns OWNER TO loyalty_user;
 
