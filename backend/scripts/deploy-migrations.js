@@ -25,17 +25,17 @@ const SCRIPT_TIMEOUT = 5 * 60 * 1000
 
 async function main() {
   const isDryRun = process.argv.includes('--dry-run')
-  
+
   try {
     // Log deployment context
     logger.info('🚀 Render.com Pre-Deploy: Running database migrations')
     logger.info(`   📊 Environment: ${process.env.NODE_ENV || 'development'}`)
-    
+
     // Mask database URL for security
     const dbUrl = process.env.DATABASE_URL || 'not set'
     const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':***@')
     logger.info(`   🔗 Database: ${maskedUrl}`)
-    
+
     // Log Render metadata if available
     if (process.env.RENDER_GIT_COMMIT) {
       logger.info(`   📦 Commit: ${process.env.RENDER_GIT_COMMIT.substring(0, 7)}`)
@@ -43,23 +43,23 @@ async function main() {
     if (process.env.RENDER_SERVICE_ID) {
       logger.info(`   🔧 Service: ${process.env.RENDER_SERVICE_ID}`)
     }
-    
+
     logger.info(`   ⏰ Timestamp: ${new Date().toISOString()}`)
-    
+
     if (isDryRun) {
       logger.info('   🧪 DRY RUN MODE - No changes will be made')
     }
-    
+
     // Validate environment
     if (!process.env.DATABASE_URL) {
       logger.error('❌ DATABASE_URL environment variable is not set')
       logger.error('   Cannot proceed without database connection')
       process.exit(1)
     }
-    
+
     // Test database connection
     logger.info('🔌 Testing database connection...')
-    
+
     try {
       await sequelize.authenticate()
       logger.info('   ✅ Database connection successful')
@@ -68,41 +68,45 @@ async function main() {
       logger.error('   Ensure DATABASE_URL is correct and database is accessible')
       process.exit(1)
     }
-    
+
     // Run auto-migrations with longer timeout for preDeploy
     logger.info('🔄 Checking for pending database migrations...')
-    
+
     const lockTimeout = parseInt(process.env.MIGRATION_LOCK_TIMEOUT || '60000', 10)
     const stopOnError = process.env.MIGRATION_STOP_ON_ERROR !== 'false'
-    
+
     const result = await AutoMigrationRunner.runPendingMigrations({
       stopOnError,
       lockTimeout,
       dryRun: isDryRun
     })
-    
+
     // Handle results
     if (result.failed > 0) {
       logger.error('❌ DEPLOYMENT BLOCKED: Migration failures detected')
       logger.error(`   Applied: ${result.applied}, Failed: ${result.failed}, Total: ${result.total}`)
       logger.error('   Fix the failed migrations and retry deployment')
       logger.error('   Failed migrations:')
-      
+
       result.results
         .filter(r => r.status === 'failed')
         .forEach(r => {
           logger.error(`   - ${r.migration}: ${r.error}`)
         })
-      
+
       await sequelize.close()
       process.exit(1)
-      
+
     } else if (result.applied > 0) {
       logger.info('✅ Auto-migrations completed successfully')
       logger.info(`   📊 Applied: ${result.applied}, Total: ${result.total}`)
       logger.info(`   ⏱️  Total execution time: ${result.totalExecutionTime}ms`)
       logger.info('🎉 Pre-deploy migrations completed - deployment can proceed')
-      
+
+    } else if (result.baseSchemaIncomplete) {
+      logger.warn('⚠️  Base schema is incomplete — incremental migrations skipped.')
+      logger.warn('   The application will deploy but backend may not function correctly until base schema is recovered.')
+
     } else if (result.skipped > 0) {
       logger.info('🧪 DRY RUN: Would apply the following migrations:')
       const pending = await AutoMigrationRunner.getPendingMigrations()
@@ -110,24 +114,24 @@ async function main() {
         logger.info(`   ${index + 1}. ${migration}`)
       })
       logger.info('   Run without --dry-run to execute migrations')
-      
+
     } else {
       logger.info('✅ No pending migrations - database schema is up to date')
       logger.info('🎉 Pre-deploy check completed - deployment can proceed')
     }
-    
+
     // Close database connection
     await sequelize.close()
-    
+
     // Exit with success
     process.exit(0)
-    
+
   } catch (error) {
     logger.error('❌ CRITICAL: Pre-deploy migration script failed')
     logger.error(`   Error: ${error.message}`)
     logger.error(`   Stack: ${error.stack}`)
     logger.error('🛑 DEPLOYMENT BLOCKED: Fix the error and retry')
-    
+
     // Remediation steps
     logger.error('')
     logger.error('📋 Remediation steps:')
@@ -136,13 +140,13 @@ async function main() {
     logger.error('   3. Test locally: npm run migrate:auto:dry-run')
     logger.error('   4. Commit and push the fix')
     logger.error('   5. Render will automatically retry deployment')
-    
+
     try {
       await sequelize.close()
     } catch (closeError) {
       logger.error('   ⚠️  Could not close database connection:', closeError.message)
     }
-    
+
     process.exit(1)
   }
 }

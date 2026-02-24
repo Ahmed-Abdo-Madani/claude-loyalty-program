@@ -117,6 +117,31 @@ class AutoMigrationRunner {
         }
       }
 
+      const BASE_TABLES = ['businesses', 'branches', 'customers', 'offers']
+      const missingTables = []
+      for (const tableName of BASE_TABLES) {
+        try {
+          await sequelize.getQueryInterface().describeTable(tableName)
+        } catch (error) {
+          missingTables.push(tableName)
+        }
+      }
+
+      if (missingTables.length > 0) {
+        logger.warn(`⚠️  Base schema is incomplete — the following core tables are missing: ${missingTables.join(', ')}`)
+        logger.warn('   Incremental migrations require the base schema to exist first.')
+        logger.warn('   Run: node backend/scripts/recover-schema.js  to restore the base schema, then redeploy.')
+        return {
+          total: allMigrationFiles.length,
+          applied: 0,
+          failed: 0,
+          skipped: pendingMigrations.length,
+          baseSchemaIncomplete: true,
+          results: [],
+          totalExecutionTime: Date.now() - startTime
+        }
+      }
+
       if (dryRun) {
         logger.info('🧪 DRY RUN MODE - Showing what would execute:')
         pendingMigrations.forEach((file, index) => {
