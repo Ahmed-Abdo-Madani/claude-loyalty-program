@@ -71,10 +71,17 @@ class LemonSqueezyService {
         try {
             const { storeId } = getLSConfig();
             const api = getApi();
+            const frontendUrl = process.env.FRONTEND_URL || 'https://app.madna.me';
+
             const payload = {
                 data: {
                     type: "checkouts",
                     attributes: {
+                        checkout_options: {
+                            success_url: `${frontendUrl}/subscription/checkout/success`,
+                            cancel_url: `${frontendUrl}/`,
+                            redirect_url: `${frontendUrl}/subscription/checkout/success`
+                        },
                         checkout_data: {
                             email: userEmail,
                             custom: {
