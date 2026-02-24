@@ -77,9 +77,7 @@ class LemonSqueezyService {
                 data: {
                     type: "checkouts",
                     attributes: {
-                        checkout_options: {
-                            success_url: `${frontendUrl}/subscription/checkout/success`,
-                            cancel_url: `${frontendUrl}/`,
+                        product_options: {
                             redirect_url: `${frontendUrl}/subscription/checkout/success`
                         },
                         checkout_data: {
