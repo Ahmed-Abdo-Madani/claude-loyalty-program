@@ -453,12 +453,10 @@ export const checkSubscriptionLimit = (limitType) => {
 
         return res.status(403).json({
           success: false,
+          code: 'PLAN_LIMIT_REACHED',
           message: limitCheck.message,
-          code: 'LIMIT_EXCEEDED',
-          current_plan: limitCheck.plan,
-          limit_type: limitType,
-          current_usage: limitCheck.current,
-          limit: limitCheck.limit,
+          limitType: limitType,
+          limits: { current: limitCheck.current, max: limitCheck.limit, plan: limitCheck.plan },
           upgrade_prompt: `You've reached the ${limitType} limit for your ${limitCheck.plan} plan. Upgrade to continue.`
         })
       }

@@ -32,6 +32,9 @@ function OffersTab({ analytics, demoData, onAddOffer, user }) {
   const [showPlanLimitModal, setShowPlanLimitModal] = useState(false)
   const [planLimitInfo, setPlanLimitInfo] = useState(null)
 
+  const offerLimit = analytics?.planLimits?.offers
+  const isAtOfferLimit = Number.isFinite(offerLimit) && offerLimit !== -1 && offers.length >= offerLimit
+
   // Filter states - use internal constants, not translated strings
   const [statusFilter, setStatusFilter] = useState('all')
   const [branchFilter, setBranchFilter] = useState('all')
@@ -211,12 +214,30 @@ function OffersTab({ analytics, demoData, onAddOffer, user }) {
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('offers.managePrograms')}</p>
         </div>
         <button
-          onClick={() => onAddOffer ? onAddOffer() : setShowCreateModal(true)}
-          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2 shadow-lg min-h-[44px] active:scale-95"
+          title={isAtOfferLimit ? t('offers.planLimitReached', 'Plan limit reached') : ''}
+          onClick={() => {
+            if (isAtOfferLimit) {
+              setPlanLimitInfo({
+                limitType: 'offers',
+                currentUsage: offers.length,
+                planLimit: offerLimit,
+                currentPlan: analytics?.currentPlan
+              })
+              setShowPlanLimitModal(true)
+            } else {
+              onAddOffer ? onAddOffer() : setShowCreateModal(true)
+            }
+          }}
+          className={`w-full sm:w-auto bg-primary text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2 shadow-lg min-h-[44px] active:scale-95 ${isAtOfferLimit ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90'
+            }`}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+          {isAtOfferLimit ? (
+            <span className="text-xl leading-none">🔒</span>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          )}
           <span>{t('offers.createOffer')}</span>
         </button>
       </div>
@@ -434,7 +455,7 @@ function OffersTab({ analytics, demoData, onAddOffer, user }) {
 
                 if (!data.success) {
                   // Check for plan limit error in response
-                  if (data.code === 'PLAN_LIMIT_REACHED' && data.limits) {
+                  if ((data.code === 'PLAN_LIMIT_REACHED' || data.code === 'LIMIT_EXCEEDED') && data.limits) {
                     setPlanLimitInfo({
                       limitType: data.limitType || 'offers',
                       currentUsage: data.limits.current,
@@ -468,14 +489,13 @@ function OffersTab({ analytics, demoData, onAddOffer, user }) {
                 status: err.response?.status
               })
 
-              // Check if this is a plan limit error - detect from error message (fallback)
-              if (err.message?.includes('Plan limit')) {
+              if (err.code === 'PLAN_LIMIT_REACHED' || err.code === 'LIMIT_EXCEEDED') {
                 setPlanLimitInfo({
-                  limitType: 'offers',
-                  currentUsage: offers.length,
-                  planLimit: offers.length,
-                  currentPlan: 'free',
-                  suggestedPlan: 'professional'
+                  limitType: err.limitType || 'offers',
+                  currentUsage: err.limits?.current,
+                  planLimit: err.limits?.max,
+                  currentPlan: err.limits?.plan,
+                  suggestedPlan: err.limits?.suggestedPlan
                 })
                 setShowPlanLimitModal(true)
                 setShowCreateModal(false)

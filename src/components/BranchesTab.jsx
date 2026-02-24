@@ -30,6 +30,9 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
   const [showPlanLimitModal, setShowPlanLimitModal] = useState(false)
   const [planLimitInfo, setPlanLimitInfo] = useState(null)
 
+  const branchLimit = analytics?.planLimits?.locations
+  const isAtBranchLimit = Number.isFinite(branchLimit) && branchLimit !== -1 && branches.length >= branchLimit
+
   // Load branches on component mount
   useEffect(() => {
     if (!demoData) {
@@ -168,12 +171,30 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('branches.manageLocations')}</p>
         </div>
         <button
-          onClick={() => onAddBranch ? onAddBranch() : setShowCreateModal(true)}
-          className="bg-primary hover:bg-primary/90 active:scale-95 text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm min-h-[44px] w-full sm:w-auto sm:self-start touch-target"
+          title={isAtBranchLimit ? t('branches.planLimitReached', 'Plan limit reached') : ''}
+          onClick={() => {
+            if (isAtBranchLimit) {
+              setPlanLimitInfo({
+                limitType: 'branches',
+                currentUsage: branches.length,
+                planLimit: branchLimit,
+                currentPlan: analytics?.currentPlan
+              })
+              setShowPlanLimitModal(true)
+            } else {
+              onAddBranch ? onAddBranch() : setShowCreateModal(true)
+            }
+          }}
+          className={`bg-primary text-white px-6 py-3.5 rounded-xl text-base font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm min-h-[44px] w-full sm:w-auto sm:self-start touch-target ${isAtBranchLimit ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90 active:scale-95'
+            }`}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+          {isAtBranchLimit ? (
+            <span className="text-xl leading-none">🔒</span>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          )}
           <span>{t('branches.addBranch')}</span>
         </button>
       </div>
@@ -348,7 +369,7 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
 
                 // Check for plan limit error in response
                 if (!data.success) {
-                  if (data.code === 'PLAN_LIMIT_REACHED' && data.limits) {
+                  if ((data.code === 'PLAN_LIMIT_REACHED' || data.code === 'LIMIT_EXCEEDED') && data.limits) {
                     setPlanLimitInfo({
                       limitType: data.limitType || 'branches',
                       currentUsage: data.limits.current,
@@ -368,14 +389,13 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
               setShowCreateModal(false)
               setShowEditModal(null)
             } catch (err) {
-              // Check if this is a plan limit error by message (fallback)
-              if (err.message?.includes('permissions.upgradeRequired') || err.message?.includes('Plan limit')) {
+              if (err.code === 'PLAN_LIMIT_REACHED' || err.code === 'LIMIT_EXCEEDED') {
                 setPlanLimitInfo({
-                  limitType: 'branches',
-                  currentUsage: branches.length,
-                  planLimit: branches.length,
-                  currentPlan: 'free',
-                  suggestedPlan: 'professional'
+                  limitType: err.limitType || 'branches',
+                  currentUsage: err.limits?.current,
+                  planLimit: err.limits?.max,
+                  currentPlan: err.limits?.plan,
+                  suggestedPlan: err.limits?.suggestedPlan
                 })
                 setShowPlanLimitModal(true)
                 setShowCreateModal(false)

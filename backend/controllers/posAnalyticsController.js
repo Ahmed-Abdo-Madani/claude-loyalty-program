@@ -22,14 +22,14 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId } = req.query
-      
+
       logger.debug('📊 getSalesSummary called:', {
         businessId,
         startDate,
         endDate,
         branchId: branchId || 'all'
       })
-      
+
       // Validate and parse dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -45,9 +45,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Build where clause
       const where = {
         business_id: businessId,
@@ -56,13 +56,13 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         where.branch_id = branchId
       }
-      
+
       logger.debug('🔍 Querying sales with filters:', where)
-      
+
       // Enhanced date logging for debugging
       logger.debug('📅 Date range details:', {
         startISO: parsedStartDate.toISOString(),
@@ -71,22 +71,22 @@ class POSAnalyticsController {
         endLocal: parsedEndDate.toString(),
         rangeDays: Math.ceil((parsedEndDate - parsedStartDate) / (1000 * 60 * 60 * 24))
       })
-      
+
       // Get total sales count and revenue with SQL logging
-      const totalSales = await Sale.count({ 
+      const totalSales = await Sale.count({
         where,
         logging: (sql) => logger.debug('🔍 SQL Query:', sql)
       })
       const totalRevenue = await Sale.sum('total_amount', { where }) || 0
       const totalTax = await Sale.sum('tax_amount', { where }) || 0
       const avgTransaction = totalSales > 0 ? totalRevenue / totalSales : 0
-      
+
       // Diagnostic queries when zero results
       let diagnostics = null
       if (totalSales === 0) {
         const totalSalesAllTime = await Sale.count({ where: { business_id: businessId } })
-        const completedSalesAllTime = await Sale.count({ 
-          where: { business_id: businessId, status: 'completed' } 
+        const completedSalesAllTime = await Sale.count({
+          where: { business_id: businessId, status: 'completed' }
         })
         const recentSamples = await Sale.findAll({
           where: { business_id: businessId },
@@ -94,7 +94,7 @@ class POSAnalyticsController {
           order: [['sale_date', 'DESC']],
           limit: 5
         })
-        
+
         diagnostics = {
           totalSalesAllTime,
           completedSalesAllTime,
@@ -106,17 +106,17 @@ class POSAnalyticsController {
             saleNumber: s.sale_number
           }))
         }
-        
+
         logger.warn('⚠️  Zero sales found in date range. Diagnostics:', diagnostics)
       }
-      
+
       logger.info('✅ Sales summary calculated:', {
         businessId,
         totalSales,
         totalRevenue: totalRevenue.toFixed(2),
         avgTransaction: avgTransaction.toFixed(2)
       })
-      
+
       // Sales by payment method
       const paymentBreakdown = await Sale.findAll({
         where,
@@ -128,7 +128,7 @@ class POSAnalyticsController {
         ],
         group: ['payment_method']
       })
-      
+
       const formattedPaymentBreakdown = paymentBreakdown.map(payment => ({
         paymentMethod: payment.payment_method,
         count: parseInt(payment.getDataValue('count')),
@@ -136,7 +136,7 @@ class POSAnalyticsController {
         avgValue: parseFloat(payment.getDataValue('avgValue')),
         percentage: totalRevenue > 0 ? ((parseFloat(payment.getDataValue('total')) / totalRevenue) * 100) : 0
       }))
-      
+
       // Sales by branch (if multi-branch)
       let branchBreakdown = []
       if (!branchId) {
@@ -154,9 +154,9 @@ class POSAnalyticsController {
             [fn('COUNT', col('Sale.public_id')), 'count'],
             [fn('SUM', col('total_amount')), 'total']
           ],
-          group: ['branch_id', 'branch.public_id', 'branch.name']
+          group: ['branch_id', 'branch.id', 'branch.public_id', 'branch.name']
         })
-        
+
         branchBreakdown = branchSales.map(sale => ({
           branchId: sale.branch_id,
           branchName: sale.branch?.name || 'Unknown',
@@ -164,7 +164,7 @@ class POSAnalyticsController {
           total: parseFloat(sale.getDataValue('total'))
         }))
       }
-      
+
       // Loyalty redemptions
       const loyaltyStats = await Sale.findAll({
         where: {
@@ -176,10 +176,10 @@ class POSAnalyticsController {
           [fn('SUM', col('loyalty_discount_amount')), 'totalDiscount']
         ]
       })
-      
+
       const loyaltyRedemptions = loyaltyStats.length > 0 ? parseInt(loyaltyStats[0].getDataValue('count')) : 0
       const loyaltyDiscountTotal = loyaltyStats.length > 0 ? parseFloat(loyaltyStats[0].getDataValue('totalDiscount')) || 0 : 0
-      
+
       // Calculate growth (compare to previous period)
       const previousPeriod = getPreviousPeriod(parsedStartDate, parsedEndDate)
       const previousWhere = {
@@ -189,24 +189,24 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         previousWhere.branch_id = branchId
       }
-      
+
       const previousSales = await Sale.count({ where: previousWhere })
       const previousRevenue = await Sale.sum('total_amount', { where: previousWhere }) || 0
-      
+
       const salesGrowth = calculateGrowth(totalSales, previousSales)
       const revenueGrowth = calculateGrowth(totalRevenue, previousRevenue)
-      
+
       logger.info('POS analytics summary fetched', {
         businessId,
         branchId,
         totalSales,
         totalRevenue
       })
-      
+
       const response = {
         success: true,
         data: {
@@ -226,7 +226,7 @@ class POSAnalyticsController {
           }
         }
       }
-      
+
       // Include diagnostics in development mode when no sales found
       if (process.env.NODE_ENV === 'development' && totalSales === 0 && diagnostics) {
         response.diagnostics = {
@@ -238,9 +238,9 @@ class POSAnalyticsController {
           suggestion: 'Check date range or try expanding to 90 days. Verify sales are marked as completed.'
         }
       }
-      
+
       res.json(response)
-      
+
     } catch (error) {
       logger.error('❌ Failed to fetch POS analytics summary:', {
         businessId: req.businessId,
@@ -269,12 +269,12 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { branchId } = req.query
-      
+
       // Calculate today's date range (midnight to now)
       const today = new Date()
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
-      
+
       logger.debug('📊 getTodaysSummary called:', {
         businessId,
         branchId: branchId || 'all',
@@ -314,7 +314,7 @@ class POSAnalyticsController {
       const totalSales = sales.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0)
       const ordersCount = sales.length
       const averageOrderValue = ordersCount > 0 ? totalSales / ordersCount : 0
-      
+
       // Count distinct customers (filter out nulls for non-loyalty sales)
       const uniqueCustomers = new Set(sales.filter(s => s.customer_id).map(s => s.customer_id))
       const activeCustomers = uniqueCustomers.size
@@ -348,7 +348,7 @@ class POSAnalyticsController {
       })
     }
   }
-  
+
   /**
    * GET /api/pos/analytics/top-products
    * Best selling products by quantity or revenue
@@ -357,7 +357,7 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId, limit = '10', sortBy = 'revenue' } = req.query
-      
+
       logger.debug('📊 getTopProducts called:', {
         businessId,
         startDate,
@@ -366,7 +366,7 @@ class POSAnalyticsController {
         limit,
         sortBy
       })
-      
+
       // Validate dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -381,9 +381,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Build where clause for sales
       const saleWhere = {
         business_id: businessId,
@@ -392,11 +392,11 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         saleWhere.branch_id = branchId
       }
-      
+
       // Get top products
       const topProducts = await SaleItem.findAll({
         attributes: [
@@ -423,7 +423,7 @@ class POSAnalyticsController {
         limit: parseInt(limit),
         subQuery: false
       })
-      
+
       const formattedProducts = topProducts.map(item => ({
         productId: item.product_id,
         productName: item.product?.name || 'Unknown',
@@ -433,25 +433,25 @@ class POSAnalyticsController {
         totalRevenue: parseFloat(item.getDataValue('totalRevenue')),
         salesCount: parseInt(item.getDataValue('salesCount'))
       }))
-      
+
       logger.info('✅ Top products fetched:', {
         businessId,
         count: formattedProducts.length,
         topProductsFound: formattedProducts.length === 0 ? 'empty' : 'has data'
       })
-      
+
       // Validate data structure before returning
       if (!Array.isArray(formattedProducts)) {
         logger.error('⚠️  formattedProducts is not an array:', typeof formattedProducts)
       }
-      
+
       res.json({
         success: true,
         data: {
           topProducts: formattedProducts
         }
       })
-      
+
     } catch (error) {
       logger.error('❌ Failed to fetch top products:', {
         businessId: req.businessId,
@@ -466,7 +466,7 @@ class POSAnalyticsController {
       })
     }
   }
-  
+
   /**
    * GET /api/pos/analytics/sales-trends
    * Time-series sales data with configurable granularity
@@ -475,7 +475,7 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId, granularity = 'daily' } = req.query
-      
+
       logger.debug('📊 getSalesTrends called:', {
         businessId,
         startDate,
@@ -483,7 +483,7 @@ class POSAnalyticsController {
         branchId: branchId || 'all',
         granularity
       })
-      
+
       // Validate dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -493,9 +493,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Validate granularity
       const validGranularities = ['daily', 'weekly', 'monthly']
       if (!validGranularities.includes(granularity)) {
@@ -505,14 +505,14 @@ class POSAnalyticsController {
           code: 'INVALID_GRANULARITY'
         })
       }
-      
+
       // Map granularity to PostgreSQL date_trunc format
       const truncFormat = {
         daily: 'day',
         weekly: 'week',
         monthly: 'month'
       }[granularity]
-      
+
       // Build where conditions
       let branchCondition = ''
       const replacements = {
@@ -520,12 +520,12 @@ class POSAnalyticsController {
         startDate: parsedStartDate,
         endDate: parsedEndDate
       }
-      
+
       if (branchId) {
         branchCondition = 'AND branch_id = :branchId'
         replacements.branchId = branchId
       }
-      
+
       // Raw SQL query for time-series data
       const query = `
         SELECT 
@@ -542,12 +542,12 @@ class POSAnalyticsController {
         GROUP BY period
         ORDER BY period
       `
-      
+
       const trends = await sequelize.query(query, {
         replacements,
         type: sequelize.QueryTypes.SELECT
       })
-      
+
       const formattedTrends = trends.map(trend => ({
         period: trend.period,
         salesCount: parseInt(trend.sales_count),
@@ -555,13 +555,13 @@ class POSAnalyticsController {
         totalTax: parseFloat(trend.total_tax),
         avgTransactionValue: parseFloat(trend.avg_transaction_value)
       }))
-      
+
       logger.info('✅ Sales trends fetched:', {
         businessId,
         granularity,
         dataPoints: formattedTrends.length
       })
-      
+
       res.json({
         success: true,
         data: {
@@ -569,7 +569,7 @@ class POSAnalyticsController {
           granularity
         }
       })
-      
+
     } catch (error) {
       logger.error('❌ Failed to fetch sales trends:', {
         businessId: req.businessId,
@@ -588,7 +588,7 @@ class POSAnalyticsController {
       })
     }
   }
-  
+
   /**
    * GET /api/pos/analytics/payment-breakdown
    * Detailed payment method analysis with trends
@@ -597,14 +597,14 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId } = req.query
-      
+
       logger.debug('📊 getPaymentBreakdown called:', {
         businessId,
         startDate,
         endDate,
         branchId: branchId || 'all'
       })
-      
+
       // Validate dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -614,9 +614,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Build where clause
       const where = {
         business_id: businessId,
@@ -625,11 +625,11 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         where.branch_id = branchId
       }
-      
+
       // Get payment breakdown
       const paymentData = await Sale.findAll({
         where,
@@ -641,9 +641,9 @@ class POSAnalyticsController {
         ],
         group: ['payment_method']
       })
-      
+
       const totalRevenue = await Sale.sum('total_amount', { where }) || 0
-      
+
       // Calculate previous period for trend
       const previousPeriod = getPreviousPeriod(parsedStartDate, parsedEndDate)
       const previousWhere = {
@@ -653,11 +653,11 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         previousWhere.branch_id = branchId
       }
-      
+
       const previousPaymentData = await Sale.findAll({
         where: previousWhere,
         attributes: [
@@ -666,18 +666,18 @@ class POSAnalyticsController {
         ],
         group: ['payment_method']
       })
-      
+
       // Create previous period lookup
       const previousLookup = {}
       previousPaymentData.forEach(payment => {
         previousLookup[payment.payment_method] = parseFloat(payment.getDataValue('total'))
       })
-      
+
       // Format breakdown with trends
       const breakdown = paymentData.map(payment => {
         const currentTotal = parseFloat(payment.getDataValue('total'))
         const previousTotal = previousLookup[payment.payment_method] || 0
-        
+
         return {
           paymentMethod: payment.payment_method,
           count: parseInt(payment.getDataValue('count')),
@@ -687,19 +687,19 @@ class POSAnalyticsController {
           trend: calculateGrowth(currentTotal, previousTotal)
         }
       })
-      
+
       logger.info('✅ Payment breakdown fetched:', {
         businessId,
         methods: breakdown.length
       })
-      
+
       res.json({
         success: true,
         data: {
           breakdown
         }
       })
-      
+
     } catch (error) {
       logger.error('❌ Failed to fetch payment breakdown:', {
         businessId: req.businessId,
@@ -717,7 +717,7 @@ class POSAnalyticsController {
       })
     }
   }
-  
+
   /**
    * GET /api/pos/analytics/category-performance
    * Sales by product category
@@ -726,14 +726,14 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId } = req.query
-      
+
       logger.debug('📊 getCategoryPerformance called:', {
         businessId,
         startDate,
         endDate,
         branchId: branchId || 'all'
       })
-      
+
       // Validate dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -743,9 +743,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Build where clause for sales
       const saleWhere = {
         business_id: businessId,
@@ -754,11 +754,11 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         saleWhere.branch_id = branchId
       }
-      
+
       // Get category performance
       const categoryData = await SaleItem.findAll({
         attributes: [
@@ -789,13 +789,13 @@ class POSAnalyticsController {
         order: [[fn('SUM', col('total')), 'DESC']],
         subQuery: false
       })
-      
+
       const totalRevenue = categoryData.reduce((sum, cat) => sum + parseFloat(cat.getDataValue('totalRevenue')), 0)
-      
+
       const categories = categoryData.map(cat => {
         const categoryId = cat.product?.category?.public_id || null
         const isUncategorized = categoryId === null
-        
+
         return {
           categoryId: isUncategorized ? 'uncategorized' : categoryId,
           categoryName: cat.product?.category?.name || 'Uncategorized',
@@ -806,24 +806,24 @@ class POSAnalyticsController {
           hasCategory: !isUncategorized
         }
       })
-      
+
       logger.info('Category performance fetched', {
         businessId,
         categories: categories.length
       })
-      
+
       logger.info('✅ Category performance fetched:', {
         businessId,
         categories: categories.length
       })
-      
+
       res.json({
         success: true,
         data: {
           categories
         }
       })
-      
+
     } catch (error) {
       logger.error('❌ Failed to fetch category performance:', {
         businessId: req.businessId,
@@ -841,7 +841,7 @@ class POSAnalyticsController {
       })
     }
   }
-  
+
   /**
    * GET /api/pos/analytics/hourly-distribution
    * Sales by hour of day for staffing optimization
@@ -850,14 +850,14 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId } = req.query
-      
+
       logger.debug('📊 getHourlyDistribution called:', {
         businessId,
         startDate,
         endDate,
         branchId: branchId || 'all'
       })
-      
+
       // Validate dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -867,9 +867,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Build where conditions
       let branchCondition = ''
       const replacements = {
@@ -877,12 +877,12 @@ class POSAnalyticsController {
         startDate: parsedStartDate,
         endDate: parsedEndDate
       }
-      
+
       if (branchId) {
         branchCondition = 'AND branch_id = :branchId'
         replacements.branchId = branchId
       }
-      
+
       // Raw SQL query for hourly distribution
       const query = `
         SELECT 
@@ -897,35 +897,35 @@ class POSAnalyticsController {
         GROUP BY hour
         ORDER BY hour
       `
-      
+
       const hourlyData = await sequelize.query(query, {
         replacements,
         type: sequelize.QueryTypes.SELECT
       })
-      
+
       const hourlyDistribution = hourlyData.map(data => ({
         hour: parseInt(data.hour),
         salesCount: parseInt(data.sales_count),
         totalRevenue: parseFloat(data.total_revenue)
       }))
-      
+
       logger.info('Hourly distribution fetched', {
         businessId,
         hours: hourlyDistribution.length
       })
-      
+
       logger.info('✅ Hourly distribution fetched:', {
         businessId,
         hours: hourlyDistribution.length
       })
-      
+
       res.json({
         success: true,
         data: {
           hourlyDistribution
         }
       })
-      
+
     } catch (error) {
       logger.error('❌ Failed to fetch hourly distribution:', {
         businessId: req.businessId,
@@ -943,7 +943,7 @@ class POSAnalyticsController {
       })
     }
   }
-  
+
   /**
    * GET /api/pos/analytics/export
    * Export analytics to CSV or JSON
@@ -952,7 +952,7 @@ class POSAnalyticsController {
     try {
       const businessId = req.businessId
       const { startDate, endDate, branchId, format = 'csv' } = req.query
-      
+
       // Validate dates
       const dateValidation = validateDateRange(startDate, endDate)
       if (!dateValidation.valid) {
@@ -962,9 +962,9 @@ class POSAnalyticsController {
           code: 'INVALID_DATE_RANGE'
         })
       }
-      
+
       const { parsedStartDate, parsedEndDate } = dateValidation
-      
+
       // Build where clause
       const where = {
         business_id: businessId,
@@ -973,11 +973,11 @@ class POSAnalyticsController {
         },
         status: 'completed'
       }
-      
+
       if (branchId) {
         where.branch_id = branchId
       }
-      
+
       // Fetch comprehensive data
       const sales = await Sale.findAll({
         where,
@@ -991,7 +991,7 @@ class POSAnalyticsController {
         attributes: ['sale_date', 'sale_number', 'total_amount', 'tax_amount', 'payment_method'],
         order: [['sale_date', 'DESC']]
       })
-      
+
       // Format data
       const exportData = sales.map(sale => ({
         date: sale.sale_date.toISOString().split('T')[0],
@@ -1001,12 +1001,12 @@ class POSAnalyticsController {
         taxAmount: parseFloat(sale.tax_amount),
         paymentMethod: sale.payment_method
       }))
-      
+
       if (format === 'csv') {
         // Convert to CSV
         const headers = ['Date', 'Sale Number', 'Branch', 'Total Amount', 'Tax Amount', 'Payment Method']
         const csvRows = [headers.join(',')]
-        
+
         exportData.forEach(row => {
           csvRows.push([
             row.date,
@@ -1017,14 +1017,14 @@ class POSAnalyticsController {
             row.paymentMethod
           ].join(','))
         })
-        
+
         const csv = csvRows.join('\n')
         const filename = `pos-analytics-${parsedStartDate.toISOString().split('T')[0]}-to-${parsedEndDate.toISOString().split('T')[0]}.csv`
-        
+
         res.setHeader('Content-Type', 'text/csv')
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
         res.send(csv)
-        
+
         logger.info('Analytics exported as CSV', {
           businessId,
           rows: exportData.length
@@ -1038,13 +1038,13 @@ class POSAnalyticsController {
             count: exportData.length
           }
         })
-        
+
         logger.info('Analytics exported as JSON', {
           businessId,
           rows: exportData.length
         })
       }
-      
+
     } catch (error) {
       logger.error('Failed to export analytics:', error)
       res.status(500).json({
@@ -1067,7 +1067,7 @@ function calculateGrowth(currentValue, previousValue) {
   if (previousValue === 0) {
     return currentValue > 0 ? '+100%' : '0%'
   }
-  
+
   const growth = ((currentValue - previousValue) / previousValue) * 100
   const sign = growth >= 0 ? '+' : ''
   return `${sign}${growth.toFixed(1)}%`
@@ -1080,7 +1080,7 @@ function getPreviousPeriod(startDate, endDate) {
   const periodLength = endDate - startDate
   const prevEndDate = new Date(startDate.getTime() - 1)
   const prevStartDate = new Date(prevEndDate.getTime() - periodLength)
-  
+
   return {
     prevStartDate,
     prevEndDate
@@ -1101,43 +1101,43 @@ function validateDateRange(startDate, endDate) {
   // Default to last 30 days if not provided
   let parsedStartDate = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   let parsedEndDate = endDate ? new Date(endDate) : new Date()
-  
+
   // Validate dates are valid
   if (isNaN(parsedStartDate.getTime())) {
     return { valid: false, error: 'Invalid start date format' }
   }
-  
+
   if (isNaN(parsedEndDate.getTime())) {
     return { valid: false, error: 'Invalid end date format' }
   }
-  
+
   // Normalize default startDate to beginning of day (midnight)
   if (!startDate) {
     parsedStartDate.setHours(0, 0, 0, 0)
   }
-  
+
   // Extend endDate to end-of-day only for date-only strings (YYYY-MM-DD format)
   // Preserve explicit time components if present
   const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/
   const isDateOnlyString = endDate && dateOnlyPattern.test(endDate.trim())
-  
+
   if (isDateOnlyString || !endDate) {
     // For date-only strings or default dates, extend to end-of-day
     parsedEndDate.setHours(23, 59, 59, 999)
   }
   // Otherwise, preserve the time component from the input
-  
+
   // Check endDate > startDate
   if (parsedEndDate < parsedStartDate) {
     return { valid: false, error: 'End date must be after start date' }
   }
-  
+
   // Check range is not too large (max 1 year)
   const oneYear = 365 * 24 * 60 * 60 * 1000
   if (parsedEndDate - parsedStartDate > oneYear) {
     return { valid: false, error: 'Date range cannot exceed 1 year' }
   }
-  
+
   return {
     valid: true,
     parsedStartDate,

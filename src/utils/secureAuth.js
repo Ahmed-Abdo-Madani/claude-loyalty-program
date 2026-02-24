@@ -165,9 +165,10 @@ export async function secureApiRequest(url, options = {}) {
     throw new Error('Authentication failed')
   }
 
-  // Handle trial expiration
+  // Handle trial expiration or plan limits
   if (response.status === 403) {
-    const data = await response.json().catch(() => ({}))
+    const clonedResponse = response.clone()
+    const data = await clonedResponse.json().catch(() => ({}))
 
     if (data.code === 'TRIAL_EXPIRED') {
       console.warn('🔒 Trial period expired')
@@ -187,6 +188,15 @@ export async function secureApiRequest(url, options = {}) {
 
       // Re-throw to allow component-level handling
       throw new Error('TRIAL_EXPIRED')
+    }
+
+    if (data.code === 'PLAN_LIMIT_REACHED' || data.code === 'LIMIT_EXCEEDED') {
+      console.warn('🔒 Plan limit reached:', data.limitType)
+      const error = new Error(data.message || 'Plan limit reached')
+      error.code = data.code
+      error.limitType = data.limitType
+      error.limits = data.limits
+      throw error
     }
   }
 

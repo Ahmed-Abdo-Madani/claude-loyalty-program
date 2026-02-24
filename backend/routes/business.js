@@ -743,7 +743,8 @@ router.get('/public/logo/:businessId/:filename', async (req, res) => {
     const { businessId, filename } = req.params
 
     // Find business by secure public_id and verify they own this logo file
-    const business = await Business.findByPk(businessId, {
+    const business = await Business.findOne({
+      where: { public_id: businessId },
       attributes: ['logo_filename', 'logo_url']
     })
 
@@ -798,7 +799,8 @@ router.get('/public/menu-pdf/:businessId', async (req, res) => {
     const { businessId } = req.params
 
     // Find business by secure public_id
-    const business = await Business.findByPk(businessId, {
+    const business = await Business.findOne({
+      where: { public_id: businessId },
       attributes: ['menu_pdf_filename', 'public_id']
     })
 
@@ -955,7 +957,8 @@ router.get('/public/menu/:identifier', async (req, res) => {
 
     if (type === 'branch') {
       // Fetch branch with business details
-      branch = await Branch.findByPk(identifier, {
+      branch = await Branch.findOne({
+        where: { public_id: identifier },
         include: [{
           model: Business,
           as: 'business',
@@ -974,7 +977,8 @@ router.get('/public/menu/:identifier', async (req, res) => {
       businessId = branch.business_id
     } else {
       // Fetch business details
-      business = await Business.findByPk(identifier, {
+      business = await Business.findOne({
+        where: { public_id: identifier },
         attributes: ['public_id', 'business_name', 'business_name_ar', 'logo_url', 'logo_filename', 'description', 'phone', 'menu_phone', 'city', 'district', 'region', 'address', 'menu_display_mode', 'menu_pdf_url', 'menu_pdf_filename', 'facebook_url', 'instagram_url', 'twitter_url', 'snapchat_url'] // Includes social media links
       })
 
@@ -985,7 +989,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         })
       }
 
-      businessId = identifier
+      businessId = business.public_id
     }
 
     // Import Product and ProductCategory models
@@ -1901,10 +1905,14 @@ router.post('/my/branches', requireBusinessAuth, checkSubscriptionLimit('locatio
     })
   } catch (error) {
     logger.error('Create branch error:', error)
-    res.status(500).json({
+    const statusCode = error.status || 500
+    res.status(statusCode).json({
       success: false,
-      message: getLocalizedMessage('server.internalError', req.locale || 'ar'),
-      error: error.message
+      code: error.code || 'UNKNOWN_ERROR',
+      limitType: error.limitType,
+      message: error.status === 403 ? error.message : getLocalizedMessage('server.internalError', req.locale || 'ar'),
+      error: error.message,
+      limits: error.limits
     })
   }
 })
