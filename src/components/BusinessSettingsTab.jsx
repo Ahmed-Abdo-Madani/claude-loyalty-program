@@ -140,13 +140,23 @@ function BusinessSettingsTab({ onNavigateToProducts }) {
     const handleSave = async () => {
         try {
             setSaving(true)
+
+            const normalizeUrl = (url) => {
+                if (!url) return url;
+                const trimmedUrl = url.trim();
+                if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+                    return trimmedUrl;
+                }
+                return `https://${trimmedUrl}`;
+            };
+
             const response = await secureApi.put(endpoints.businessUpdateProfile, {
                 menu_display_mode: displayMode,
                 menu_phone: menuPhone,
-                facebook_url: socialMedia.facebook,
-                instagram_url: socialMedia.instagram,
-                twitter_url: socialMedia.twitter,
-                snapchat_url: socialMedia.snapchat
+                facebook_url: normalizeUrl(socialMedia.facebook),
+                instagram_url: normalizeUrl(socialMedia.instagram),
+                twitter_url: normalizeUrl(socialMedia.twitter),
+                snapchat_url: normalizeUrl(socialMedia.snapchat)
             })
             const result = await response.json()
             if (result.success) {

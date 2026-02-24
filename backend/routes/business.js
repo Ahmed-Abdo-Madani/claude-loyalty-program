@@ -1128,6 +1128,15 @@ router.get('/public/menu/:identifier', async (req, res) => {
     }
 
     // Format response
+    const normalizeUrl = (url) => {
+      if (!url) return url;
+      const trimmedUrl = url.trim();
+      if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+        return trimmedUrl;
+      }
+      return `https://${trimmedUrl}`;
+    };
+
     const menuData = {
       business: {
         id: business.public_id,
@@ -1144,10 +1153,10 @@ router.get('/public/menu/:identifier', async (req, res) => {
         menu_display_mode: business.menu_display_mode,
         menu_pdf_url: business.menu_pdf_url,
         menu_pdf_filename: business.menu_pdf_filename,
-        facebook_url: business.facebook_url,
-        instagram_url: business.instagram_url,
-        twitter_url: business.twitter_url,
-        snapchat_url: business.snapchat_url
+        facebook_url: normalizeUrl(business.facebook_url),
+        instagram_url: normalizeUrl(business.instagram_url),
+        twitter_url: normalizeUrl(business.twitter_url),
+        snapchat_url: normalizeUrl(business.snapchat_url)
       },
       menuDisplayMode: business.menu_display_mode || 'grid',
       categories,

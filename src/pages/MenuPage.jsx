@@ -64,6 +64,15 @@ function MenuPage({ type }) {
   const getCategoryName = (category) => i18n.language === 'ar' && category.name_ar ? category.name_ar : category.name
   const getLogoUrl = (url) => url ? (url.startsWith('http') ? url : `${apiBaseUrl}${url}`) : null
 
+  const normalizeUrl = (url) => {
+    if (!url) return url;
+    const trimmedUrl = url.trim();
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+      return trimmedUrl;
+    }
+    return `https://${trimmedUrl}`;
+  };
+
   const formatPrice = (price) => new Intl.NumberFormat(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -299,7 +308,7 @@ function MenuPage({ type }) {
               <span className="font-medium text-gray-600 dark:text-gray-400">{t('followUs')}</span>
               {menu?.business?.facebook_url && (
                 <a
-                  href={menu.business.facebook_url}
+                  href={normalizeUrl(menu.business.facebook_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 bg-white dark:bg-gray-800 rounded-full text-[#1877F2] shadow-sm hover:shadow-md transition-all transform hover:scale-110"
@@ -310,7 +319,7 @@ function MenuPage({ type }) {
               )}
               {menu?.business?.instagram_url && (
                 <a
-                  href={menu.business.instagram_url}
+                  href={normalizeUrl(menu.business.instagram_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 bg-white dark:bg-gray-800 rounded-full text-[#E4405F] shadow-sm hover:shadow-md transition-all transform hover:scale-110"
@@ -321,7 +330,7 @@ function MenuPage({ type }) {
               )}
               {menu?.business?.twitter_url && (
                 <a
-                  href={menu.business.twitter_url}
+                  href={normalizeUrl(menu.business.twitter_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 bg-white dark:bg-gray-800 rounded-full text-[#1DA1F2] shadow-sm hover:shadow-md transition-all transform hover:scale-110"
@@ -332,7 +341,7 @@ function MenuPage({ type }) {
               )}
               {menu?.business?.snapchat_url && (
                 <a
-                  href={menu.business.snapchat_url}
+                  href={normalizeUrl(menu.business.snapchat_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 bg-white dark:bg-gray-800 rounded-full text-[#FFFC00] shadow-sm hover:shadow-md transition-all transform hover:scale-110"
