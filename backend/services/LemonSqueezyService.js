@@ -1,6 +1,6 @@
-
 import axios from 'axios';
 import crypto from 'crypto';
+import { Op } from 'sequelize';
 import Subscription from '../models/Subscription.js';
 import Business from '../models/Business.js';
 import logger from '../config/logger.js';
@@ -67,11 +67,16 @@ class LemonSqueezyService {
      * @param {string} userEmail - Pre-fill email
      * @returns {Promise<string>} Checkout URL
      */
-    async createCheckout(businessId, variantId, userEmail) {
+    async createCheckout(businessId, variantId, userEmail, upgradeFromSubId = null) {
         try {
             const { storeId } = getLSConfig();
             const api = getApi();
             const frontendUrl = process.env.FRONTEND_URL || 'https://app.madna.me';
+
+            const customData = { business_id: businessId };
+            if (upgradeFromSubId) {
+                customData.upgrade_from_sub_id = upgradeFromSubId;
+            }
 
             const payload = {
                 data: {
@@ -82,9 +87,7 @@ class LemonSqueezyService {
                         },
                         checkout_data: {
                             email: userEmail,
-                            custom: {
-                                business_id: businessId
-                            }
+                            custom: customData
                         }
                     },
                     relationships: {
@@ -236,10 +239,36 @@ class LemonSqueezyService {
             billingInterval = 'annual';
         }
 
-        await Subscription.upsert({
+        const newSubscriptionId = attributes.subscription_id?.toString() || data.id?.toString();
+
+        // 1. Cancel previous active subscriptions for this business if they differ from the new one
+        const whereClause = {
             business_id: businessId,
-            lemon_squeezy_subscription_id: attributes.subscription_id?.toString() || data.id,
-            lemon_squeezy_customer_id: attributes.customer_id.toString(),
+            status: ['active', 'trial', 'past_due']
+        };
+        if (newSubscriptionId) {
+            whereClause.lemon_squeezy_subscription_id = { [Op.ne]: newSubscriptionId };
+        }
+        const previousActiveSubs = await Subscription.findAll({ where: whereClause });
+
+        for (const oldSub of previousActiveSubs) {
+            if (oldSub.lemon_squeezy_subscription_id) {
+                try {
+                    await this.cancelSubscription(oldSub.lemon_squeezy_subscription_id);
+                } catch (err) {
+                    logger.error(`Failed to cancel old subscription ${oldSub.lemon_squeezy_subscription_id} during upgrade:`, err);
+                }
+            }
+            await oldSub.update({
+                status: 'cancelled',
+                lemon_squeezy_status: 'cancelled',
+                cancelled_at: new Date()
+            });
+        }
+
+        const subData = {
+            business_id: businessId,
+            lemon_squeezy_customer_id: attributes.customer_id?.toString(),
             lemon_squeezy_variant_id: variantId,
             lemon_squeezy_status: attributes.status,
             status: attributes.status === 'active' || attributes.status === 'on_trial' ? 'active' : 'expired',
@@ -249,7 +278,22 @@ class LemonSqueezyService {
             billing_cycle_start: attributes.created_at, // Approximation
             amount: attributes.total / 100, // Convert cents to dollars/SAR
             currency: attributes.currency
-        });
+        };
+
+        // 2. Insert or update the CURRENT subscription record
+        let currentSub = null;
+        if (newSubscriptionId) {
+            currentSub = await Subscription.findOne({
+                where: { lemon_squeezy_subscription_id: newSubscriptionId }
+            });
+        }
+
+        if (currentSub) {
+            await currentSub.update(subData);
+        } else {
+            subData.lemon_squeezy_subscription_id = newSubscriptionId;
+            await Subscription.create(subData);
+        }
 
         // Also update Business table status
         await Business.update(

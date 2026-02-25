@@ -104,8 +104,14 @@ export const generateCheckout = async (req, res) => {
             });
         }
 
+        const currentSub = await Subscription.findOne({
+            where: { business_id: businessId, status: ['active', 'trial', 'past_due'] },
+            order: [['created_at', 'DESC']]
+        });
+        const upgradeFromSubId = currentSub?.lemon_squeezy_subscription_id || null;
+
         // Retrieve the checkout URL
-        const checkoutUrl = await LemonSqueezyService.createCheckout(businessId, targetVariantId, req.business.email);
+        const checkoutUrl = await LemonSqueezyService.createCheckout(businessId, targetVariantId, req.business.email, upgradeFromSubId);
         res.json({ success: true, checkoutUrl });
     } catch (error) {
         logger.error('Checkout Generation Error:', error);
