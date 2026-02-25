@@ -108,7 +108,8 @@
       "crNumberHelp": "Enter 10 digits only",
       "businessDescription": "Business Description",
       "businessDescriptionPlaceholder": "Describe your business services",
-      "businessDetails": "Business Details"
+      "businessDetails": "Business Details",
+      "phone": "Business Phone"
     },
     "locationContact": {
       "locationContact": "Location & Contact",

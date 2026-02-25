@@ -1,4 +1,13 @@
 {
+  "dashboard": {
+    "subscription": {
+      "title": "اشتراكك",
+      "usageSummary": "إدارة خطتك وحدود الاستخدام.",
+      "upgradePrompt": "ترقية الخطة",
+      "manageBilling": "إدارة الفواتير",
+      "trialEnding": "تنتهي الفترة التجريبية خلال {{days}} يوم"
+    }
+  },
   "loading": "جاري التحميل...",
   "view": "عرض",
   "delete": "حذف",
@@ -383,6 +392,9 @@
     "posAccessActive": "نقاط البيع نشطة",
     "posAccessDisabled": "نقاط البيع معطلة",
     "posAccessNotConfigured": "نقاط البيع غير مجهزة",
+    "posAccess": "الوصول لنقاط البيع",
+    "posAccessDesc": "حالة الوصول لنقاط البيع",
+    "planLimitReached": "تم الوصول للحد الأقصى للخطة",
     "disablePosTerminalAccessTitle": "تعطيل الوصول لطرفية نقاط البيع؟",
     "disablePosTerminalAccessMessage": "سيؤدي هذا فوراً إلى منع مديري الفروع من تسجيل الدخول لطرفية نقاط البيع وإجراء عمليات المبيعات. سيتم إنهاء أي جلسات نشطة. هل أنت متأكد؟",
     "posAccessEnabledSuccess": "تم تفعيل وصول نقاط البيع بنجاح",

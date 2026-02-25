@@ -63,6 +63,7 @@
   "about": "حول",
   "contact": "اتصل بنا",
   "itemCount": "{{count}} عنصر",
+  "itemCount_plural": "{{count}} عناصر",
   "locationType": {
     "region": "منطقة",
     "city": "مدينة",
@@ -118,8 +119,11 @@
   "time": {
     "justNow": "الآن",
     "minutesAgo": "منذ {{count}} دقيقة",
+    "minutesAgo_plural": "منذ {{count}} دقائق",
     "hoursAgo": "منذ {{count}} ساعة",
-    "daysAgo": "منذ {{count}} يوم"
+    "hoursAgo_plural": "منذ {{count}} ساعات",
+    "daysAgo": "منذ {{count}} يوم",
+    "daysAgo_plural": "منذ {{count}} أيام"
   },
   "location": {
     "searchPlaceholder": "ابحث عن المنطقة أو المدينة أو الحي..."

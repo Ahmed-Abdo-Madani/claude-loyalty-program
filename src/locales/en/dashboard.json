@@ -1,4 +1,13 @@
 {
+  "dashboard": {
+    "subscription": {
+      "title": "Your Subscription",
+      "usageSummary": "Manage your plan and usage limits.",
+      "upgradePrompt": "Upgrade Plan",
+      "manageBilling": "Manage Billing",
+      "trialEnding": "Trial ends in {{days}} days"
+    }
+  },
   "loading": "Loading...",
   "view": "View",
   "delete": "Delete",
@@ -376,6 +385,9 @@
     "posAccessActive": "POS Active",
     "posAccessDisabled": "POS Disabled",
     "posAccessNotConfigured": "POS Not Configured",
+    "posAccess": "POS Access",
+    "posAccessDesc": "POS Access Status",
+    "planLimitReached": "Plan limit reached",
     "disablePosTerminalAccessTitle": "Disable POS Terminal Access?",
     "disablePosTerminalAccessMessage": "This will immediately prevent branch managers from logging in to the POS terminal and performing sales operations. Any active sessions will be terminated. Are you sure?",
     "posAccessEnabledSuccess": "POS access enabled successfully",

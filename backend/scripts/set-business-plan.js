@@ -1,8 +1,8 @@
 import sequelize from '../config/database.js'
 
 async function setPlan() {
-    const email = 'saiko@madna.me'
-    const plan = 'loyalty_professional'
+    const email = 'toni91994@gmail.com'
+    const plan = 'pos_business'
 
     try {
         console.log(`🔍 Finding business with email: ${email}`)

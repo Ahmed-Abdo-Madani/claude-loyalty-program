@@ -108,7 +108,8 @@
       "crNumberHelp": "أدخل 10 أرقام فقط",
       "businessDescription": "وصف الأعمال",
       "businessDescriptionPlaceholder": "صف خدمات أعمالك",
-      "businessDetails": "تفاصيل النشاط التجاري"
+      "businessDetails": "تفاصيل النشاط التجاري",
+      "phone": "هاتف الأعمال"
     },
     "locationContact": {
       "locationContact": "الموقع والتواصل",
