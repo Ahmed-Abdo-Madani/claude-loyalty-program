@@ -2,8 +2,8 @@ import { useState, useEffect, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ViewColumnsIcon, ListBulletIcon } from '@heroicons/react/24/outline'
 import useMediaQuery from '../../hooks/useMediaQuery'
-import useResponsiveImage from '../../hooks/useResponsiveImage'
-import { apiBaseUrl } from '../../utils/secureAuth'
+import { useResponsiveImage } from '../../hooks/useResponsiveImage'
+import { apiBaseUrl } from '../../config/api'
 
 export default function ProductGrid({ products, onAddToCart, loading }) {
   const { t, i18n } = useTranslation('pos')
@@ -84,8 +84,8 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
         <button
           onClick={() => toggleViewMode('list')}
           className={`p-2 rounded-lg transition-colors ${viewMode === 'list'
-              ? 'bg-primary text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            ? 'bg-primary text-white'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           title={t('products.viewMode.switchToList')}
           aria-label={t('products.viewMode.switchToList')}
@@ -95,8 +95,8 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
         <button
           onClick={() => toggleViewMode('grid')}
           className={`p-2 rounded-lg transition-colors ${viewMode === 'grid'
-              ? 'bg-primary text-white'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+            ? 'bg-primary text-white'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           title={t('products.viewMode.switchToGrid')}
           aria-label={t('products.viewMode.switchToGrid')}
@@ -143,13 +143,13 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
 const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdded, t, i18n }) {
   const isDisabled = product.status !== 'active'
   const displayName = i18n.language === 'ar' && product.name_ar ? product.name_ar : product.name
-  const imageUrl = useResponsiveImage(product, apiBaseUrl, 'list')
+  const { imageUrl } = useResponsiveImage(product, apiBaseUrl)
 
   return (
     <div
       className={`bg-white dark:bg-gray-800 rounded-lg p-3 flex items-center gap-3 border transition-all ${isDisabled
-          ? 'opacity-50 border-gray-200 dark:border-gray-700'
-          : 'border-gray-200 dark:border-gray-700 hover:border-primary active:scale-[0.98]'
+        ? 'opacity-50 border-gray-200 dark:border-gray-700'
+        : 'border-gray-200 dark:border-gray-700 hover:border-primary active:scale-[0.98]'
         }`}
     >
       {/* Product Image - 60x60px */}
@@ -202,8 +202,8 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
         onClick={() => onQuickAdd(product)}
         disabled={isDisabled}
         className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex-shrink-0 ${isAdded
-            ? 'bg-green-500 text-white'
-            : 'bg-primary text-white hover:bg-primary-dark active:scale-95'
+          ? 'bg-green-500 text-white'
+          : 'bg-primary text-white hover:bg-primary-dark active:scale-95'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         {isAdded ? '✓' : t('products.quickAdd')}
@@ -216,17 +216,17 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
 const ProductGridCard = memo(function ProductGridCard({ product, onClick, isAdded, t, i18n }) {
   const isDisabled = product.status !== 'active'
   const displayName = i18n.language === 'ar' && product.name_ar ? product.name_ar : product.name
-  const imageUrl = useResponsiveImage(product, apiBaseUrl, 'grid')
+  const { imageUrl } = useResponsiveImage(product, apiBaseUrl)
 
   return (
     <button
       onClick={onClick}
       disabled={isDisabled}
       className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 text-left border-2 transition-all ${isDisabled
-          ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700'
-          : isAdded
-            ? 'border-green-500 scale-95'
-            : 'border-transparent hover:border-primary hover:shadow-md active:scale-95'
+        ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700'
+        : isAdded
+          ? 'border-green-500 scale-95'
+          : 'border-transparent hover:border-primary hover:shadow-md active:scale-95'
         }`}
     >
       {/* Product Image */}
