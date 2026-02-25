@@ -186,18 +186,21 @@ export default function PaymentCallbackPage() {
       const data = await response.json()
 
       if (data.success) {
+        let resultToSend = null;
+
         // Payment successful
         if (isPaymentMethodUpdate) {
           // Payment method update success
-          setPaymentResult({
+          resultToSend = {
             success: true,
             isPaymentMethodUpdate: true,
             paymentMethod: data.data,
             message: data.message
-          })
+          };
+          setPaymentResult(resultToSend)
         } else {
           // Subscription activation/reactivation success
-          setPaymentResult({
+          resultToSend = {
             success: true,
             isReactivation,
             subscription: data.subscription,
@@ -205,7 +208,8 @@ export default function PaymentCallbackPage() {
             amount: data.subscription?.amount,
             nextBillingDate: data.subscription?.next_billing_date,
             hasToken: data.subscription?.has_token
-          })
+          };
+          setPaymentResult(resultToSend)
 
           // Update localStorage with new subscription data (Comment 1: use helper)
           if (data.subscription) {
@@ -234,7 +238,7 @@ export default function PaymentCallbackPage() {
         }
 
         // Start countdown for auto-redirect
-        startCountdown()
+        startCountdown(resultToSend)
       } else {
         // Payment failed
         setPaymentResult({
@@ -275,7 +279,7 @@ export default function PaymentCallbackPage() {
   }
 
   // Start countdown timer for auto-redirect
-  const startCountdown = () => {
+  const startCountdown = (resultToSend) => {
     countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -284,7 +288,7 @@ export default function PaymentCallbackPage() {
           if (isPaymentMethodUpdate) {
             navigate('/dashboard/subscription')
           } else {
-            navigate('/subscription/success', { state: { paymentResult } })
+            navigate('/subscription/success', { state: { paymentResult: resultToSend } })
           }
           return 0
         }
