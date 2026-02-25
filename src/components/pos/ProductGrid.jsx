@@ -1,6 +1,9 @@
 import { useState, useEffect, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ViewColumnsIcon, ListBulletIcon } from '@heroicons/react/24/outline'
+import useMediaQuery from '../../hooks/useMediaQuery'
+import useResponsiveImage from '../../hooks/useResponsiveImage'
+import { apiBaseUrl } from '../../utils/secureAuth'
 
 export default function ProductGrid({ products, onAddToCart, loading }) {
   const { t, i18n } = useTranslation('pos')
@@ -8,18 +11,19 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
   const [addedProductId, setAddedProductId] = useState(null)
 
   // Load saved view preference and detect device type
+  const isMobile = useMediaQuery('(max-width: 767px)')
+
   useEffect(() => {
     const savedMode = localStorage.getItem('posViewMode')
-    const isMobile = window.innerWidth < 768
-    
-    if (isMobile) {
-      setViewMode('list') // Force list on mobile
-    } else if (savedMode) {
+
+    if (savedMode) {
       setViewMode(savedMode)
+    } else if (isMobile) {
+      setViewMode('list') // Default to list on mobile
     } else {
       setViewMode('grid') // Default to grid on tablet+
     }
-  }, [])
+  }, [isMobile])
 
   // Handle view mode toggle
   const toggleViewMode = (mode) => {
@@ -31,27 +35,24 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
   const handleQuickAdd = (product) => {
     onAddToCart(product)
     setAddedProductId(product.public_id)
-    
+
     // Haptic feedback on mobile
     if (navigator.vibrate) {
       navigator.vibrate(50)
     }
-    
+
     // Clear feedback after animation
     setTimeout(() => setAddedProductId(null), 600)
   }
-
-  // Detect if mobile to hide view toggle
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   if (loading) {
     return (
       /* Loading Skeleton */
       <div className={viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'}>
         {[...Array(8)].map((_, i) => (
-          <div 
-            key={i} 
-            className={viewMode === 'list' 
+          <div
+            key={i}
+            className={viewMode === 'list'
               ? 'bg-gray-200 dark:bg-gray-700 rounded-lg h-20 animate-pulse'
               : 'bg-gray-200 dark:bg-gray-700 rounded-lg h-48 animate-pulse'
             }
@@ -78,35 +79,31 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
 
   return (
     <div>
-      {/* View Mode Toggle - Hide on Mobile */}
-      {!isMobile && (
-        <div className="flex justify-end mb-3 gap-2">
-          <button
-            onClick={() => toggleViewMode('list')}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'list'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+      {/* View Mode Toggle */}
+      <div className="flex justify-end mb-3 gap-2">
+        <button
+          onClick={() => toggleViewMode('list')}
+          className={`p-2 rounded-lg transition-colors ${viewMode === 'list'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
-            title={t('products.viewMode.switchToList')}
-            aria-label={t('products.viewMode.switchToList')}
-          >
-            <ListBulletIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => toggleViewMode('grid')}
-            className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'grid'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+          title={t('products.viewMode.switchToList')}
+          aria-label={t('products.viewMode.switchToList')}
+        >
+          <ListBulletIcon className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => toggleViewMode('grid')}
+          className={`p-2 rounded-lg transition-colors ${viewMode === 'grid'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
-            title={t('products.viewMode.switchToGrid')}
-            aria-label={t('products.viewMode.switchToGrid')}
-          >
-            <ViewColumnsIcon className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+          title={t('products.viewMode.switchToGrid')}
+          aria-label={t('products.viewMode.switchToGrid')}
+        >
+          <ViewColumnsIcon className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* Product List/Grid */}
       {viewMode === 'list' ? (
@@ -146,20 +143,20 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
 const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdded, t, i18n }) {
   const isDisabled = product.status !== 'active'
   const displayName = i18n.language === 'ar' && product.name_ar ? product.name_ar : product.name
-  
+  const imageUrl = useResponsiveImage(product, apiBaseUrl, 'list')
+
   return (
-    <div 
-      className={`bg-white dark:bg-gray-800 rounded-lg p-3 flex items-center gap-3 border transition-all ${
-        isDisabled 
-          ? 'opacity-50 border-gray-200 dark:border-gray-700' 
+    <div
+      className={`bg-white dark:bg-gray-800 rounded-lg p-3 flex items-center gap-3 border transition-all ${isDisabled
+          ? 'opacity-50 border-gray-200 dark:border-gray-700'
           : 'border-gray-200 dark:border-gray-700 hover:border-primary active:scale-[0.98]'
-      }`}
+        }`}
     >
       {/* Product Image - 60x60px */}
       <div className="w-[60px] h-[60px] bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-        {product.image_url ? (
-          <img 
-            src={product.image_url} 
+        {imageUrl ? (
+          <img
+            src={imageUrl}
             alt={displayName}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -171,13 +168,13 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
           <div className="text-3xl">📦</div>
         )}
       </div>
-      
+
       {/* Product Info - Flex Grow */}
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-gray-900 dark:text-white text-sm line-clamp-1 mb-1">
           {displayName}
         </h3>
-        
+
         {/* Price and Category */}
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-primary">
@@ -185,13 +182,13 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
           </span>
           {product.category && (
             <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {i18n.language === 'ar' && product.category.name_ar 
-                ? product.category.name_ar 
+              {i18n.language === 'ar' && product.category.name_ar
+                ? product.category.name_ar
                 : product.category.name}
             </span>
           )}
         </div>
-        
+
         {/* Out of Stock Badge */}
         {product.status === 'out_of_stock' && (
           <span className="inline-block px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded font-semibold mt-1">
@@ -199,16 +196,15 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
           </span>
         )}
       </div>
-      
+
       {/* Quick Add Button */}
       <button
         onClick={() => onQuickAdd(product)}
         disabled={isDisabled}
-        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex-shrink-0 ${
-          isAdded
+        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex-shrink-0 ${isAdded
             ? 'bg-green-500 text-white'
             : 'bg-primary text-white hover:bg-primary-dark active:scale-95'
-        } disabled:opacity-50 disabled:cursor-not-allowed`}
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         {isAdded ? '✓' : t('products.quickAdd')}
       </button>
@@ -220,24 +216,24 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
 const ProductGridCard = memo(function ProductGridCard({ product, onClick, isAdded, t, i18n }) {
   const isDisabled = product.status !== 'active'
   const displayName = i18n.language === 'ar' && product.name_ar ? product.name_ar : product.name
-  
+  const imageUrl = useResponsiveImage(product, apiBaseUrl, 'grid')
+
   return (
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 text-left border-2 transition-all ${
-        isDisabled
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 text-left border-2 transition-all ${isDisabled
           ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700'
           : isAdded
-          ? 'border-green-500 scale-95'
-          : 'border-transparent hover:border-primary hover:shadow-md active:scale-95'
-      }`}
+            ? 'border-green-500 scale-95'
+            : 'border-transparent hover:border-primary hover:shadow-md active:scale-95'
+        }`}
     >
       {/* Product Image */}
       <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
-        {product.image_url ? (
-          <img 
-            src={product.image_url} 
+        {imageUrl ? (
+          <img
+            src={imageUrl}
             alt={displayName}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -249,12 +245,12 @@ const ProductGridCard = memo(function ProductGridCard({ product, onClick, isAdde
           <div className="text-4xl">📦</div>
         )}
       </div>
-      
+
       {/* Product Name */}
       <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 line-clamp-2 min-h-[2.5rem]">
         {displayName}
       </h3>
-      
+
       {/* Price */}
       <div className="flex justify-between items-center">
         <span className="text-lg font-bold text-primary">
@@ -264,18 +260,18 @@ const ProductGridCard = memo(function ProductGridCard({ product, onClick, isAdde
           {t('common.sar')}
         </span>
       </div>
-      
+
       {/* Category Badge */}
       {product.category && (
         <div className="mt-2">
           <span className="inline-block px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded truncate max-w-full">
-            {i18n.language === 'ar' && product.category.name_ar 
-              ? product.category.name_ar 
+            {i18n.language === 'ar' && product.category.name_ar
+              ? product.category.name_ar
               : product.category.name}
           </span>
         </div>
       )}
-      
+
       {/* Out of Stock Badge */}
       {product.status === 'out_of_stock' && (
         <div className="mt-2">
@@ -284,7 +280,7 @@ const ProductGridCard = memo(function ProductGridCard({ product, onClick, isAdde
           </span>
         </div>
       )}
-      
+
       {/* Added Checkmark */}
       {isAdded && (
         <div className="mt-2 text-center">
