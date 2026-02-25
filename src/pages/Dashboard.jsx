@@ -19,7 +19,7 @@ import PlanUpgradeModal from '../components/PlanUpgradeModal'
 import LogoUploadModal from '../components/LogoUploadModal'
 import BusinessSettingsTab from '../components/BusinessSettingsTab'
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid'
-import { isAuthenticated, logout, getAuthData } from '../utils/secureAuth'
+import { isAuthenticated, logout, getAuthData, setSubscriptionData as setSecureSubscriptionData } from '../utils/secureAuth'
 import { endpoints, secureApi } from '../config/api'
 import SEO from '../components/SEO'
 
@@ -122,6 +122,9 @@ function Dashboard() {
         if (subResponseData.success) {
           subData = subResponseData.data;
           setSubscriptionData(subData);
+          if (subData.subscription) {
+            setSecureSubscriptionData(subData.subscription);
+          }
         }
       } catch (err) {
         console.warn('Failed to parse subscription data', err);
@@ -433,7 +436,10 @@ function Dashboard() {
               )}
 
               {activeTab === 'branches' && (
-                <BranchesTab analytics={analytics} />
+                <BranchesTab
+                  analytics={analytics}
+                  planType={subscriptionData?.subscription?.plan_type}
+                />
               )}
 
               {activeTab === 'products' && (

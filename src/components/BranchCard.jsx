@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import StatusBadge from './StatusBadge'
-import { isPOSPlan, isLoyaltyPlan } from '../utils/secureAuth'
+import { isPOSPlan } from '../utils/secureAuth'
 import {
   BuildingStorefrontIcon,
   HomeModernIcon,
@@ -23,18 +23,19 @@ function BranchCard({
   onEdit,
   onDelete,
   onToggleStatus,
-  onManagerAccess
+  onManagerAccess,
+  planType: propPlanType
 }) {
   const { t, i18n } = useTranslation('dashboard')
   const [showDeactivateWarning, setShowDeactivateWarning] = useState(false)
   const navigate = useNavigate()
-  const [planType, setPlanType] = useState('loyalty')
 
-  useEffect(() => {
-    if (isPOSPlan()) {
-      setPlanType('pos')
-    }
-  }, [])
+  // Use prop if available, otherwise fallback to local storage
+  const isPos = typeof propPlanType === 'string'
+    ? propPlanType.startsWith('pos_')
+    : isPOSPlan();
+
+  const planType = isPos ? 'pos' : 'loyalty';
 
   const isActive = branch.status === 'active'
 

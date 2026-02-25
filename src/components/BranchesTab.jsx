@@ -10,7 +10,7 @@ import UsageIndicator from './UsageIndicator'
 import { endpoints, secureApi } from '../config/api'
 import { validateSecureBranchId } from '../utils/secureAuth'
 
-function BranchesTab({ analytics, demoData, onAddBranch }) {
+function BranchesTab({ analytics, demoData, onAddBranch, planType }) {
   const { t } = useTranslation('dashboard')
   const [branches, setBranches] = useState(demoData || [])
   const [loading, setLoading] = useState(!demoData)
@@ -307,6 +307,7 @@ function BranchesTab({ analytics, demoData, onAddBranch }) {
         onToggleStatus={toggleBranchStatus}
         onRefresh={loadBranches}
         onManagerAccess={setShowManagerAccessModal}
+        planType={planType}
       />
 
       {/* Delete Confirmation Modal - Full-screen on mobile */}

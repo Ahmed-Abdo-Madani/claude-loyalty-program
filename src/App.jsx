@@ -90,6 +90,7 @@ function App() {
             <Route path="/test" element={<TestPage />} />
             <Route path="/business/register" element={<BusinessRegistrationPage />} />
             <Route path="/subscription/checkout" element={<CheckoutPage />} />
+            <Route path="/subscription/checkout/success" element={<CheckoutSuccessPage />} />
             <Route path="/subscription/success" element={<CheckoutSuccessPage />} />
             <Route path="/subscription/payment-callback" element={<PaymentCallbackPage />} />
             <Route path="/subscription/suspended" element={<SuspendedAccountPage />} />
