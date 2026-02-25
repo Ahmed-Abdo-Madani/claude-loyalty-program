@@ -154,7 +154,7 @@ export const getSubscriptionDetails = async (req, res) => {
         const limits = Object.fromEntries(
             Object.entries(rawLimits || {}).map(([k, v]) => [
                 k,
-                v === Infinity ? 'unlimited' : v
+                (v === Infinity || v < 0) ? 'unlimited' : v
             ])
         );
 
@@ -299,11 +299,11 @@ export const getAvailablePlans = async (req, res) => {
             if (key.startsWith('loyalty_')) category = 'loyalty';
             else if (key.startsWith('pos_')) category = 'pos';
 
-            // Normalize limits to handle Infinity -> 'unlimited'
+            // Normalize limits to handle Infinity/-1 -> 'unlimited'
             const normalizedLimits = Object.fromEntries(
                 Object.entries(plan.limits || {}).map(([k, v]) => [
                     k,
-                    v === Infinity ? 'unlimited' : v
+                    (v === Infinity || v < 0) ? 'unlimited' : v
                 ])
             );
 

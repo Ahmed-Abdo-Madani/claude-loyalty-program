@@ -232,14 +232,17 @@ class SubscriptionService {
         });
       }
 
+      // Normalize unlimited marker (-1 or less) to Infinity
+      const normalizedLimit = limit < 0 ? Infinity : limit;
+
       // Check limit
-      const result = this.enforceLimit(currentUsage, limit, limitType);
+      const result = this.enforceLimit(currentUsage, normalizedLimit, limitType);
 
       logger.debug('Subscription limit checked', {
         businessId,
         limitType,
         currentUsage,
-        limit,
+        limit: normalizedLimit,
         allowed: result.allowed,
         plan: business.current_plan
       });
@@ -248,7 +251,7 @@ class SubscriptionService {
         allowed: result.allowed,
         message: result.message,
         current: currentUsage,
-        limit: limit === Infinity ? 'unlimited' : limit,
+        limit: normalizedLimit === Infinity ? 'unlimited' : normalizedLimit,
         plan: business.current_plan
       };
 
@@ -304,6 +307,12 @@ class SubscriptionService {
         };
       }
 
+      // Normalize unlimited limits to 'unlimited' for response
+      const normalizedLimits = {};
+      for (const [key, value] of Object.entries(plan.limits)) {
+        normalizedLimits[key] = value < 0 ? 'unlimited' : value;
+      }
+
       // Fetch active Subscription record for retry/grace metadata
       const subscription = await Subscription.findOne({
         where: { business_id: businessId },
@@ -314,7 +323,7 @@ class SubscriptionService {
         current_plan: business.current_plan,
         subscription_status: business.subscription_status,
         trial_info: trialInfo,
-        limits: plan.limits,
+        limits: normalizedLimits,
         usage,
         features: plan.features,
         can_upgrade: business.current_plan !== 'pos_premium',

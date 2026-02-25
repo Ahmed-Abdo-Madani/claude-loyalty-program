@@ -398,7 +398,11 @@ Business.prototype.getRemainingTrialDays = function () {
 Business.prototype.getPlanLimits = function () {
   try {
     const plan = SubscriptionService.getPlanDefinition(this.current_plan)
-    return plan.limits
+    const normalizedLimits = {}
+    for (const [key, value] of Object.entries(plan.limits)) {
+      normalizedLimits[key] = value < 0 ? 'unlimited' : value
+    }
+    return normalizedLimits
   } catch (error) {
     logger.error('Error getting plan limits', { plan: this.current_plan, error: error.message })
     // Fallback to free plan limits if plan not found/error
