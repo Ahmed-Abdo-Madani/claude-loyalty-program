@@ -78,29 +78,31 @@ const Receipt = sequelize.define('Receipt', {
     // Sequelize runs validation BEFORE beforeCreate, so we must set receipt_number
     // before validation to avoid "cannot be null" errors
     beforeValidate: async (receipt, options) => {
+      if (!receipt.isNewRecord) return
+
       // Auto-generate receipt_number using database-backed counter with lock
       const currentYear = new Date().getFullYear()
-      
+
       // Get transaction from options (required for atomic counter increment)
       const transaction = options.transaction
       if (!transaction) {
         throw new Error('Transaction is required for receipt creation to ensure atomic counter increment')
       }
-      
+
       // Access Counter model via Sequelize registry to avoid initialization issues
       const CounterModel = sequelize.models.Counter
-      
+
       if (!CounterModel) {
         throw new Error('Counter model not initialized in Sequelize registry. Check models/index.js initialization order.')
       }
-      
+
       // Get next counter value with database lock
       const nextNumber = await CounterModel.getNextValue('receipt_number', currentYear, {
         businessId: null, // Global counter
         branchId: null,
         transaction
       })
-      
+
       // Format with leading zeros (5 digits)
       const formattedNumber = String(nextNumber).padStart(5, '0')
       receipt.receipt_number = `RCP-${currentYear}-${formattedNumber}`
@@ -109,30 +111,30 @@ const Receipt = sequelize.define('Receipt', {
 })
 
 // Instance methods
-Receipt.prototype.markAsPrinted = async function() {
+Receipt.prototype.markAsPrinted = async function (options = {}) {
   this.printed_at = new Date()
   this.print_count += 1
-  await this.save()
+  await this.save({ transaction: options.transaction })
   return this
 }
 
-Receipt.prototype.markAsEmailed = async function(email) {
+Receipt.prototype.markAsEmailed = async function (email) {
   this.emailed_at = new Date()
   this.email_recipient = email
   await this.save()
   return this
 }
 
-Receipt.prototype.canReprint = function() {
+Receipt.prototype.canReprint = function () {
   // Business rule: Allow reprints within 24 hours
   if (!this.printed_at) {
     return true
   }
-  
+
   const printDate = new Date(this.printed_at)
   const now = new Date()
   const hoursDifference = (now - printDate) / (1000 * 60 * 60)
-  
+
   return hoursDifference <= 24
 }
 

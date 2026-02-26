@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { endpoints, apiBaseUrl } from '../../config/api'
 import { managerApiRequest } from '../../utils/secureAuth'
+import { generateReceiptHtml, triggerIframePrint } from '../../utils/printReceipt'
 
 /**
  * Receipt Preview Modal
@@ -13,7 +14,6 @@ export default function ReceiptPreviewModal({ isOpen, onClose, saleId, receiptDa
   const [receipt, setReceipt] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const receiptContentRef = useRef(null)
 
   // Load receipt data when modal opens
   useEffect(() => {
@@ -86,94 +86,8 @@ export default function ReceiptPreviewModal({ isOpen, onClose, saleId, receiptDa
     }
   }
 
-  const triggerBrowserPrint = (printWindow) => {
-    if (!receiptContentRef.current) {
-      if (printWindow) printWindow.close()
-      return
-    }
-
-    const receiptHtml = receiptContentRef.current.innerHTML
-    const isRtl = i18n.language === 'ar'
-
-    printWindow.document.write(`
-      <html dir="${isRtl ? 'rtl' : 'ltr'}">
-        <head>
-          <title>Print Receipt</title>
-          <style>
-            @media print {
-              @page { margin: 0; }
-              body { margin: 0; padding: 10mm; }
-            }
-            body {
-              font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-              font-size: 12px;
-              color: #000;
-              background: #fff;
-              max-width: 80mm;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .text-center { text-align: center; }
-            .text-right { text-align: ${isRtl ? 'left' : 'right'}; }
-            .text-left { text-align: ${isRtl ? 'right' : 'left'}; }
-            .font-bold { font-weight: 700; }
-            .font-semibold { font-weight: 600; }
-            .text-sm { font-size: 11px; }
-            .text-xl { font-size: 16px; }
-            .mb-2 { margin-bottom: 8px; }
-            .mb-3 { margin-bottom: 12px; }
-            .mt-1 { margin-top: 4px; }
-            .mt-2 { margin-top: 8px; }
-            .pt-2 { padding-top: 8px; }
-            .pt-3 { padding-top: 12px; }
-            .pt-4 { padding-top: 16px; }
-            .pt-6 { padding-top: 24px; }
-            .pb-4 { padding-bottom: 16px; }
-            .h-16 { height: 64px; }
-            .w-40 { width: 160px; }
-            .h-40 { height: 160px; }
-            .mx-auto { margin-left: auto; margin-right: auto; }
-            .space-y-6 > * + * { margin-top: 24px; }
-            .space-y-2 > * + * { margin-top: 8px; }
-            .flex { display: flex; }
-            .justify-between { justify-content: space-between; }
-            .border-b { border-bottom: 1px dashed #000; }
-            .border-t { border-top: 1px dashed #000; }
-            .border-t-2 { border-top: 2px solid #000; }
-            table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 8px; }
-            th { padding: 8px 4px; border-bottom: 1px solid #000; }
-            td { padding: 6px 4px; border-bottom: 1px dashed #ccc; }
-            img { max-width: 100%; object-fit: contain; }
-            * { color: #000 !important; }
-          </style>
-        </head>
-        <body>
-          <div class="space-y-6">
-            ${receiptHtml}
-          </div>
-          <script>
-            window.onload = () => {
-              setTimeout(() => {
-                window.focus();
-                window.print();
-                setTimeout(() => window.close(), 500);
-              }, 250);
-            };
-          </script>
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
-  }
-
   // Print receipt
   const handlePrint = async () => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) {
-      alert(t('checkout.error.receiptActionFailed') || 'Please allow popups to print')
-      return
-    }
-
     try {
       const response = await managerApiRequest(endpoints.posReceiptPrint(saleId), {
         method: 'POST'
@@ -183,10 +97,11 @@ export default function ReceiptPreviewModal({ isOpen, onClose, saleId, receiptDa
         throw new Error('Failed to print receipt response')
       }
 
-      triggerBrowserPrint(printWindow)
+      const isRtl = i18n.language === 'ar'
+      const html = generateReceiptHtml(receipt, isRtl, apiBaseUrl)
+      triggerIframePrint(html)
     } catch (err) {
       console.error('Failed to print receipt:', err)
-      printWindow.close()
       alert(t('checkout.error.receiptActionFailed'))
     }
   }
@@ -221,7 +136,7 @@ export default function ReceiptPreviewModal({ isOpen, onClose, saleId, receiptDa
               <p className="text-red-600">{t('receipt.error')}: {error}</p>
             </div>
           ) : receipt ? (
-            <div className="space-y-6" ref={receiptContentRef}>
+            <div className="space-y-6">
               {/* Business Header */}
               <div className="text-center border-b border-gray-200 dark:border-gray-700 pb-4">
                 {receipt.business.logo_url && (

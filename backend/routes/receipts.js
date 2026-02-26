@@ -5,6 +5,7 @@ import Receipt from '../models/Receipt.js'
 import Sale from '../models/Sale.js'
 import logger from '../config/logger.js'
 import { attachBusinessFromBranch, checkTrialExpiration } from '../middleware/hybridBusinessAuth.js'
+import sequelize from '../config/database.js'
 
 const router = express.Router()
 
@@ -332,8 +333,10 @@ router.post('/:saleId/regenerate', requireBranchManagerAuth, attachBusinessFromB
     })
 
     // Update receipt
-    receipt.content_json = newContent
-    await receipt.save()
+    await sequelize.transaction(async (t) => {
+      receipt.content_json = newContent
+      await receipt.save({ transaction: t })
+    })
 
     logger.info('Receipt content regenerated', { saleId, receiptNumber: receipt.receipt_number })
 

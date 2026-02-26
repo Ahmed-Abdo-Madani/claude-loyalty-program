@@ -15,6 +15,7 @@ import fs from 'fs'
 import path from 'path'
 import axios from 'axios'
 import { Op } from 'sequelize'
+import sequelize from '../config/database.js'
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000'
 
@@ -858,18 +859,21 @@ class ReceiptService {
    */
   static async markReceiptAsPrinted(receiptNumber) {
     try {
-      const receipt = await Receipt.findOne({
-        where: { receipt_number: receiptNumber }
+      return await sequelize.transaction(async (t) => {
+        const receipt = await Receipt.findOne({
+          where: { receipt_number: receiptNumber },
+          transaction: t
+        })
+
+        if (!receipt) {
+          throw new Error(`Receipt not found: ${receiptNumber}`)
+        }
+
+        await receipt.markAsPrinted({ transaction: t })
+        logger.info('Receipt marked as printed', { receiptNumber })
+
+        return receipt
       })
-
-      if (!receipt) {
-        throw new Error(`Receipt not found: ${receiptNumber}`)
-      }
-
-      await receipt.markAsPrinted()
-      logger.info('Receipt marked as printed', { receiptNumber })
-
-      return receipt
 
     } catch (error) {
       logger.error('Failed to mark receipt as printed', {

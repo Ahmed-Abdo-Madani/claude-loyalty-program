@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { endpoints } from '../../config/api'
+import { endpoints, apiBaseUrl } from '../../config/api'
 import { managerApiRequest, getManagerAuthData } from '../../utils/secureAuth'
 import EnhancedQRScanner from '../EnhancedQRScanner'
+import { generateReceiptHtml, triggerIframePrint } from '../../utils/printReceipt'
 
 export default function CheckoutModal({
   isOpen,
@@ -363,11 +364,41 @@ export default function CheckoutModal({
 
         case 'print':
           // Call print endpoint
-          await managerApiRequest(endpoints.posReceiptPrint(completedSale.public_id), {
+          const printRes = await managerApiRequest(endpoints.posReceiptPrint(completedSale.public_id), {
             method: 'POST'
           })
-          // Show success message
-          alert(t('checkout.success.printSuccess'))
+
+          if (!printRes.ok) {
+            alert(t('checkout.error.receiptActionFailed'))
+            return
+          }
+
+          // Fetch the receipt preview data
+          const previewResponse = await managerApiRequest(
+            endpoints.posReceiptPreview(completedSale.public_id),
+            {
+              headers: {
+                'Accept-Language': i18n.language || 'ar'
+              }
+            }
+          )
+
+          if (!previewResponse.ok) {
+            alert(t('checkout.error.receiptActionFailed'))
+            return
+          }
+
+          const previewData = await previewResponse.json()
+
+          if (!previewData.success) {
+            alert(t('checkout.error.receiptActionFailed'))
+            return
+          }
+
+          const isRtl = i18n.language === 'ar'
+          const html = generateReceiptHtml(previewData.receipt, isRtl, apiBaseUrl)
+          triggerIframePrint(html)
+
           onComplete(completedSale, { action: 'print' })
           break
 
@@ -644,9 +675,9 @@ export default function CheckoutModal({
             {/* Loyalty Warning Alert */}
             {loyaltyWarning && (
               <div className={`mt-3 p-3 rounded-lg border-l-4 text-left ${loyaltyWarning.code === 'OFFER_PAUSED' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 text-yellow-800 dark:text-yellow-200' :
-                  loyaltyWarning.code === 'OFFER_INACTIVE' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-800 dark:text-orange-200' :
-                    loyaltyWarning.code === 'OFFER_EXPIRED' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200' :
-                      'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200'
+                loyaltyWarning.code === 'OFFER_INACTIVE' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 text-orange-800 dark:text-orange-200' :
+                  loyaltyWarning.code === 'OFFER_EXPIRED' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 text-red-800 dark:text-red-200' :
+                    'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-800 dark:text-blue-200'
                 }`}>
                 <div className="flex items-start gap-2">
                   <span className="text-lg">
