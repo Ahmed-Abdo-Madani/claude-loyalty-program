@@ -11,7 +11,11 @@ import {
   GlobeAltIcon,
   QrCodeIcon,
   ArrowRightIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  DevicePhoneMobileIcon,
+  HeartIcon,
+  BuildingStorefrontIcon,
+  ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
 
 function LandingPage() {
@@ -19,10 +23,28 @@ function LandingPage() {
 
   const features = [
     {
-      icon: <MegaphoneIcon className="w-6 h-6" />,
-      titleKey: 'features.automatedEngagement.title',
-      descKey: 'features.automatedEngagement.description',
+      icon: <DevicePhoneMobileIcon className="w-6 h-6" />,
+      titleKey: 'features.liveMenu.title',
+      descKey: 'features.liveMenu.description',
       color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+    },
+    {
+      icon: <HeartIcon className="w-6 h-6" />,
+      titleKey: 'features.loyaltyProgram.title',
+      descKey: 'features.loyaltyProgram.description',
+      color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'
+    },
+    {
+      icon: <BuildingStorefrontIcon className="w-6 h-6" />,
+      titleKey: 'features.multiBranch.title',
+      descKey: 'features.multiBranch.description',
+      color: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400'
+    },
+    {
+      icon: <ArchiveBoxIcon className="w-6 h-6" />,
+      titleKey: 'features.centralizedProducts.title',
+      descKey: 'features.centralizedProducts.description',
+      color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
     },
     {
       icon: <CloudIcon className="w-6 h-6" />,

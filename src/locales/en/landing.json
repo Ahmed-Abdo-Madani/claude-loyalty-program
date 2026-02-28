@@ -40,9 +40,21 @@
   "features": {
     "sectionTitle": "Everything You Need",
     "sectionSubtitle": "A complete suite of tools to grow your business.",
-    "automatedEngagement": {
-      "title": "Automated Engagement",
-      "description": "Keep customers coming back with smart, automated campaigns."
+    "liveMenu": {
+      "title": "Live Menu",
+      "description": "Give your customers a seamless ordering experience with a live, interactive digital menu."
+    },
+    "loyaltyProgram": {
+      "title": "Loyalty Program",
+      "description": "Reward your customers and turn them into lifelong fans with custom loyalty points."
+    },
+    "multiBranch": {
+      "title": "Multi-Branch Management",
+      "description": "Control and monitor all your business locations from a single, unified dashboard."
+    },
+    "centralizedProducts": {
+      "title": "Centralized Products",
+      "description": "Manage your entire inventory and product catalog centrally across all your branches."
     },
     "cloudPos": {
       "title": "Cloud POS",
