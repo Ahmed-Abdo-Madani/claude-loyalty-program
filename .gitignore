@@ -73,7 +73,6 @@ QR-SCANNER-ISSUES-ANALYSIS.md
 
 # Production deployment files (keep local)
 # render.yaml - COMMENTED OUT: Now using Blueprint deployment (render.yaml must be committed)
-.env.production
 deployment/
 
 # Windows batch files
@@ -101,3 +100,7 @@ backend/certificates/apns/*.csr
 
 # Certificate environment variables - SENSITIVE DATA!
 backend/scripts/certificate-env-vars.txt
+
+# Capacitor Native Projects web assets
+ios/App/App/public
+android/app/src/main/assets/public

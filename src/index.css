@@ -459,4 +459,13 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-white/20;
   }
+
+  /* Native Scanner Support */
+  body.scanner-active {
+    background: transparent !important;
+  }
+  body.scanner-active #root,
+  body.scanner-active .app-container {
+    background: transparent !important;
+  }
 }

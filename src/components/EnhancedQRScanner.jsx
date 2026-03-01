@@ -3,8 +3,10 @@ import PropTypes from 'prop-types'
 import { BarcodeDetector } from 'barcode-detector'
 import CryptoJS from 'crypto-js'
 import ApiService from '../utils/api.js'
+import { isNative } from '../utils/platform.js'
+import { startNativeScan, stopNativeScan, toggleNativeFlashlight } from '../utils/scannerService.js'
 
-function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isActive }) {
+function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, isActive }) {
   const videoRef = useRef(null)
   const barcodeDetectorRef = useRef(null)
   const animationFrameRef = useRef(null)
@@ -75,7 +77,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
     if ('BarcodeDetector' in window) {
       return videoElement
     }
-    
+
     // For polyfill browsers (Safari, Firefox), use ImageBitmap or canvas
     try {
       // Try ImageBitmap first (better performance)
@@ -85,7 +87,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
     } catch (error) {
       console.log('ImageBitmap not available, falling back to canvas:', error)
     }
-    
+
     // Fallback to canvas for maximum compatibility
     const canvas = document.createElement('canvas')
     canvas.width = videoElement.videoWidth
@@ -206,11 +208,11 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
           hasColon: cleanedData.includes(':'),
           preview: cleanedData.substring(0, 30) + '...'
         })
-        
+
         // Use full base64 token, no offer hash available
         customerToken = cleanedData
         offerHash = null
-        
+
         console.log('✅ Legacy QR format matched:', {
           customerToken: customerToken.substring(0, 20) + '...',
           offerHash: 'auto-detect',
@@ -260,10 +262,10 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
       }
 
       if (customerToken) {
-        console.log('✅ Valid barcode format detected:', { 
-          customerToken, 
-          offerHash: offerHash || 'auto-detect', 
-          format: barcode.format 
+        console.log('✅ Valid barcode format detected:', {
+          customerToken,
+          offerHash: offerHash || 'auto-detect',
+          format: barcode.format
         })
 
         setScanStatus('success')
@@ -297,106 +299,131 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
         setScanStatus('initializing')
         setErrorMessage('')
 
-        // Check camera permissions and HTTPS requirement
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Camera not supported in this browser')
-        }
+        if (isNative()) {
+          console.log('📱 Initializing Native Barcode Scanner')
+          setHasFlashlight(true)
+          document.body.classList.add('scanner-active')
 
-        // Check if running on HTTPS (required for camera access)
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-          throw new Error('Camera access requires HTTPS. Please use HTTPS or localhost.')
-        }
-
-        console.log('🔒 Camera access check:', {
-          protocol: location.protocol,
-          hostname: location.hostname,
-          mediaDevices: !!navigator.mediaDevices,
-          getUserMedia: !!navigator.mediaDevices?.getUserMedia
-        })
-
-        // Check BarcodeDetector support
-        const hasNativeSupport = 'BarcodeDetector' in window
-        console.log('📊 BarcodeDetector support:', hasNativeSupport ? 'Native' : 'Polyfill')
-
-        // Create BarcodeDetector instance (supports both QR and PDF417)
-        barcodeDetectorRef.current = new BarcodeDetector({ 
-          formats: ['qr_code', 'pdf417'] 
-        })
-        console.log('✅ BarcodeDetector initialized with formats: qr_code, pdf417')
-
-        // Setup camera stream
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
-        })
-        
-        videoRef.current.srcObject = stream
-        
-        // Wait for video to be ready before starting detection
-        await new Promise((resolve) => {
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play()
-            resolve()
-          }
-        })
-
-        // Check for flashlight support (defensive - don't break init if unavailable)
-        try {
-          const videoTrack = stream.getVideoTracks()[0]
-          if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
-            const capabilities = videoTrack.getCapabilities()
-            setHasFlashlight(capabilities.torch === true)
-          } else {
-            setHasFlashlight(false)
-          }
-        } catch (error) {
-          console.log('Flashlight capability check not supported:', error)
-          setHasFlashlight(false)
-        }
-
-        setScanStatus('ready')
-        isRunningRef.current = true
-
-        // Start detection loop
-        const detectBarcodes = async () => {
-          if (!isRunningRef.current || !videoRef.current || !barcodeDetectorRef.current) return
-
-          try {
-            // Check if video is ready
-            if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-              // Get cross-browser compatible detection source
-              const detectionSource = await getDetectionSource(videoRef.current)
-              const barcodes = await barcodeDetectorRef.current.detect(detectionSource)
-              
-              // Filter for QR and PDF417 formats only
-              const validBarcodes = barcodes.filter(b => 
-                b.format === 'qr_code' || b.format === 'pdf417'
-              )
-
-              if (validBarcodes.length > 0) {
-                // Process first valid barcode
-                await handleBarcodeDetection(validBarcodes[0])
+          const cleanup = await startNativeScan(
+            (barcodes) => {
+              if (barcodes.length > 0) {
+                handleBarcodeDetection(barcodes[0])
               }
+            },
+            (errorMsg) => {
+              throw new Error(errorMsg)
+            }
+          )
+
+          barcodeDetectorRef.current = { cleanup }
+          setScanStatus('ready')
+          isRunningRef.current = true
+          console.log('📸 Native Barcode Scanner initialized and started')
+        } else {
+          // Check camera permissions and HTTPS requirement
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Camera not supported in this browser')
+          }
+
+          // Check if running on HTTPS (required for camera access)
+          if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            throw new Error('Camera access requires HTTPS. Please use HTTPS or localhost.')
+          }
+
+          console.log('🔒 Camera access check:', {
+            protocol: location.protocol,
+            hostname: location.hostname,
+            mediaDevices: !!navigator.mediaDevices,
+            getUserMedia: !!navigator.mediaDevices?.getUserMedia
+          })
+
+          // Check BarcodeDetector support
+          const hasNativeSupport = 'BarcodeDetector' in window
+          console.log('📊 BarcodeDetector support:', hasNativeSupport ? 'Native' : 'Polyfill')
+
+          // Create BarcodeDetector instance (supports both QR and PDF417)
+          barcodeDetectorRef.current = new BarcodeDetector({
+            formats: ['qr_code', 'pdf417']
+          })
+          console.log('✅ BarcodeDetector initialized with formats: qr_code, pdf417')
+
+          // Setup camera stream
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          })
+
+          videoRef.current.srcObject = stream
+
+          // Wait for video to be ready before starting detection
+          await new Promise((resolve) => {
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current.play()
+              resolve()
+            }
+          })
+
+          // Check for flashlight support (defensive - don't break init if unavailable)
+          try {
+            const videoTrack = stream.getVideoTracks()[0]
+            if (videoTrack && typeof videoTrack.getCapabilities === 'function') {
+              const capabilities = videoTrack.getCapabilities()
+              setHasFlashlight(capabilities.torch === true)
+            } else {
+              setHasFlashlight(false)
             }
           } catch (error) {
-            console.error('Detection error:', error)
+            console.log('Flashlight capability check not supported:', error)
+            setHasFlashlight(false)
           }
 
-          // Schedule next frame (limit to ~2 scans per second)
-          if (isRunningRef.current) {
-            setTimeout(() => {
-              animationFrameRef.current = requestAnimationFrame(detectBarcodes)
-            }, 500)
+          setScanStatus('ready')
+          isRunningRef.current = true
+
+          // Start detection loop
+          const detectBarcodes = async () => {
+            if (!isRunningRef.current || !videoRef.current || !barcodeDetectorRef.current) return
+
+            try {
+              // Check if video is ready
+              if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+                // Get cross-browser compatible detection source
+                const detectionSource = await getDetectionSource(videoRef.current)
+                const barcodes = await barcodeDetectorRef.current.detect(detectionSource)
+
+                // Filter for QR and PDF417 formats only
+                const validBarcodes = barcodes.filter(b =>
+                  b.format === 'qr_code' || b.format === 'pdf417'
+                )
+
+                if (validBarcodes.length > 0) {
+                  // Process first valid barcode
+                  await handleBarcodeDetection(validBarcodes[0])
+                }
+              }
+            } catch (error) {
+              console.error('Detection error:', error)
+            }
+
+            // Schedule next frame (limit to ~2 scans per second)
+            if (isRunningRef.current) {
+              setTimeout(() => {
+                animationFrameRef.current = requestAnimationFrame(detectBarcodes)
+              }, 500)
+            }
           }
+
+          // Start detection loop
+          detectBarcodes()
+
+          console.log('📸 Web Barcode Scanner initialized and started')
         }
-
-        // Start detection loop
-        detectBarcodes()
-
-        console.log('📸 Barcode Scanner initialized and started')
 
       } catch (error) {
         console.error('❌ Scanner initialization failed:', error)
-        
+        if (isNative()) {
+          document.body.classList.remove('scanner-active')
+        }
+
         // Only set state if still mounted/active
         if (isRunningRef.current) {
           setScanStatus('error')
@@ -433,7 +460,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
     return () => {
       // Stop the detection loop
       isRunningRef.current = false
-      
+
       // Cancel pending animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
@@ -447,6 +474,14 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
         videoRef.current.srcObject = null
       }
 
+      if (isNative()) {
+        document.body.classList.remove('scanner-active')
+        stopNativeScan()
+        if (barcodeDetectorRef.current && barcodeDetectorRef.current.cleanup) {
+          barcodeDetectorRef.current.cleanup()
+        }
+      }
+
       // Clear detector reference
       if (barcodeDetectorRef.current) {
         barcodeDetectorRef.current = null
@@ -456,16 +491,21 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
 
   // Flashlight toggle
   const toggleFlashlight = useCallback(async () => {
-    if (hasFlashlight && videoRef.current && videoRef.current.srcObject) {
-      try {
+    if (!hasFlashlight) return
+
+    try {
+      if (isNative()) {
+        await toggleNativeFlashlight(!flashlightOn)
+        setFlashlightOn(!flashlightOn)
+      } else if (videoRef.current && videoRef.current.srcObject) {
         const videoTrack = videoRef.current.srcObject.getVideoTracks()[0]
         await videoTrack.applyConstraints({
           advanced: [{ torch: !flashlightOn }]
         })
         setFlashlightOn(!flashlightOn)
-      } catch (error) {
-        console.error('Flashlight toggle failed:', error)
       }
+    } catch (error) {
+      console.error('Flashlight toggle failed:', error)
     }
   }, [flashlightOn, hasFlashlight])
 
@@ -497,7 +537,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
       <div className="flex-1 relative overflow-hidden">
         <video
           ref={videoRef}
-          className="w-full h-full object-cover"
+          className={isNative() ? 'hidden' : 'w-full h-full object-cover'}
           playsInline
           muted
           autoPlay
@@ -516,13 +556,12 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
         {/* Targeting Overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div
-            className={`relative w-56 h-56 lg:w-64 lg:h-64 border-[6px] lg:border-4 rounded-lg transition-colors duration-300 ${
-              scanStatus === 'detected' || scanStatus === 'success'
-                ? 'border-green-400 shadow-lg shadow-green-400/50'
-                : scanStatus === 'error'
+            className={`relative w-56 h-56 lg:w-64 lg:h-64 border-[6px] lg:border-4 rounded-lg transition-colors duration-300 ${scanStatus === 'detected' || scanStatus === 'success'
+              ? 'border-green-400 shadow-lg shadow-green-400/50'
+              : scanStatus === 'error'
                 ? 'border-red-400'
                 : 'border-white shadow-2xl shadow-white/30'
-            }`}
+              }`}
             style={{
               background: 'transparent',
               boxShadow: scanStatus === 'detected' ? '0 0 0 9999px rgba(0,0,0,0.5)' : 'none'
@@ -538,15 +577,14 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
 
         {/* Status Indicator */}
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2" aria-live="polite" aria-atomic="true">
-          <div 
-            className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-white font-medium text-sm lg:text-base ${
-              scanStatus === 'ready' || scanStatus === 'scanning' ? 'bg-blue-600' :
+          <div
+            className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-full text-white font-medium text-sm lg:text-base ${scanStatus === 'ready' || scanStatus === 'scanning' ? 'bg-blue-600' :
               scanStatus === 'detected' ? 'bg-yellow-600' :
-              scanStatus === 'processing' ? 'bg-purple-600' :
-              scanStatus === 'success' ? 'bg-green-600' :
-              scanStatus === 'error' ? 'bg-red-600' :
-              'bg-gray-600'
-            }`}
+                scanStatus === 'processing' ? 'bg-purple-600' :
+                  scanStatus === 'success' ? 'bg-green-600' :
+                    scanStatus === 'error' ? 'bg-red-600' :
+                      'bg-gray-600'
+              }`}
             role="status"
           >
             {scanStatus === 'initializing' && '📷 Starting...'}
@@ -600,11 +638,10 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => {}, isA
         {hasFlashlight && (
           <button
             onClick={toggleFlashlight}
-            className={`absolute top-20 right-4 w-14 h-14 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold transition-all shadow-lg z-20 text-2xl lg:text-xl focus:outline-none focus:ring-4 focus:ring-white/50 ${
-              flashlightOn 
-                ? 'bg-yellow-500 text-white shadow-yellow-500/50' 
-                : 'bg-gray-700 text-white'
-            }`}
+            className={`absolute top-20 right-4 w-14 h-14 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold transition-all shadow-lg z-20 text-2xl lg:text-xl focus:outline-none focus:ring-4 focus:ring-white/50 ${flashlightOn
+              ? 'bg-yellow-500 text-white shadow-yellow-500/50'
+              : 'bg-gray-700 text-white'
+              }`}
             aria-label="Toggle flashlight"
             title="Flash"
           >

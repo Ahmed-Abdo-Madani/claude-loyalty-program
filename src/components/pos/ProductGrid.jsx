@@ -83,7 +83,7 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
       <div className="flex justify-end mb-3 gap-2">
         <button
           onClick={() => toggleViewMode('list')}
-          className={`p-2 rounded-lg transition-colors ${viewMode === 'list'
+          className={`p-3 rounded-lg transition-colors ${viewMode === 'list'
             ? 'bg-primary text-white'
             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
@@ -94,7 +94,7 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
         </button>
         <button
           onClick={() => toggleViewMode('grid')}
-          className={`p-2 rounded-lg transition-colors ${viewMode === 'grid'
+          className={`p-3 rounded-lg transition-colors ${viewMode === 'grid'
             ? 'bg-primary text-white'
             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
@@ -122,7 +122,7 @@ export default function ProductGrid({ products, onAddToCart, loading }) {
         </div>
       ) : (
         /* Grid View - Compact Cards */
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 tablet:grid-cols-3 lg:grid-cols-4 gap-3">
           {products.map(product => (
             <ProductGridCard
               key={product.public_id}
@@ -201,7 +201,7 @@ const ProductListRow = memo(function ProductListRow({ product, onQuickAdd, isAdd
       <button
         onClick={() => onQuickAdd(product)}
         disabled={isDisabled}
-        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex-shrink-0 ${isAdded
+        className={`px-4 py-3 min-h-[44px] rounded-lg font-semibold text-sm transition-all flex-shrink-0 ${isAdded
           ? 'bg-green-500 text-white'
           : 'bg-primary text-white hover:bg-primary-dark active:scale-95'
           } disabled:opacity-50 disabled:cursor-not-allowed`}

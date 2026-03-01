@@ -3,6 +3,7 @@
 
 import { endpoints } from '../config/api.js'
 import i18n from '../i18n/config.js'
+import { setManagerItem, getManagerItem, clearManagerSession } from './managerStorage.js'
 
 /**
  * Get stored authentication data
@@ -332,7 +333,8 @@ export default {
   getTrialExpirationData,
   clearTrialExpiration,
   isPOSPlan,
-  isLoyaltyPlan
+  isLoyaltyPlan,
+  isManagerAuthenticatedAsync
 }
 // ============================================
 // Branch Manager Authentication Functions
@@ -341,20 +343,20 @@ export default {
 /**
  * Get stored manager authentication data
  */
-export function getManagerAuthData() {
+export async function getManagerAuthData() {
   return {
-    isAuthenticated: localStorage.getItem('managerAuthenticated') === 'true',
-    branchId: localStorage.getItem('managerBranchId'),
-    branchName: localStorage.getItem('managerBranchName'),
-    managerToken: localStorage.getItem('managerToken')
+    isAuthenticated: (await getManagerItem('managerAuthenticated')) === 'true',
+    branchId: await getManagerItem('managerBranchId'),
+    branchName: await getManagerItem('managerBranchName'),
+    managerToken: await getManagerItem('managerToken')
   }
 }
 
 /**
  * Get manager authentication headers for API requests
  */
-export function getManagerAuthHeaders() {
-  const { managerToken, branchId } = getManagerAuthData()
+export async function getManagerAuthHeaders() {
+  const { managerToken, branchId } = await getManagerAuthData()
 
   if (!managerToken || !branchId) {
     console.warn('⚠️ Missing manager authentication data')
@@ -375,8 +377,8 @@ export function getManagerAuthHeaders() {
 /**
  * Check if manager is authenticated
  */
-export function isManagerAuthenticated() {
-  const { isAuthenticated, branchId, managerToken } = getManagerAuthData()
+export async function isManagerAuthenticatedAsync() {
+  const { isAuthenticated, branchId, managerToken } = await getManagerAuthData()
 
   if (!isAuthenticated || !branchId || !managerToken) {
     return false
@@ -387,8 +389,24 @@ export function isManagerAuthenticated() {
     return false
   }
 
+  const timestampStr = await getManagerItem('managerLoginTimestamp');
+  const timestamp = parseInt(timestampStr, 10);
+
+  if (!timestampStr || isNaN(timestamp)) {
+    await clearManagerSession();
+    return false;
+  }
+
+  const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+  if (Date.now() - timestamp > SESSION_TTL_MS) {
+    await clearManagerSession();
+    return false;
+  }
+
   return true
 }
+
+export const isManagerAuthenticated = isManagerAuthenticatedAsync;
 
 /**
  * Login manager
@@ -407,10 +425,11 @@ export async function managerLogin(branchId, pin) {
     const data = await response.json()
 
     if (data.success && data.token) {
-      localStorage.setItem('managerAuthenticated', 'true')
-      localStorage.setItem('managerToken', data.token)
-      localStorage.setItem('managerBranchId', data.branch.id)
-      localStorage.setItem('managerBranchName', data.branch.name)
+      await setManagerItem('managerAuthenticated', 'true')
+      await setManagerItem('managerToken', data.token)
+      await setManagerItem('managerBranchId', data.branch.id)
+      await setManagerItem('managerBranchName', data.branch.name)
+      await setManagerItem('managerLoginTimestamp', Date.now().toString())
 
       return { success: true }
     } else {
@@ -430,11 +449,8 @@ export async function managerLogin(branchId, pin) {
 /**
  * Logout manager
  */
-export function managerLogout() {
-  localStorage.removeItem('managerAuthenticated')
-  localStorage.removeItem('managerToken')
-  localStorage.removeItem('managerBranchId')
-  localStorage.removeItem('managerBranchName')
+export async function managerLogout() {
+  await clearManagerSession();
 }
 
 /**
@@ -442,7 +458,7 @@ export function managerLogout() {
  */
 export async function managerApiRequest(url, options = {}) {
   const headers = {
-    ...getManagerAuthHeaders(),
+    ...(await getManagerAuthHeaders()),
     ...(options.headers || {})
   }
 
@@ -452,7 +468,7 @@ export async function managerApiRequest(url, options = {}) {
   })
 
   if (response.status === 401) {
-    managerLogout()
+    await managerLogout()
     window.location.href = '/branch-manager-login'
     throw new Error('Authentication expired')
   }

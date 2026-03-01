@@ -10,11 +10,13 @@ import CheckoutModal from '../components/pos/CheckoutModal'
 import ReceiptPreviewModal from '../components/pos/ReceiptPreviewModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import SEO from '../components/SEO'
+import useManagerAutoLock from '../hooks/useManagerAutoLock'
 
 export default function BranchPOS() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation('pos')
-  
+  useManagerAutoLock()
+
   // State Management
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -30,7 +32,7 @@ export default function BranchPOS() {
   const [branchInfo, setBranchInfo] = useState(null)
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0)
   const [isScrolled, setIsScrolled] = useState(false)
-  
+
   // Refs
   const searchDebounceRef = useRef(null)
   const productsContainerRef = useRef(null)
@@ -39,13 +41,13 @@ export default function BranchPOS() {
   useEffect(() => {
     const initializePOS = async () => {
       // Check authentication
-      if (!isManagerAuthenticated()) {
+      if (!(await isManagerAuthenticated())) {
         navigate('/branch-manager-login')
         return
       }
 
       // Load branch info
-      const managerData = getManagerAuthData()
+      const managerData = await getManagerAuthData()
       if (!managerData || !managerData.branchId) {
         setError('Branch information not found')
         return
@@ -64,7 +66,7 @@ export default function BranchPOS() {
 
         // Parse response JSON
         const productsJson = await productsResponse.json()
-        
+
         if (productsJson.success && productsJson.products) {
           setProducts(productsJson.products)
         }
@@ -76,7 +78,7 @@ export default function BranchPOS() {
 
         // Parse response JSON
         const categoriesJson = await categoriesResponse.json()
-        
+
         if (categoriesJson.success && categoriesJson.categories) {
           setCategories(categoriesJson.categories)
         }
@@ -97,11 +99,11 @@ export default function BranchPOS() {
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current)
     }
-    
+
     searchDebounceRef.current = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery)
     }, 300)
-    
+
     return () => {
       if (searchDebounceRef.current) {
         clearTimeout(searchDebounceRef.current)
@@ -132,22 +134,22 @@ export default function BranchPOS() {
   const addToCart = (product) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.product.public_id === product.public_id)
-      
+
       if (existingItem) {
         // Increment quantity
         return prevCart.map(item => {
           if (item.product.public_id === product.public_id) {
             const newQuantity = item.quantity + 1
-            
+
             // Coerce price to number to avoid string concatenation
             const unitPrice = parseFloat(product.price)
-            
+
             // Normalize tax rate: convert percentage to decimal
             const ratePct = parseFloat(product.tax_rate ?? 15) // Default 15% Saudi VAT
             const rate = ratePct / 100
-            
+
             let subtotal, tax, total
-            
+
             if (product.tax_included) {
               // Tax is included in price: derive base price and tax
               const priceWithTax = unitPrice * newQuantity
@@ -160,7 +162,7 @@ export default function BranchPOS() {
               tax = subtotal * rate
               total = subtotal + tax
             }
-            
+
             return {
               ...item,
               quantity: newQuantity,
@@ -175,13 +177,13 @@ export default function BranchPOS() {
         // Add new item
         // Coerce price to number to avoid string concatenation
         const unitPrice = parseFloat(product.price)
-        
+
         // Normalize tax rate: convert percentage to decimal
         const ratePct = parseFloat(product.tax_rate ?? 15)
         const rate = ratePct / 100
-        
+
         let subtotal, tax, total
-        
+
         if (product.tax_included) {
           // Tax is included in price: derive base price and tax
           const priceWithTax = unitPrice
@@ -194,7 +196,7 @@ export default function BranchPOS() {
           tax = subtotal * rate
           total = subtotal + tax
         }
-        
+
         return [...prevCart, {
           product,
           quantity: 1,
@@ -220,13 +222,13 @@ export default function BranchPOS() {
       if (item.product.public_id === productId) {
         // Coerce price to number to avoid string concatenation
         const unitPrice = parseFloat(item.product.price)
-        
+
         // Normalize tax rate: convert percentage to decimal
         const ratePct = parseFloat(item.product.tax_rate ?? 15)
         const rate = ratePct / 100
-        
+
         let subtotal, tax, total
-        
+
         if (item.product.tax_included) {
           // Tax is included in price: derive base price and tax
           const priceWithTax = unitPrice * newQuantity
@@ -239,7 +241,7 @@ export default function BranchPOS() {
           tax = subtotal * rate
           total = subtotal + tax
         }
-        
+
         return {
           ...item,
           quantity: newQuantity,
@@ -279,7 +281,7 @@ export default function BranchPOS() {
       const matchesName = product.name?.toLowerCase().includes(query)
       const matchesNameAr = product.name_ar?.toLowerCase().includes(query)
       const matchesSku = product.sku?.toLowerCase().includes(query)
-      
+
       if (!matchesName && !matchesNameAr && !matchesSku) {
         return false
       }
@@ -300,27 +302,27 @@ export default function BranchPOS() {
   const handleCheckoutComplete = (saleData, options = {}) => {
     // Clear cart
     clearCart()
-    
+
     // Reset loyalty discount
     setLoyaltyDiscount(0)
-    
+
     // Show success message
     // (You can add a toast notification here)
-    
+
     // Handle receipt action if specified
     if (options.action === 'preview') {
       setSelectedSaleForReceipt(saleData)
       setShowReceiptPreview(true)
     }
-    
+
     // Close checkout modal
     setShowCheckout(false)
-    
+
     // Note: print and email actions are handled in CheckoutModal
   }
 
-  const handleLogout = () => {
-    managerLogout()
+  const handleLogout = async () => {
+    await managerLogout()
     navigate('/branch-manager-login')
   }
 
@@ -328,7 +330,7 @@ export default function BranchPOS() {
     <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col overflow-hidden" dir={i18n.dir()}>
       {/* SEO Component */}
       <SEO title={t('title')} description={t('description')} noindex={true} />
-      
+
       {/* Header Bar */}
       <header className="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 sticky top-0 z-20">
         <div className="flex items-center justify-between gap-4">
@@ -357,29 +359,27 @@ export default function BranchPOS() {
           </div>
         </div>
       </header>
-      
+
       {/* Main Content - Split Screen Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        
+      <div className="flex-1 flex flex-col tablet:flex-row overflow-hidden">
+
         {/* Left Side: Product Grid (60% on desktop) */}
-        <div 
+        <div
           ref={productsContainerRef}
-          className="flex-1 lg:w-3/5 overflow-y-auto"
+          className="flex-1 tablet:w-3/5 overflow-y-auto"
         >
           {/* Sticky Filter Bar with Scroll Shadow */}
-          <div className={`sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 transition-shadow ${
-            isScrolled ? 'shadow-md' : ''
-          }`}>
+          <div className={`sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 transition-shadow ${isScrolled ? 'shadow-md' : ''
+            }`}>
             <div className="p-4 pb-0">
               {/* Category Filter Tabs - Scrollable */}
               <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className={`px-4 py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${
-                    selectedCategory === null
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+                  className={`px-4 py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${selectedCategory === null
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                 >
                   {t('categories.all')}
                 </button>
@@ -387,21 +387,20 @@ export default function BranchPOS() {
                   <button
                     key={cat.public_id}
                     onClick={() => setSelectedCategory(cat.public_id)}
-                    className={`px-4 py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${
-                      selectedCategory === cat.public_id
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`px-4 py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm font-medium ${selectedCategory === cat.public_id
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
                   >
                     {i18n.language === 'ar' && cat.name_ar ? cat.name_ar : cat.name}
                   </button>
                 ))}
               </div>
-              
+
               {/* Search Bar with Clear Button */}
               <div className="relative mb-3">
-                <input 
-                  type="search" 
+                <input
+                  type="search"
                   placeholder={t('products.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -419,20 +418,20 @@ export default function BranchPOS() {
               </div>
             </div>
           </div>
-          
+
           {/* Product Grid Component - Scrollable Content */}
           <div className="p-4 pt-2">
-            <ProductGrid 
+            <ProductGrid
               products={filteredProducts}
               onAddToCart={addToCart}
               loading={loading}
             />
           </div>
         </div>
-        
+
         {/* Right Side: Cart (40% on desktop, bottom sheet on mobile) */}
-        <div className="h-[45vh] lg:h-full lg:w-2/5 bg-white dark:bg-gray-800 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700">
-          <POSCart 
+        <div className="h-[50vh] tablet:h-full tablet:w-2/5 bg-white dark:bg-gray-800 border-t tablet:border-t-0 tablet:border-l border-gray-200 dark:border-gray-700">
+          <POSCart
             cart={cart}
             onUpdateQuantity={updateQuantity}
             onRemoveItem={removeFromCart}
@@ -443,10 +442,10 @@ export default function BranchPOS() {
           />
         </div>
       </div>
-      
+
       {/* Checkout Modal */}
       {showCheckout && (
-        <CheckoutModal 
+        <CheckoutModal
           isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
           cart={cart}

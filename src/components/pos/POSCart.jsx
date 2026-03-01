@@ -24,15 +24,15 @@ export default function POSCart({
           </span>
         </div>
         {cart.length > 0 && (
-          <button 
-            onClick={onClearCart} 
-            className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 mt-2 transition-colors"
+          <button
+            onClick={onClearCart}
+            className="text-sm py-2 px-3 inline-flex items-center justify-center min-h-[44px] text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 mt-2 transition-colors"
           >
             {t('cart.clearAll')}
           </button>
         )}
       </div>
-      
+
       {/* Cart Items List - Scrollable */}
       <div className="flex-1 overflow-y-auto p-4 pb-6">
         {cart.length === 0 ? (
@@ -50,16 +50,16 @@ export default function POSCart({
           /* Cart Items */
           <div className="space-y-3">
             {cart.map(item => (
-              <div 
-                key={item.product.public_id} 
+              <div
+                key={item.product.public_id}
                 className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3"
               >
                 {/* Product Name */}
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {i18n.language === 'ar' && item.product.name_ar 
-                        ? item.product.name_ar 
+                      {i18n.language === 'ar' && item.product.name_ar
+                        ? item.product.name_ar
                         : item.product.name}
                     </h3>
                     {i18n.language === 'ar' && item.product.name && (
@@ -73,20 +73,20 @@ export default function POSCart({
                       </p>
                     )}
                   </div>
-                  <button 
+                  <button
                     onClick={() => onRemoveItem(item.product.public_id)}
-                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-2 transition-colors text-xl leading-none"
+                    className="w-11 h-11 flex items-center justify-center text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-2 transition-colors text-xl leading-none"
                     aria-label={t('cart.remove')}
                   >
                     ✕
                   </button>
                 </div>
-                
+
                 {/* Quantity Controls & Price */}
                 <div className="flex justify-between items-center">
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => onUpdateQuantity(item.product.public_id, item.quantity - 1)}
                       className="w-11 h-11 rounded-lg bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 transition-colors"
                       aria-label={t('cart.decrease')}
@@ -96,7 +96,7 @@ export default function POSCart({
                     <span className="w-12 text-center font-semibold text-lg text-gray-900 dark:text-white">
                       {item.quantity}
                     </span>
-                    <button 
+                    <button
                       onClick={() => onUpdateQuantity(item.product.public_id, item.quantity + 1)}
                       className="w-11 h-11 rounded-lg bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 flex items-center justify-center font-bold text-gray-700 dark:text-gray-200 transition-colors"
                       aria-label={t('cart.increase')}
@@ -104,7 +104,7 @@ export default function POSCart({
                       +
                     </button>
                   </div>
-                  
+
                   {/* Line Total */}
                   <div className="text-right">
                     <div className="font-bold text-lg text-gray-900 dark:text-white">
@@ -120,7 +120,7 @@ export default function POSCart({
           </div>
         )}
       </div>
-      
+
       {/* Cart Footer - Totals & Checkout */}
       <div className="border-t border-gray-200 dark:border-gray-700 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-white dark:bg-gray-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
         {/* Totals Breakdown */}
@@ -133,7 +133,7 @@ export default function POSCart({
             <span>{t('cart.tax')}</span>
             <span>{totals.tax.toFixed(2)} {t('common.sar')}</span>
           </div>
-          
+
           {/* Show loyalty discount if applied */}
           {loyaltyDiscount > 0 && (
             <div className="flex justify-between text-green-600 dark:text-green-400 font-semibold">
@@ -141,15 +141,15 @@ export default function POSCart({
               <span>-{loyaltyDiscount.toFixed(2)} {t('common.sar')}</span>
             </div>
           )}
-          
+
           <div className="flex justify-between text-xl font-bold text-gray-900 dark:text-white pt-2 border-t border-gray-200 dark:border-gray-700">
             <span>{t('cart.total')}</span>
             <span>{Math.max(0, totals.total - loyaltyDiscount).toFixed(2)} {t('common.sar')}</span>
           </div>
         </div>
-        
+
         {/* Checkout Button */}
-        <button 
+        <button
           onClick={onCheckout}
           disabled={cart.length === 0}
           className="w-full h-14 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold text-lg rounded-lg transition-colors"

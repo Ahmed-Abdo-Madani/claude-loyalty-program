@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
+  base: process.env.CAPACITOR_BUILD ? './' : '/',
   plugins: [react()],
   publicDir: 'public', // Ensure public folder (including _redirects) is copied to dist
   resolve: {

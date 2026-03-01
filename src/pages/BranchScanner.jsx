@@ -12,10 +12,12 @@ import EnhancedQRScanner from '../components/EnhancedQRScanner'
 import { endpoints } from '../config/api'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import SEO from '../components/SEO'
+import useManagerAutoLock from '../hooks/useManagerAutoLock'
 
 export default function BranchScanner() {
   const { t } = useTranslation('admin')
   const navigate = useNavigate()
+  useManagerAutoLock()
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -32,23 +34,27 @@ export default function BranchScanner() {
       setPlanType('loyalty')
     }
 
-    // Check authentication
-    if (!isManagerAuthenticated()) {
-      navigate('/branch-manager-login')
-      return
+    const checkAuth = async () => {
+      // Check authentication
+      if (!(await isManagerAuthenticated())) {
+        navigate('/branch-manager-login')
+        return
+      }
+
+      // Load branch info
+      const authData = await getManagerAuthData()
+      setBranchInfo(authData)
+
+      // Load today's stats
+      loadTodayStats()
     }
 
-    // Load branch info
-    const authData = getManagerAuthData()
-    setBranchInfo(authData)
-
-    // Load today's stats
-    loadTodayStats()
+    checkAuth()
   }, [navigate])
 
   const loadTodayStats = async () => {
     try {
-      const authData = getManagerAuthData()
+      const authData = await getManagerAuthData()
       const response = await fetch(endpoints.branchManagerStats, {
         headers: {
           'x-branch-id': authData.branchId,
@@ -82,7 +88,7 @@ export default function BranchScanner() {
     setError('')
 
     try {
-      const authData = getManagerAuthData()
+      const authData = await getManagerAuthData()
 
       // Construct URL based on whether offerHash is present (new format) or null (legacy format)
       const scanUrl = offerHash
@@ -193,8 +199,8 @@ export default function BranchScanner() {
     setError(err?.message ?? String(err))
   }
 
-  const handleLogout = () => {
-    managerLogout()
+  const handleLogout = async () => {
+    await managerLogout()
     navigate('/branch-manager-login')
   }
 
