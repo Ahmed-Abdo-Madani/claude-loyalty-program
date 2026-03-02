@@ -39,6 +39,13 @@ function Header() {
             </Link>
             <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
             <Link
+              to="/branch-manager-login"
+              className="hidden md:block text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+            >
+              {t('header.branchLogin')}
+            </Link>
+            <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
+            <Link
               to="/auth?mode=signin"
               className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-blue-400 transition-colors"
             >

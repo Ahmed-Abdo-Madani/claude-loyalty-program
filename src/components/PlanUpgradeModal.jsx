@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { secureApi, endpoints } from '../config/api';
+import ContactSupportModal from './ContactSupportModal';
 
 const PlanUpgradeModal = ({
     isOpen,
@@ -16,6 +17,10 @@ const PlanUpgradeModal = ({
     const navigate = useNavigate();
     const [isAnimating, setIsAnimating] = useState(false);
     const [billingInterval, setBillingInterval] = useState('monthly');
+
+    // Contact Support State
+    const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+    const [contactSubject, setContactSubject] = useState('');
 
     // API Data State
     const [plans, setPlans] = useState([]);
@@ -170,13 +175,20 @@ const PlanUpgradeModal = ({
                 </ul>
 
                 <button
-                    onClick={() => handleSelectPlan(plan)}
-                    disabled={isActive || !canUpgrade}
+                    onClick={() => {
+                        if (canUpgrade) {
+                            handleSelectPlan(plan);
+                        } else {
+                            setContactSubject(`Downgrade inquiry: ${plan.displayName}`);
+                            setIsContactModalOpen(true);
+                        }
+                    }}
+                    disabled={isActive}
                     className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 mt-auto ${isActive
                         ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-default'
                         : canUpgrade
                             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-md'
                         }`}
                 >
                     {isActive
@@ -324,6 +336,12 @@ const PlanUpgradeModal = ({
                     )}
                 </div>
             </div>
+
+            <ContactSupportModal
+                isOpen={isContactModalOpen}
+                onClose={() => setIsContactModalOpen(false)}
+                initialSubject={contactSubject}
+            />
         </div>
     );
 };

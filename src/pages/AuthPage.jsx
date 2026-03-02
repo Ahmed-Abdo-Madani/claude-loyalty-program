@@ -276,6 +276,15 @@ function AuthPage() {
                   mode === 'signin' ? t('businessAuth.signIn') : t('businessAuth.createAccount')
                 )}
               </button>
+
+              {mode === 'signin' && (
+                <p className="text-sm text-center text-gray-500 dark:text-gray-400 mt-4">
+                  {t('businessAuth.branchManagerPrompt')}{' '}
+                  <Link to="/branch-manager-login" className="font-medium text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors">
+                    {t('businessAuth.branchManagerLink')}
+                  </Link>
+                </p>
+              )}
             </form>
 
             {mode === 'signup' && (

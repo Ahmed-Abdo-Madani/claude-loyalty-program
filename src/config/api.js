@@ -223,7 +223,8 @@ export const endpoints = {
 
   // Payment History & Invoice Management
   businessPayments: `${API_BASE_URL}/api/business/payments`,
-  businessInvoices: (invoiceId) => `${API_BASE_URL}/api/business/invoices/${invoiceId}`
+  businessInvoices: (invoiceId) => `${API_BASE_URL}/api/business/invoices/${invoiceId}`,
+  contactSupport: `${API_BASE_URL}/api/contact`
 }
 
 // Secure API helper functions

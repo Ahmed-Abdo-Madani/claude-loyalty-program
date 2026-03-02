@@ -304,6 +304,8 @@ class EmailService {
       replyTo
     } = emailData;
 
+    let attempt = 0;
+
     try {
       this.validateConfig();
 
@@ -329,7 +331,6 @@ class EmailService {
       // Retry configuration
       const maxRetries = parseInt(process.env.EMAIL_RETRY_MAX_ATTEMPTS || '3', 10);
       const baseDelay = 1000; // 1 second
-      let attempt = 0;
       let lastError = null;
 
       while (attempt <= maxRetries) {

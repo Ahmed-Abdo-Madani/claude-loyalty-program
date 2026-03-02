@@ -30,6 +30,13 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
+      # Email Configuration (Resend is the required provider, SendGrid is deprecated)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@madna.me
+      - key: FRONTEND_URL
+        value: https://app.madna.me
     healthCheckPath: /health
     domains:
       - api.madna.me

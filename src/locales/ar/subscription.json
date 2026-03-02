@@ -563,5 +563,19 @@
     "customers": "العملاء",
     "locations": "المواقع",
     "posOperations": "عمليات نقاط البيع"
+  },
+  "contactSupport": {
+    "title": "تواصل مع الدعم",
+    "subtitle": "أرسل رسالة لفريقنا وسنرد عليك في أقرب وقت",
+    "subjectLabel": "الموضوع",
+    "subjectPlaceholder": "اشرح مشكلتك أو سؤالك",
+    "messageLabel": "الرسالة",
+    "messagePlaceholder": "أدرج تفاصيل طلبك...",
+    "sendButton": "إرسال الرسالة",
+    "sending": "جاري الإرسال...",
+    "successTitle": "تم الإرسال!",
+    "successMessage": "استلمنا رسالتك وسنرد عليك خلال 24 ساعة.",
+    "errorMessage": "فشل إرسال الرسالة. حاول مرة أخرى.",
+    "closeButton": "إغلاق"
   }
 }

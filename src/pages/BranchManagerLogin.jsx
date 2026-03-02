@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { managerLogin } from '../utils/secureAuth'
 import SEO from '../components/SEO'
+import EnhancedQRScanner from '../components/EnhancedQRScanner'
 
 export default function BranchManagerLogin() {
   const { t } = useTranslation('auth')
@@ -14,6 +15,7 @@ export default function BranchManagerLogin() {
   const [error, setError] = useState('')
   const [showPinInput, setShowPinInput] = useState(false)
   const [showPin, setShowPin] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const [errorDetails, setErrorDetails] = useState(null)
 
   // Auto-fill branch ID from URL parameter and advance to PIN input
@@ -112,9 +114,42 @@ export default function BranchManagerLogin() {
     setErrorDetails(null)
   }
 
+  const handleQRScanSuccess = (customerToken, offerHash, rawData) => {
+    try {
+      const url = new URL(rawData)
+      const branchParam = url.searchParams.get('branch')
+
+      if (branchParam && branchParam.startsWith('branch_')) {
+        setBranchId(branchParam)
+        setShowScanner(false)
+        setShowPinInput(true)
+        setError('')
+      } else {
+        setError(t('branchManagerAuth.scannerError'))
+        setShowScanner(false)
+      }
+    } catch (err) {
+      setError(t('branchManagerAuth.scannerError'))
+      setShowScanner(false)
+    }
+  }
+
+  const handleQRScanError = () => {
+    setError(t('branchManagerAuth.scannerError'))
+    setShowScanner(false)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <SEO titleKey="pages.branchManager.title" descriptionKey="pages.branchManager.description" noindex={true} />
+
+      <EnhancedQRScanner
+        isActive={showScanner}
+        mode="branch-login"
+        onScanSuccess={handleQRScanSuccess}
+        onScanError={handleQRScanError}
+        onClose={() => setShowScanner(false)}
+      />
 
       <div className="w-full max-w-md">
         {/* Header */}
@@ -204,14 +239,24 @@ export default function BranchManagerLogin() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {t('branchManagerAuth.branchId')}
                 </label>
-                <input
-                  type="text"
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  placeholder={t('branchManagerAuth.branchIdPlaceholder')}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  autoFocus
-                />
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    placeholder={t('branchManagerAuth.branchIdPlaceholder')}
+                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setError(''); setShowScanner(true) }}
+                    className="px-5 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center shrink-0"
+                    title={t('branchManagerAuth.scanQrCode')}
+                  >
+                    <span className="text-xl">📷</span>
+                  </button>
+                </div>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                   {t('branchManagerAuth.branchIdHelp')}
                 </p>

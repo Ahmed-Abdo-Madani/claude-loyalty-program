@@ -563,5 +563,19 @@
     "customers": "Customers",
     "locations": "Locations",
     "posOperations": "POS Operations"
+  },
+  "contactSupport": {
+    "title": "Contact Support",
+    "subtitle": "Send a message to our team and we'll get back to you shortly",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "Describe your issue or question",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Provide details about your request...",
+    "sendButton": "Send Message",
+    "sending": "Sending...",
+    "successTitle": "Message Sent!",
+    "successMessage": "We've received your message and will respond within 24 hours.",
+    "errorMessage": "Failed to send message. Please try again.",
+    "closeButton": "Close"
   }
 }

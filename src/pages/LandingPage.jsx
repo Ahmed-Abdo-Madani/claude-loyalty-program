@@ -105,23 +105,30 @@ function LandingPage() {
                 <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-sans rtl:font-cairo">
                   {t('hero.description')}
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:flex lg:flex-row justify-center lg:justify-start">
                   <Link
                     to="/business/register"
-                    className="btn-primary text-lg px-8 py-4 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"
+                    className="btn-primary text-base lg:text-lg px-6 lg:px-8 py-3 lg:py-4 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 text-center"
                   >
                     {t('hero.getStarted')}
-                    <ArrowRightIcon className="w-5 h-5" />
+                    <ArrowRightIcon className="w-5 h-5 flex-shrink-0" />
                   </Link>
                   <Link
                     to="/auth?mode=signin"
-                    className="px-8 py-4 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold text-lg transition-all duration-300 hover:-translate-y-1"
+                    className="px-6 lg:px-8 py-3 lg:py-4 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 text-center"
                   >
                     {t('hero.signIn')}
                   </Link>
                   <Link
+                    to="/branch-manager-login"
+                    className="px-6 lg:px-8 py-3 lg:py-4 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 text-center"
+                  >
+                    <QrCodeIcon className="w-5 h-5 flex-shrink-0" />
+                    {t('hero.staffLogin')}
+                  </Link>
+                  <Link
                     to="/demo"
-                    className="px-8 py-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-semibold text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2"
+                    className="px-6 lg:px-8 py-3 lg:py-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 text-center"
                   >
                     {t('header.tryDemo')}
                   </Link>

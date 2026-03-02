@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { getSubscriptionData } from '../utils/secureAuth'
 import { secureApi, endpoints } from '../config/api'
 import SEO from '../components/SEO'
+import ContactSupportModal from '../components/ContactSupportModal'
 
 const SubscriptionPlansPage = () => {
   const { t, i18n } = useTranslation('subscription')
@@ -14,6 +15,10 @@ const SubscriptionPlansPage = () => {
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState(null)
   const [error, setError] = useState(null)
+
+  // Contact Support State
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
+  const [contactSubject, setContactSubject] = useState('')
 
   // New state for API plans
   const [plans, setPlans] = useState([])
@@ -349,16 +354,25 @@ const SubscriptionPlansPage = () => {
                 {t('actions.cancel')}
               </button>
               <button
-                disabled
-                className="flex-1 px-8 py-4 rounded-xl bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 font-bold cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={() => {
+                  setContactSubject(`Downgrade inquiry: ${selectedPlan}`);
+                  setIsContactModalOpen(true);
+                  closeModal();
+                }}
+                className="flex-1 px-8 py-4 rounded-xl bg-[hsl(var(--electric-indigo))] dark:bg-[hsl(var(--neon-teal))] text-white dark:text-slate-950 font-bold transition-all hover:shadow-indigo-500/50 dark:hover:shadow-teal-500/50 hover:shadow-2xl"
               >
-                {t('actions.confirm')}
-                <span className="text-[10px] bg-slate-400 dark:bg-slate-600 text-white dark:text-slate-800 px-2 py-0.5 rounded-full">{t('actions.soon')}</span>
+                {t('actions.contactSupport')}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <ContactSupportModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        initialSubject={contactSubject}
+      />
     </div>
   );
 };

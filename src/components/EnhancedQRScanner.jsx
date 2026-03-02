@@ -6,7 +6,7 @@ import ApiService from '../utils/api.js'
 import { isNative } from '../utils/platform.js'
 import { startNativeScan, stopNativeScan, toggleNativeFlashlight } from '../utils/scannerService.js'
 
-function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, isActive }) {
+function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, isActive, mode = 'loyalty' }) {
   const videoRef = useRef(null)
   const barcodeDetectorRef = useRef(null)
   const animationFrameRef = useRef(null)
@@ -128,6 +128,17 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, is
 
     try {
       setScanStatus('processing')
+
+      // 🆕 Handle branch-login generic scanning mode
+      if (mode === 'branch-login' || mode === 'generic') {
+        console.log('✅ Generic data matched:', { data: cleanedData })
+        setScanStatus('success')
+        playSuccessSound()
+        if (onScanSuccess) {
+          await onScanSuccess(null, null, barcode.rawValue, barcode.format)
+        }
+        return
+      }
 
       let customerToken = null
       let offerHash = null
@@ -288,7 +299,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, is
         onScanError(error.message)
       }
     }
-  }, [detectedQR, lastScanTime, onScanSuccess, onScanError, playBeep, vibrate, playSuccessSound])
+  }, [detectedQR, lastScanTime, onScanSuccess, onScanError, playBeep, vibrate, playSuccessSound, mode])
 
   // Initialize Barcode Scanner
   useEffect(() => {
@@ -662,7 +673,8 @@ EnhancedQRScanner.propTypes = {
   onScanSuccess: PropTypes.func.isRequired, // (customerToken, offerHash, rawData, format) - format is 'qr_code' or 'pdf_417'
   onScanError: PropTypes.func, // Expects a string message
   onClose: PropTypes.func,
-  isActive: PropTypes.bool.isRequired
+  isActive: PropTypes.bool.isRequired,
+  mode: PropTypes.oneOf(['loyalty', 'branch-login', 'generic'])
 }
 
 export default EnhancedQRScanner

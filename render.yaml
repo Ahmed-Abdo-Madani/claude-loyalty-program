@@ -39,6 +39,13 @@ services:
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
+      # Email Configuration (Resend is the required provider, SendGrid is deprecated)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@madna.me
+      - key: FRONTEND_URL
+        value: https://app.madna.me
       # Emergency-only overrides. Set to true to bypass startup blocks.
       # MUST be removed once schema is confirmed healthy.
       - key: SKIP_SCHEMA_VALIDATION

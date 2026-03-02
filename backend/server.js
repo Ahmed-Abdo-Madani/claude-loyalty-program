@@ -38,6 +38,7 @@ import { extractLanguage, getLocalizedMessage } from './middleware/languageMiddl
 import AutoMigrationRunner from './services/AutoMigrationRunner.js'
 import EmailAlertService from './services/EmailAlertService.js'
 import NotificationService from './services/NotificationService.js'
+import EmailService from './services/EmailService.js'
 
 // Initialize singletons and cron jobs
 EmailAlertService.init()
@@ -55,6 +56,18 @@ if (!process.env.FONTCONFIG_PATH) {
 }
 
 dotenv.config()
+
+// Validate email configuration on startup
+try {
+  EmailService.validateConfig()
+} catch (error) {
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('🔴 FATAL: Email configuration error', { error: error.message })
+    process.exit(1)
+  } else {
+    logger.warn(`⚠️ WARNING: Email configuration is missing or invalid: ${error.message}. Emails will not send.`)
+  }
+}
 
 // Auto-migration configuration (optional)
 // AUTO_MIGRATE=true (default) - Automatically run pending migrations on startup
