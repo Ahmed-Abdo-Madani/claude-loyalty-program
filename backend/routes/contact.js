@@ -315,6 +315,58 @@ router.post('/', async (req, res) => {
     }
 
     // 4. Response
+    if (!adminEmailSent && !customerEmailSent) {
+      logger.error('Failed to send both admin and customer emails. Enqueueing fallback jobs.');
+      let queueSuccess = false;
+      try {
+        const { default: EmailQueueService } = await import('../services/EmailQueueService.js');
+
+        // Enqueue admin email
+        const adminRecipients = (process.env.CONTACT_FORM_RECIPIENT_EMAIL || '').split(',').map(e => e.trim()).filter(e => e);
+        for (const recipient of adminRecipients) {
+          await EmailQueueService.enqueue({
+            to: recipient,
+            subject: `New Contact Form Submission: ${subject}`,
+            html: adminHtml,
+            text: `New Contact from ${firstName} ${lastName} (${email})\nSubject: ${subject}\n\n${message}`
+          });
+        }
+
+        // Enqueue customer email
+        await EmailQueueService.enqueue({
+          to: email,
+          subject: `We received your message - ${subject}`,
+          html: customerHtml,
+          text: `Hi ${firstName},\n\nWe received your message regarding "${subject}". We will respond within 24 hours.\n\nThank you,\nMadn Team`
+        });
+
+        queueSuccess = true;
+        logger.info('Successfully queued fallback contact emails.');
+      } catch (queueErr) {
+        logger.error('Failed to enqueue fallback contact emails. Explicit recovery failed; submission may be lost.', queueErr);
+      }
+
+      if (queueSuccess) {
+        return res.status(503).json({
+          success: false,
+          message: 'Email service is temporarily unavailable. Your inquiry has been queued.',
+          emailSent: {
+            adminNotification: false,
+            customerConfirmation: false
+          }
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          message: 'Message processing completely failed. Please try again later or contact us directly.',
+          emailSent: {
+            adminNotification: false,
+            customerConfirmation: false
+          }
+        });
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Message received successfully',

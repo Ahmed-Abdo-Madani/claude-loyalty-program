@@ -11,7 +11,8 @@ const PlanUpgradeModal = ({
     currentPlan = 'free',
     suggestedPlans,
     trialExpired = false,
-    message = ''
+    message = '',
+    isResubscribing = false
 }) => {
     const { t } = useTranslation(['subscription', 'common']);
     const navigate = useNavigate();
@@ -90,7 +91,7 @@ const PlanUpgradeModal = ({
         };
         // Safely access weight, default to 0 if not found
         const planWeight = weights[planName] || 0;
-        const currentWeight = weights[currentPlan] || 0;
+        const currentWeight = isResubscribing ? 0 : (weights[currentPlan] || 0);
 
         return planWeight > currentWeight;
     };
@@ -188,7 +189,7 @@ const PlanUpgradeModal = ({
                         ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-default'
                         : canUpgrade
                             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 hover:shadow-md'
+                            : 'bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-md'
                         }`}
                 >
                     {isActive
@@ -297,7 +298,7 @@ const PlanUpgradeModal = ({
                                             <PlanCard
                                                 key={plan.id}
                                                 plan={plan}
-                                                isActive={plan.name === currentPlan}
+                                                isActive={!isResubscribing && plan.name === currentPlan}
                                                 canUpgrade={isUpgrade(plan.name)}
                                             />
                                         ))}
@@ -325,7 +326,7 @@ const PlanUpgradeModal = ({
                                             <PlanCard
                                                 key={plan.id}
                                                 plan={plan}
-                                                isActive={plan.name === currentPlan}
+                                                isActive={!isResubscribing && plan.name === currentPlan}
                                                 canUpgrade={isUpgrade(plan.name)}
                                             />
                                         ))}

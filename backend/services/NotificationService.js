@@ -427,7 +427,7 @@ class NotificationService {
       // Send through appropriate channel
       switch (channel) {
         case 'email':
-          sendResult = await this.sendEmail(customer, message, options)
+          sendResult = await this.sendEmail(customer, message, { ...options, log_id: logEntry.id })
           success = sendResult.success
           externalId = sendResult.externalId
           provider = sendResult.provider
@@ -504,6 +504,10 @@ class NotificationService {
 
       // Use queue if requested (e.g. for bulk campaigns)
       if (options.useQueue) {
+        if (!options.log_id) {
+          throw new Error('A valid log_id is required to queue emails.');
+        }
+
         logger.debug('Queuing email instead of direct send', { to: customer.email })
         const queueResult = await EmailQueueService.enqueue({
           to: customer.email,
@@ -511,7 +515,7 @@ class NotificationService {
           html: message.html || message.body,
           text: message.text,
           attachments,
-          logId: options.log_id || logEntry.id
+          logId: options.log_id
         })
 
         return {

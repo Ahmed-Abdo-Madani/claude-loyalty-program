@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { managerLogin } from '../utils/secureAuth'
 import SEO from '../components/SEO'
 import EnhancedQRScanner from '../components/EnhancedQRScanner'
+import { QrCodeIcon } from '@heroicons/react/24/outline'
 
 export default function BranchManagerLogin() {
   const { t } = useTranslation('auth')
@@ -254,7 +255,7 @@ export default function BranchManagerLogin() {
                     className="px-5 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center shrink-0"
                     title={t('branchManagerAuth.scanQrCode')}
                   >
-                    <span className="text-xl">📷</span>
+                    <QrCodeIcon className="w-6 h-6" />
                   </button>
                 </div>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">

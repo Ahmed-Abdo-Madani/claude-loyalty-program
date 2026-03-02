@@ -169,6 +169,7 @@ class LemonSqueezyService {
             case 'subscription_created':
             case 'subscription_updated':
             case 'subscription_payment_success':
+            case 'subscription_resumed':
                 await this.syncSubscription(businessId, data);
                 break;
 
@@ -311,10 +312,26 @@ class LemonSqueezyService {
         await Subscription.update({
             status: 'cancelled',
             lemon_squeezy_status: data.attributes.status,
-            cancelled_at: new Date()
+            cancelled_at: new Date(),
+            next_billing_date: data.attributes.ends_at || null
         }, {
-            where: { lemon_squeezy_subscription_id: data.id }
+            where: { lemon_squeezy_subscription_id: data.id.toString() }
         });
+
+        const activeSubCount = await Subscription.count({
+            where: {
+                business_id: businessId,
+                status: ['active', 'trial', 'past_due']
+            }
+        });
+
+        if (activeSubCount === 0) {
+            await Business.update({
+                subscription_status: 'cancelled'
+            }, {
+                where: { public_id: businessId }
+            });
+        }
 
         // We don't immediately downgrade Business plan, usually wait for expiration
         // But for now, let's keep it simple

@@ -152,7 +152,7 @@ export const getSubscriptionDetails = async (req, res) => {
         const businessId = business.public_id;
 
         const subscription = await Subscription.findOne({
-            where: { business_id: businessId, status: ['active', 'trial', 'past_due', 'cancelled'] },
+            where: { business_id: businessId, status: ['active', 'trial', 'past_due', 'cancelled', 'expired'] },
             order: [['created_at', 'DESC']]
         });
 
@@ -185,7 +185,9 @@ export const getSubscriptionDetails = async (req, res) => {
 
         const subData = {
             plan_type: business.current_plan,
-            status: business.subscription_status,
+            status: subscription?.status || business.subscription_status,
+            cancelled_at: subscription?.cancelled_at ?? null,
+            lemon_squeezy_status: subscription?.lemon_squeezy_status ?? null,
             amount: subscription?.amount || 0,
             currency: subscription?.currency || 'USD',
             billing_cycle_start: subscription?.billing_cycle_start,
