@@ -146,25 +146,15 @@ function LandingPage() {
                 </div>
               </div>
 
-              <div className="lg:w-1/2 relative">
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 aspect-[4/3] group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-                    {/* Abstract Dashboard Representation */}
-                    <div className="w-3/4 h-3/4 bg-white dark:bg-slate-700 rounded-xl shadow-inner p-6 relative overflow-hidden">
-                      <div className="flex gap-4 mb-6">
-                        <div className="w-1/3 h-24 bg-blue-50 dark:bg-slate-600 rounded-lg animate-pulse"></div>
-                        <div className="w-1/3 h-24 bg-purple-50 dark:bg-slate-600 rounded-lg animate-pulse delay-100"></div>
-                        <div className="w-1/3 h-24 bg-green-50 dark:bg-slate-600 rounded-lg animate-pulse delay-200"></div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="h-4 bg-gray-100 dark:bg-slate-600 rounded w-3/4"></div>
-                        <div className="h-4 bg-gray-100 dark:bg-slate-600 rounded w-1/2"></div>
-                        <div className="h-4 bg-gray-100 dark:bg-slate-600 rounded w-full"></div>
-                        <div className="h-32 bg-gray-50 dark:bg-slate-600 rounded-lg mt-4 border-2 border-dashed border-gray-200 dark:border-slate-500 flex items-center justify-center text-gray-400 text-sm">
-                          {t('hero.dashboardPreview')}
-                        </div>
-                      </div>
-                    </div>
+              <div className="lg:w-1/2 relative mt-12 lg:mt-0 flex justify-center items-center">
+                <div className="relative w-full max-w-[500px] lg:max-w-none lg:w-[130%] lg:-translate-x-12 lg:-translate-y-16 xl:w-[140%] xl:-translate-x-24 xl:-translate-y-24 z-10 group">
+                  {/* Ambient glowing blob behind the image - made much larger and brighter */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-gradient-to-tr from-purple-500/40 via-fuchsia-500/40 to-blue-500/40 dark:from-purple-500/50 dark:via-fuchsia-500/50 dark:to-blue-500/50 blur-[80px] rounded-full mix-blend-screen dark:mix-blend-lighten opacity-60 group-hover:opacity-100 transition-opacity duration-1000"></div>
+
+                  {/* The SVG Image - Removed aspect ratio clipping, added smooth hover-float */}
+                  <div className="relative w-full h-auto transform transition-transform duration-[2000ms] ease-out hover:-translate-y-4">
+                    <img src="/assets/images/landing/hero/hero-image-light.svg" alt={t('hero.dashboardPreview')} className="w-full h-auto object-contain filter drop-shadow-2xl dark:hidden pointer-events-none" />
+                    <img src="/assets/images/landing/hero/hero-image-dark.svg" alt={t('hero.dashboardPreview')} className="w-full h-auto object-contain filter drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hidden dark:block pointer-events-none" />
                   </div>
                 </div>
                 {/* Floating Elements */}
