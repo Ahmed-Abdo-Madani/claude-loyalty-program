@@ -256,15 +256,28 @@ class LemonSqueezyService {
             if (oldSub.lemon_squeezy_subscription_id) {
                 try {
                     await this.cancelSubscription(oldSub.lemon_squeezy_subscription_id);
+                    await oldSub.update({
+                        status: 'cancelled',
+                        lemon_squeezy_status: 'cancelled',
+                        cancelled_at: new Date()
+                    });
                 } catch (err) {
                     logger.error(`Failed to cancel old subscription ${oldSub.lemon_squeezy_subscription_id} during upgrade:`, err);
+                    try {
+                        await oldSub.update({
+                            status: 'pending_cancellation'
+                        });
+                    } catch (updateErr) {
+                        logger.error(`Failed to update old subscription status to pending_cancellation for ${oldSub.lemon_squeezy_subscription_id}:`, updateErr);
+                    }
                 }
+            } else {
+                await oldSub.update({
+                    status: 'cancelled',
+                    lemon_squeezy_status: 'cancelled',
+                    cancelled_at: new Date()
+                });
             }
-            await oldSub.update({
-                status: 'cancelled',
-                lemon_squeezy_status: 'cancelled',
-                cancelled_at: new Date()
-            });
         }
 
         const subData = {

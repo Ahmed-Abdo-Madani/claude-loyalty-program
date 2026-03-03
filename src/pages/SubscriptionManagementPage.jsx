@@ -64,6 +64,8 @@ export default function SubscriptionManagementPage() {
   }
 
   const handleDownloadInvoice = async (invoiceId) => {
+    let downloadUrl = null;
+    let link = null;
     try {
       const url = endpoints.businessInvoices(invoiceId);
       // For invoice download, we might need a secure way or just window.open if it's a signed URL or session cookie handles it.
@@ -72,18 +74,24 @@ export default function SubscriptionManagementPage() {
       const response = await secureApi.get(url);
       if (response.ok) {
         const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        downloadUrl = window.URL.createObjectURL(blob);
+        link = document.createElement('a');
         link.href = downloadUrl;
         link.download = `invoice-${invoiceId}.pdf`;
         document.body.appendChild(link);
         link.click();
-        link.remove();
       } else {
         alert(t('subscription:errors.invoiceFailed'));
       }
     } catch (err) {
       console.error('Invoice download failed', err);
+    } finally {
+      if (link && link.parentNode) {
+        link.remove();
+      }
+      if (downloadUrl) {
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 100);
+      }
     }
   }
 
