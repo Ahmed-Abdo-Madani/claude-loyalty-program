@@ -119,6 +119,7 @@
         "name": "Loyalty Starter",
         "price": "49 SAR",
         "description": "Essential loyalty features for small businesses",
+        "badge": "",
         "features": [
           "Up to 500 Customers",
           "Online Menu",
@@ -160,6 +161,7 @@
         "name": "POS Business",
         "price": "199 SAR",
         "description": "Streamlined POS for retail and service",
+        "badge": "",
         "features": [
           "Up to 1,000 Customers",
           "Online Menu",
@@ -189,6 +191,7 @@
         "name": "POS Premium",
         "price": "549 SAR",
         "description": "Ultimate control and customization",
+        "badge": "",
         "features": [
           "Unlimited Customers",
           "Online Menu",
@@ -309,7 +312,9 @@
       "other": "Other",
       "message": "Message",
       "messagePlaceholder": "Tell us how we can help you...",
-      "sendMessage": "Send Message"
+      "sendMessage": "Send Message",
+      "success": "Message sent successfully! We will get back to you shortly.",
+      "error": "Failed to send message. Please try again later."
     },
     "otherWays": {
       "title": "Other ways to reach us"

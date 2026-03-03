@@ -361,7 +361,8 @@ function Dashboard() {
                     </>
                   )}
 
-                  {/* Subscription Summary Card - NEW */}
+                  {/* Subscription Summary Card - HIDDEN (Maybe in the future) */}
+                  {/*
                   {subscriptionData && (
                     <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg p-6 text-white overflow-hidden relative">
                       <div className="relative z-10 flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center">
@@ -401,14 +402,9 @@ function Dashboard() {
                       </div>
                     </div>
                   )}
+                  */}
 
-                  {/* Detailed Usage Metrics - NEW */}
-                  {subscriptionData && (
-                    <UsageMetrics
-                      usage={subscriptionData.usage}
-                      limits={subscriptionData.limits}
-                    />
-                  )}
+
 
                   {/* Today's Snapshot - Real-time POS Metrics */}
                   <TodaysSnapshot />
@@ -424,6 +420,14 @@ function Dashboard() {
                     onViewMenu={() => user?.businessId && window.open(`/menu/business/${user.businessId}`, '_blank')}
                     onManageSubscription={() => handleTabChange('billing-subscription')}
                   />
+
+                  {/* Detailed Usage Metrics - Moved below Quick Actions */}
+                  {subscriptionData && (
+                    <UsageMetrics
+                      usage={subscriptionData.usage}
+                      limits={subscriptionData.limits}
+                    />
+                  )}
                 </div>
               )}
 

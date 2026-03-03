@@ -30,7 +30,7 @@ function ContactPage() {
     setStatus({ type: '', message: '' })
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/contact`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -229,20 +229,6 @@ function ContactPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start group">
-                    <div className="bg-primary/10 p-3 rounded-lg mr-4 rtl:mr-0 rtl:ml-4 group-hover:bg-primary/20 transition-colors">
-                      <BuildingOfficeIcon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('contact.salesTeam.title')}</h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-2 text-sm">
-                        {t('contact.salesTeam.description')}
-                      </p>
-                      <a href="mailto:sales@madna.com" className="text-primary hover:underline font-medium">
-                        sales@madna.com
-                      </a>
-                    </div>
-                  </div>
 
                   <div className="flex items-start group">
                     <div className="bg-primary/10 p-3 rounded-lg mr-4 rtl:mr-0 rtl:ml-4 group-hover:bg-primary/20 transition-colors">
