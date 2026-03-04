@@ -336,7 +336,16 @@
       "avgVisitsPerCustomer": "متوسط الزيارات لكل عميل",
       "avgDaysToComplete": "متوسط الأيام للإكمال"
     },
-    "createNewOffer": "إنشاء عرض جديد"
+    "createNewOffer": "إنشاء عرض جديد",
+    "englishName": "الاسم بالإنجليزي",
+    "arabicName": "الاسم بالعربي",
+    "minRewardsLabel": "الحد الأدنى للمكافآت",
+    "maxRewardsLabel": "الحد الأقصى للمكافآت",
+    "startingTier": "المستوى الابتدائي",
+    "afterTier": "بعد {{tier}}",
+    "previousTier": "المستوى السابق",
+    "userNeedsRange": "يحتاج المستخدم من {{min}} إلى {{max}} مكافأة ليكون في هذا المستوى",
+    "userNeedsUnlimited": "يحتاج المستخدم إلى {{min}}+ مكافأة (غير محدود)"
   },
   "branches": {
     "title": "إدارة الفروع",

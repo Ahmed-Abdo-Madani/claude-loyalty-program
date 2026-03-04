@@ -17,7 +17,7 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
         description: offer?.description || '',
         branch: offer?.branch || 'all',
         type: 'stamps', // Hardcoded default
-        stamps_required: offer?.stamps_required || 10,
+        stamps_required: offer?.stamps_required || 5,
         is_time_limited: offer?.is_time_limited || false,
         start_date: offer?.start_date || '',
         end_date: offer?.end_date || '',
@@ -245,7 +245,7 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
                                         value={formData.stamps_required}
                                         onChange={(e) => setFormData({ ...formData, stamps_required: parseInt(e.target.value) })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                        placeholder="10"
+                                        placeholder="5"
                                     />
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
                                         <button type="button" onClick={() => setFormData(prev => ({ ...prev, stamps_required: Math.max(1, prev.stamps_required - 1) }))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-500">-</button>
@@ -289,10 +289,13 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                                        {tier.name || `Tier ${index + 1}`}
+                                                        {tier.name || `${t('offers.tier', 'Tier')} ${index + 1}`}
                                                     </h4>
                                                     <p className="text-xs text-gray-500">
-                                                        {index === 0 ? 'Starting Tier' : `After ${tiers[index - 1]?.name || 'previous tier'}`}
+                                                        {index === 0
+                                                            ? t('offers.startingTier', 'Starting Tier')
+                                                            : t('offers.afterTier', { tier: tiers[index - 1]?.name || t('offers.previousTier', 'previous tier') })
+                                                        }
                                                     </p>
                                                 </div>
                                                 {index > 0 && (
@@ -309,7 +312,7 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
                                             {/* Inputs Grid */}
                                             <div className="grid grid-cols-2 gap-3 mb-3">
                                                 <div>
-                                                    <label className="text-xs font-medium text-gray-500 mb-1 block">English Name</label>
+                                                    <label className="text-xs font-medium text-gray-500 mb-1 block">{t('offers.englishName', 'English Name')}</label>
                                                     <input
                                                         type="text"
                                                         value={tier.name}
@@ -319,7 +322,7 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-xs font-medium text-gray-500 mb-1 block">Arabic Name</label>
+                                                    <label className="text-xs font-medium text-gray-500 mb-1 block">{t('offers.arabicName', 'Arabic Name')}</label>
                                                     <input
                                                         type="text"
                                                         value={tier.nameAr}
@@ -334,14 +337,14 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
                                             {/* Rewards Range Smart Inputs */}
                                             <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg">
                                                 <div className="flex-1">
-                                                    <label className="text-xs text-gray-500 block mb-1">Min Rewards</label>
+                                                    <label className="text-xs text-gray-500 block mb-1">{t('offers.minRewardsLabel', 'Min Rewards')}</label>
                                                     <div className="font-mono bg-white dark:bg-gray-800 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-600 text-center text-gray-500">
                                                         {tier.minRewards}
                                                     </div>
                                                 </div>
                                                 <div className="text-gray-400">→</div>
                                                 <div className="flex-1">
-                                                    <label className="text-xs text-gray-500 block mb-1">Max Rewards</label>
+                                                    <label className="text-xs text-gray-500 block mb-1">{t('offers.maxRewardsLabel', 'Max Rewards')}</label>
                                                     <input
                                                         type="number"
                                                         min={tier.minRewards}
@@ -354,8 +357,8 @@ export default function CreateOfferModal({ offer, branches, onClose, onSave }) {
                                             </div>
                                             <p className="text-[10px] text-gray-400 mt-2 text-center">
                                                 {tier.maxRewards ?
-                                                    `User needs ${tier.minRewards} to ${tier.maxRewards} rewards to be in this tier` :
-                                                    `User needs ${tier.minRewards}+ rewards (Unlimited)`}
+                                                    t('offers.userNeedsRange', { min: tier.minRewards, max: tier.maxRewards }) :
+                                                    t('offers.userNeedsUnlimited', { min: tier.minRewards })}
                                             </p>
                                         </div>
                                     ))}

@@ -329,7 +329,16 @@
       "avgVisitsPerCustomer": "Avg Visits per Customer",
       "avgDaysToComplete": "Avg Days to Complete"
     },
-    "createNewOffer": "Create New Offer"
+    "createNewOffer": "Create New Offer",
+    "englishName": "English Name",
+    "arabicName": "Arabic Name",
+    "minRewardsLabel": "Min Rewards",
+    "maxRewardsLabel": "Max Rewards",
+    "startingTier": "Starting Tier",
+    "afterTier": "After {{tier}}",
+    "previousTier": "previous tier",
+    "userNeedsRange": "User needs {{min}} to {{max}} rewards to be in this tier",
+    "userNeedsUnlimited": "User needs {{min}}+ rewards (Unlimited)"
   },
   "branches": {
     "title": "Branch Management",
