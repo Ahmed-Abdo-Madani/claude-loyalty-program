@@ -77,7 +77,7 @@ function PlanLimitModal({
         loyalty_starter: 49,
         loyalty_growth: 99,
         loyalty_professional: 179,
-        pos_business: 199,
+        pos_business: 149,
         pos_enterprise: 349,
         pos_premium: 549,
         // Retro values for compatibility

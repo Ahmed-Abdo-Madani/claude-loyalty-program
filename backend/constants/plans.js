@@ -58,8 +58,8 @@ export const PLAN_DEFINITIONS = {
     },
     pos_business: {
         name: 'pos_business',
-        monthlyPrice: 199,
-        annualPrice: 1990,
+        monthlyPrice: 149,
+        annualPrice: 1490,
         limits: {
             customers: 1000,
             offers: 1,
