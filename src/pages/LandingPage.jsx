@@ -86,68 +86,68 @@ function LandingPage() {
 
       <main>
         {/* Hero Section with Gradient Mesh */}
-        <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-48 overflow-hidden">
+        <section className="relative pt-10 pb-20 sm:pt-16 sm:pb-32 lg:pt-32 lg:pb-48 overflow-hidden">
           {/* Background Gradients */}
           <div className="absolute inset-0 bg-gradient-to-b from-blue-50 to-white dark:from-slate-900 dark:to-slate-900 transition-colors duration-300"></div>
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-blue-400/20 rounded-full blur-3xl animate-pulse-slow"></div>
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-purple-400/20 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
 
           <div className="container-max section-padding relative z-10">
-            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+            <div className="flex flex-col-reverse lg:flex-row items-center gap-4 sm:gap-8 lg:gap-20">
               <div className="lg:w-1/2 text-center lg:text-left lg:rtl:text-right">
 
-                <h1 className="text-5xl lg:text-7xl font-extrabold text-gray-900 dark:text-white mb-6 leading-[1.1] rtl:leading-[1.5] tracking-tight font-sans rtl:font-cairo">
+                <h1 className="text-3xl md:text-5xl lg:text-7xl font-extrabold text-[#1a202c] dark:text-white mb-6 leading-tight lg:leading-[1.1] rtl:leading-[1.5] tracking-tight font-sans rtl:font-cairo max-w-xl mx-auto lg:mx-0">
                   {t('hero.headline')}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 block mt-2">
                     {t('hero.highlight')}
                   </span>
                 </h1>
-                <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-sans rtl:font-cairo">
+                <p className="text-base sm:text-lg lg:text-xl text-gray-700 dark:text-gray-300 font-medium mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed font-sans rtl:font-cairo">
                   {t('hero.description')}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:flex lg:flex-row justify-center lg:justify-start">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:flex lg:flex-row justify-center lg:justify-start">
                   <Link
                     to="/business/register"
-                    className="btn-primary text-base lg:text-lg px-6 lg:px-8 py-3 lg:py-4 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 text-center"
+                    className="col-span-2 lg:col-span-1 btn-primary text-base lg:text-lg px-6 lg:px-8 py-3 lg:py-4 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 text-center"
                   >
                     {t('hero.getStarted')}
                     <ArrowRightIcon className="w-5 h-5 flex-shrink-0" />
                   </Link>
                   <Link
                     to="/auth?mode=signin"
-                    className="px-6 lg:px-8 py-3 lg:py-4 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 text-center"
+                    className="col-span-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl px-2 sm:px-4 py-3 lg:py-4 font-semibold text-sm sm:text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 text-center flex items-center justify-center"
                   >
                     {t('hero.signIn')}
                   </Link>
                   <Link
                     to="/branch-manager-login"
-                    className="px-6 lg:px-8 py-3 lg:py-4 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-white border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 text-center"
+                    className="col-span-1 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl px-2 sm:px-4 py-3 lg:py-4 font-semibold text-sm sm:text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center"
                   >
-                    <QrCodeIcon className="w-5 h-5 flex-shrink-0" />
-                    {t('hero.staffLogin')}
+                    <QrCodeIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                    <span>{t('hero.staffLogin')}</span>
                   </Link>
                   <Link
                     to="/demo"
-                    className="px-6 lg:px-8 py-3 lg:py-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 text-center"
+                    className="col-span-2 lg:col-span-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-xl px-6 lg:px-8 py-3 lg:py-4 font-semibold text-base lg:text-lg transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 text-center"
                   >
                     {t('header.tryDemo')}
                   </Link>
                 </div>
 
-                <div className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                <div className="mt-8 lg:mt-10 flex flex-wrap items-center justify-center lg:justify-start gap-4 lg:gap-6 text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                     <span>{t('hero.benefit1')}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                     <span>{t('hero.benefit2')}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="lg:w-1/2 relative mt-12 lg:mt-0 flex justify-center items-center">
-                <div className="relative w-full max-w-[500px] lg:max-w-none lg:w-[130%] lg:-translate-x-12 lg:-translate-y-16 xl:w-[140%] xl:-translate-x-24 xl:-translate-y-24 z-10 group">
+              <div className="lg:w-1/2 relative flex justify-center items-center -mt-8 sm:-mt-4 lg:mt-0">
+                <div className="relative w-[85vw] max-w-[450px] sm:w-[70vw] lg:max-w-none lg:w-[130%] lg:-translate-x-12 lg:-translate-y-16 xl:w-[140%] xl:-translate-x-24 xl:-translate-y-24 z-10 group">
                   {/* Ambient glowing blob behind the image - made much larger and brighter */}
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] h-[110%] bg-gradient-to-tr from-purple-500/40 via-fuchsia-500/40 to-blue-500/40 dark:from-purple-500/50 dark:via-fuchsia-500/50 dark:to-blue-500/50 blur-[80px] rounded-full mix-blend-screen dark:mix-blend-lighten opacity-60 group-hover:opacity-100 transition-opacity duration-1000"></div>
 
