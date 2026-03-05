@@ -116,7 +116,7 @@ const Offer = sequelize.define('Offer', {
   barcode_preference: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    defaultValue: 'PDF417',
+    defaultValue: 'QR_CODE',
     comment: 'Barcode format for wallet passes (QR_CODE or PDF417)',
     validate: {
       isIn: {

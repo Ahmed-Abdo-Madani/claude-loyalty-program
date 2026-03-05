@@ -850,7 +850,7 @@ class AppleWalletController {
       })
 
       // Determine barcode preference from offer or design (use let for later reassignment if needed)
-      let barcodePreference = offerData.barcode_preference || design?.barcode_preference || 'PDF417'
+      let barcodePreference = offerData.barcode_preference || design?.barcode_preference || 'QR_CODE'
 
       // Determine Apple Wallet pass type from offer preference (centralized helper)
       // Prefer design.apple_pass_type if set, otherwise use offer.apple_pass_type

@@ -365,9 +365,45 @@ class RealGoogleWalletController {
       })
 
       if (response.ok) {
-        return await response.json()
+        console.log(`🔄 Google Wallet: Updating existing class branding for ${classId}`)
+
+        const updatePayload = {
+          programLogo: loyaltyClass.programLogo,
+          hexBackgroundColor: loyaltyClass.hexBackgroundColor
+        }
+        if (loyaltyClass.heroImage) {
+          updatePayload.heroImage = loyaltyClass.heroImage
+        }
+
+        const updateResponse = await fetch(`${this.baseUrl}/loyaltyClass/${classId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatePayload)
+        })
+
+        if (!updateResponse.ok) {
+          const errorText = await updateResponse.text()
+          let errorBody = errorText
+          try {
+            errorBody = JSON.parse(errorText)
+          } catch (e) { }
+
+          console.error('❌ Google Wallet: Failed to update class branding', {
+            classId,
+            status: updateResponse.status,
+            body: errorBody
+          })
+
+          throw new Error(`Failed to update loyalty class branding: ${errorText}`)
+        }
+
+        return await updateResponse.json()
       }
 
+      console.log(`✨ Google Wallet: Creating new class branding for ${classId}`)
       // Create new class
       const createResponse = await fetch(`${this.baseUrl}/loyaltyClass`, {
         method: 'POST',

@@ -405,7 +405,7 @@ class CardDesignService {
         version: 1,
         validation_status: 'pending',
         validation_errors: [],
-        barcode_preference: offer.barcode_preference || 'PDF417',
+        barcode_preference: offer.barcode_preference || 'QR_CODE',
         apple_pass_type: offer.apple_pass_type || 'storeCard',
         isDefault: true  // Flag to indicate this is a default design
       }
