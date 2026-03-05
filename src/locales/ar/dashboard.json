@@ -35,7 +35,8 @@
     "subscriptionManage": "إدارة الاشتراك",
     "paymentHistory": "سجل المدفوعات",
     "comingSoon": "قريباً",
-    "billingSubscription": "الفواتير والاشتراك"
+    "billingSubscription": "الفواتير والاشتراك",
+    "autoEngagement": "التفاعل التلقائي"
   },
   "header": {
     "dashboard": "لوحة التحكم",
@@ -71,6 +72,7 @@
     "branches": "الفروع",
     "products": "المنتجات",
     "customers": "العملاء",
+    "promotions": "الترويجات",
     "mobileWallets": "المحافظ الرقمية",
     "analytics": "التحليلات",
     "subscription": "الاشتراك",
@@ -92,6 +94,7 @@
     "branches": "الفروع",
     "products": "المنتجات",
     "customers": "العملاء",
+    "promotions": "الترويجات",
     "billingSubscription": "الفواتير"
   },
   "quickActions": {
@@ -839,7 +842,34 @@
     "exportExcel": "تصدير Excel",
     "tabs": {
       "customers": "العملاء",
-      "campaigns": "الحملات"
+      "campaigns": "الحملات",
+      "autoEngagement": "التفاعل التلقائي"
+    },
+    "autoEngagement": {
+      "title": "إعادة المشاركة التلقائية",
+      "enableToggle": "تفعيل إعادة المشاركة التلقائية",
+      "enableDesc": "إرسال إشعارات تلقائيًا إلى العملاء غير النشطين.",
+      "inactivityThreshold": "عتبة الخمول (بالأيام)",
+      "inactivityHelp": "عدد الأيام منذ آخر زيارة (1-365)",
+      "messageTemplate": "قالب الرسالة",
+      "templateHeader": "العنوان",
+      "templateHeaderPlaceholder": "مثال: افتقدناك!",
+      "templateBody": "المحتوى",
+      "templateBodyPlaceholder": "مثال: عد واستمتع بمكافأة خاصة...",
+      "channels": "القنوات",
+      "saving": "جاري الحفظ...",
+      "saveButton": "حفظ الإعدادات",
+      "saveSuccess": "تم حفظ الإعدادات بنجاح.",
+      "lastRunAt": "آخر تشغيل",
+      "lastRunStatus": "الحالة",
+      "totalNotified": "إجمالي الإشعارات المرسلة",
+      "historyTitle": "سجل الإشعارات",
+      "tableDate": "تاريخ الإرسال",
+      "tableCustomer": "معرف العميل",
+      "tableChannel": "القناة",
+      "tableStatus": "الحالة",
+      "tableMessage": "الرسالة",
+      "noHistory": "لم يتم إرسال أي إشعارات بعد."
     },
     "createCampaign": "إنشاء حملة",
     "createCampaignButton": "+ حملة جديدة",

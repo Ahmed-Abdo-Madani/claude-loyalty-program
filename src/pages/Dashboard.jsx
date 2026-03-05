@@ -457,6 +457,10 @@ function Dashboard() {
                 <CustomersTab analytics={analytics} />
               )}
 
+              {activeTab === 'promotions' && (
+                <CustomersTab analytics={analytics} initialSubTab="campaigns" />
+              )}
+
               {activeTab === 'wallet' && (
                 <WalletAnalytics />
               )}

@@ -115,6 +115,9 @@ export const endpoints = {
   walletNotificationBulk: `${API_BASE_URL}/api/notifications/wallet/bulk`,
   walletNotificationCustom: `${API_BASE_URL}/api/notifications/wallet/custom`,
 
+  // Auto Engagement APIs
+  autoEngagementConfig: `${API_BASE_URL}/api/auto-engagement/config`,
+  autoEngagementHistory: `${API_BASE_URL}/api/auto-engagement/history`,
   // Segmentation APIs
   segments: `${API_BASE_URL}/api/segments`,
   segmentsPredefined: `${API_BASE_URL}/api/segments/predefined`,

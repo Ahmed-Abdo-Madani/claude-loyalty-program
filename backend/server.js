@@ -662,6 +662,42 @@ async function initializeDatabase() {
       }
     }
 
+    // Validate customer_segments.color column exists
+    if (process.env.SKIP_SCHEMA_VALIDATION !== 'true') {
+      try {
+        logger.info('🔍 Validating customer_segments.color column...')
+
+        const [columnCheck] = await sequelize.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'customer_segments' 
+          AND column_name = 'color'
+        `)
+
+        if (columnCheck.length === 0) {
+          logger.error('❌ CRITICAL: customer_segments.color column is missing')
+          logger.error('   This will cause /api/segments route to fail!')
+          logger.error('   Run migration: node backend/run-migration.js 20260305-add-color-to-customer-segments.js')
+
+          if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SCHEMA_DRIFT !== 'true') {
+            logger.error('🛑 Exiting in production due to missing critical column')
+            process.exit(1)
+          } else {
+            logger.warn('⚠️  Continuing, but custom segment visual colors will fail')
+          }
+        } else {
+          logger.info('✅ customer_segments.color column validated')
+        }
+      } catch (error) {
+        logger.error('❌ Failed to validate customer_segments table', {
+          error: error.message
+        })
+        if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SCHEMA_DRIFT !== 'true') {
+          process.exit(1)
+        }
+      }
+    }
+
     // Initialize Apple Wallet certificates
     try {
       const certValidation = await appleCertificateValidator.validateAndLoad()

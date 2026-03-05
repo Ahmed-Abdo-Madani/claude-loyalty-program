@@ -1451,6 +1451,7 @@ CREATE TABLE IF NOT EXISTS public.customer_segments (
     business_id character varying(50) NOT NULL,
     name character varying(255) NOT NULL,
     description text,
+    color character varying(7) DEFAULT '#3B82F6'::character varying,
     type public.enum_customer_segments_type DEFAULT 'dynamic'::public.enum_customer_segments_type,
     is_predefined boolean DEFAULT false,
     auto_update boolean DEFAULT true,

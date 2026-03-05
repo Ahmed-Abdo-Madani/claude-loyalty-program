@@ -14,7 +14,7 @@ class NotificationService {
       email: { maxPerDay: 5, maxPerWeek: 15, maxPerMonth: 50 },
       sms: { maxPerDay: 3, maxPerWeek: 10, maxPerMonth: 30 },
       push: { maxPerDay: 10, maxPerWeek: 30, maxPerMonth: 100 },
-      wallet: { maxPerDay: 3, maxPerWeek: 10, maxPerMonth: 25 }
+      wallet: { maxPerDay: 10, maxPerWeek: 50, maxPerMonth: 200 } // Aligned with WalletPass.canSendNotification (10/day)
     }
   }
 
@@ -53,17 +53,20 @@ class NotificationService {
       }
 
       const results = []
+      const skippedChannels = []
 
       // Send notification through each channel
       for (const channel of channels) {
         if (!customer.canReceiveNotification(channel)) {
           logger.warn(`Customer ${customerId} cannot receive ${channel} notifications`)
+          skippedChannels.push({ channel, reason: 'opt_out_or_missing_contact' })
           continue
         }
 
         // Check rate limits
         if (!(await this.checkRateLimit(customerId, channel))) {
           logger.warn(`Rate limit exceeded for customer ${customerId} on ${channel}`)
+          skippedChannels.push({ channel, reason: 'rate_limit_exceeded' })
           continue
         }
 
@@ -71,9 +74,24 @@ class NotificationService {
         results.push(result)
       }
 
+      // Compute success: at least one channel was attempted AND at least one succeeded
+      const hasAttempted = results.length > 0
+      const hasSuccess = hasAttempted && results.some(r => r.success)
+
+      let failureReason = null
+      if (!hasSuccess) {
+        if (!hasAttempted) {
+          failureReason = 'no_eligible_channel'
+        } else {
+          failureReason = 'all_channels_failed'
+        }
+      }
+
       return {
-        success: true,
+        success: hasSuccess,
+        reason: failureReason,
         results,
+        skipped_channels: skippedChannels,
         customer_id: customerId
       }
 
@@ -116,8 +134,10 @@ class NotificationService {
 
       logger.info(`Bulk notification completed: ${successful} successful, ${failed} failed`)
 
+      const isSuccess = customerIds.length === 0 || successful > 0
+
       return {
-        success: true,
+        success: isSuccess,
         total: customerIds.length,
         successful,
         failed,
@@ -408,7 +428,7 @@ class NotificationService {
           business_id: customer.business_id,
           notification_type: options.notification_type || (options.campaign_id ? 'campaign' : 'manual'),
           channel,
-          subject: message.subject,
+          subject: message.subject || message.header || null,
           message_content: message.content || message.body,
           recipient_email: customer.email,
           recipient_phone: customer.phone,
@@ -460,12 +480,25 @@ class NotificationService {
 
       if (success) {
         await logEntry.markAsSent(externalId, provider)
+        if (channel === 'wallet') {
+          if (sendResult.failures && sendResult.failures.length > 0) {
+            logEntry.context_data = {
+              ...(logEntry.context_data || {}),
+              partial_failures: sendResult.failures
+            }
+            await logEntry.save()
+          }
+          await logEntry.markAsDelivered()
+        }
       } else {
         const errorContext = {
           provider_error: error,
           is_retryable: sendResult.isRetryable || false,
           attempts: sendResult.attempts || 0,
           provider
+        }
+        if (channel === 'wallet' && sendResult.failures) {
+          errorContext.wallet_failures = sendResult.failures
         }
         await logEntry.markAsFailed(
           error || 'Failed to send through external provider',
@@ -614,14 +647,54 @@ class NotificationService {
     try {
       logger.info(`💳 Sending wallet notification to ${customer.customer_id}`)
 
-      // This would integrate with your existing wallet notification system
-      // from RealGoogleWalletController
-      const externalId = `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      // Dynamically import WalletNotificationService and WalletPass
+      const WalletNotificationService = (await import('./WalletNotificationService.js')).default
+      const WalletPass = (await import('../models/WalletPass.js')).default
+
+      // Find all active wallet passes for this customer and business
+      const walletPasses = await WalletPass.findAll({
+        where: {
+          customer_id: customer.customer_id,
+          business_id: customer.business_id,
+          pass_status: 'active'
+        }
+      })
+
+      if (walletPasses.length === 0) {
+        return { success: false, error: 'No active wallet passes', provider: 'wallet' }
+      }
+
+      const messageData = {
+        header: message.header || message.subject,
+        body: message.body || message.content
+      }
+
+      let successCount = 0
+      let lastExternalId = null
+      let failures = []
+
+      for (const pass of walletPasses) {
+        const result = await WalletNotificationService.sendCustomMessage(pass.id, messageData, 'campaign')
+        if (result.success) {
+          successCount++
+          lastExternalId = `pass_${pass.id}`
+        } else {
+          failures.push({
+            passId: pass.id,
+            error: result.error,
+            message: result.message
+          })
+        }
+      }
+
+      const success = successCount > 0
 
       return {
-        success: true,
-        externalId,
-        provider: 'google_wallet'
+        success,
+        externalId: lastExternalId,
+        provider: 'wallet',
+        failures,
+        error: success ? null : (failures.length > 0 ? failures[0].error : 'All passes failed')
       }
 
     } catch (error) {
@@ -751,7 +824,7 @@ class NotificationService {
       cutoffDate.setDate(cutoffDate.getDate() - criteria.last_activity_days)
       // Current: finds customers active within N days (last_activity_date >= cutoff)
       // For "inactive for N days": use { [Op.lte]: cutoffDate }
-      filter.last_activity_date = { [Op.gte]: cutoffDate }
+      filter.last_activity_date = { [Op.lte]: cutoffDate }
     }
 
     return filter

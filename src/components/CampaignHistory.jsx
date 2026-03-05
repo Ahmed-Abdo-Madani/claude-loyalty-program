@@ -4,7 +4,7 @@ import { endpoints, secureApi } from '../config/api'
 
 function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
   const { t } = useTranslation(['campaign', 'common'])
-  
+
   // State management
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
@@ -14,12 +14,12 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
   const [showDetails, setShowDetails] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [pagination, setPagination] = useState(null)
-  
+
   // Action states
   const [confirmDialog, setConfirmDialog] = useState({ show: false, type: '', campaign: null, message: '' })
   const [actionLoading, setActionLoading] = useState(false)
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' })
-  
+
   // Filters and sorting
   const [filters, setFilters] = useState({
     campaign_type: '',
@@ -30,7 +30,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
   })
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState('desc')
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 20
@@ -76,7 +76,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
 
   const loadCampaignDetails = async (campaignId) => {
     setDetailsLoading(true)
-    
+
     try {
       const response = await secureApi.get(`${endpoints.notificationCampaigns}/${campaignId}`)
       const data = await response.json()
@@ -104,7 +104,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
       showToast(t('campaign:history.actions.cannotDeleteCompleted'), 'error')
       return
     }
-    
+
     setConfirmDialog({
       show: true,
       type: 'delete',
@@ -155,7 +155,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
 
     try {
       let response
-      
+
       switch (type) {
         case 'delete':
           response = await secureApi.delete(`${endpoints.notificationCampaigns}/${campaign.campaign_id}`)
@@ -208,7 +208,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
       completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
     }
-    
+
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || styles.draft}`}>
         {t(`campaign:history.statuses.${status}`)}
@@ -243,7 +243,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
           {t('campaign:history.emptyState.description')}
         </p>
         <button
-          onClick={onCreateCampaign}
+          onClick={() => onCreateCampaign()}
           className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-colors"
         >
           {t('campaign:history.emptyState.createButton')}
@@ -377,25 +377,25 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                 <tr>
-                  <th 
+                  <th
                     onClick={() => handleSort('name')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
                     {t('campaign:history.table.campaign')} {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('campaign_type')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
                     {t('campaign:history.table.type')} {sortBy === 'campaign_type' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('status')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
                     {t('campaign:history.table.status')} {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('total_recipients')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
@@ -404,7 +404,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('campaign:history.table.engagement')}
                   </th>
-                  <th 
+                  <th
                     onClick={() => handleSort('created_at')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
@@ -417,7 +417,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {paginatedCampaigns.map((campaign) => (
-                  <tr 
+                  <tr
                     key={campaign.campaign_id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
@@ -458,7 +458,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                           {campaign.total_opened || 0} {t('campaign:history.table.opens')}
                         </div>
                         <div className="text-gray-500 dark:text-gray-400">
-                          {campaign.total_recipients > 0 
+                          {campaign.total_recipients > 0
                             ? t('campaign:history.table.openRate', { rate: Math.round((campaign.total_opened / campaign.total_recipients) * 100) })
                             : t('campaign:history.table.openRate', { rate: 0 })}
                         </div>
@@ -475,7 +475,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                         >
                           {t('campaign:history.table.viewDetails')}
                         </button>
-                        
+
                         {campaign.status === 'draft' && (
                           <>
                             <button
@@ -504,7 +504,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                             </button>
                           </>
                         )}
-                        
+
                         {campaign.status === 'active' && (
                           <button
                             onClick={() => handleDeactivateCampaign(campaign)}
@@ -513,7 +513,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                             {t('campaign:history.actions.deactivate')}
                           </button>
                         )}
-                        
+
                         {campaign.status === 'paused' && (
                           <button
                             onClick={() => handleResendCampaign(campaign)}
@@ -536,7 +536,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
           {/* Mobile Card View */}
           <div className="lg:hidden space-y-4">
             {paginatedCampaigns.map((campaign) => (
-              <div 
+              <div
                 key={campaign.campaign_id}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4"
               >
@@ -565,7 +565,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">{t('campaign:history.table.opens')}:</span>
                     <div className="font-medium text-gray-900 dark:text-white">
-                      {campaign.total_opened || 0} ({campaign.total_recipients > 0 
+                      {campaign.total_opened || 0} ({campaign.total_recipients > 0
                         ? t('campaign:history.table.openRate', { rate: Math.round((campaign.total_opened / campaign.total_recipients) * 100) })
                         : t('campaign:history.table.openRate', { rate: 0 })})
                     </div>
@@ -609,7 +609,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                         </button>
                       </>
                     )}
-                    
+
                     {campaign.status === 'active' && (
                       <button
                         onClick={() => handleDeactivateCampaign(campaign)}
@@ -618,7 +618,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                         {t('campaign:history.actions.deactivate')}
                       </button>
                     )}
-                    
+
                     {campaign.status === 'paused' && (
                       <button
                         onClick={() => handleResendCampaign(campaign)}
@@ -663,16 +663,15 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                     } else {
                       pageNum = currentPage - 2 + i
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-2 rounded-lg ${
-                          currentPage === pageNum
+                        className={`px-3 py-2 rounded-lg ${currentPage === pageNum
                             ? 'bg-primary text-white'
                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        } transition-colors`}
+                          } transition-colors`}
                       >
                         {pageNum}
                       </button>
@@ -790,7 +789,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{t('campaign:history.details.deliveryRate')}</div>
                       <div className="text-xl font-bold text-gray-900 dark:text-white mt-1">
-                        {deliveryStats?.delivery_rate || (selectedCampaign.total_recipients > 0 
+                        {deliveryStats?.delivery_rate || (selectedCampaign.total_recipients > 0
                           ? `${Math.round((selectedCampaign.total_sent / selectedCampaign.total_recipients) * 100)}%`
                           : '0%')}
                       </div>
@@ -798,7 +797,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
                       <div className="text-sm text-gray-600 dark:text-gray-400">{t('campaign:history.details.openRate')}</div>
                       <div className="text-xl font-bold text-gray-900 dark:text-white mt-1">
-                        {deliveryStats?.open_rate || (selectedCampaign.total_sent > 0 
+                        {deliveryStats?.open_rate || (selectedCampaign.total_sent > 0
                           ? `${Math.round((selectedCampaign.total_opened / selectedCampaign.total_sent) * 100)}%`
                           : '0%')}
                       </div>
@@ -902,13 +901,12 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
               <button
                 onClick={executeAction}
                 disabled={actionLoading}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium text-white disabled:opacity-50 transition-colors ${
-                  confirmDialog.type === 'delete' 
-                    ? 'bg-red-600 hover:bg-red-700' 
+                className={`flex-1 px-4 py-2 rounded-lg font-medium text-white disabled:opacity-50 transition-colors ${confirmDialog.type === 'delete'
+                    ? 'bg-red-600 hover:bg-red-700'
                     : confirmDialog.type === 'activate'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-primary hover:bg-primary/90'
-                }`}
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-primary hover:bg-primary/90'
+                  }`}
               >
                 {actionLoading ? (
                   <span className="flex items-center justify-center">
@@ -930,11 +928,10 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
       {/* Toast Notification */}
       {toast.show && (
         <div className="fixed bottom-4 right-4 z-50 animate-slide-in">
-          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${
-            toast.type === 'success' 
-              ? 'bg-green-500 text-white' 
+          <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${toast.type === 'success'
+              ? 'bg-green-500 text-white'
               : 'bg-red-500 text-white'
-          }`}>
+            }`}>
             {toast.type === 'success' ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

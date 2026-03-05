@@ -113,11 +113,11 @@ router.get('/', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching segments:', error)
+    logger.error('Error fetching segments:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch segments',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -148,11 +148,11 @@ router.get('/:segmentId', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching segment:', error)
+    logger.error('Error fetching segment:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch segment details',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -183,11 +183,11 @@ router.post('/', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error creating segment:', error)
+    logger.error('Error creating segment:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to create segment',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -225,11 +225,11 @@ router.put('/:segmentId', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error updating segment:', error)
+    logger.error('Error updating segment:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to update segment',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -267,11 +267,11 @@ router.delete('/:segmentId', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error deleting segment:', error)
+    logger.error('Error deleting segment:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to delete segment',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -351,11 +351,11 @@ router.get('/:segmentId/customers', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching segment customers:', error)
+    logger.error('Error fetching segment customers:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch segment customers',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -391,11 +391,11 @@ router.post('/:segmentId/refresh', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error refreshing segment:', error)
+    logger.error('Error refreshing segment:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to refresh segment',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -459,11 +459,11 @@ router.get('/:segmentId/analytics', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching segment analytics:', error)
+    logger.error('Error fetching segment analytics:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch segment analytics',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -488,11 +488,11 @@ router.post('/predefined', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error creating predefined segments:', error)
+    logger.error('Error creating predefined segments:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to create predefined segments',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -515,11 +515,11 @@ router.get('/predefined/high-value', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching high-value customers:', error)
+    logger.error('Error fetching high-value customers:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch high-value customers',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -542,11 +542,11 @@ router.get('/predefined/at-risk', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching at-risk customers:', error)
+    logger.error('Error fetching at-risk customers:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch at-risk customers',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -572,11 +572,11 @@ router.get('/predefined/birthday', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error fetching birthday customers:', error)
+    logger.error('Error fetching birthday customers:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to fetch birthday customers',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -595,11 +595,11 @@ router.post('/refresh-all', requireBusinessAuth, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error refreshing all segments:', error)
+    logger.error('Error refreshing all segments:', { error: error.message, stack: error.stack, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to refresh all segments',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -708,11 +708,11 @@ router.post('/:segmentId/send-notification', requireBusinessAuth, async (req, re
     })
 
   } catch (error) {
-    logger.error('Error sending segment notification:', error)
+    logger.error('Error sending segment notification:', { error: error.message, stack: error.stack, segmentId, businessId: req.business?.public_id })
     res.status(500).json({
       success: false,
       message: 'Failed to send segment notification',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })
@@ -843,7 +843,7 @@ router.post('/send-notification', requireBusinessAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to send notifications to segment',
-      error: error.message
+      error: 'An internal server error occurred'
     })
   }
 })

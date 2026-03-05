@@ -41,7 +41,7 @@
   },
   "features": {
     "sectionTitle": "Everything You Need",
-    "sectionSubtitle": "A complete suite of tools to grow your business.",
+    "sectionSubtitle": "From smart point-of-sale to automated marketing—unlock the tools to turn first-time buyers into lifelong regulars.",
     "liveMenu": {
       "title": "Live Menu",
       "description": "Give your customers a seamless ordering experience with a live, interactive digital menu."
@@ -57,6 +57,18 @@
     "centralizedProducts": {
       "title": "Centralized Products",
       "description": "Manage your entire inventory and product catalog centrally across all your branches."
+    },
+    "customersManagement": {
+      "title": "Customers Management",
+      "description": "Understand your customers better with detailed profiles and purchase history."
+    },
+    "promotionCampaigns": {
+      "title": "Promotion Campaigns",
+      "description": "Create and send targeted offers via SMS, Email, and Push Notifications."
+    },
+    "autoReengagement": {
+      "title": "Auto Re-engagement",
+      "description": "Automatically reach out to inactive customers and win them back."
     },
     "cloudPos": {
       "title": "Cloud POS",

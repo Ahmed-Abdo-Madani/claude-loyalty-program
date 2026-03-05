@@ -410,11 +410,29 @@ router.post('/campaigns/:campaignId/send', requireBusinessAuth, async (req, res)
     }
 
     // Check campaign status - allow draft and paused campaigns to be sent
-    if (campaign.status !== 'draft' && campaign.status !== 'paused') {
+    if (campaign.status !== 'draft' && campaign.status !== 'paused' && campaign.status !== 'completed') {
       return res.status(400).json({
         success: false,
-        message: 'Only draft or paused campaigns can be sent'
+        message: 'Only draft, paused, or completed campaigns can be sent'
       })
+    }
+
+    // Reset status and stats if resending a completed campaign
+    if (campaign.status === 'completed') {
+      await campaign.update({
+        status: 'draft',
+        started_at: null,
+        completed_at: null,
+        total_recipients: 0,
+        total_sent: 0,
+        total_delivered: 0,
+        total_opened: 0,
+        total_clicked: 0,
+        total_converted: 0,
+        total_failed: 0,
+        total_cost: 0
+      })
+      await campaign.reload()
     }
 
     // Use NotificationService singleton
@@ -873,6 +891,14 @@ router.post('/send-quick', requireBusinessAuth, async (req, res) => {
       message,
       send_immediately
     })
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error || 'Failed to send quick notification',
+        data: result
+      })
+    }
 
     res.json({
       success: true,

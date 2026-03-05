@@ -5,9 +5,10 @@ import CompactStatsBar from './CompactStatsBar'
 import NotificationModal from './NotificationModal'
 import CampaignBuilder from './CampaignBuilder'
 import CampaignHistory from './CampaignHistory'
+import AutoEngagementSettings from './AutoEngagementSettings'
 import { formatCurrency } from '../utils/formatUtils'
 
-function CustomersTab({ analytics: globalAnalytics }) {
+function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' }) {
   const { t, i18n } = useTranslation(['dashboard', 'notification'])
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -35,10 +36,16 @@ function CustomersTab({ analytics: globalAnalytics }) {
   const [audienceMode, setAudienceMode] = useState('all') // 'all' | 'selected' | 'segment'
 
   // Campaign state
-  const [activeTab, setActiveTab] = useState('customers') // 'customers' | 'campaigns'
+  const validInitialTab = ['customers', 'campaigns', 'auto-engagement'].includes(initialSubTab) ? initialSubTab : 'customers'
+  const [activeTab, setActiveTab] = useState(validInitialTab) // 'customers' | 'campaigns'
   const [showCampaignBuilder, setShowCampaignBuilder] = useState(false)
   const [campaignRefreshTrigger, setCampaignRefreshTrigger] = useState(0)
   const [campaignToEdit, setCampaignToEdit] = useState(null)
+
+  // Sync tab state if parent changes initialSubTab
+  useEffect(() => {
+    setActiveTab(['customers', 'campaigns', 'auto-engagement'].includes(initialSubTab) ? initialSubTab : 'customers')
+  }, [initialSubTab])
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -392,6 +399,15 @@ function CustomersTab({ analytics: globalAnalytics }) {
                 }`}
             >
               📢 {t('dashboard:customers.tabs.campaigns')}
+            </button>
+            <button
+              onClick={() => setActiveTab('auto-engagement')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'auto-engagement'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+            >
+              🤖 {t('dashboard:customers.tabs.autoEngagement')}
             </button>
           </div>
         </div>
@@ -930,6 +946,13 @@ function CustomersTab({ analytics: globalAnalytics }) {
             }}
             refreshTrigger={campaignRefreshTrigger}
           />
+        </div>
+      )}
+
+      {/* Auto Engagement Tab */}
+      {activeTab === 'auto-engagement' && (
+        <div className="compact-spacing">
+          <AutoEngagementSettings />
         </div>
       )}
 

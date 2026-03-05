@@ -2,25 +2,25 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { endpoints, secureApi } from '../config/api'
 
-function NotificationModal({ 
-  customers = [], 
-  notificationType = 'custom', 
-  offers = [], 
+function NotificationModal({
+  customers = [],
+  notificationType = 'custom',
+  offers = [],
   segmentData = null,
   segmentId = null,
-  onClose, 
-  onSuccess 
+  onClose,
+  onSuccess
 }) {
   const { t } = useTranslation('notification')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+
   // Progress tracking
   const [sendingProgress, setSendingProgress] = useState(0)
   const [estimatedTime, setEstimatedTime] = useState(null)
   const [sendResults, setSendResults] = useState(null)
   const [showResults, setShowResults] = useState(false)
-  
+
   const [formData, setFormData] = useState({
     type: notificationType,
     header: '',
@@ -84,10 +84,10 @@ function NotificationModal({
     const batchSize = 100
     const batches = Math.ceil(count / batchSize)
     const totalSeconds = batches * secondsPerBatch
-    
+
     if (totalSeconds < 5) return t('estimatedTime.instant')
     if (totalSeconds < 60) return t('estimatedTime.seconds', { seconds: totalSeconds })
-    
+
     const minutes = Math.ceil(totalSeconds / 60)
     return t('estimatedTime.minutes', { count: minutes })
   }
@@ -150,7 +150,7 @@ function NotificationModal({
     setLoading(true)
     setError('')
     setSendingProgress(10) // Start with visible progress
-    
+
     // Calculate estimated time
     const totalCustomers = segmentData ? segmentData.customerCount : customers.length
     const timeEstimate = estimateDeliveryTime(totalCustomers)
@@ -316,10 +316,8 @@ function NotificationModal({
       setSendingProgress(100)
 
       if (data.success) {
-        // For segment notifications, extract result from nested structure
-        const resultData = formData.type === 'segment' && data.data.result 
-          ? data.data.result 
-          : data.data
+        // For segment/bulk notifications, extract result from nested structure
+        const resultData = data.data?.result || data.data
 
         // Store results and show results view
         setSendResults({
@@ -330,7 +328,7 @@ function NotificationModal({
           errors: resultData.errors || []
         })
         setShowResults(true)
-        
+
         // Call onSuccess after short delay to show results
         setTimeout(() => {
           onSuccess(data.data)
@@ -353,7 +351,7 @@ function NotificationModal({
   const ResultsView = () => {
     if (!sendResults) return null
 
-    const successRate = sendResults.total > 0 
+    const successRate = sendResults.total > 0
       ? ((sendResults.successful / sendResults.total) * 100).toFixed(1)
       : 0
 
@@ -407,8 +405,8 @@ function NotificationModal({
               ))}
               {sendResults.errors.length > 5 && (
                 <li className="text-red-600 dark:text-red-400">
-                  {t('results.moreErrors', { 
-                    count: sendResults.errors.length - 5 
+                  {t('results.moreErrors', {
+                    count: sendResults.errors.length - 5
                   })}
                 </li>
               )}
@@ -457,11 +455,11 @@ function NotificationModal({
                 {currentType.label}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {segmentData 
-                  ? t('sendingToSegment', { 
-                      name: segmentData.segmentName,
-                      count: segmentData.customerCount
-                    })
+                {segmentData
+                  ? t('sendingToSegment', {
+                    name: segmentData.segmentName,
+                    count: segmentData.customerCount
+                  })
                   : t('sendingTo', { count: customers.length })
                 }
               </p>
@@ -492,7 +490,7 @@ function NotificationModal({
               )}
             </div>
             <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-              <div 
+              <div
                 className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
                 style={{ width: sendingProgress > 0 ? `${sendingProgress}%` : '100%' }}
               />

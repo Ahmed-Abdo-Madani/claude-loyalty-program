@@ -15,7 +15,7 @@
  */
 
 import WalletPass from '../models/WalletPass.js'
-import { Customer, Business, Offer, CustomerProgress } from '../models/index.js'
+import { Customer, Business, Offer, CustomerProgress, NotificationLog } from '../models/index.js'
 import WalletPassService from './WalletPassService.js'
 import logger from '../config/logger.js'
 
@@ -40,7 +40,7 @@ class WalletNotificationService {
     try {
       // Find wallet pass
       const walletPass = await WalletPass.findOne({
-        where: { public_id: walletPassId }
+        where: { id: walletPassId }
       })
 
       if (!walletPass) {
@@ -57,26 +57,6 @@ class WalletNotificationService {
           success: false,
           error: 'Wallet pass is not active',
           status: walletPass.pass_status,
-          walletPassId
-        }
-      }
-
-      // Check rate limiting (configurable daily limit, default 10)
-      if (!walletPass.canSendNotification()) {
-        const dailyLimit = parseInt(process.env.WALLET_NOTIFICATION_DAILY_LIMIT || '10')
-        logger.warn(`Rate limit reached for wallet pass ${walletPassId}`, {
-          notification_count: walletPass.notification_count,
-          last_notification_date: walletPass.last_notification_date,
-          daily_limit: dailyLimit
-        })
-
-        return {
-          success: false,
-          error: 'Rate limit exceeded',
-          message: `Cannot send more than ${dailyLimit} notifications per day to this pass`,
-          notification_count: walletPass.notification_count,
-          daily_limit: dailyLimit,
-          last_notification_date: walletPass.last_notification_date,
           walletPassId
         }
       }
@@ -645,6 +625,24 @@ class WalletNotificationService {
               success: false,
               error: 'No active wallet passes found'
             })
+
+            try {
+              await NotificationLog.create({
+                customer_id: customerId,
+                business_id: businessId,
+                notification_type: messageType === 'segment_notification' ? 'campaign' : 'manual',
+                channel: 'wallet',
+                subject: messageData.header,
+                message_content: messageData.body,
+                status: 'failed',
+                failed_at: new Date(),
+                error_message: 'No active wallet passes found',
+                provider: 'wallet_pass'
+              })
+            } catch (logError) {
+              logger.error('Failed to write failure log for wallet segment notification', { error: logError.message })
+            }
+
             continue
           }
 
@@ -674,6 +672,24 @@ class WalletNotificationService {
             success: customerSuccessful,
             passes_sent: walletPasses.length
           })
+
+          try {
+            await NotificationLog.create({
+              customer_id: customerId,
+              business_id: businessId,
+              notification_type: messageType === 'segment_notification' ? 'campaign' : 'manual',
+              channel: 'wallet',
+              subject: messageData.header,
+              message_content: messageData.body,
+              status: customerSuccessful ? 'sent' : 'failed',
+              sent_at: customerSuccessful ? new Date() : null,
+              failed_at: !customerSuccessful ? new Date() : null,
+              error_message: !customerSuccessful ? 'All passes failed' : null,
+              provider: 'wallet_pass'
+            })
+          } catch (logError) {
+            logger.error('Failed to write result log for wallet segment notification', { error: logError.message })
+          }
 
         } catch (customerError) {
           logger.error('Error sending notification to customer', {

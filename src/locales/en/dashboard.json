@@ -32,7 +32,8 @@
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
     "subscription": "Subscription",
-    "billingSubscription": "Billing & Subscription"
+    "billingSubscription": "Billing & Subscription",
+    "autoEngagement": "Auto Engagement"
   },
   "imageUpload": {
     "title": "Product Image",
@@ -68,6 +69,7 @@
     "branches": "Branches",
     "products": "Products",
     "customers": "Customers",
+    "promotions": "Promotions",
     "mobileWallets": "Mobile Wallets",
     "analytics": "Analytics",
     "subscription": "Subscription",
@@ -85,6 +87,7 @@
     "branches": "Branches",
     "products": "Products",
     "customers": "Customers",
+    "promotions": "Promotions",
     "billingSubscription": "Billing"
   },
   "quickActions": {
@@ -833,7 +836,34 @@
     "exportExcel": "Export Excel",
     "tabs": {
       "customers": "Customers",
-      "campaigns": "Campaigns"
+      "campaigns": "Campaigns",
+      "autoEngagement": "Auto Engagement"
+    },
+    "autoEngagement": {
+      "title": "Auto Re-engagement",
+      "enableToggle": "Enable auto re-engagement",
+      "enableDesc": "Automatically send notifications to inactive customers.",
+      "inactivityThreshold": "Inactivity threshold (days)",
+      "inactivityHelp": "Number of days since last visit (1-365)",
+      "messageTemplate": "Message Template",
+      "templateHeader": "Header",
+      "templateHeaderPlaceholder": "e.g. We miss you!",
+      "templateBody": "Body",
+      "templateBodyPlaceholder": "e.g. Come back and enjoy a special treat...",
+      "channels": "Channels",
+      "saving": "Saving...",
+      "saveButton": "Save Configuration",
+      "saveSuccess": "Configuration saved successfully.",
+      "lastRunAt": "Last Run",
+      "lastRunStatus": "Status",
+      "totalNotified": "Total Notified",
+      "historyTitle": "Notification History",
+      "tableDate": "Date Sent",
+      "tableCustomer": "Customer ID",
+      "tableChannel": "Channel",
+      "tableStatus": "Status",
+      "tableMessage": "Message",
+      "noHistory": "No notifications have been sent yet."
     },
     "createCampaign": "Create Campaign",
     "createCampaignButton": "+ New Campaign",

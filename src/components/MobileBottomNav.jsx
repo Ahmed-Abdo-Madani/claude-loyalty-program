@@ -63,14 +63,14 @@ function MobileBottomNav() {
       iconSolid: ShoppingBagIconSolid,
       tabName: 'products'
     },
-    // Temporarily hidden for future development
-    // {
-    //   name: t('mobileNav.customers'),
-    //   path: '/dashboard?tab=customers',
-    //   icon: UsersIcon,
-    //   iconSolid: UsersIconSolid,
-    //   tabName: 'customers'
-    // },
+    {
+      name: t('mobileNav.customers'),
+      path: '/dashboard?tab=customers',
+      icon: UsersIcon,
+      iconSolid: UsersIconSolid,
+      tabName: 'customers'
+    },
+
     {
       name: t('mobileNav.billingSubscription'),
       path: '/dashboard?tab=billing-subscription',

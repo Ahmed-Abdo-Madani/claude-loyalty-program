@@ -15,7 +15,9 @@ import {
   DevicePhoneMobileIcon,
   HeartIcon,
   BuildingStorefrontIcon,
-  ArchiveBoxIcon
+  ArchiveBoxIcon,
+  UsersIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline'
 
 function LandingPage() {
@@ -23,16 +25,40 @@ function LandingPage() {
 
   const features = [
     {
-      icon: <DevicePhoneMobileIcon className="w-6 h-6" />,
-      titleKey: 'features.liveMenu.title',
-      descKey: 'features.liveMenu.description',
-      color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
-    },
-    {
       icon: <HeartIcon className="w-6 h-6" />,
       titleKey: 'features.loyaltyProgram.title',
       descKey: 'features.loyaltyProgram.description',
       color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'
+    },
+    {
+      icon: <CloudIcon className="w-6 h-6" />,
+      titleKey: 'features.cloudPos.title',
+      descKey: 'features.cloudPos.description',
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+    },
+    {
+      icon: <UsersIcon className="w-6 h-6" />,
+      titleKey: 'features.customersManagement.title',
+      descKey: 'features.customersManagement.description',
+      color: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
+    },
+    {
+      icon: <MegaphoneIcon className="w-6 h-6" />,
+      titleKey: 'features.promotionCampaigns.title',
+      descKey: 'features.promotionCampaigns.description',
+      color: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'
+    },
+    {
+      icon: <ArrowPathIcon className="w-6 h-6" />,
+      titleKey: 'features.autoReengagement.title',
+      descKey: 'features.autoReengagement.description',
+      color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+    },
+    {
+      icon: <DevicePhoneMobileIcon className="w-6 h-6" />,
+      titleKey: 'features.liveMenu.title',
+      descKey: 'features.liveMenu.description',
+      color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
     },
     {
       icon: <BuildingStorefrontIcon className="w-6 h-6" />,
@@ -45,12 +71,6 @@ function LandingPage() {
       titleKey: 'features.centralizedProducts.title',
       descKey: 'features.centralizedProducts.description',
       color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-    },
-    {
-      icon: <CloudIcon className="w-6 h-6" />,
-      titleKey: 'features.cloudPos.title',
-      descKey: 'features.cloudPos.description',
-      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
     },
     {
       icon: <ChartBarIcon className="w-6 h-6" />,

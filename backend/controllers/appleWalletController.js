@@ -45,12 +45,12 @@ function formatCustomerName(fullName) {
   if (!fullName) return ''
   const name = String(fullName).trim()
   if (name.length <= 7) return name
-  
+
   const firstSpaceIndex = name.indexOf(' ')
   if (firstSpaceIndex > 0) {
     return name.substring(0, firstSpaceIndex)
   }
-  
+
   return name.substring(0, 7) + '...'
 }
 
@@ -62,22 +62,22 @@ function formatCustomerName(fullName) {
  * @returns {string} Language code ('en' or 'ar')
  */
 function getPassLanguage(customerData, offerData) {
-  const language = customerData?.preferredLanguage || 
-                   customerData?.preferred_language || 
-                   offerData?.language || 
-                   'en'
-  
+  const language = customerData?.preferredLanguage ||
+    customerData?.preferred_language ||
+    offerData?.language ||
+    'en'
+
   // Normalize to base language code
   const normalized = language.toLowerCase().substring(0, 2)
   const result = ['en', 'ar'].includes(normalized) ? normalized : 'en'
-  
+
   logger.info('🌐 Pass language detected:', {
     source: customerData?.preferredLanguage ? 'customerData.preferredLanguage' :
-            customerData?.preferred_language ? 'customerData.preferred_language' :
-            offerData?.language ? 'offerData.language' : 'default',
+      customerData?.preferred_language ? 'customerData.preferred_language' :
+        offerData?.language ? 'offerData.language' : 'default',
     language: result
   })
-  
+
   return result
 }
 
@@ -246,7 +246,7 @@ class AppleWalletController {
         }
       } else {
         logger.info('✅ offerData has required fields (businessId and stampsRequired)')
-        
+
         // Fetch apple_pass_type even when other offer fields are present
         if (offerData.apple_pass_type === undefined || offerData.apple_pass_type === null) {
           logger.info('🔍 Fetching apple_pass_type from database...')
@@ -275,7 +275,7 @@ class AppleWalletController {
             offerData.apple_pass_type = 'storeCard'
           }
         }
-        
+
         // Fetch barcode_preference even when other offer fields are present
         if (offerData.barcode_preference === undefined || offerData.barcode_preference === null) {
           logger.info('🔍 Fetching barcode_preference from database...')
@@ -330,7 +330,7 @@ class AppleWalletController {
           offerData.businessRegion = businessRecord.region || null
           offerData.businessAddress = businessRecord.address || null
           offerData.location_hierarchy = businessRecord.location_hierarchy || null
-          
+
           logger.info('✅ Business data enriched for back fields:', {
             phone: !!businessRecord.phone,
             city: !!businessRecord.city,
@@ -430,7 +430,7 @@ class AppleWalletController {
       let existingPass = null
       let existingSerialNumber = null
       let existingAuthToken = null
-      
+
       try {
         const WalletPass = (await import('../models/WalletPass.js')).default
         existingPass = await WalletPass.findOne({
@@ -440,7 +440,7 @@ class AppleWalletController {
             wallet_type: 'apple'
           }
         })
-        
+
         if (existingPass) {
           existingSerialNumber = existingPass.wallet_serial
           existingAuthToken = existingPass.authentication_token
@@ -469,8 +469,8 @@ class AppleWalletController {
       // Generate pass images with progress data for stamp visualization
       // Use centralized helper to resolve pass type (prefer design over offer data)
       const images = await this.generatePassImages(
-        offerData, 
-        design, 
+        offerData,
+        design,
         actualProgressData,
         resolveApplePassType(offerData, design)
       )
@@ -594,7 +594,7 @@ class AppleWalletController {
     // 🌐 Detect pass language for localization
     const passLanguage = getPassLanguage(customerData, offerData)
     const localizedStrings = getLocalizedPassStrings(passLanguage)
-    
+
     const backFields = []
 
     // 1. Customer Tier (visible on back for both pass types)
@@ -635,7 +635,7 @@ class AppleWalletController {
       if (offerData.businessRegion) parts.push(offerData.businessRegion)
       locationValue = parts.join(', ')
     }
-    
+
     if (locationValue) {
       backFields.push({
         key: 'location',
@@ -657,8 +657,8 @@ class AppleWalletController {
     }
 
     // 4. Offer Details (always available)
-    const offerDetails = offerData.description 
-      ? `${offerData.title}\n${offerData.description}` 
+    const offerDetails = offerData.description
+      ? `${offerData.title}\n${offerData.description}`
       : offerData.title
     backFields.push({
       key: 'offer_details',
@@ -700,7 +700,7 @@ class AppleWalletController {
     if (customMessage && customMessage.header && customMessage.body) {
       const timestamp = new Date().toISOString()
       const messageValue = `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
-      
+
       backFields.push({
         key: 'latest_message',
         label: localizedStrings.latestMessage,
@@ -708,9 +708,9 @@ class AppleWalletController {
         textAlignment: 'PKTextAlignmentLeft'
         // NO changeMessage - handled by primary field to prevent duplicate notifications
       })
-      
+
       const isArabic = passLanguage === 'ar'
-      
+
       logger.info('💬 Custom message field added to back fields:', {
         timestamp,
         header: customMessage.header.substring(0, 30),
@@ -723,7 +723,7 @@ class AppleWalletController {
     // Log which fields are populated
     const populatedFields = backFields.map(f => f.key).join(', ')
     logger.info(`📋 Back fields populated: ${populatedFields}${customMessage ? ' (includes custom message)' : ''}`)
-    
+
     return backFields
   }
 
@@ -866,262 +866,262 @@ class AppleWalletController {
 
       // Prepare pass data structure
       const passData = {
-      formatVersion: 1,
-      passTypeIdentifier: certs.passTypeId, // Real Pass Type ID from certificates
-      serialNumber,
-      teamIdentifier: certs.teamId, // Real Team ID from certificates
-      organizationName: businessName, // Use validated business name
-      description: `${businessName} Loyalty Card`,
+        formatVersion: 1,
+        passTypeIdentifier: certs.passTypeId, // Real Pass Type ID from certificates
+        serialNumber,
+        teamIdentifier: certs.teamId, // Real Team ID from certificates
+        organizationName: businessName, // Use validated business name
+        description: `${businessName} Loyalty Card`,
 
-      // Visual styling - Use custom colors or defaults
-      // logoText: offerData.businessName, // REMOVED - Not present in working iOS 15.6 pass
-      foregroundColor,
-      backgroundColor,
-      labelColor,
+        // Visual styling - Use custom colors or defaults
+        // logoText: offerData.businessName, // REMOVED - Not present in working iOS 15.6 pass
+        foregroundColor,
+        backgroundColor,
+        labelColor,
 
-      // iOS 15 compatibility fields (from working Loopy Loyalty pass structure)
-      sharingProhibited: true, // Prevents pass from being shared
-      ...(isGenericPass ? {} : { suppressStripShine: false }), // Only for storeCard
+        // iOS 15 compatibility fields (from working Loopy Loyalty pass structure)
+        sharingProhibited: true, // Prevents pass from being shared
+        ...(isGenericPass ? {} : { suppressStripShine: false }), // Only for storeCard
 
-      // Pass structure - storeCard or generic based on offer preference
-      // Different field hierarchies for optimal display
-      [isGenericPass ? 'generic' : 'storeCard']: isGenericPass ? {
-        // GENERIC PASS STRUCTURE - Complies with PassKit field count limits
-        // Maximum: 1 primary + 2 secondary + 2 auxiliary = 4 fields total
-        
-        // Header fields - Business name in top right corner
-        headerFields: [
-          {
-            key: 'business',
-            value: businessName,
-            textAlignment: 'PKTextAlignmentRight'
-          }
-        ],
+        // Pass structure - storeCard or generic based on offer preference
+        // Different field hierarchies for optimal display
+        [isGenericPass ? 'generic' : 'storeCard']: isGenericPass ? {
+          // GENERIC PASS STRUCTURE - Complies with PassKit field count limits
+          // Maximum: 1 primary + 2 secondary + 2 auxiliary = 4 fields total
 
-        // Primary fields - Offer title as label, custom message as value - EXACTLY 1 field
-        primaryFields: [
-          {
-            key: 'primary',
-            label: truncateText(offerData.title, 50),
-            textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-            value: (customMessage && customMessage.header && customMessage.body) 
-              ? truncateText(`${customMessage.header}: ${customMessage.body}`, 80) 
-              : '',
-            ...((customMessage && customMessage.header && customMessage.body) && { changeMessage: localizedStrings.newMessage })
-          }
-        ],
+          // Header fields - Business name in top right corner
+          headerFields: [
+            {
+              key: 'business',
+              value: businessName,
+              textAlignment: 'PKTextAlignmentRight'
+            }
+          ],
 
-        // Secondary fields - Progress only - EXACTLY 1 field
-        secondaryFields: [
-          {
-            key: 'progress',
-            label: localizedStrings.progress,
-            textAlignment: 'PKTextAlignmentRight',
-            value: `${stampsEarned} ${ofWord} ${stampsRequired}`
-          }
-        ],
+          // Primary fields - Offer title as label, custom message as value - EXACTLY 1 field
+          primaryFields: [
+            {
+              key: 'primary',
+              label: truncateText(offerData.title, 50),
+              textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
+              value: (customMessage && customMessage.header && customMessage.body)
+                ? truncateText(`${customMessage.header}: ${customMessage.body}`, 80)
+                : '',
+              ...((customMessage && customMessage.header && customMessage.body) && { changeMessage: localizedStrings.newMessage })
+            }
+          ],
 
-        // Auxiliary fields - Tier (with label showing tier name), Member Name (right, no label) - EXACTLY 2 fields
-        auxiliaryFields: [
-          {
-            key: 'tier',
-            label: truncateText(
-              progressData?.tierData?.currentTier
-                ? `${progressData?.tierData?.currentTier?.icon} ${passLanguage === 'ar' ? progressData?.tierData?.currentTier?.nameAr : progressData?.tierData?.currentTier?.name}`
-                : passLanguage === 'ar' ? '👋 عضو جديد' : '👋 New Member',
-              28
-            ),
-            textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-            value: '',
-            changeMessage: localizedStrings.congratulations
-          },
-          {
-            key: 'customer',
-            label: '', // No label for cleaner look
-            textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-            value: (() => {
-              const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
-              const formattedName = formatCustomerName(fullName)
-              return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
-            })()
-          }
-        ]
-      } : {
-        // STORECARD PASS STRUCTURE - Reduced field count for barcode compatibility
-        
-        // Header fields - Business name in top right corner
-        headerFields: [
-          {
-            key: 'business',
-            value: businessName,
-            textAlignment: 'PKTextAlignmentRight'
-          }
-        ],
+          // Secondary fields - Progress only - EXACTLY 1 field
+          secondaryFields: [
+            {
+              key: 'progress',
+              label: localizedStrings.progress,
+              textAlignment: 'PKTextAlignmentRight',
+              value: `${stampsEarned} ${ofWord} ${stampsRequired}`
+            }
+          ],
 
-        // Secondary fields - EXACTLY 2 fields for barcode compatibility
-        secondaryFields: [
-          {
-            key: 's0',
-            label: localizedStrings.progress,
-            textAlignment: 'PKTextAlignmentLeft',
-            value: `${stampsEarned} ${ofWord} ${stampsRequired}`
-          },
-          {
-            key: 'completions',
-            label: localizedStrings.completed,
-            textAlignment: 'PKTextAlignmentLeft',
-            value: `${progressData?.rewardsClaimed || 0}x`,
-            changeMessage: localizedStrings.rewardsCompleted
-          }
-        ],
+          // Auxiliary fields - Tier (with label showing tier name), Member Name (right, no label) - EXACTLY 2 fields
+          auxiliaryFields: [
+            {
+              key: 'tier',
+              label: truncateText(
+                progressData?.tierData?.currentTier
+                  ? `${progressData?.tierData?.currentTier?.icon} ${passLanguage === 'ar' ? progressData?.tierData?.currentTier?.nameAr : progressData?.tierData?.currentTier?.name}`
+                  : passLanguage === 'ar' ? '👋 عضو جديد' : '👋 New Member',
+                28
+              ),
+              textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
+              value: '',
+              changeMessage: localizedStrings.congratulations
+            },
+            {
+              key: 'customer',
+              label: '', // No label for cleaner look
+              textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
+              value: (() => {
+                const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
+                const formattedName = formatCustomerName(fullName)
+                return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
+              })()
+            }
+          ]
+        } : {
+          // STORECARD PASS STRUCTURE - Reduced field count for barcode compatibility
 
-        // Auxiliary fields - EXACTLY 1 field (customer name with dynamic tier label)
-        auxiliaryFields: [
-          {
-            key: 'customer',
-            label: (() => {
-              // Use tier name as label if available, otherwise use "Member"
-              if (progressData?.tierData?.currentTier) {
-                const tier = progressData?.tierData?.currentTier
-                // Use localized tier name based on pass language
-                const tierName = passLanguage === 'ar' ? tier.nameAr : tier.name
-                return tierName || localizedStrings.member
-              }
-              return localizedStrings.member
-            })(),
-            value: (() => {
-              const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
-              const formattedName = formatCustomerName(fullName)
-              return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
-            })(),
-            textAlignment: 'PKTextAlignmentRight' // Right-aligned for storeCard
-          }
-        ]
-      },
+          // Header fields - Business name in top right corner
+          headerFields: [
+            {
+              key: 'business',
+              value: businessName,
+              textAlignment: 'PKTextAlignmentRight'
+            }
+          ],
 
-      // PHASE 3: Back fields - Business contact, location, and offer details (TOP-LEVEL per PassKit schema)
-      backFields: this.buildBackFields(offerData, customerData, customMessage, progressData)
-    }
+          // Secondary fields - EXACTLY 2 fields for barcode compatibility
+          secondaryFields: [
+            {
+              key: 's0',
+              label: localizedStrings.progress,
+              textAlignment: 'PKTextAlignmentLeft',
+              value: `${stampsEarned} ${ofWord} ${stampsRequired}`
+            },
+            {
+              key: 'completions',
+              label: localizedStrings.completed,
+              textAlignment: 'PKTextAlignmentLeft',
+              value: `${progressData?.rewardsClaimed || 0}x`,
+              changeMessage: localizedStrings.rewardsCompleted
+            }
+          ],
 
-    // Log pass structure for debugging
-    logger.info('📋 Pass structure created:', {
-      passType: isGenericPass ? 'generic' : 'storeCard',
-      hasPrimaryFields: isGenericPass,
-      primaryFieldsCount: isGenericPass ? 1 : 0,
-      secondaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length,
-      auxiliaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length,
-      hasCustomMessage: !!customMessage,
-      totalFieldCount: (isGenericPass ? 1 : 0) + 
-                       (passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length || 0) + 
-                       (passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length || 0),
-      // Generic: 1 primary + 1 secondary + 2 auxiliary = 4 fields ✅
-      // StoreCard: 2 secondary + 1 auxiliary = 3 fields ✅
-      structure: isGenericPass 
-        ? '1 primary (offer title w/ message) + 1 secondary (progress) + 2 auxiliary (tier + member)'
-        : '2 secondary (tier + progress) + 1 auxiliary (member)'
-    })
+          // Auxiliary fields - EXACTLY 1 field (customer name with dynamic tier label)
+          auxiliaryFields: [
+            {
+              key: 'customer',
+              label: (() => {
+                // Use tier name as label if available, otherwise use "Member"
+                if (progressData?.tierData?.currentTier) {
+                  const tier = progressData?.tierData?.currentTier
+                  // Use localized tier name based on pass language
+                  const tierName = passLanguage === 'ar' ? tier.nameAr : tier.name
+                  return tierName || localizedStrings.member
+                }
+                return localizedStrings.member
+              })(),
+              value: (() => {
+                const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
+                const formattedName = formatCustomerName(fullName)
+                return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
+              })(),
+              textAlignment: 'PKTextAlignmentRight' // Right-aligned for storeCard
+            }
+          ]
+        },
 
-    // Determine barcode format based on offer preference
-    // Already declared earlier - just reassign if needed for fallback logic
-    // Default was set to 'PDF417' earlier, but keep QR_CODE fallback for safety
-    barcodePreference = barcodePreference || 'QR_CODE'
-    let barcodeFormat = barcodePreference === 'PDF417' ? 'PKBarcodeFormatPDF417' : 'PKBarcodeFormatQR'
-    
-    // PDF417 size guard: PDF417 typically supports ~1850 alphanumeric characters
-    // QR codes support up to ~4296 alphanumeric characters
-    const PDF417_MAX_LENGTH = 1850
-    if (barcodePreference === 'PDF417' && qrMessage.length > PDF417_MAX_LENGTH) {
-      logger.warn('⚠️ PDF417 barcode payload exceeds safe limit, falling back to QR_CODE', {
-        messageLength: qrMessage.length,
-        maxLength: PDF417_MAX_LENGTH,
-        exceededBy: qrMessage.length - PDF417_MAX_LENGTH
+        // PHASE 3: Back fields - Business contact, location, and offer details (TOP-LEVEL per PassKit schema)
+        backFields: this.buildBackFields(offerData, customerData, customMessage, progressData)
+      }
+
+      // Log pass structure for debugging
+      logger.info('📋 Pass structure created:', {
+        passType: isGenericPass ? 'generic' : 'storeCard',
+        hasPrimaryFields: isGenericPass,
+        primaryFieldsCount: isGenericPass ? 1 : 0,
+        secondaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length,
+        auxiliaryFieldsCount: passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length,
+        hasCustomMessage: !!customMessage,
+        totalFieldCount: (isGenericPass ? 1 : 0) +
+          (passData[isGenericPass ? 'generic' : 'storeCard'].secondaryFields?.length || 0) +
+          (passData[isGenericPass ? 'generic' : 'storeCard'].auxiliaryFields?.length || 0),
+        // Generic: 1 primary + 1 secondary + 2 auxiliary = 4 fields ✅
+        // StoreCard: 2 secondary + 1 auxiliary = 3 fields ✅
+        structure: isGenericPass
+          ? '1 primary (offer title w/ message) + 1 secondary (progress) + 2 auxiliary (tier + member)'
+          : '2 secondary (tier + progress) + 1 auxiliary (member)'
       })
-      barcodePreference = 'QR_CODE'
-      barcodeFormat = 'PKBarcodeFormatQR'
-    }
-    
-    logger.info('📊 Barcode format selection:', { 
-      preference: barcodePreference, 
-      appleFormat: barcodeFormat,
-      messageLength: qrMessage.length
-    })
 
-    // Add barcode configuration to passData
-    // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
-    // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
-    // Encoding: UTF-8 (safer for international characters, backward compatible with ASCII QR data)
-    // QR payload is base64:hex format (ASCII-safe), but UTF-8 provides future-proofing
-    passData.barcode = {
-      altText: localizedStrings.scanToEarn,
-      format: barcodeFormat,
-      message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
-      messageEncoding: 'UTF-8'
-    }
-    
-    passData.barcodes = [
-      {
+      // Determine barcode format based on offer preference
+      // Already declared earlier - just reassign if needed for fallback logic
+      // Default was set to 'PDF417' earlier, but keep QR_CODE fallback for safety
+      barcodePreference = barcodePreference || 'QR_CODE'
+      let barcodeFormat = barcodePreference === 'PDF417' ? 'PKBarcodeFormatPDF417' : 'PKBarcodeFormatQR'
+
+      // PDF417 size guard: PDF417 typically supports ~1850 alphanumeric characters
+      // QR codes support up to ~4296 alphanumeric characters
+      const PDF417_MAX_LENGTH = 1850
+      if (barcodePreference === 'PDF417' && qrMessage.length > PDF417_MAX_LENGTH) {
+        logger.warn('⚠️ PDF417 barcode payload exceeds safe limit, falling back to QR_CODE', {
+          messageLength: qrMessage.length,
+          maxLength: PDF417_MAX_LENGTH,
+          exceededBy: qrMessage.length - PDF417_MAX_LENGTH
+        })
+        barcodePreference = 'QR_CODE'
+        barcodeFormat = 'PKBarcodeFormatQR'
+      }
+
+      logger.info('📊 Barcode format selection:', {
+        preference: barcodePreference,
+        appleFormat: barcodeFormat,
+        messageLength: qrMessage.length
+      })
+
+      // Add barcode configuration to passData
+      // CRITICAL: iOS 15 and earlier require BOTH barcode (singular, deprecated) AND barcodes (plural)
+      // CRITICAL: Field ordering and values MUST MATCH working clone exactly for iOS 15.6!
+      // Encoding: UTF-8 (safer for international characters, backward compatible with ASCII QR data)
+      // QR payload is base64:hex format (ASCII-safe), but UTF-8 provides future-proofing
+      passData.barcode = {
         altText: localizedStrings.scanToEarn,
         format: barcodeFormat,
         message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
         messageEncoding: 'UTF-8'
       }
-    ]
 
-    // NOTE: relevantDate and maxDistance removed for iOS 15 compatibility
-    // maxDistance requires a locations array or causes validation failures on iOS 15
-    // relevantDate has strict format requirements that can fail on older iOS versions
-    // These can be added later with proper locations array for geolocation features
+      passData.barcodes = [
+        {
+          altText: localizedStrings.scanToEarn,
+          format: barcodeFormat,
+          message: qrMessage,  // ✅ Enhanced: customerToken:offerHash (base64:hex - ASCII-safe)
+          messageEncoding: 'UTF-8'
+        }
+      ]
 
-    // ============ APPLE WEB SERVICE PROTOCOL ============
-    // Add webServiceURL and authenticationToken for dynamic pass updates
-    // This enables device registration and push notifications
-    // Apple expects the full base path to PassKit endpoints
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://api.madna.me'
-      : process.env.BASE_URL || 'http://localhost:3001'
+      // NOTE: relevantDate and maxDistance removed for iOS 15 compatibility
+      // maxDistance requires a locations array or causes validation failures on iOS 15
+      // relevantDate has strict format requirements that can fail on older iOS versions
+      // These can be added later with proper locations array for geolocation features
 
-    // Full path to Apple Web Service endpoints (mounted at /api/apple with /v1 routes)
-    passData.webServiceURL = `${baseUrl}/api/apple`
-    // Use existing auth token if provided (for updates), otherwise generate new one
-    // CRITICAL: Must use same algorithm as WalletPass.generateAuthToken (customerId + offerId)
-    passData.authenticationToken = existingAuthToken || this.generateAuthToken(customerData.customerId, offerData.offerId)
+      // ============ APPLE WEB SERVICE PROTOCOL ============
+      // Add webServiceURL and authenticationToken for dynamic pass updates
+      // This enables device registration and push notifications
+      // Apple expects the full base path to PassKit endpoints
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://api.madna.me'
+        : process.env.BASE_URL || 'http://localhost:3001'
 
-    logger.info('🔐 Apple Web Service Protocol enabled:', {
-      webServiceURL: passData.webServiceURL,
-      authenticationToken: passData.authenticationToken.substring(0, 16) + '...',
-      serialNumber: serialNumber,
-      usingExistingToken: !!existingAuthToken,
-      generatedFrom: existingAuthToken ? 'database' : `customerId:${customerData.customerId} + offerId:${offerData.offerId}`
-    })
-    // ===================================================
+      // Full path to Apple Web Service endpoints (mounted at /api/apple with /v1 routes)
+      passData.webServiceURL = `${baseUrl}/api/apple`
+      // Use existing auth token if provided (for updates), otherwise generate new one
+      // CRITICAL: Must use same algorithm as WalletPass.generateAuthToken (customerId + offerId)
+      passData.authenticationToken = existingAuthToken || this.generateAuthToken(customerData.customerId, offerData.offerId)
 
-    // ============ PASS LIFECYCLE FIELDS ============
-    // Add expiration date and voided status for completed/expired passes
-    // If pass is completed and has scheduled expiration, set expirationDate
-    if (existingPass && existingPass.pass_status === 'completed' && existingPass.scheduled_expiration_at) {
-      passData.expirationDate = new Date(existingPass.scheduled_expiration_at).toISOString()
-      logger.info('⏰ Pass expiration scheduled:', passData.expirationDate)
-    }
-    
-    // If pass is expired or revoked, mark as voided (grays out the pass in Wallet)
-    if (existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked')) {
-      passData.voided = true
-      logger.info('🚫 Pass marked as voided (status: ' + existingPass.pass_status + ')')
-    }
-    // ===============================================
+      logger.info('🔐 Apple Web Service Protocol enabled:', {
+        webServiceURL: passData.webServiceURL,
+        authenticationToken: passData.authenticationToken.substring(0, 16) + '...',
+        serialNumber: serialNumber,
+        usingExistingToken: !!existingAuthToken,
+        generatedFrom: existingAuthToken ? 'database' : `customerId:${customerData.customerId} + offerId:${offerData.offerId}`
+      })
+      // ===================================================
+
+      // ============ PASS LIFECYCLE FIELDS ============
+      // Add expiration date and voided status for completed/expired passes
+      // If pass is completed and has scheduled expiration, set expirationDate
+      if (existingPass && existingPass.pass_status === 'completed' && existingPass.scheduled_expiration_at) {
+        passData.expirationDate = new Date(existingPass.scheduled_expiration_at).toISOString()
+        logger.info('⏰ Pass expiration scheduled:', passData.expirationDate)
+      }
+
+      // If pass is expired or revoked, mark as voided (grays out the pass in Wallet)
+      if (existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked')) {
+        passData.voided = true
+        logger.info('🚫 Pass marked as voided (status: ' + existingPass.pass_status + ')')
+      }
+      // ===============================================
 
       // ==================== DEBUG LOGGING ====================
       logger.info('🔍 ========== PASS.JSON DEBUG ==========')
       logger.info('📋 Complete pass.json structure:')
-      
+
       // 🔒 CRITICAL: Deep copy to avoid mutating original passData
       // Shallow copy { ...passData } was causing barcode corruption in production!
       const redactedPassData = JSON.parse(JSON.stringify(passData))
-      
+
       if (redactedPassData.authenticationToken) {
         const token = redactedPassData.authenticationToken
-        redactedPassData.authenticationToken = token.length > 8 
-          ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` 
+        redactedPassData.authenticationToken = token.length > 8
+          ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}`
           : '[REDACTED]'
       }
       // Redact barcode messages (now safe to modify deep copy)
@@ -1137,7 +1137,7 @@ class AppleWalletController {
           ? `${msg.substring(0, 4)}...[${msg.length} chars]`
           : '[REDACTED]'
       }
-      
+
       logger.info(JSON.stringify(redactedPassData, null, 2))
       logger.info('🔍 ======================================')
       logger.info('📊 Pass data analysis:')
@@ -1173,7 +1173,7 @@ class AppleWalletController {
     if (design?.logo_url) {
       try {
         logger.info('🎨 Fetching custom logo for Apple Wallet from:', design.logo_url)
-        
+
         // Use SafeImageFetcher with 5s timeout and 3MB size cap
         baseImageBuffer = await SafeImageFetcher.fetchImage(design.logo_url, {
           timeoutMs: 5000,
@@ -1209,8 +1209,8 @@ class AppleWalletController {
           background: { r: 59, g: 130, b: 246, alpha: 1 }
         }
       })
-      .png()
-      .toBuffer()
+        .png()
+        .toBuffer()
     }
 
     // Generate REQUIRED icon.png images (Apple Wallet won't install without these)
@@ -1232,16 +1232,16 @@ class AppleWalletController {
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
     })
-    .composite([{
-      input: await sharp(baseImageBuffer)
-        .resize(100, 45, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        .png()
-        .toBuffer(),
-      left: 3,  // PHASE 4: 3px offset from left edge (proportional to @2x)
-      top: 2     // Vertically centered: (50-45)/2 ≈ 2px
-    }])
-    .png()
-    .toBuffer()
+      .composite([{
+        input: await sharp(baseImageBuffer)
+          .resize(100, 45, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toBuffer(),
+        left: 3,  // PHASE 4: 3px offset from left edge (proportional to @2x)
+        top: 2     // Vertically centered: (50-45)/2 ≈ 2px
+      }])
+      .png()
+      .toBuffer()
 
     const logo2x = await sharp({
       create: {
@@ -1251,16 +1251,16 @@ class AppleWalletController {
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
     })
-    .composite([{
-      input: await sharp(baseImageBuffer)
-        .resize(200, 90, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        .png()
-        .toBuffer(),
-      left: 5,  // PHASE 4: 5px offset from left edge (closer to edge alignment)
-      top: 5     // Vertically centered: (100-90)/2 = 5px
-    }])
-    .png()
-    .toBuffer()
+      .composite([{
+        input: await sharp(baseImageBuffer)
+          .resize(200, 90, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toBuffer(),
+        left: 5,  // PHASE 4: 5px offset from left edge (closer to edge alignment)
+        top: 5     // Vertically centered: (100-90)/2 = 5px
+      }])
+      .png()
+      .toBuffer()
 
     // Generate dynamic stamp visualization hero image using StampImageGenerator
     logger.info('🎨 Generating dynamic stamp visualization for hero image...')
@@ -1273,7 +1273,7 @@ class AppleWalletController {
     try {
       const manifest = ManifestService.readManifest()
       const validIcon = manifest.icons?.find(icon => icon.id === stampIconId)
-      
+
       if (!validIcon) {
         logger.warn(`⚠️ Invalid stamp icon ID '${stampIconId}' not found in manifest`)
         // Fallback to first available icon or known-good default
@@ -1346,30 +1346,32 @@ class AppleWalletController {
     // CRITICAL: Verify presence of required 1x and 2x image pairs
     // Missing 1x images can cause silent install failures on some iOS versions
     logger.info('🔍 Verifying required image variants...')
-    
+
     const requiredPairs = [
       { base: 'icon', size2x: [58, 58], size1x: [29, 29] },
       { base: 'logo', size2x: [320, 100], size1x: [160, 50] },
-      { base: passType === 'generic' ? 'thumbnail' : 'strip', 
+      {
+        base: passType === 'generic' ? 'thumbnail' : 'strip',
         size2x: passType === 'generic' ? [180, 180] : [624, 168],
-        size1x: passType === 'generic' ? [90, 90] : [312, 84] }
+        size1x: passType === 'generic' ? [90, 90] : [312, 84]
+      }
     ]
 
     for (const pair of requiredPairs) {
       const key1x = `${pair.base}.png`
       const key2x = `${pair.base}@2x.png`
-      
+
       if (!images[key2x]) {
         logger.warn(`⚠️ Missing @2x variant: ${key2x}`)
       }
-      
+
       if (!images[key1x] && images[key2x]) {
         // Generate missing 1x by resizing 2x with fixed kernel
         logger.info(`🔧 Generating missing 1x variant: ${key1x} from ${key2x}`)
         try {
           images[key1x] = await sharp(images[key2x])
-            .resize(pair.size1x[0], pair.size1x[1], { 
-              fit: 'contain', 
+            .resize(pair.size1x[0], pair.size1x[1], {
+              fit: 'contain',
               background: { r: 0, g: 0, b: 0, alpha: 0 },
               kernel: sharp.kernel.lanczos3  // Fixed kernel for consistent results
             })
@@ -1397,7 +1399,7 @@ class AppleWalletController {
     // Add image hashes in SORTED order for deterministic manifest
     // Sort filenames alphabetically to ensure stable ordering across builds
     const sortedImageEntries = Object.entries(images).sort(([a], [b]) => a.localeCompare(b))
-    
+
     sortedImageEntries.forEach(([filename, buffer]) => {
       manifest[filename] = crypto.createHash('sha1').update(buffer).digest('hex')
     })
@@ -1448,7 +1450,7 @@ class AppleWalletController {
       // Add images in SORTED order (same as manifest creation)
       // Sort filenames alphabetically to ensure stable zip structure
       const sortedImageEntries = Object.entries(images).sort(([a], [b]) => a.localeCompare(b))
-      
+
       sortedImageEntries.forEach(([filename, buffer]) => {
         archive.append(buffer, { name: filename })
       })
@@ -1527,7 +1529,7 @@ class AppleWalletController {
       // Coerce header and body to strings for safe logging
       const safeHeader = String(header || '')
       const safeBody = String(body || '')
-      
+
       logger.info('🍎 Apple Wallet: sendCustomMessage called', {
         serialNumber,
         header: safeHeader.substring(0, 50),
@@ -1555,11 +1557,28 @@ class AppleWalletController {
         }
       }
 
+      // Check notification rate limiting BEFORE expensive lookups and pass regeneration
+      if (!walletPass.canSendNotification()) {
+        const limit = parseInt(process.env.WALLET_NOTIFICATION_DAILY_LIMIT || '10')
+        logger.warn('⚠️ Daily notification limit reached:', {
+          serialNumber,
+          limit,
+          currentCount: walletPass.notification_count
+        })
+        return {
+          success: false,
+          error: 'Daily notification limit exceeded',
+          message: `Maximum ${limit} notifications per day allowed`,
+          sent: 0,
+          failed: 0
+        }
+      }
+
       logger.info('🔍 Fetching pass data for custom message...')
 
       // Fetch customer data
-      const customer = await Customer.findOne({ 
-        where: { customer_id: walletPass.customer_id } 
+      const customer = await Customer.findOne({
+        where: { customer_id: walletPass.customer_id }
       })
       if (!customer) {
         logger.error('❌ Customer not found:', walletPass.customer_id)
@@ -1677,28 +1696,13 @@ class AppleWalletController {
         customMessage  // Custom message to add to back fields
       )
 
+
+
       // Update database with new pass data
       // Note: Manifest and signature will be recomputed at serve time by the pass endpoint
       // This ensures consistency and avoids ETag mismatches if images evolve
       logger.info('💾 Updating pass data in database...')
       await walletPass.updatePassData(passData)
-
-      // Check notification rate limiting
-      if (!walletPass.canSendNotification()) {
-        const limit = parseInt(process.env.WALLET_NOTIFICATION_DAILY_LIMIT || '10')
-        logger.warn('⚠️ Daily notification limit reached:', {
-          serialNumber,
-          limit,
-          currentCount: walletPass.notification_count
-        })
-        return {
-          success: false,
-          error: 'Daily notification limit exceeded',
-          message: `Maximum ${limit} notifications per day allowed`,
-          sent: 0,
-          failed: 0
-        }
-      }
 
       // Send push notification via WalletPass model (standardized path)
       logger.info('📤 Sending push notification via WalletPass model...')
@@ -1800,7 +1804,7 @@ class AppleWalletController {
           offerData.businessRegion = businessRecord.region || null
           offerData.businessAddress = businessRecord.address || null
           offerData.location_hierarchy = businessRecord.location_hierarchy || null
-          
+
           logger.info('✅ Business data enriched for back fields in push update:', {
             phone: !!businessRecord.phone,
             city: !!businessRecord.city,
@@ -1940,7 +1944,7 @@ class AppleWalletController {
         const lastMessage = notificationHistory
           .filter(n => n.type === 'custom' && n.header && n.body)
           .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0]
-        
+
         if (lastMessage) {
           lastCustomMessage = {
             header: lastMessage.header,
@@ -1968,7 +1972,7 @@ class AppleWalletController {
 
       // Update pass data in database
       await walletPass.updatePassData(updatedPassData)
-      
+
       // Log successful save with tier information for debugging
       logger.info('💾 Pass data saved to database:', {
         serialNumber: updatedPassData.serialNumber,
