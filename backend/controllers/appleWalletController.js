@@ -557,8 +557,16 @@ class AppleWalletController {
 
   // Helper function to generate stamp visualization for Apple Wallet back fields
   // Since Apple Wallet doesn't support visual stamps in main layout, show them as emoji
-  generateStampVisualization(earned, required) {
-    const stampIcon = '⭐'  // Filled stamp
+  generateStampVisualization(earned, required, stampIconId = 'gift-01') {
+    // Map manifest IDs to emojis for text-based Apple Wallet back fields
+    const emojiMap = {
+      'gift-01': '🎁',
+      'crown': '👑',
+      'balloon': '🎈',
+      'coffee-01': '☕',
+      'star': '⭐'
+    }
+    const stampIcon = emojiMap[stampIconId] || '⭐'  // Filled stamp
     const emptyIcon = '☆'   // Empty stamp
 
     // Create visual representation (max 20 stamps to avoid text overflow)
@@ -604,7 +612,7 @@ class AppleWalletController {
       const currentTier = progressData.tierData.currentTier
       const tierName = passLanguage === 'ar' ? currentTier.nameAr : currentTier.name
       backFields.push({
-        key: 'tier',
+        key: 'back_tier',
         label: localizedStrings.customerTier,
         value: `${currentTier.icon} ${tierName}`,
         textAlignment: 'PKTextAlignmentLeft',
@@ -615,7 +623,7 @@ class AppleWalletController {
     // 2. Business Phone (if available) - with tap-to-call
     if (offerData.businessPhone || offerData.phone) {
       backFields.push({
-        key: 'business_phone',
+        key: 'back_business_phone',
         label: localizedStrings.contact,
         value: offerData.businessPhone || offerData.phone,
         textAlignment: 'PKTextAlignmentLeft',
@@ -638,7 +646,7 @@ class AppleWalletController {
 
     if (locationValue) {
       backFields.push({
-        key: 'location',
+        key: 'back_location',
         label: localizedStrings.location,
         value: locationValue,
         textAlignment: 'PKTextAlignmentLeft'
@@ -648,7 +656,7 @@ class AppleWalletController {
     // 3. Business Address (if available) - with tap-to-map
     if (offerData.businessAddress || offerData.address) {
       backFields.push({
-        key: 'address',
+        key: 'back_address',
         label: localizedStrings.address,
         value: offerData.businessAddress || offerData.address,
         textAlignment: 'PKTextAlignmentLeft',
@@ -661,7 +669,7 @@ class AppleWalletController {
       ? `${offerData.title}\n${offerData.description}`
       : offerData.title
     backFields.push({
-      key: 'offer_details',
+      key: 'back_offer_details',
       label: localizedStrings.offer,
       value: offerDetails,
       textAlignment: 'PKTextAlignmentLeft'
@@ -670,7 +678,7 @@ class AppleWalletController {
     // 5. Reward Description (if available)
     if (offerData.rewardDescription) {
       backFields.push({
-        key: 'reward',
+        key: 'back_reward',
         label: localizedStrings.reward,
         value: offerData.rewardDescription,
         textAlignment: 'PKTextAlignmentLeft'
@@ -679,7 +687,7 @@ class AppleWalletController {
 
     // 6. Completions (total rewards claimed)
     backFields.push({
-      key: 'completions',
+      key: 'back_completions',
       label: localizedStrings.completed,
       value: `${progressData?.rewardsClaimed || 0}x`,
       textAlignment: 'PKTextAlignmentLeft',
@@ -688,7 +696,7 @@ class AppleWalletController {
 
     // 7. Customer ID (always available)
     backFields.push({
-      key: 'customer_id',
+      key: 'back_customer_id',
       label: localizedStrings.memberId,
       value: customerData.customerId,
       textAlignment: 'PKTextAlignmentLeft'
@@ -702,7 +710,7 @@ class AppleWalletController {
       const messageValue = `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
 
       backFields.push({
-        key: 'latest_message',
+        key: 'back_latest_message',
         label: localizedStrings.latestMessage,
         value: messageValue,
         textAlignment: 'PKTextAlignmentLeft'
@@ -1001,6 +1009,39 @@ class AppleWalletController {
 
         // PHASE 3: Back fields - Business contact, location, and offer details (TOP-LEVEL per PassKit schema)
         backFields: this.buildBackFields(offerData, customerData, customMessage, progressData)
+      }
+
+      // 🆕 COMMENT 1 FIX: Final validation to ensure all field keys are unique
+      const allKeys = new Set()
+      const duplicates = new Set()
+
+      const passStyle = isGenericPass ? passData.generic : passData.storeCard
+      const fieldArrays = [
+        passStyle.headerFields,
+        passStyle.primaryFields,
+        passStyle.secondaryFields,
+        passStyle.auxiliaryFields,
+        passData.backFields
+      ]
+
+      fieldArrays.forEach(fields => {
+        if (Array.isArray(fields)) {
+          fields.forEach(field => {
+            if (field && field.key) {
+              if (allKeys.has(field.key)) {
+                duplicates.add(field.key)
+              } else {
+                allKeys.add(field.key)
+              }
+            }
+          })
+        }
+      })
+
+      if (duplicates.size > 0) {
+        const dupArray = Array.from(duplicates)
+        logger.error('❌ Duplicate keys found in pass payload, failing generation to avoid invalid pass warnings:', dupArray)
+        throw new Error(`Duplicate field keys detected in pass payload: ${dupArray.join(', ')}`)
       }
 
       // Log pass structure for debugging

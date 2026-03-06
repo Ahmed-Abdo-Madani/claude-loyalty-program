@@ -234,9 +234,9 @@ export function validateCardDesign(design) {
     warnings.push(...colorValidation.warnings)
   }
 
-  // Validate stamp icon (should be a single emoji/character)
-  if (design.stamp_icon && design.stamp_icon.length > 10) {
-    warnings.push('Stamp icon is too long. Use a single emoji or short text')
+  // Validate stamp icon (should be a valid manifest ID, e.g., 'gift-01', 'crown')
+  if (design.stamp_icon && design.stamp_icon.length > 30) {
+    warnings.push('Stamp icon ID is unusually long. Please select a valid icon from the manifest.')
   }
 
   // Validate progress display style

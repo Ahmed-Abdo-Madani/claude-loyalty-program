@@ -82,9 +82,9 @@ const OfferCardDesign = sequelize.define('OfferCardDesign', {
 
   // Layout Preferences
   stamp_icon: {
-    type: DataTypes.STRING(10),
-    defaultValue: '⭐',
-    comment: 'Emoji or symbol representing each stamp'
+    type: DataTypes.STRING(20),
+    defaultValue: 'gift-01',
+    comment: 'Manifest icon ID (e.g., gift-01, crown) representing each stamp'
   },
   stamp_display_type: {
     type: DataTypes.ENUM('svg', 'logo'),

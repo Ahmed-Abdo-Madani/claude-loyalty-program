@@ -89,7 +89,7 @@ const DeviceRegistration = sequelize.define('DeviceRegistration', {
 /**
  * Update last_checked_at timestamp
  */
-DeviceRegistration.prototype.updateLastChecked = async function() {
+DeviceRegistration.prototype.updateLastChecked = async function () {
   this.last_checked_at = new Date()
   await this.save()
   return this
@@ -98,7 +98,7 @@ DeviceRegistration.prototype.updateLastChecked = async function() {
 /**
  * Check if registration is recent (within last 7 days)
  */
-DeviceRegistration.prototype.isRecent = function() {
+DeviceRegistration.prototype.isRecent = function () {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   return this.registered_at > sevenDaysAgo
 }
@@ -106,7 +106,7 @@ DeviceRegistration.prototype.isRecent = function() {
 /**
  * Check if device actively checks for updates (checked in last 24 hours)
  */
-DeviceRegistration.prototype.isActivelyChecking = function() {
+DeviceRegistration.prototype.isActivelyChecking = function () {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
   return this.last_checked_at > oneDayAgo
 }
@@ -119,7 +119,7 @@ DeviceRegistration.prototype.isActivelyChecking = function() {
  * @param {number} walletPassId - Wallet pass ID
  * @returns {Promise<DeviceRegistration>}
  */
-DeviceRegistration.registerDevice = async function(deviceId, walletPassId) {
+DeviceRegistration.registerDevice = async function (deviceId, walletPassId) {
   const [registration, created] = await this.findOrCreate({
     where: {
       device_id: deviceId,
@@ -145,7 +145,7 @@ DeviceRegistration.registerDevice = async function(deviceId, walletPassId) {
  * @param {number} walletPassId - Wallet pass ID
  * @returns {Promise<boolean>} True if registration was deleted
  */
-DeviceRegistration.unregisterDevice = async function(deviceId, walletPassId) {
+DeviceRegistration.unregisterDevice = async function (deviceId, walletPassId) {
   const result = await this.destroy({
     where: {
       device_id: deviceId,
@@ -160,7 +160,7 @@ DeviceRegistration.unregisterDevice = async function(deviceId, walletPassId) {
  * @param {number} walletPassId - Wallet pass ID
  * @returns {Promise<DeviceRegistration[]>}
  */
-DeviceRegistration.getDevicesForPass = async function(walletPassId) {
+DeviceRegistration.getDevicesForPass = async function (walletPassId) {
   return await this.findAll({
     where: { wallet_pass_id: walletPassId },
     include: [{
@@ -177,7 +177,7 @@ DeviceRegistration.getDevicesForPass = async function(walletPassId) {
  * @param {number} deviceId - Device ID
  * @returns {Promise<DeviceRegistration[]>}
  */
-DeviceRegistration.getPassesForDevice = async function(deviceId) {
+DeviceRegistration.getPassesForDevice = async function (deviceId) {
   return await this.findAll({
     where: { device_id: deviceId },
     include: [{
@@ -195,10 +195,14 @@ DeviceRegistration.getPassesForDevice = async function(deviceId) {
  * @param {string} updatesSinceTag - Unix timestamp or ISO date
  * @returns {Promise<string[]>} Array of serial numbers
  */
-DeviceRegistration.getUpdatedPassesForDevice = async function(deviceId, passTypeId, updatesSinceTag) {
+DeviceRegistration.getUpdatedPassesForDevice = async function (deviceId, passTypeId, updatesSinceTag) {
   // Coerce updatesSinceTag to integer for numeric comparison with BIGINT column
   const since = Number.parseInt(updatesSinceTag || '0', 10)
-  
+
+  if (Number.isNaN(since)) {
+    return []
+  }
+
   // Query registrations with wallet passes that have been updated since the given tag
   const registrations = await this.findAll({
     where: { device_id: deviceId },
@@ -226,7 +230,7 @@ DeviceRegistration.getUpdatedPassesForDevice = async function(deviceId, passType
  * Clean up stale registrations (not checked in 90+ days)
  * @returns {Promise<number>} Number of registrations deleted
  */
-DeviceRegistration.cleanupStaleRegistrations = async function() {
+DeviceRegistration.cleanupStaleRegistrations = async function () {
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
   const result = await this.destroy({
     where: {

@@ -19,6 +19,7 @@ import WalletPass from '../models/WalletPass.js'
 import Device from '../models/Device.js'
 import DeviceRegistration from '../models/DeviceRegistration.js'
 import DeviceLog from '../models/DeviceLog.js'
+import sequelize from '../config/database.js'
 import appleWalletController, { resolveApplePassType } from '../controllers/appleWalletController.js'
 import { CustomerProgress, Offer, Business, Customer } from '../models/index.js'
 import CardDesignService from '../services/CardDesignService.js'
@@ -248,7 +249,7 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
       // Remove weak indicator if present and compare
       const clientETag = ifNoneMatch.replace(/^W\//, '').trim()
       const serverETag = walletPass.manifest_etag.trim()
-      
+
       if (clientETag === serverETag) {
         logger.info('✅ ETag match, returning 304 Not Modified', {
           serialNumber,
@@ -315,7 +316,7 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     try {
       logger.info('🎯 Calculating tier data for customer:', walletPass.customer_id, 'offer:', walletPass.offer_id)
       const tierData = await CustomerService.calculateCustomerTier(walletPass.customer_id, walletPass.offer_id)
-      
+
       if (tierData) {
         // Enrich progressData with tier information (matches appleWalletController.pushProgressUpdate pattern)
         progressData.rewardsClaimed = tierData.rewardsClaimed || 0
@@ -406,7 +407,7 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     // Update pass data in database with current timestamp AND manifest ETag (single save operation)
     const updateTimestamp = new Date()
     await walletPass.updatePassData(passData, manifestETag)
-    
+
     // Reload the record to get the updated last_updated_at value
     await walletPass.reload()
 
@@ -415,10 +416,10 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     res.setHeader('ETag', manifestETag)
     res.setHeader('Last-Modified', (walletPass.last_updated_at || updateTimestamp).toUTCString())
     res.setHeader('Cache-Control', 'private, must-revalidate')
-    
+
     // Set Content-Disposition with sanitized filename (multi-level fallback)
     const passFilename = walletPass.offer?.title || walletPass.business?.business_name || 'loyalty-card'
-    logger.debug('Setting Content-Disposition header', { 
+    logger.debug('Setting Content-Disposition header', {
       filename: passFilename,
       hasOfferTitle: !!walletPass.offer?.title,
       hasBusinessName: !!walletPass.business?.business_name
@@ -469,16 +470,16 @@ router.delete('/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNum
     })
 
     if (!device) {
-      logger.warn('❌ Device not found', { deviceLibraryId })
-      return res.status(404).json({ error: 'Device not found' })
+      logger.warn('ℹ️ Device not found. Treated as unregister success', { deviceLibraryId })
+      return res.status(200).json({ success: true, message: 'Device not found' })
     }
 
-    // Find wallet pass
-    const walletPass = await WalletPass.findBySerialNumber(serialNumber)
+    // Find wallet pass (ignore status since we want to allow unregistering revoked/expired passes)
+    const walletPass = await WalletPass.findOne({ where: { wallet_serial: serialNumber } })
 
     if (!walletPass) {
-      logger.warn('❌ Pass not found', { serialNumber })
-      return res.status(404).json({ error: 'Pass not found' })
+      logger.warn('ℹ️ Pass not found. Treated as unregister success', { serialNumber })
+      return res.status(200).json({ success: true, message: 'Pass not found' })
     }
 
     // Verify authentication token
@@ -498,11 +499,11 @@ router.delete('/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNum
       })
       return res.status(200).json({ success: true, message: 'Device unregistered' })
     } else {
-      logger.warn('⚠️ Registration not found', {
+      logger.info('ℹ️ Registration not found. Treated as unregister success', {
         deviceLibraryId,
         serialNumber
       })
-      return res.status(404).json({ error: 'Registration not found' })
+      return res.status(200).json({ success: true, message: 'Registration not found' })
     }
 
   } catch (error) {
@@ -544,7 +545,7 @@ router.post('/v1/log', async (req, res) => {
       if (userAgent) {
         const device = await Device.findOne({
           where: sequelize.where(
-            sequelize.cast(sequelize.json('device_info.user_agent'), 'text'),
+            sequelize.literal("device_info->>'user_agent'"),
             userAgent
           ),
           order: [['last_seen_at', 'DESC']]

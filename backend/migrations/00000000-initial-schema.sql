@@ -759,7 +759,7 @@ CREATE TABLE IF NOT EXISTS public.wallet_passes (
     last_notification_date timestamp with time zone,
     notification_history jsonb DEFAULT '[]'::jsonb,
     authentication_token character varying(64) UNIQUE,
-    last_updated_tag character varying(50),
+    last_updated_tag BIGINT,
     manifest_etag character varying(32),
     pass_data_json jsonb,
     scheduled_expiration_at timestamp with time zone,

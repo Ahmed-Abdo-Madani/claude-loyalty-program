@@ -391,7 +391,7 @@ class CardDesignService {
         background_color: '#3B82F6',
         foreground_color: '#FFFFFF',
         label_color: '#E0F2FE',
-        stamp_icon: '⭐',
+        stamp_icon: 'gift-01',
         progress_display_style: 'bar',
         field_labels: {},
         google_wallet_config: {},
