@@ -8,7 +8,7 @@ import prerender from 'prerender-node'
 import logger from './config/logger.js'
 import sequelize from './config/database.js'
 import walletRoutes from './routes/wallet.js'
-import passRoutes from './routes/passes.js'
+
 import appleWebServiceRoutes from './routes/appleWebService.js'
 import adminRoutes from './routes/admin.js'
 import businessRoutes from './routes/business.js'
@@ -187,12 +187,35 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.raw({ type: 'application/octet-stream', limit: '10mb' }))
 
 // Health check endpoint - MUST be before rate limiting to avoid blocking Render health checks
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Comment 3: Apple pass webServiceURL defaults to localhost in non-production
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://api.madna.me'
+    : process.env.BASE_URL || 'http://localhost:3001'
+  const webServiceURL = `${baseUrl}/api/apple`
+
+  // Comment 11: APNs ready state in health check
+  let apnsStatus = { configured: false, environment: null, topic: null }
+  try {
+    const ApnsService = (await import('./services/ApnsService.js')).default
+    apnsStatus = {
+      configured: ApnsService.isReady(),
+      environment: process.env.APNS_PRODUCTION === 'true' ? 'production' : 'sandbox',
+      topic: ApnsService.topic || process.env.APNS_TOPIC || process.env.APPLE_PASS_TYPE_ID || null
+    }
+  } catch (err) {
+    logger.error('Failed to get APNs status for health check', err)
+  }
+
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     service: 'loyalty-platform-backend',
-    version: '1.0.0'
+    version: '1.0.0',
+    appleWallet: {
+      webServiceURL
+    },
+    apns: apnsStatus
   })
 })
 
@@ -348,7 +371,7 @@ if (!process.env.UPLOADS_DIR && process.env.NODE_ENV === 'production') {
 
 // API Routes
 app.use('/api/wallet', walletRoutes)
-app.use('/api/passes', passRoutes)
+
 app.use('/api/apple', appleWebServiceRoutes) // Apple Web Service Protocol (routes have /v1 prefix)
 app.use('/api/webhooks', webhookRoutes) // Moyasar webhook callbacks (signature verification, no auth)
 app.use('/api/admin', adminRoutes)
@@ -409,6 +432,13 @@ async function initializeDatabase() {
   try {
     // Initialize database first
     await initializeDatabase()
+
+    // Comment 3: Log resolved webServiceURL to make misconfiguration immediately visible
+    const resolvedBaseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://api.madna.me'
+      : process.env.BASE_URL || 'http://localhost:3001'
+    const resolvedWebServiceURL = `${resolvedBaseUrl}/api/apple`
+    logger.info(`🍏 Apple Wallet webServiceURL configured as: ${resolvedWebServiceURL}`)
 
     // Flag to track if auto-engagement table exists (Comment 2)
     let autoEngagementTableExists = false

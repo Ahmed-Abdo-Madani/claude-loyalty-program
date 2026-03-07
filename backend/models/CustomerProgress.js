@@ -129,7 +129,7 @@ const CustomerProgress = sequelize.define('CustomerProgress', {
 })
 
 // Instance methods
-CustomerProgress.prototype.addStamp = async function(incrementBy = 1) {
+CustomerProgress.prototype.addStamp = async function (incrementBy = 1) {
   const wasCompleted = this.is_completed
 
   this.current_stamps = Math.min(this.current_stamps + incrementBy, this.max_stamps)
@@ -180,13 +180,20 @@ CustomerProgress.prototype.addStamp = async function(incrementBy = 1) {
   return this
 }
 
-CustomerProgress.prototype.claimReward = async function(branchId = null, notes = null) {
+CustomerProgress.prototype.claimReward = async function (branchId = null, notes = null) {
   if (!this.is_completed) {
     throw new Error('Cannot claim reward: progress not completed')
   }
 
+  if (branchId && (typeof branchId !== 'string' || !branchId.startsWith('branch_'))) {
+    const error = new Error('Invalid branch identifier format')
+    error.name = 'ApplicationError'
+    error.status = 400
+    throw error
+  }
+
   this.rewards_claimed = (this.rewards_claimed || 0) + 1
-  
+
   // Set fulfillment tracking
   if (branchId) {
     this.reward_fulfilled_at = new Date()
@@ -230,34 +237,41 @@ CustomerProgress.prototype.claimReward = async function(branchId = null, notes =
   return this
 }
 
-CustomerProgress.prototype.markRewardFulfilled = async function(branchId, notes = null) {
+CustomerProgress.prototype.markRewardFulfilled = async function (branchId, notes = null) {
   if (!this.is_completed) {
     throw new Error('Cannot mark reward fulfilled: progress not completed')
   }
-  
+
+  if (!branchId || typeof branchId !== 'string' || !branchId.startsWith('branch_')) {
+    const error = new Error('Invalid branch identifier format')
+    error.name = 'ApplicationError'
+    error.status = 400
+    throw error
+  }
+
   this.reward_fulfilled_at = new Date()
   this.fulfilled_by_branch = branchId
   this.fulfillment_notes = notes
-  
+
   await this.save()
-  
+
   return this
 }
 
-CustomerProgress.prototype.getProgressPercentage = function() {
+CustomerProgress.prototype.getProgressPercentage = function () {
   if (this.max_stamps === 0) return 0
   return Math.round((this.current_stamps / this.max_stamps) * 100)
 }
 
-CustomerProgress.prototype.getRemainingStamps = function() {
+CustomerProgress.prototype.getRemainingStamps = function () {
   return Math.max(0, this.max_stamps - this.current_stamps)
 }
 
-CustomerProgress.prototype.canClaimReward = function() {
+CustomerProgress.prototype.canClaimReward = function () {
   return this.is_completed && this.current_stamps >= this.max_stamps
 }
 
-CustomerProgress.prototype.getDaysToComplete = function() {
+CustomerProgress.prototype.getDaysToComplete = function () {
   if (!this.first_scan_date || this.is_completed) return null
 
   const daysSinceFirst = Math.floor((new Date() - this.first_scan_date) / (1000 * 60 * 60 * 24))

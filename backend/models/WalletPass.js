@@ -178,23 +178,23 @@ const WalletPass = sequelize.define('WalletPass', {
 })
 
 // Instance methods
-WalletPass.prototype.isActive = function() {
+WalletPass.prototype.isActive = function () {
   return this.pass_status === 'active'
 }
 
-WalletPass.prototype.markExpired = async function() {
+WalletPass.prototype.markExpired = async function () {
   this.pass_status = 'expired'
   await this.save()
   return this
 }
 
-WalletPass.prototype.revoke = async function() {
+WalletPass.prototype.revoke = async function () {
   this.pass_status = 'revoked'
   await this.save()
   return this
 }
 
-WalletPass.prototype.updateLastPush = async function() {
+WalletPass.prototype.updateLastPush = async function () {
   this.last_updated_at = new Date()
   // Also update the last_updated_tag for Apple Web Service Protocol
   if (this.wallet_type === 'apple') {
@@ -211,8 +211,8 @@ WalletPass.prototype.updateLastPush = async function() {
  * Token is unique per pass and used for authentication in web service endpoints
  * @returns {string} 32-character authentication token
  */
-WalletPass.generateAuthToken = function(customerId, offerId) {
-  const data = `${customerId}:${offerId}:${Date.now()}`
+WalletPass.generateAuthToken = function (customerId, offerId) {
+  const data = `${customerId}:${offerId}:${crypto.randomBytes(16).toString('hex')}`
   return crypto.createHash('sha256').update(data).digest('hex').substring(0, 32)
 }
 
@@ -222,7 +222,7 @@ WalletPass.generateAuthToken = function(customerId, offerId) {
  * @param {object} passData - Complete pass.json structure
  * @param {string} [manifestETag] - Optional manifest ETag to save (combines two DB writes into one)
  */
-WalletPass.prototype.updatePassData = async function(passData, manifestETag) {
+WalletPass.prototype.updatePassData = async function (passData, manifestETag) {
   if (this.wallet_type !== 'apple') {
     throw new Error('updatePassData is only for Apple Wallet passes')
   }
@@ -230,7 +230,7 @@ WalletPass.prototype.updatePassData = async function(passData, manifestETag) {
   this.pass_data_json = passData
   this.last_updated_tag = Math.floor(Date.now() / 1000)
   this.last_updated_at = new Date()
-  
+
   // If manifestETag provided, update it in the same operation (avoids double DB write)
   if (manifestETag) {
     this.manifest_etag = manifestETag
@@ -243,7 +243,7 @@ WalletPass.prototype.updatePassData = async function(passData, manifestETag) {
 /**
  * Get authentication token (or generate if missing)
  */
-WalletPass.prototype.getAuthenticationToken = async function() {
+WalletPass.prototype.getAuthenticationToken = async function () {
   if (!this.authentication_token) {
     this.authentication_token = WalletPass.generateAuthToken(this.customer_id, this.offer_id)
     await this.save()
@@ -256,7 +256,7 @@ WalletPass.prototype.getAuthenticationToken = async function() {
  * @param {string} authToken - Authentication token
  * @returns {Promise<WalletPass|null>}
  */
-WalletPass.findByAuthToken = async function(authToken) {
+WalletPass.findByAuthToken = async function (authToken) {
   return await this.findOne({
     where: {
       authentication_token: authToken,
@@ -271,12 +271,14 @@ WalletPass.findByAuthToken = async function(authToken) {
  * @param {string} serialNumber - Apple Wallet serial number
  * @returns {Promise<WalletPass|null>}
  */
-WalletPass.findBySerialNumber = async function(serialNumber) {
+WalletPass.findBySerialNumber = async function (serialNumber) {
   return await this.findOne({
     where: {
       wallet_serial: serialNumber,
       wallet_type: 'apple',
-      pass_status: 'active'
+      pass_status: {
+        [sequelize.Sequelize.Op.in]: ['active', 'completed']
+      }
     }
   })
 }
@@ -286,7 +288,7 @@ WalletPass.findBySerialNumber = async function(serialNumber) {
  * This triggers iOS devices to fetch the updated pass from webServiceURL
  * @returns {Promise<object>} - Result with success counts
  */
-WalletPass.prototype.sendPushNotification = async function() {
+WalletPass.prototype.sendPushNotification = async function () {
   try {
     // Only Apple Wallet passes support push notifications
     if (this.wallet_type !== 'apple') {
@@ -364,7 +366,7 @@ WalletPass.prototype.sendPushNotification = async function() {
 }
 
 // Static methods
-WalletPass.findByCustomerAndOffer = async function(customerId, offerId) {
+WalletPass.findByCustomerAndOffer = async function (customerId, offerId) {
   return await this.findAll({
     where: {
       customer_id: customerId,
@@ -374,12 +376,12 @@ WalletPass.findByCustomerAndOffer = async function(customerId, offerId) {
   })
 }
 
-WalletPass.getCustomerWalletTypes = async function(customerId, offerId) {
+WalletPass.getCustomerWalletTypes = async function (customerId, offerId) {
   const wallets = await this.findByCustomerAndOffer(customerId, offerId)
   return wallets.map(w => w.wallet_type)
 }
 
-WalletPass.hasWalletType = async function(customerId, offerId, walletType) {
+WalletPass.hasWalletType = async function (customerId, offerId, walletType) {
   const count = await this.count({
     where: {
       customer_id: customerId,
@@ -392,7 +394,7 @@ WalletPass.hasWalletType = async function(customerId, offerId, walletType) {
 }
 
 // Notification rate limiting - Check if can send notification
-WalletPass.prototype.canSendNotification = function() {
+WalletPass.prototype.canSendNotification = function () {
   if (!this.last_notification_date) return true
 
   const today = new Date().setHours(0, 0, 0, 0)
@@ -407,7 +409,7 @@ WalletPass.prototype.canSendNotification = function() {
 }
 
 // Record notification sent
-WalletPass.prototype.recordNotification = async function(messageType, messageData) {
+WalletPass.prototype.recordNotification = async function (messageType, messageData) {
   const now = new Date()
   const today = now.setHours(0, 0, 0, 0)
   const lastNotificationDay = this.last_notification_date
@@ -443,13 +445,13 @@ WalletPass.prototype.recordNotification = async function(messageType, messageDat
  * Schedule pass expiration
  * @param {number} daysFromNow - Days from now when pass should expire (default: 30)
  */
-WalletPass.prototype.scheduleExpiration = async function(daysFromNow = 30) {
+WalletPass.prototype.scheduleExpiration = async function (daysFromNow = 30) {
   const expirationDate = new Date()
   expirationDate.setDate(expirationDate.getDate() + daysFromNow)
-  
+
   this.scheduled_expiration_at = expirationDate
   this.expiration_notified = false
-  
+
   await this.save()
   return this.scheduled_expiration_at
 }
@@ -457,12 +459,12 @@ WalletPass.prototype.scheduleExpiration = async function(daysFromNow = 30) {
 /**
  * Mark pass as completed (when customer redeems reward)
  */
-WalletPass.prototype.markCompleted = async function() {
+WalletPass.prototype.markCompleted = async function () {
   this.pass_status = 'completed'
-  
+
   // Schedule expiration 30 days from now
   await this.scheduleExpiration(30)
-  
+
   await this.save()
 }
 

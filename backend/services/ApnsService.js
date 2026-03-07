@@ -29,22 +29,24 @@ class ApnsService {
   constructor() {
     this.provider = null
     this.isConfigured = false
-    this.initialize()
+    this.hasInitialized = false
   }
 
   /**
    * Initialize APNs provider with certificates
    */
   initialize() {
+    if (this.hasInitialized) return
+    this.hasInitialized = true
     try {
       // APNs topic MUST equal Pass Type ID for Wallet passes
       const topic = process.env.APNS_TOPIC || process.env.APPLE_PASS_TYPE_ID
-      
+
       // Support multiple env var names for certificate password
-      const certPassword = process.env.APNS_CERT_PASSWORD || 
-                          process.env.APPLE_PASS_CERTIFICATE_PASSWORD ||
-                          process.env.APPLE_APNS_CERT_PASSWORD
-      
+      const certPassword = process.env.APNS_CERT_PASSWORD ||
+        process.env.APPLE_PASS_CERTIFICATE_PASSWORD ||
+        process.env.APPLE_APNS_CERT_PASSWORD
+
       const isProduction = process.env.APNS_PRODUCTION === 'true'
 
       if (!topic) {
@@ -59,10 +61,11 @@ class ApnsService {
 
       // Option 1: Load from environment variable (base64 encoded) - for production/Render
       // Support multiple env var names for certificate
-      const certBase64 = process.env.APPLE_PASS_CERTIFICATE_BASE64 || 
-                        process.env.APPLE_APNS_CERT_BASE64 ||
-                        process.env.APNS_CERT_BASE64
-      
+      const certBase64 = process.env.APPLE_CERT_P12_BASE64 ||
+        process.env.APPLE_PASS_CERTIFICATE_BASE64 ||
+        process.env.APPLE_APNS_CERT_BASE64 ||
+        process.env.APNS_CERT_BASE64
+
       if (certBase64) {
         try {
           const certBuffer = Buffer.from(certBase64, 'base64')
@@ -71,16 +74,18 @@ class ApnsService {
             passphrase: certPassword || '',
             production: isProduction
           }
-          
+
           // Determine which env var was used
-          if (process.env.APPLE_PASS_CERTIFICATE_BASE64) {
+          if (process.env.APPLE_CERT_P12_BASE64) {
+            certSource = 'environment variable (APPLE_CERT_P12_BASE64)'
+          } else if (process.env.APPLE_PASS_CERTIFICATE_BASE64) {
             certSource = 'environment variable (APPLE_PASS_CERTIFICATE_BASE64)'
           } else if (process.env.APPLE_APNS_CERT_BASE64) {
             certSource = 'environment variable (APPLE_APNS_CERT_BASE64)'
           } else {
             certSource = 'environment variable (APNS_CERT_BASE64)'
           }
-          
+
           logger.info('✅ APNs certificate loaded from environment variable')
         } catch (error) {
           logger.error('❌ Failed to decode APNs certificate from environment variable:', error.message)
@@ -89,10 +94,10 @@ class ApnsService {
       }
       // Option 2: Load from file path - for local development
       else {
-        const certPath = process.env.APNS_CERT_PATH || 
-                        process.env.APPLE_APNS_CERT_PATH ||
-                        process.env.APPLE_PASS_CERTIFICATE_PATH
-        
+        const certPath = process.env.APNS_CERT_PATH ||
+          process.env.APPLE_APNS_CERT_PATH ||
+          process.env.APPLE_PASS_CERTIFICATE_PATH
+
         if (certPath) {
           const fullCertPath = path.resolve(path.join(__dirname, '..', certPath))
 
@@ -129,7 +134,7 @@ class ApnsService {
         certificateSource: certSource,
         environment: isProduction ? 'PRODUCTION' : 'SANDBOX'
       })
-      
+
       // Health log at startup
       logger.info('🍎 APNs Configuration:', {
         topic: `${topic} (MUST match Pass Type ID)`,
@@ -155,6 +160,9 @@ class ApnsService {
    * @returns {Promise<object>} - Result with success status
    */
   async sendPassUpdateNotification(pushToken, options = {}) {
+    if (!this.hasInitialized) {
+      this.initialize()
+    }
     try {
       if (!this.isConfigured) {
         logger.warn('⚠️ APNs not configured - notification not sent', {
@@ -256,6 +264,9 @@ class ApnsService {
    * @returns {Promise<object>} - Result with success counts
    */
   async sendPassUpdateNotificationBatch(pushTokens) {
+    if (!this.hasInitialized) {
+      this.initialize()
+    }
     try {
       if (!this.isConfigured) {
         logger.warn('⚠️ APNs not configured - batch notifications not sent')
@@ -347,6 +358,9 @@ class ApnsService {
    * @returns {boolean}
    */
   isReady() {
+    if (!this.hasInitialized) {
+      this.initialize()
+    }
     return this.isConfigured
   }
 }

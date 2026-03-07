@@ -141,7 +141,7 @@ class AppleCertificateValidator {
       logger.info('📍 Production mode: Looking for base64-encoded certificates in environment variables')
 
       // Production requires base64-encoded certificates
-      if (!process.env.APPLE_CERT_P12_BASE64) {
+      if (!process.env.APPLE_CERT_P12_BASE64 && !process.env.APPLE_PASS_CERTIFICATE_BASE64) {
         errors.push('Missing environment variable: APPLE_CERT_P12_BASE64 (required in production)')
       }
       if (!process.env.APPLE_CERT_WWDR_BASE64) {
@@ -221,7 +221,7 @@ class AppleCertificateValidator {
     const errors = []
 
     try {
-      const p12Base64 = process.env.APPLE_CERT_P12_BASE64
+      const p12Base64 = process.env.APPLE_CERT_P12_BASE64 || process.env.APPLE_PASS_CERTIFICATE_BASE64
 
       if (!p12Base64) {
         errors.push('APPLE_CERT_P12_BASE64 environment variable is empty')

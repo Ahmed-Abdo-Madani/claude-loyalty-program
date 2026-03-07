@@ -410,7 +410,7 @@ router.post('/scan/:customerToken/:offerHash?', requireBranchManagerAuth, async 
     // 🎉 AUTO-CLAIM REWARD: If progress just completed, automatically claim and reset
     if (justCompleted) {
       logger.info('🎊 Progress just completed! Auto-claiming reward and resetting cycle...')
-      await progress.claimReward(req.branch.id, 'Auto-claimed via scan')
+      await progress.claimReward(req.branch.public_id, 'Auto-claimed via scan')
       logger.info('✅ Reward claimed, cycle reset:', {
         rewardsClaimed: progress.rewards_claimed,
         currentStamps: progress.current_stamps,

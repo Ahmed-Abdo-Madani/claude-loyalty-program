@@ -1,5 +1,24 @@
-// Mobile Wallet Pass Generator Utility
-// Supports both Apple Wallet (PassKit) and Google Pay (Wallet API)
+/**
+ * Mobile Wallet Pass Generator Utility
+ * 
+ * VALID METHODS:
+ * - generateProgressQRUrl
+ * - encryptCustomerToken
+ * - hashOfferId
+ * - generateGoogleWalletPass
+ * - generateWalletPreview
+ * - generateStampVisual
+ * - generateAppleWalletUrl
+ * - generateGoogleWalletUrl
+ * - updatePassProgress
+ * - formatDate
+ * - validatePassData
+ * - getDeviceCapabilities
+ * 
+ * REMOVED/DEPRECATED METHODS:
+ * - generateAppleWalletPass: Use POST /api/wallet/apple/generate instead.
+ * - generateAuthToken: Handled by server-side pass generation.
+ */
 
 import CryptoJS from 'crypto-js'
 
@@ -42,132 +61,11 @@ class WalletPassGenerator {
     return CryptoJS.MD5(data).toString()
   }
 
-  // Generate Apple Wallet Pass (.pkpass file)
+  /**
+   * @deprecated use POST /api/wallet/apple/generate instead
+   */
   generateAppleWalletPass(customerData, offerData, progressData) {
-    // Apple PassKit JSON structure
-    const passData = {
-      formatVersion: 1,
-      passTypeIdentifier: 'pass.com.loyaltyplatform.storecard',
-      serialNumber: `${customerData.customerId}-${offerData.offerId}-${Date.now()}`,
-      teamIdentifier: 'LOYALTY_TEAM_ID', // Would be real Apple Developer Team ID
-      organizationName: offerData.businessName,
-      description: `${offerData.businessName} Loyalty Card`,
-
-      // Visual styling
-      logoText: offerData.businessName,
-      foregroundColor: 'rgb(255, 255, 255)',
-      backgroundColor: 'rgb(59, 130, 246)', // Primary blue
-      labelColor: 'rgb(255, 255, 255)',
-
-      // Store Card specific structure
-      storeCard: {
-        // Primary field (most prominent)
-        primaryFields: [
-          {
-            key: 'progress',
-            label: 'Progress',
-            value: `${progressData.stampsEarned} of ${offerData.stamps_required || offerData.stampsRequired}`,
-            textAlignment: 'PKTextAlignmentCenter'
-          }
-        ],
-
-        // Secondary fields (middle section)
-        secondaryFields: [
-          {
-            key: 'reward',
-            label: 'Reward',
-            value: offerData.rewardDescription || 'Free Item',
-            textAlignment: 'PKTextAlignmentLeft'
-          },
-          {
-            key: 'location',
-            label: 'Location',
-            value: offerData.branchName || 'All Locations',
-            textAlignment: 'PKTextAlignmentRight'
-          }
-        ],
-
-        // Auxiliary fields (bottom section)
-        auxiliaryFields: [
-          {
-            key: 'member_since',
-            label: 'Member Since',
-            value: this.formatDate(customerData.joinedDate),
-            textAlignment: 'PKTextAlignmentLeft'
-          },
-          {
-            key: 'expires',
-            label: 'Expires',
-            value: offerData.expirationDate ? this.formatDate(offerData.expirationDate) : 'Never',
-            textAlignment: 'PKTextAlignmentRight'
-          }
-        ],
-
-        // Back fields (detailed info)
-        backFields: [
-          {
-            key: 'customer_name',
-            label: 'Customer',
-            value: `${customerData.firstName} ${customerData.lastName}`
-          },
-          {
-            key: 'customer_id',
-            label: 'Customer ID',
-            value: customerData.customerId
-          },
-          {
-            key: 'offer_details',
-            label: 'Offer Details',
-            value: offerData.description
-          },
-          {
-            key: 'terms',
-            label: 'Terms & Conditions',
-            value: 'Valid at participating locations. Cannot be combined with other offers. Subject to availability.'
-          }
-        ]
-      },
-
-      // Barcodes (for scanning at POS and progress tracking)
-      barcodes: [
-        {
-          message: customerData.customerId,
-          format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1',
-          altText: `Customer ID: ${customerData.customerId}`
-        },
-        {
-          message: this.generateProgressQRUrl(customerData, offerData),
-          format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1',
-          altText: 'Scan to update loyalty progress'
-        }
-      ],
-
-      // Locations (for lock screen relevance)
-      locations: offerData.locations ? offerData.locations.map(location => ({
-        latitude: location.lat,
-        longitude: location.lng,
-        relevantText: `${offerData.businessName} nearby - Show your loyalty card!`
-      })) : [],
-
-      // Web service for updates - MUST match backend Apple Web Service router mount point
-      // Backend mounts appleWebServiceRoutes at /api/apple with /v1 routes
-      // NOTE: This frontend generator is deprecated - use backend controller instead
-      webServiceURL: `${this.baseUrl}/api/apple`,
-      authenticationToken: this.generateAuthToken(customerData.customerId, offerData.offerId),
-
-      // Pass relevance
-      relevantDate: new Date().toISOString(),
-      maxDistance: 1000, // meters
-
-      // Visual elements
-      stripImage: `${this.baseUrl}/api/wallet/images/strip/${offerData.businessId}`,
-      thumbnailImage: `${this.baseUrl}/api/wallet/images/thumbnail/${offerData.businessId}`,
-      logoImage: `${this.baseUrl}/api/wallet/images/logo/${offerData.businessId}`
-    }
-
-    return passData
+    throw new Error('Deprecated: use POST /api/wallet/apple/generate instead')
   }
 
   // Generate Google Wallet Pass
@@ -309,7 +207,7 @@ class WalletPassGenerator {
     // Handle both snake_case and camelCase property names for compatibility
     const stampsRequired = offerData.stamps_required || offerData.stampsRequired || 0
     const stampsEarned = progressData.stampsEarned || 0
-    
+
     const progressPercentage = stampsRequired > 0 ? Math.round((stampsEarned / stampsRequired) * 100) : 0
 
     return {
@@ -406,10 +304,11 @@ class WalletPassGenerator {
     })
   }
 
+  /**
+   * @deprecated use POST /api/wallet/apple/generate instead
+   */
   generateAuthToken(customerId, offerId) {
-    // Simple token generation for demo
-    // In production, use proper JWT with signing
-    return btoa(`${customerId}:${offerId}:${Date.now()}`).substring(0, 32)
+    throw new Error('Deprecated: use POST /api/wallet/apple/generate instead')
   }
 
   // Validate wallet pass data
@@ -422,7 +321,7 @@ class WalletPassGenerator {
     if (!offerData?.businessName) errors.push('Business name required')
     if (!offerData?.title) errors.push('Offer title required')
     if (typeof progressData?.stampsEarned !== 'number') errors.push('Stamps earned must be a number')
-    
+
     const stampsRequired = offerData?.stamps_required || offerData?.stampsRequired
     if (typeof stampsRequired !== 'number') errors.push('Stamps required must be a number')
 

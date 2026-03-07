@@ -211,7 +211,9 @@ DeviceRegistration.getUpdatedPassesForDevice = async function (deviceId, passTyp
       as: 'walletPass',
       where: {
         wallet_type: 'apple',
-        pass_status: 'active',
+        pass_status: {
+          [sequelize.Sequelize.Op.in]: ['active', 'completed']
+        },
         last_updated_tag: {
           [sequelize.Sequelize.Op.gt]: since
         }

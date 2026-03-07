@@ -704,9 +704,12 @@ class RealGoogleWalletController {
       const updatedObject = await response.json()
 
       // Step 2: Send push notification to user's device
-      await this.sendPushNotification(objectId, authClient)
+      const pushNotification = await this.sendPushNotification(objectId, authClient)
 
-      return updatedObject
+      return {
+        ...updatedObject,
+        pushNotification
+      }
 
     } catch (error) {
       console.error('Failed to update loyalty object:', error)
@@ -1070,8 +1073,16 @@ class RealGoogleWalletController {
               offerData: { ...offerData, businessName: offerData.businessName.substring(0, 20) + '...' }
             })
 
-            // Create loyalty class first
-            await this.createOrUpdateLoyaltyClass(authClient, offerData)
+            // Create or update loyalty class first
+            // Make this best-effort so class branding/review-status errors don't block loyalty object recovery
+            try {
+              await this.createOrUpdateLoyaltyClass(authClient, offerData)
+            } catch (classUpdateError) {
+              console.warn('⚠️ Google Wallet: Class update failed during object recovery (non-fatal):', {
+                message: classUpdateError.message,
+                offerId: offerData.offerId
+              })
+            }
 
             // Create loyalty object
             const createdObject = await this.createLoyaltyObject(authClient, customerData, offerData, defaultProgressData)
@@ -1238,7 +1249,7 @@ class RealGoogleWalletController {
         updated: new Date().toISOString(),
         progress: progressData,
         result,
-        pushNotification: await this.sendPushNotification(objectId, authClient)
+        pushNotification: result.pushNotification
       }
     } catch (error) {
       console.error('❌ Google Wallet push update failed:', error)

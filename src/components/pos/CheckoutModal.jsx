@@ -579,8 +579,20 @@ export default function CheckoutModal({
                       </div>
                     )}
 
-                    {/* Prize Pending/Failed - Show Warning */}
-                    {(prizeConfirmationStatus === 'pending' || prizeConfirmationStatus === 'failed') && loyaltyProgress && loyaltyProgress.is_completed && (
+                    {/* Explicit Pending State */}
+                    {prizeConfirmationStatus === 'pending' && (
+                      <div className="mt-2 space-y-2">
+                        <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full border-2 border-yellow-500 border-t-transparent animate-spin"></div>
+                          <p className="text-xs sm:text-sm font-semibold text-yellow-900 dark:text-yellow-100">
+                            {t('checkout.loyalty.rewardPending') || 'Reward earned - confirming...'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Prize Failed - Show Warning */}
+                    {prizeConfirmationStatus === 'failed' && loyaltyProgress && loyaltyProgress.is_completed && (
                       <div className="mt-2 space-y-2">
                         <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
                           <p className="text-xs sm:text-sm font-semibold text-yellow-900 dark:text-yellow-100">
@@ -620,7 +632,7 @@ export default function CheckoutModal({
                     )}
 
                     {/* Regular Progress - No Reward Yet */}
-                    {!loyaltyProgress.is_completed && prizeConfirmationStatus !== 'confirmed' && (
+                    {loyaltyProgress && !loyaltyProgress.is_completed && prizeConfirmationStatus !== 'confirmed' && (
                       <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
                         {t('checkout.loyalty.progress', {
                           current: loyaltyProgress.current_stamps,
@@ -630,7 +642,7 @@ export default function CheckoutModal({
                     )}
 
                     {/* Old Completed State (shouldn't happen with auto-confirm, but fallback) */}
-                    {loyaltyProgress.is_completed && !prizeConfirmationStatus && (
+                    {loyaltyProgress && loyaltyProgress.is_completed && !prizeConfirmationStatus && (
                       <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded">
                         <p className="text-xs sm:text-sm font-semibold text-green-900 dark:text-green-100">
                           ✅ {t('checkout.loyalty.rewardAvailable') || 'Reward Available'}

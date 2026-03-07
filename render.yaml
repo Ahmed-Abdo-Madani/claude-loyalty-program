@@ -55,6 +55,15 @@ services:
       # Set to false to allow server startup even if auto-migrations fail
       - key: MIGRATION_STOP_ON_ERROR
         sync: false
+      # APNs Configuration for Apple Wallet passes
+      - key: APNS_PRODUCTION
+        sync: false
+      - key: APNS_TOPIC
+        sync: false
+      - key: APPLE_CERT_P12_BASE64
+        sync: false
+      - key: APPLE_PASS_CERTIFICATE_PASSWORD
+        sync: false
     healthCheckPath: /health
     # Domain will be added after service is verified working
     # domains:

@@ -1632,6 +1632,22 @@ router.post('/sales', requireBranchManagerAuth, attachBusinessFromBranch, checkT
 
     logger.info(`Sale created: ${sale.public_id} (${sale.sale_number}) for branch ${branchId}`)
 
+    // Push updates to wallet passes AFTER commit to avoid holding transaction open
+    if (loyaltyRedemption && progress) {
+      try {
+        const { default: appleWalletController } = await import('../controllers/appleWalletController.js')
+        const { default: googleWalletController } = await import('../controllers/realGoogleWalletController.js')
+
+        const progressData = progress.toJSON()
+        await appleWalletController.pushProgressUpdate(loyaltyRedemption.customerId, loyaltyRedemption.offerId, progressData)
+        await googleWalletController.pushProgressUpdate(loyaltyRedemption.customerId, loyaltyRedemption.offerId, progressData)
+
+        logger.info('✅ Wallet passes updated after POS reward redemption')
+      } catch (walletError) {
+        logger.warn('⚠️ Failed to update wallet passes after POS redemption:', walletError.message)
+      }
+    }
+
     // Fetch complete sale with associations
     const completeSale = await Sale.findOne({
       where: { public_id: sale.public_id },

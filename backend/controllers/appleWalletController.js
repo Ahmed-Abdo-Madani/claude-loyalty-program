@@ -738,7 +738,7 @@ class AppleWalletController {
   createPassJson(customerData, offerData, progressData, design = null, existingSerialNumber = null, existingAuthToken = null, existingPass = null, customMessage = null) {
     try {
       // Use existing serial number if provided (for updates), otherwise generate new one
-      const serialNumber = existingSerialNumber || `${customerData.customerId}-${offerData.offerId}-${Date.now()}`
+      const serialNumber = existingSerialNumber || crypto.randomBytes(16).toString('hex')
 
       // ==================== DATA VALIDATION & LOGGING ====================
       logger.info('📊 ========== PASS DATA RECEIVED ==========')
@@ -1749,11 +1749,6 @@ class AppleWalletController {
       logger.info('📤 Sending push notification via WalletPass model...')
       const pushResult = await walletPass.sendPushNotification()
 
-      // Record notification in history
-      await walletPass.recordNotification('custom', {
-        header: safeHeader,
-        body: safeBody
-      })
 
       logger.info('✅ Apple Wallet: Custom message sent successfully', {
         serialNumber,

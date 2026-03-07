@@ -37,6 +37,15 @@ services:
         value: noreply@madna.me
       - key: FRONTEND_URL
         value: https://app.madna.me
+      # APNs Configuration for Apple Wallet passes
+      - key: APNS_PRODUCTION
+        sync: false
+      - key: APNS_TOPIC
+        sync: false
+      - key: APPLE_CERT_P12_BASE64
+        sync: false
+      - key: APPLE_PASS_CERTIFICATE_PASSWORD
+        sync: false
     healthCheckPath: /health
     domains:
       - api.madna.me
