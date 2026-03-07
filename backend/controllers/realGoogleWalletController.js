@@ -365,6 +365,25 @@ class RealGoogleWalletController {
       })
 
       if (response.ok) {
+        const existingClass = await response.json()
+        console.log(`🔄 Google Wallet: Checking existing class branding for ${classId}`)
+
+        // Comment 2: Compare remote and local branding fields
+        const remoteBg = existingClass.hexBackgroundColor
+        const remoteLogo = existingClass.programLogo?.sourceUri?.uri
+        const remoteHero = existingClass.heroImage?.sourceUri?.uri
+
+        const intendedBg = loyaltyClass.hexBackgroundColor
+        const intendedLogo = loyaltyClass.programLogo?.sourceUri?.uri
+        const intendedHero = loyaltyClass.heroImage?.sourceUri?.uri
+
+        const hasChanges = remoteBg !== intendedBg || remoteLogo !== intendedLogo || remoteHero !== intendedHero
+
+        if (!hasChanges) {
+          console.log(`✨ Google Wallet: No branding changes needed for ${classId}, skipping PATCH`)
+          return existingClass
+        }
+
         console.log(`🔄 Google Wallet: Updating existing class branding for ${classId}`)
 
         const updatePayload = {
@@ -397,7 +416,14 @@ class RealGoogleWalletController {
             body: errorBody
           })
 
-          throw new Error(`Failed to update loyalty class branding: ${errorText}`)
+          // Comment 1: Best-effort fallback when PATCHing existing class
+          // Hard fail only if auth/permission issue
+          if (updateResponse.status === 401 || updateResponse.status === 403) {
+            throw new Error(`Failed to update loyalty class branding (auth/permission): ${errorText}`)
+          }
+
+          console.warn(`⚠️ Google Wallet: Class branding PATCH rejected, returning existing class for ${classId}`)
+          return existingClass
         }
 
         return await updateResponse.json()
