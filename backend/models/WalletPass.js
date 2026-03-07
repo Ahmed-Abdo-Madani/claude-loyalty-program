@@ -462,10 +462,8 @@ WalletPass.prototype.scheduleExpiration = async function (daysFromNow = 30) {
 WalletPass.prototype.markCompleted = async function () {
   this.pass_status = 'completed'
 
-  // Schedule expiration 30 days from now
+  // Schedule expiration 30 days from now (internally calls save)
   await this.scheduleExpiration(30)
-
-  await this.save()
 }
 
 export default WalletPass

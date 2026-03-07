@@ -533,7 +533,7 @@ export default function CheckoutModal({
                     </p>
 
                     {/* Prize Confirmed - Show New Cycle */}
-                    {prizeConfirmationStatus === 'confirmed' && (
+                    {prizeConfirmationStatus === 'confirmed' && loyaltyProgress && (
                       <div className="mt-2 space-y-2">
                         <div className="p-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-300 dark:border-green-700 rounded">
                           <p className="text-xs sm:text-sm font-bold text-green-900 dark:text-green-100">
