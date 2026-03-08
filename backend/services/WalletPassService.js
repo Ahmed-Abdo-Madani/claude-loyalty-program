@@ -138,6 +138,40 @@ class WalletPassService {
   }
 
   /**
+   * Update the wallet_object_id for an existing Google Wallet pass
+   * @param {string} customerId - Customer ID
+   * @param {string} offerId - Offer ID
+   * @param {string} newObjectId - New Google Wallet object ID
+   * @returns {Promise<WalletPass>}
+   */
+  static async updateGoogleWalletObjectId(customerId, offerId, newObjectId) {
+    try {
+      const walletPass = await WalletPass.findOne({
+        where: {
+          customer_id: customerId,
+          offer_id: offerId,
+          wallet_type: 'google',
+          pass_status: 'active'
+        }
+      })
+
+      if (!walletPass) {
+        throw new Error(`Active Google Wallet pass not found for customer ${customerId} and offer ${offerId}`)
+      }
+
+      if (walletPass.wallet_object_id !== newObjectId) {
+        logger.info(`🔄 Updating wallet_object_id for pass ${walletPass.id} to ${newObjectId}`)
+        await walletPass.update({ wallet_object_id: newObjectId })
+      }
+
+      return walletPass
+    } catch (error) {
+      logger.error('❌ Failed to update Google Wallet object ID:', error)
+      throw error
+    }
+  }
+
+  /**
    * Check if customer has a specific wallet type
    * @param {string} customerId - Customer ID
    * @param {string} offerId - Offer ID

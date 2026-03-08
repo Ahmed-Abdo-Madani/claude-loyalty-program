@@ -442,6 +442,34 @@ class CardDesignService {
   }
 
   /**
+   * Set the active Google Wallet Class ID for an offer design
+   * @param {string} offerId - Offer public ID
+   * @param {string} classId - Google Wallet Class ID
+   * @returns {Promise<object|null>} Plain design object or null
+   */
+  static async setActiveGoogleClassId(offerId, classId) {
+    try {
+      const design = await OfferCardDesign.findByOfferId(offerId)
+      if (!design) {
+        logger.warn(`⚠️ No design found for offer ${offerId} to set Google Class ID`)
+        return null
+      }
+
+      const currentConfig = design.google_wallet_config || {}
+      if (currentConfig.activeClassId !== classId) {
+        const updatedConfig = { ...currentConfig, activeClassId: classId }
+        await design.update({ google_wallet_config: updatedConfig })
+        logger.info(`✅ Set active Google Class ID to ${classId} for offer ${offerId}`)
+      }
+
+      return design.toJSON()
+    } catch (error) {
+      logger.error(`❌ Failed to set active Google Class ID for offer ${offerId}:`, error)
+      throw error
+    }
+  }
+
+  /**
    * Get business statistics for card designs
    * @param {string} businessId - Business public ID
    * @returns {Promise<object>}

@@ -157,8 +157,12 @@ class RealGoogleWalletController {
       // Step 1: Create or update loyalty class
       const loyaltyClass = await this.createOrUpdateLoyaltyClass(authClient, offerData)
 
+      const brandingFailed = loyaltyClass._brandingFailed || false
+      const brandingError = loyaltyClass._brandingError || null
+
       // Step 2: Create loyalty object (customer's specific card)
-      const loyaltyObject = await this.createLoyaltyObject(authClient, customerData, offerData, progressData)
+      // Pass the resolved classId from loyaltyClass
+      const loyaltyObject = await this.createLoyaltyObject(authClient, customerData, offerData, progressData, loyaltyClass.id)
 
       // Step 3: Generate signed JWT for Save to Google Wallet
       const jwt = this.generateSaveToWalletJWT(loyaltyObject)
@@ -172,18 +176,36 @@ class RealGoogleWalletController {
       // Apple-specific fields (authentication_token, last_updated_tag, manifest_etag, pass_data_json)
       // are intentionally omitted and will be set to NULL by WalletPassService
       const WalletPassService = (await import('../services/WalletPassService.js')).default
-      const walletPass = await WalletPassService.createWalletPass(
-        customerData.customerId,
-        offerData.offerId,
-        'google',
-        {
-          wallet_object_id: loyaltyObject.id,
-          device_info: {
-            user_agent: req.headers['user-agent'],
-            generated_at: new Date().toISOString()
-          }
+      const existingPass = await WalletPass.findOne({
+        where: {
+          customer_id: customerData.customerId,
+          offer_id: offerData.offerId,
+          wallet_type: 'google'
         }
-      )
+      })
+
+      let walletPass;
+      if (existingPass) {
+        if (!existingPass.wallet_object_id || existingPass.wallet_object_id !== loyaltyObject.id) {
+          console.log(`🔄 Google Wallet: Object ID missing or migrated, updating wallet pass record`)
+          walletPass = await WalletPassService.updateGoogleWalletObjectId(customerData.customerId, offerData.offerId, loyaltyObject.id)
+        } else {
+          walletPass = existingPass
+        }
+      } else {
+        walletPass = await WalletPassService.createWalletPass(
+          customerData.customerId,
+          offerData.offerId,
+          'google',
+          {
+            wallet_object_id: loyaltyObject.id,
+            device_info: {
+              user_agent: req.headers['user-agent'],
+              generated_at: new Date().toISOString()
+            }
+          }
+        )
+      }
       console.log('✨ Google Wallet pass recorded in database successfully')
 
       // Verify the wallet pass was created with correct field values
@@ -208,7 +230,9 @@ class RealGoogleWalletController {
         jwt,
         classId: loyaltyClass.id,
         objectId: loyaltyObject.id,
-        expiresAt: new Date(Date.now() + 3600000).toISOString() // 1 hour from now
+        expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+        brandingFailed,
+        ...(brandingFailed && { brandingError })
       })
 
     } catch (error) {
@@ -265,8 +289,6 @@ class RealGoogleWalletController {
   }
 
   async createOrUpdateLoyaltyClass(authClient, offerData) {
-    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}`
-
     // Phase 4: Load card design if available (with backward compatibility)
     let design = null
     try {
@@ -285,6 +307,10 @@ class RealGoogleWalletController {
     } catch (error) {
       console.warn('⚠️ Failed to load card design, using defaults:', error.message)
     }
+
+    // Comment 2: Derive class ID from offer + design version
+    const designVersion = design?.version || 1
+    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9]/g, '_')}_v${designVersion}`
 
     // Calculate logo URI with triple fallback
     const logoUri = design?.logo_google_url || design?.logo_url || 'https://img.icons8.com/color/200/loyalty-card.png'
@@ -356,6 +382,8 @@ class RealGoogleWalletController {
       // Get access token properly
       const accessToken = await authClient.getAccessToken()
 
+      let finalClassResult;
+
       // Try to get existing class first
       const response = await fetch(`${this.baseUrl}/loyaltyClass/${classId}`, {
         headers: {
@@ -381,71 +409,80 @@ class RealGoogleWalletController {
 
         if (!hasChanges) {
           console.log(`✨ Google Wallet: No branding changes needed for ${classId}, skipping PATCH`)
-          return existingClass
-        }
+          finalClassResult = existingClass
+        } else {
+          console.log(`🔄 Google Wallet: Updating existing class branding for ${classId}`)
 
-        console.log(`🔄 Google Wallet: Updating existing class branding for ${classId}`)
+          const updatePayload = {
+            programLogo: loyaltyClass.programLogo,
+            hexBackgroundColor: loyaltyClass.hexBackgroundColor
+          }
+          if (loyaltyClass.heroImage) {
+            updatePayload.heroImage = loyaltyClass.heroImage
+          }
 
-        const updatePayload = {
-          programLogo: loyaltyClass.programLogo,
-          hexBackgroundColor: loyaltyClass.hexBackgroundColor
-        }
-        if (loyaltyClass.heroImage) {
-          updatePayload.heroImage = loyaltyClass.heroImage
-        }
+          const updateResponse = await fetch(`${this.baseUrl}/loyaltyClass/${classId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatePayload)
+          })
 
-        const updateResponse = await fetch(`${this.baseUrl}/loyaltyClass/${classId}`, {
-          method: 'PATCH',
+          if (!updateResponse.ok) {
+            const errorText = await updateResponse.text()
+            let errorBody = errorText
+            try {
+              errorBody = JSON.parse(errorText)
+            } catch (e) { }
+
+            console.error('❌ Google Wallet: Failed to update class branding', {
+              classId,
+              status: updateResponse.status,
+              body: errorBody
+            })
+
+            // Comment 1: Best-effort fallback when PATCHing existing class
+            // Hard fail only if auth/permission issue
+            if (updateResponse.status === 401 || updateResponse.status === 403) {
+              throw new Error(`Failed to update loyalty class branding (auth/permission): ${errorText}`)
+            }
+
+            console.warn(`⚠️ Google Wallet: Class branding PATCH rejected, returning existing class for ${classId}`)
+            finalClassResult = { ...existingClass, _brandingFailed: true, _brandingError: errorBody }
+          } else {
+            finalClassResult = await updateResponse.json()
+          }
+        }
+      } else {
+        console.log(`✨ Google Wallet: Creating new class branding for ${classId}`)
+        // Create new class
+        const createResponse = await fetch(`${this.baseUrl}/loyaltyClass`, {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken.token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(updatePayload)
+          body: JSON.stringify(loyaltyClass)
         })
 
-        if (!updateResponse.ok) {
-          const errorText = await updateResponse.text()
-          let errorBody = errorText
-          try {
-            errorBody = JSON.parse(errorText)
-          } catch (e) { }
-
-          console.error('❌ Google Wallet: Failed to update class branding', {
-            classId,
-            status: updateResponse.status,
-            body: errorBody
-          })
-
-          // Comment 1: Best-effort fallback when PATCHing existing class
-          // Hard fail only if auth/permission issue
-          if (updateResponse.status === 401 || updateResponse.status === 403) {
-            throw new Error(`Failed to update loyalty class branding (auth/permission): ${errorText}`)
-          }
-
-          console.warn(`⚠️ Google Wallet: Class branding PATCH rejected, returning existing class for ${classId}`)
-          return existingClass
+        if (!createResponse.ok) {
+          const error = await createResponse.json()
+          throw new Error(`Failed to create loyalty class: ${JSON.stringify(error)}`)
         }
 
-        return await updateResponse.json()
+        finalClassResult = await createResponse.json()
       }
 
-      console.log(`✨ Google Wallet: Creating new class branding for ${classId}`)
-      // Create new class
-      const createResponse = await fetch(`${this.baseUrl}/loyaltyClass`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(loyaltyClass)
-      })
-
-      if (!createResponse.ok) {
-        const error = await createResponse.json()
-        throw new Error(`Failed to create loyalty class: ${JSON.stringify(error)}`)
+      // Record active Google class ID in CardDesignService if successful
+      if (design && !finalClassResult._brandingFailed) {
+        CardDesignService.setActiveGoogleClassId(offerData.offerId, classId).catch(err => {
+          console.error('Failed to set active Google Class ID in background', err)
+        })
       }
 
-      return await createResponse.json()
+      return finalClassResult
 
     } catch (error) {
       console.error('Failed to create/update loyalty class:', error)
@@ -453,7 +490,7 @@ class RealGoogleWalletController {
     }
   }
 
-  async createLoyaltyObject(authClient, customerData, offerData, progressData) {
+  async createLoyaltyObject(authClient, customerData, offerData, progressData, resolvedClassId) {
     // Validate customer ID format
     if (!customerData.customerId || !customerData.customerId.startsWith('cust_')) {
       console.error(`❌ Invalid customer ID format: ${customerData.customerId}. Expected cust_* format.`)
@@ -474,11 +511,14 @@ class RealGoogleWalletController {
       }
     })
 
-    const objectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
-    const classId = `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9\-]/g, '_')}`
+    const baseObjectId = `${this.issuerId}.${customerData.customerId}_${offerData.offerId}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
+    const currentObjectId = existingPass?.wallet_object_id || baseObjectId
+
+    // Fallback if resolvedClassId is not provided (should not happen usually)
+    const classId = resolvedClassId || `${this.issuerId}.${String(offerData.offerId).replace(/[^a-zA-Z0-9\-]/g, '_')}_v1`
 
     const loyaltyObject = {
-      id: objectId,
+      id: currentObjectId,
       classId: classId,
       state: existingPass && existingPass.pass_status === 'completed' ? 'COMPLETED' :
         existingPass && (existingPass.pass_status === 'expired' || existingPass.pass_status === 'revoked') ? 'EXPIRED' :
@@ -611,7 +651,7 @@ class RealGoogleWalletController {
       const accessToken = await authClient.getAccessToken()
 
       // First, try to get existing object
-      const getResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
+      const getResponse = await fetch(`${this.baseUrl}/loyaltyObject/${currentObjectId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken.token}`,
           'Content-Type': 'application/json'
@@ -619,22 +659,49 @@ class RealGoogleWalletController {
       })
 
       if (getResponse.ok) {
-        // Object exists, update it
-        const updateResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${accessToken.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(loyaltyObject)
-        })
+        const currentObject = await getResponse.json()
 
-        if (!updateResponse.ok) {
-          const error = await updateResponse.json()
-          throw new Error(`Failed to update loyalty object: ${JSON.stringify(error)}`)
+        // Comment 1: Class Migration Logic
+        if (currentObject.classId !== classId) {
+          console.log(`🔄 Google Wallet: Class ID migration needed. Old: ${currentObject.classId}, New: ${classId}`)
+
+          // Generate a new object ID for the new class version
+          const newObjectId = `${baseObjectId}_${Date.now()}`.replace(/[^a-zA-Z0-9._\-]/g, '_')
+          loyaltyObject.id = newObjectId
+
+          const createResponse = await fetch(`${this.baseUrl}/loyaltyObject`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loyaltyObject)
+          })
+
+          if (!createResponse.ok) {
+            const error = await createResponse.json()
+            throw new Error(`Failed to create migrated loyalty object: ${JSON.stringify(error)}`)
+          }
+
+          return await createResponse.json()
+        } else {
+          // Object exists and class matches, update it
+          const updateResponse = await fetch(`${this.baseUrl}/loyaltyObject/${currentObjectId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loyaltyObject)
+          })
+
+          if (!updateResponse.ok) {
+            const error = await updateResponse.json()
+            throw new Error(`Failed to update loyalty object: ${JSON.stringify(error)}`)
+          }
+
+          return await updateResponse.json()
         }
-
-        return await updateResponse.json()
       }
 
       // Object doesn't exist, create new one
