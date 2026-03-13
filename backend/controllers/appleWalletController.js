@@ -966,6 +966,19 @@ class AppleWalletController {
             }
           ],
 
+          // Primary fields - Offer title as label, custom message as value - EXACTLY 1 field if custom message present
+          ...(customMessage && customMessage.header && customMessage.body ? {
+            primaryFields: [
+              {
+                key: 'primary',
+                label: truncateText(offerData.title, 50),
+                textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
+                value: truncateText(`${customMessage.header}: ${customMessage.body}`, 80),
+                changeMessage: localizedStrings.newMessage
+              }
+            ]
+          } : {}),
+
           // Secondary fields - EXACTLY 2 fields for barcode compatibility
           secondaryFields: [
             {
@@ -1742,8 +1755,8 @@ class AppleWalletController {
       // Update database with new pass data
       // Note: Manifest and signature will be recomputed at serve time by the pass endpoint
       // This ensures consistency and avoids ETag mismatches if images evolve
-      logger.info('💾 Updating pass data in database...')
-      await walletPass.updatePassData(passData)
+      logger.info('💾 Updating pass data in database and invalidating ETag...')
+      await walletPass.updatePassData(passData, null)
 
       // Send push notification via WalletPass model (standardized path)
       logger.info('📤 Sending push notification via WalletPass model...')
@@ -1978,7 +1991,7 @@ class AppleWalletController {
       if (notificationHistory.length > 0) {
         // Find the most recent custom message notification
         const lastMessage = notificationHistory
-          .filter(n => n.type === 'custom' && n.header && n.body)
+          .filter(n => n.header && n.body)
           .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0]
 
         if (lastMessage) {
@@ -2007,7 +2020,7 @@ class AppleWalletController {
       )
 
       // Update pass data in database
-      await walletPass.updatePassData(updatedPassData)
+      await walletPass.updatePassData(updatedPassData, null)
 
       // Log successful save with tier information for debugging
       logger.info('💾 Pass data saved to database:', {

@@ -380,8 +380,63 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
     logger.info('🔄 Using existing serial number:', existingSerialNumber)
     logger.info('🔄 Using existing auth token:', existingAuthToken?.substring(0, 8) + '...')
 
+    // Retrieve last custom message to persist on back field during regeneration
+    let lastCustomMessage = null
+
+    // First attempt: Check pass_data_json from database (wrote synchronously during sendCustomMessage before APNs)
+    if (walletPass.pass_data_json && walletPass.pass_data_json.backFields) {
+      const latestMsgField = walletPass.pass_data_json.backFields.find(f => f.key === 'back_latest_message')
+      if (latestMsgField && latestMsgField.value) {
+        // Parse format: "[timestamp] Header: Body"
+        const str = latestMsgField.value
+        const endBracket = str.indexOf('] ')
+        if (endBracket !== -1) {
+          const rest = str.substring(endBracket + 2)
+          const colon = rest.indexOf(': ')
+          if (colon !== -1) {
+            lastCustomMessage = {
+              header: rest.substring(0, colon),
+              body: rest.substring(colon + 2)
+            }
+            logger.info('📬 Retrieved last custom message from pass_data_json to prevent APNs drop:', {
+              header: lastCustomMessage.header.substring(0, 30)
+            })
+          }
+        }
+      }
+    }
+
+    // Fallback: Check notification history if pass_data_json didn't have it
+    if (!lastCustomMessage) {
+      const notificationHistory = walletPass.notification_history || []
+      if (notificationHistory.length > 0) {
+        const lastMessage = notificationHistory
+          .filter(n => n.header && n.body)
+          .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0]
+
+        if (lastMessage) {
+          lastCustomMessage = {
+            header: lastMessage.header,
+            body: lastMessage.body
+          }
+          logger.info('📬 Retrieved last custom message from notification_history fallback:', {
+            header: lastMessage.header.substring(0, 30)
+          })
+        }
+      }
+    }
+
     // Generate pass data (pass.json) with SAME serial number and SAME auth token
-    const passData = appleWalletController.createPassJson(customerData, offerData, progressData, design, existingSerialNumber, existingAuthToken)
+    const passData = appleWalletController.createPassJson(
+      customerData,
+      offerData,
+      progressData,
+      design,
+      existingSerialNumber,
+      existingAuthToken,
+      walletPass,
+      lastCustomMessage
+    )
 
     // Determine pass type before generating images
     const applePassType = resolveApplePassType(offerData)

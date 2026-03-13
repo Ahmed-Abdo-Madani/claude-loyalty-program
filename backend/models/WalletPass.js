@@ -220,7 +220,7 @@ WalletPass.generateAuthToken = function (customerId, offerId) {
  * Update the pass data and increment update tag
  * This triggers push notifications to registered devices
  * @param {object} passData - Complete pass.json structure
- * @param {string} [manifestETag] - Optional manifest ETag to save (combines two DB writes into one)
+ * @param {string|null} [manifestETag] - Optional manifest ETag to save (or null to invalidate)
  */
 WalletPass.prototype.updatePassData = async function (passData, manifestETag) {
   if (this.wallet_type !== 'apple') {
@@ -231,8 +231,8 @@ WalletPass.prototype.updatePassData = async function (passData, manifestETag) {
   this.last_updated_tag = Math.floor(Date.now() / 1000)
   this.last_updated_at = new Date()
 
-  // If manifestETag provided, update it in the same operation (avoids double DB write)
-  if (manifestETag) {
+  // If manifestETag provided (including explicitly null to invalidate), update it in the same operation
+  if (manifestETag !== undefined) {
     this.manifest_etag = manifestETag
   }
 
