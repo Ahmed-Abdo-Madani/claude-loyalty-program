@@ -874,6 +874,11 @@ class AppleWalletController {
         source: design?.apple_pass_type ? 'design' : 'offer'
       })
 
+      // Retrieve the historical notification trigger if available (prevents spurious notifications on pass rebuilds)
+      const oldGenericTrigger = existingPass?.pass_data_json?.generic?.auxiliaryFields?.find(f => f.key === 'notification_trigger')?.value;
+      const oldStoreCardTrigger = existingPass?.pass_data_json?.storeCard?.auxiliaryFields?.find(f => f.key === 'notification_trigger')?.value;
+      const triggerValue = customMessage?.triggerTimestamp || oldGenericTrigger || oldStoreCardTrigger;
+
       // Prepare pass data structure
       const passData = {
         formatVersion: 1,
@@ -918,17 +923,27 @@ class AppleWalletController {
             }
           ],
 
-          // Secondary fields - Progress only - EXACTLY 1 field
+          // Secondary fields - Progress and Customer - EXACTLY 2 fields
           secondaryFields: [
             {
               key: 'progress',
               label: localizedStrings.progress,
-              textAlignment: 'PKTextAlignmentRight',
+              textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
               value: `${stampsEarned} ${ofWord} ${stampsRequired}`
+            },
+            {
+              key: 'customer',
+              label: '', // No label for cleaner look
+              textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentLeft' : 'PKTextAlignmentRight',
+              value: (() => {
+                const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
+                const formattedName = formatCustomerName(fullName)
+                return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
+              })()
             }
           ],
 
-          // Auxiliary fields - Tier (with label showing tier name), Member Name (right, no label) - EXACTLY 2 fields
+          // Auxiliary fields - Tier and optional Notification Trigger - EXACTLY 1 or 2 fields
           auxiliaryFields: [
             {
               key: 'tier',
@@ -939,19 +954,15 @@ class AppleWalletController {
                 28
               ),
               textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-              value: '',
-              changeMessage: customMessage ? localizedStrings.newMessage : localizedStrings.congratulations
+              value: ''
             },
-            {
-              key: 'customer',
-              label: '', // No label for cleaner look
-              textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-              value: (() => {
-                const fullName = [customerData.firstName, customerData.lastName].filter(Boolean).join(' ')
-                const formattedName = formatCustomerName(fullName)
-                return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
-              })()
-            }
+            ...(triggerValue ? [{
+              key: 'notification_trigger',
+              label: '',
+              value: triggerValue,
+              changeMessage: localizedStrings.newMessage,
+              textAlignment: 'PKTextAlignmentLeft'
+            }] : [])
           ]
         } : {
           // STORECARD PASS STRUCTURE - Reduced field count for barcode compatibility
@@ -1003,9 +1014,15 @@ class AppleWalletController {
                 const formattedName = formatCustomerName(fullName)
                 return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
               })(),
-              textAlignment: 'PKTextAlignmentRight', // Right-aligned for storeCard
-              ...(customMessage && { changeMessage: localizedStrings.newMessage })
-            }
+              textAlignment: 'PKTextAlignmentRight' // Right-aligned for storeCard
+            },
+            ...(triggerValue ? [{
+              key: 'notification_trigger',
+              label: '',
+              value: triggerValue,
+              changeMessage: localizedStrings.newMessage,
+              textAlignment: 'PKTextAlignmentLeft'
+            }] : [])
           ]
         },
 
@@ -1719,10 +1736,11 @@ class AppleWalletController {
         }
       }
 
-      // Prepare custom message object
+      // Prepare custom message object with explicit trigger control
       const customMessage = {
         header: safeHeader,
-        body: safeBody
+        body: safeBody,
+        triggerTimestamp: new Date().toISOString()
       }
 
       logger.info('🔄 Regenerating pass with custom message...')

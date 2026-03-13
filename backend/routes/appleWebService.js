@@ -398,10 +398,14 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
               header: rest.substring(0, colon),
               body: rest.substring(colon + 2)
             }
-            logger.info('📬 Retrieved last custom message from pass_data_json to prevent APNs drop:', {
-              header: lastCustomMessage.header.substring(0, 30)
-            })
+          } else {
+            lastCustomMessage = {
+              header: rest
+            }
           }
+          logger.info('📬 Retrieved last custom message from pass_data_json to prevent APNs drop:', {
+            header: lastCustomMessage.header.substring(0, 30)
+          })
         }
       }
     }
@@ -411,7 +415,7 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
       const notificationHistory = walletPass.notification_history || []
       if (notificationHistory.length > 0) {
         const lastMessage = notificationHistory
-          .filter(n => n.header && n.body)
+          .filter(n => n.header)
           .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0]
 
         if (lastMessage) {
