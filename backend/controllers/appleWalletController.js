@@ -704,10 +704,12 @@ class AppleWalletController {
 
     // 8. Custom Message (if provided) - Dynamic field WITHOUT changeMessage (to avoid duplicate notifications)
     // Full message on back (persistence) - allows users to view message after dismissing notification
-    // changeMessage is handled by primary field to avoid double notifications
-    if (customMessage && customMessage.header && customMessage.body) {
+    // changeMessage is handled by primary/auxiliary field to avoid double notifications
+    if (customMessage && customMessage.header) {
       const timestamp = new Date().toISOString()
-      const messageValue = `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
+      const messageValue = customMessage.body
+        ? `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
+        : `[${timestamp}] ${customMessage.header}`
 
       backFields.push({
         key: 'back_latest_message',
@@ -722,7 +724,7 @@ class AppleWalletController {
       logger.info('💬 Custom message field added to back fields:', {
         timestamp,
         header: customMessage.header.substring(0, 30),
-        body: customMessage.body.substring(0, 30),
+        body: customMessage.body?.substring(0, 30),
         language: passLanguage,
         isArabic
       })
@@ -906,16 +908,13 @@ class AppleWalletController {
             }
           ],
 
-          // Primary fields - Offer title as label, custom message as value - EXACTLY 1 field
+          // Primary fields - Offer title as label, empty value to keep it clean - EXACTLY 1 field
           primaryFields: [
             {
               key: 'primary',
               label: truncateText(offerData.title, 50),
               textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-              value: (customMessage && customMessage.header && customMessage.body)
-                ? truncateText(`${customMessage.header}: ${customMessage.body}`, 80)
-                : '',
-              ...((customMessage && customMessage.header && customMessage.body) && { changeMessage: localizedStrings.newMessage })
+              value: ''
             }
           ],
 
@@ -941,7 +940,7 @@ class AppleWalletController {
               ),
               textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
               value: '',
-              changeMessage: localizedStrings.congratulations
+              changeMessage: customMessage ? localizedStrings.newMessage : localizedStrings.congratulations
             },
             {
               key: 'customer',
@@ -966,18 +965,7 @@ class AppleWalletController {
             }
           ],
 
-          // Primary fields - Offer title as label, custom message as value - EXACTLY 1 field if custom message present
-          ...(customMessage && customMessage.header && customMessage.body ? {
-            primaryFields: [
-              {
-                key: 'primary',
-                label: truncateText(offerData.title, 50),
-                textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
-                value: truncateText(`${customMessage.header}: ${customMessage.body}`, 80),
-                changeMessage: localizedStrings.newMessage
-              }
-            ]
-          } : {}),
+          // Primary fields not needed for standard StoreCard layout with notifications moved to auxiliary
 
           // Secondary fields - EXACTLY 2 fields for barcode compatibility
           secondaryFields: [
@@ -996,7 +984,7 @@ class AppleWalletController {
             }
           ],
 
-          // Auxiliary fields - EXACTLY 1 field (customer name with dynamic tier label)
+          // Auxiliary fields - EXACTLY 1 field (customer name with dynamic tier label), triggers notification
           auxiliaryFields: [
             {
               key: 'customer',
@@ -1015,7 +1003,8 @@ class AppleWalletController {
                 const formattedName = formatCustomerName(fullName)
                 return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
               })(),
-              textAlignment: 'PKTextAlignmentRight' // Right-aligned for storeCard
+              textAlignment: 'PKTextAlignmentRight', // Right-aligned for storeCard
+              ...(customMessage && { changeMessage: localizedStrings.newMessage })
             }
           ]
         },
@@ -1991,7 +1980,7 @@ class AppleWalletController {
       if (notificationHistory.length > 0) {
         // Find the most recent custom message notification
         const lastMessage = notificationHistory
-          .filter(n => n.header && n.body)
+          .filter(n => n.header)
           .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0]
 
         if (lastMessage) {

@@ -127,10 +127,7 @@ function NotificationModal({
       return
     }
 
-    if (currentType.fields.includes('body') && !formData.body.trim()) {
-      setError(t('errors.bodyRequired'))
-      return
-    }
+
 
     if (currentType.fields.includes('offer') && !formData.offerId) {
       setError(t('errors.offerRequired'))
@@ -583,7 +580,7 @@ function NotificationModal({
           {currentType.fields.includes('body') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('messageBody')}
+                {t('messageBody')} (optional)
               </label>
               <textarea
                 value={formData.body}
@@ -591,7 +588,6 @@ function NotificationModal({
                 placeholder={t('messageBodyPlaceholder')}
                 rows={4}
                 maxLength={BODY_LIMIT}
-                required
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">

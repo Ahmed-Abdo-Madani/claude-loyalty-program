@@ -62,11 +62,11 @@ class WalletNotificationService {
       }
 
       // Validate message data
-      if (!messageData.header || !messageData.body) {
+      if (!messageData.header) {
         return {
           success: false,
           error: 'Invalid message data',
-          message: 'Both header and body are required',
+          message: 'Header is required',
           walletPassId
         }
       }
@@ -633,7 +633,7 @@ class WalletNotificationService {
                 notification_type: messageType === 'segment_notification' ? 'campaign' : 'manual',
                 channel: 'wallet',
                 subject: messageData.header,
-                message_content: messageData.body,
+                message_content: messageData.body || messageData.header || '',
                 status: 'failed',
                 failed_at: new Date(),
                 error_message: 'No active wallet passes found',
@@ -680,7 +680,7 @@ class WalletNotificationService {
               notification_type: messageType === 'segment_notification' ? 'campaign' : 'manual',
               channel: 'wallet',
               subject: messageData.header,
-              message_content: messageData.body,
+              message_content: messageData.body || messageData.header || '',
               status: customerSuccessful ? 'sent' : 'failed',
               sent_at: customerSuccessful ? new Date() : null,
               failed_at: !customerSuccessful ? new Date() : null,

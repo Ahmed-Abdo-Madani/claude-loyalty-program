@@ -1135,10 +1135,10 @@ router.post('/wallet/bulk', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    if (!message_header || !message_body) {
+    if (!message_header) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: message_header, message_body'
+        message: 'Missing required field: message_header'
       })
     }
 
@@ -1181,10 +1181,10 @@ router.post('/wallet/custom', requireBusinessAuth, async (req, res) => {
     const { wallet_pass_id, message_header, message_body, message_type = 'custom' } = req.body
 
     // Validate required fields
-    if (!wallet_pass_id || !message_header || !message_body) {
+    if (!wallet_pass_id || !message_header) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: wallet_pass_id, message_header, message_body'
+        message: 'Missing required fields: wallet_pass_id, message_header'
       })
     }
 

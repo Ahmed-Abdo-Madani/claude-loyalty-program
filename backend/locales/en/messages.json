@@ -157,7 +157,7 @@
     "changeMessages": {
       "rewardsCompleted": "🎉 Rewards completed: %@",
       "congratulations": "Congratulations! You are now %@",
-      "newMessage": "New message: %@"
+      "newMessage": "New message"
     }
   },
   "payment": {

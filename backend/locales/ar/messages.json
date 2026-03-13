@@ -157,7 +157,7 @@
     "changeMessages": {
       "rewardsCompleted": "🎉 المكافآت المكتملة: %@",
       "congratulations": "مبروك! أنت الآن %@",
-      "newMessage": "رسالة جديدة: %@"
+      "newMessage": "رسالة جديدة"
     }
   },
   "payment": {

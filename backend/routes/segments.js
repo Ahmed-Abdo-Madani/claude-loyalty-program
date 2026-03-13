@@ -615,10 +615,10 @@ router.post('/:segmentId/send-notification', requireBusinessAuth, async (req, re
     const { segmentId } = req.params
     const { message_header, message_body, message_type } = req.body
 
-    if (!message_header || !message_body) {
+    if (!message_header) {
       return res.status(400).json({
         success: false,
-        message: 'message_header and message_body are required'
+        message: 'message_header is required'
       })
     }
 
@@ -736,10 +736,10 @@ router.post('/send-notification', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    if (!message_header || !message_body) {
+    if (!message_header) {
       return res.status(400).json({
         success: false,
-        message: 'message_header and message_body are required'
+        message: 'message_header is required'
       })
     }
 
