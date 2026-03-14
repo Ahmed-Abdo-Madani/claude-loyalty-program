@@ -43,7 +43,13 @@ router.get('/campaigns', requireBusinessAuth, async (req, res) => {
     const whereClause = { business_id: businessId }
 
     if (status) {
-      whereClause.status = status
+      if (status === 'scheduled') {
+        whereClause.status = 'draft'
+        whereClause.send_immediately = false
+        whereClause.scheduled_at = { [Op.gt]: new Date() }
+      } else {
+        whereClause.status = status
+      }
     }
 
     if (campaign_type) {
@@ -507,10 +513,10 @@ router.post('/campaigns/promotional', requireBusinessAuth, async (req, res) => {
     logger.info('Creating promotional campaign', { business_id: businessId, campaign_type })
 
     // Validate required fields
-    if (!name || !campaign_type || !message_header || !message_body || !target_type) {
+    if (!name || !campaign_type || !message_header || !target_type) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: name, campaign_type, message_header, message_body, target_type'
+        message: 'Missing required fields: name, campaign_type, message_header, target_type'
       })
     }
 
@@ -598,7 +604,7 @@ router.post('/campaigns/promotional', requireBusinessAuth, async (req, res) => {
       linked_offer_id: linked_offer_id || null,
       message_template: {
         header: message_header,
-        body: message_body
+        body: message_body || ''
       },
       channels,
       send_immediately,

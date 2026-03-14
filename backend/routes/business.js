@@ -13,6 +13,7 @@ import MoyasarService from '../services/MoyasarService.js'
 import InvoiceService from '../services/InvoiceService.js'
 import LemonSqueezyService from '../services/LemonSqueezyService.js'
 import EmailService from '../services/EmailService.js'
+import CustomerSegmentationService from '../services/CustomerSegmentationService.js'
 import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice, Sale } from '../models/index.js'
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
@@ -2696,6 +2697,17 @@ router.post('/register', async (req, res) => {
         error: subscriptionError.message
       })
       // Continue with registration even if subscription initialization fails
+    }
+
+    // Seed predefined segments
+    try {
+      await CustomerSegmentationService.createPredefinedSegments(newBusiness.public_id)
+    } catch (segmentError) {
+      logger.error('Failed to create predefined segments', {
+        business_id: newBusiness.public_id,
+        error: segmentError.message
+      })
+      // Continue with registration even if segment creation fails
     }
 
     // Generate simple session token for immediate login

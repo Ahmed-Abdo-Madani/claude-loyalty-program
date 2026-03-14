@@ -7,6 +7,8 @@ import cron from 'node-cron'
 import prerender from 'prerender-node'
 import logger from './config/logger.js'
 import sequelize from './config/database.js'
+import { Op } from 'sequelize'
+import { NotificationCampaign } from './models/index.js'
 import walletRoutes from './routes/wallet.js'
 
 import appleWebServiceRoutes from './routes/appleWebService.js'
@@ -877,6 +879,53 @@ async function initializeDatabase() {
         }
       } else {
         logger.info('⏸️ Auto-engagement cron job disabled (DISABLE_AUTO_ENGAGEMENT=true)');
+      }
+
+      // Initialize scheduled campaigns cron job
+      if (process.env.DISABLE_SCHEDULED_CAMPAIGNS !== 'true') {
+        // Run every minute
+        cron.schedule('* * * * *', async () => {
+          logger.info('⏰ Checking for due scheduled campaigns...');
+          try {
+            // Use atomic update to claim campaigns and prevent race conditions
+            const [updateCount, dueCampaigns] = await NotificationCampaign.update(
+              { status: 'active', started_at: new Date() },
+              {
+                where: {
+                  status: 'draft',
+                  send_immediately: false,
+                  scheduled_at: {
+                    [Op.lte]: new Date()
+                  }
+                },
+                returning: true
+              }
+            );
+
+            if (dueCampaigns.length > 0) {
+              logger.info(`Found and claimed ${dueCampaigns.length} scheduled campaigns due for sending`);
+              for (const campaign of dueCampaigns) {
+                try {
+                  await NotificationService.sendCampaign(campaign.campaign_id);
+                  logger.info(`✅ Successfully dispatched scheduled campaign: ${campaign.campaign_id}`);
+                } catch (err) {
+                  logger.error(`❌ Failed to dispatch scheduled campaign ${campaign.campaign_id}`, {
+                    error: err.message
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            logger.error('❌ Scheduled campaigns check failed', {
+              error: error.message,
+              stack: error.stack
+            });
+          }
+        });
+
+        logger.info('⏰ Scheduled campaigns cron job initialized (every minute)');
+      } else {
+        logger.info('⏸️ Scheduled campaigns cron job disabled (DISABLE_SCHEDULED_CAMPAIGNS=true)');
       }
 
       // Initialize recurring billing cron job

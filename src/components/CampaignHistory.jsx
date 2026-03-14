@@ -198,20 +198,32 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
   }
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'Never'
     return new Date(dateString).toLocaleString()
   }
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (campaignOrStatus) => {
+    const status = typeof campaignOrStatus === 'string' ? campaignOrStatus : campaignOrStatus.status;
+
+    let displayStatus = status;
+    if (typeof campaignOrStatus === 'object') {
+      if (status === 'draft' && campaignOrStatus.send_immediately === false && campaignOrStatus.scheduled_at && new Date(campaignOrStatus.scheduled_at) > new Date()) {
+        displayStatus = 'scheduled';
+      }
+    }
+
     const styles = {
       draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
       active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      paused: 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-300',
       completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      scheduled: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
     }
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status] || styles.draft}`}>
-        {t(`campaign:history.statuses.${status}`)}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[displayStatus] || styles.draft}`}>
+        {t(`campaign:history.statuses.${displayStatus}`)}
       </span>
     )
   }
@@ -302,6 +314,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
               <option value="active">{t('campaign:history.statuses.active')}</option>
               <option value="completed">{t('campaign:history.statuses.completed')}</option>
               <option value="cancelled">{t('campaign:history.statuses.cancelled')}</option>
+              <option value="scheduled">{t('campaign:history.statuses.scheduled')}</option>
             </select>
           </div>
 
@@ -440,7 +453,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                       {t(`campaign:history.types.${campaign.campaign_type}`)}
                     </td>
                     <td className="px-6 py-4">
-                      {getStatusBadge(campaign.status)}
+                      {getStatusBadge(campaign)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">
@@ -465,7 +478,12 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(campaign.created_at)}
+                      <div>{formatDate(campaign.created_at)}</div>
+                      {campaign.status === 'draft' && !campaign.send_immediately && campaign.scheduled_at && (
+                        <div className="mt-1 text-xs text-yellow-600 dark:text-yellow-500">
+                          ⏰ {t('campaign:history.details.scheduledFor')}: {formatDate(campaign.scheduled_at)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -552,7 +570,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                       </p>
                     </div>
                   </div>
-                  {getStatusBadge(campaign.status)}
+                  {getStatusBadge(campaign)}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
@@ -573,9 +591,16 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    {formatDate(campaign.created_at)}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {formatDate(campaign.created_at)}
+                    </span>
+                    {campaign.status === 'draft' && !campaign.send_immediately && campaign.scheduled_at && (
+                      <span className="mt-1 text-xs text-yellow-600 dark:text-yellow-500">
+                        ⏰ {formatDate(campaign.scheduled_at)}
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={() => loadCampaignDetails(campaign.campaign_id)}
                     className="text-primary hover:text-primary/80 font-medium"
@@ -669,8 +694,8 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
                         className={`px-3 py-2 rounded-lg ${currentPage === pageNum
-                            ? 'bg-primary text-white'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          ? 'bg-primary text-white'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                           } transition-colors`}
                       >
                         {pageNum}
@@ -735,7 +760,7 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">{t('campaign:history.table.status')}</div>
-                      <div className="mt-1">{getStatusBadge(selectedCampaign.status)}</div>
+                      <div className="mt-1">{getStatusBadge(selectedCampaign)}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">{t('campaign:history.table.recipients')}</div>
@@ -832,6 +857,19 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                         </div>
                       </div>
                     </div>
+                    {selectedCampaign.status === 'draft' && !selectedCampaign.send_immediately && selectedCampaign.scheduled_at && (
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2"></div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {t('campaign:history.details.scheduledFor')}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(selectedCampaign.scheduled_at)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {selectedCampaign.sent_at && (
                       <div className="flex items-start gap-3">
                         <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
@@ -902,10 +940,10 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
                 onClick={executeAction}
                 disabled={actionLoading}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium text-white disabled:opacity-50 transition-colors ${confirmDialog.type === 'delete'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : confirmDialog.type === 'activate'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-primary hover:bg-primary/90'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : confirmDialog.type === 'activate'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-primary hover:bg-primary/90'
                   }`}
               >
                 {actionLoading ? (
@@ -929,8 +967,8 @@ function CampaignHistory({ onCreateCampaign, refreshTrigger }) {
       {toast.show && (
         <div className="fixed bottom-4 right-4 z-50 animate-slide-in">
           <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 ${toast.type === 'success'
-              ? 'bg-green-500 text-white'
-              : 'bg-red-500 text-white'
+            ? 'bg-green-500 text-white'
+            : 'bg-red-500 text-white'
             }`}>
             {toast.type === 'success' ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

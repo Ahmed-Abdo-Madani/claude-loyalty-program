@@ -20,6 +20,7 @@ function AutoEngagementSettings() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [runningNow, setRunningNow] = useState(false);
 
     // Pagination for history
     const [currentPage, setCurrentPage] = useState(1);
@@ -93,6 +94,27 @@ function AutoEngagementSettings() {
         }
     };
 
+    const handleRunNow = async () => {
+        setRunningNow(true);
+        setError('');
+        setSuccessMessage('');
+        try {
+            const res = await secureApi.post(endpoints.autoEngagementRun, {});
+            const data = await res.json();
+            if (data.success) {
+                setSuccessMessage(t('dashboard:customers.autoEngagement.runNowSuccess', { count: data.data.notified_count, defaultValue: `Manual check complete. Notified ${data.data.notified_count} customers.` }));
+                fetchConfig();
+                fetchHistory(1);
+            } else {
+                throw new Error(data.message || t('dashboard:customers.autoEngagement.runNowFailed', 'Failed to run auto-engagement'));
+            }
+        } catch (err) {
+            setError(err.message || t('dashboard:customers.autoEngagement.runNowError', 'Error running auto-engagement manually'));
+        } finally {
+            setRunningNow(false);
+        }
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return 'Never';
         return new Date(dateString).toLocaleString('en-US', {
@@ -107,10 +129,10 @@ function AutoEngagementSettings() {
     const getStatusBadge = (runStatus) => {
         switch (runStatus) {
             case 'success':
-            case 'completed': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">Success</span>;
-            case 'failed': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">Failed</span>;
-            case 'running': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">Running</span>;
-            default: return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">Pending</span>;
+            case 'completed': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">{t('dashboard:customers.autoEngagement.statusSuccess', 'Success')}</span>;
+            case 'failed': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">{t('dashboard:customers.autoEngagement.statusFailed', 'Failed')}</span>;
+            case 'running': return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">{t('dashboard:customers.autoEngagement.statusRunning', 'Running')}</span>;
+            default: return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{t('dashboard:customers.autoEngagement.statusPending', 'Pending')}</span>;
         }
     };
 
@@ -118,7 +140,7 @@ function AutoEngagementSettings() {
         return (
             <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">{t('loading', 'Loading...')}</p>
+                <p className="text-gray-600 dark:text-gray-400">{t('dashboard:loading', 'Loading...')}</p>
             </div>
         );
     }
@@ -220,7 +242,7 @@ function AutoEngagementSettings() {
                                         ...config,
                                         message_template: { ...config.message_template, body: e.target.value }
                                     })}
-                                    placeholder={t('dashboard:customers.autoEngagement.templateBodyPlaceholder', 'e.g. Come back and enjoy a special treat...')}
+                                    placeholder={t('dashboard:customers.autoEngagement.templateBodyPlaceholder', 'e.g. Come back and enjoy a special treat... (Optional)')}
                                     rows={3}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
                                     maxLength={256}
@@ -302,6 +324,18 @@ function AutoEngagementSettings() {
                         <div className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                             {formatDate(status.last_run_at)}
                         </div>
+                        {!status.last_run_at && config.enabled && (
+                            <button
+                                onClick={handleRunNow}
+                                disabled={runningNow}
+                                className="mt-2 text-sm px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60 rounded flex items-center justify-center gap-1 w-auto disabled:opacity-50 transition-colors"
+                            >
+                                {runningNow ? t('dashboard:customers.autoEngagement.runningNow', 'Running...') : t('dashboard:customers.autoEngagement.runNow', '🚀 Run Now')}
+                            </button>
+                        )}
+                        {!status.last_run_at && !config.enabled && (
+                            <p className="mt-1 text-xs text-gray-500">{t('dashboard:customers.autoEngagement.enableToRun', 'Enable to run manually')}</p>
+                        )}
                     </div>
                     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
                         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -364,7 +398,7 @@ function AutoEngagementSettings() {
                                             {formatDate(log.sent_at)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                            {log.customer_id.substring(0, 8)}...
+                                            {log.customer?.name || log.customer?.phone || (log.customer_id ? `${log.customer_id.substring(0, 8)}...` : '-')}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                             <span className="capitalize">{log.channel}</span>
@@ -401,14 +435,14 @@ function AutoEngagementSettings() {
                                 disabled={currentPage === 1}
                                 className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Previous
+                                {t('common:previous', 'Previous')}
                             </button>
                             <button
                                 onClick={() => fetchHistory(currentPage + 1)}
                                 disabled={currentPage === totalPages}
                                 className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Next
+                                {t('common:next', 'Next')}
                             </button>
                         </div>
                     </div>

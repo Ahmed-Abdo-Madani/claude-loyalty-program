@@ -4,10 +4,10 @@ import { endpoints, secureApi } from '../config/api'
 
 function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
   const { t } = useTranslation(['campaign', 'common'])
-  
+
   // Determine mode: 'create' or 'edit'
   const mode = initialData ? 'edit' : 'create'
-  
+
   // State management
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -19,7 +19,8 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
   const [validationErrors, setValidationErrors] = useState({})
   const [offersEmpty, setOffersEmpty] = useState(false)
   const [segmentsEmpty, setSegmentsEmpty] = useState(false)
-  
+  const [seedingSegments, setSeedingSegments] = useState(false)
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -72,20 +73,20 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
       const response = await secureApi.get(endpoints.segments)
       const data = await response.json()
       console.log('Segments API response:', data)
-      
+
       if (data.success && data.data) {
         // Handle both array and object shapes
         let segmentsArray = []
-        
+
         if (Array.isArray(data.data)) {
           segmentsArray = data.data
         } else if (data.data.segments && Array.isArray(data.data.segments)) {
           segmentsArray = data.data.segments
         }
-        
+
         const activeSegments = segmentsArray.filter(s => s.is_active)
         console.log('Active segments found:', activeSegments.length, 'out of', segmentsArray.length)
-        
+
         setSegments(activeSegments)
         setSegmentsEmpty(activeSegments.length === 0)
       }
@@ -100,20 +101,20 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
       const response = await secureApi.get(endpoints.myOffers)
       const data = await response.json()
       console.log('Offers API response:', data)
-      
+
       if (data.success && data.data) {
         // Handle both array and object shapes
         let offersArray = []
-        
+
         if (Array.isArray(data.data)) {
           offersArray = data.data
         } else if (data.data.offers && Array.isArray(data.data.offers)) {
           offersArray = data.data.offers
         }
-        
-        const activeOffers = offersArray.filter(o => o.is_active)
+
+        const activeOffers = offersArray.filter(o => o.status === 'active')
         console.log('Active offers found:', activeOffers.length, 'out of', offersArray.length)
-        
+
         setOffers(activeOffers)
         setOffersEmpty(activeOffers.length === 0)
       }
@@ -126,12 +127,12 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
   // Validation functions
   const validateStep = (step) => {
     const errors = {}
-    
+
     if (step === 1) {
       if (!formData.name.trim()) errors.name = t('campaign:validation.nameRequired')
       if (!formData.campaign_type) errors.campaign_type = t('campaign:validation.typeRequired')
     }
-    
+
     if (step === 2) {
       if (!formData.target_type) errors.target_type = t('campaign:validation.targetRequired')
       if (formData.target_type === 'segment' && !formData.target_segment_id) {
@@ -141,18 +142,17 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
         errors.target_criteria = t('campaign:validation.criteriaRequired')
       }
     }
-    
+
     if (step === 3) {
       if (!formData.message_header.trim()) errors.message_header = t('campaign:validation.headerRequired')
       if (formData.message_header.length > HEADER_LIMIT) {
         errors.message_header = t('campaign:validation.headerTooLong', { max: HEADER_LIMIT })
       }
-      if (!formData.message_body.trim()) errors.message_body = t('campaign:validation.bodyRequired')
       if (formData.message_body.length > BODY_LIMIT) {
         errors.message_body = t('campaign:validation.bodyTooLong', { max: BODY_LIMIT })
       }
     }
-    
+
     if (step === 4) {
       if (!formData.send_immediately && !formData.scheduled_at) {
         errors.scheduled_at = t('campaign:validation.scheduleRequired')
@@ -161,7 +161,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
         errors.scheduled_at = t('campaign:validation.scheduleFuture')
       }
     }
-    
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -237,10 +237,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
       custom_promotion: 'customPromotion',
       seasonal_campaign: 'seasonal'
     }
-    
+
     const translationKey = typeMap[formData.campaign_type]
     if (!translationKey) return ''
-    
+
     return field === 'header'
       ? t(`campaign:step3.placeholders.${translationKey}.header`)
       : t(`campaign:step3.placeholders.${translationKey}.body`)
@@ -257,14 +257,14 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
               {mode === 'edit' ? t('campaign:edit.success') : t('campaign:success.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {mode === 'edit' 
+              {mode === 'edit'
                 ? 'Campaign has been updated successfully'
-                : (formData.send_immediately 
+                : (formData.send_immediately
                   ? t('campaign:success.messageSent')
                   : t('campaign:success.messageScheduled'))
               }
             </p>
-            
+
             <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 mb-6 text-left">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-4">{t('campaign:success.detailsTitle')}</h3>
               <div className="space-y-2 text-sm">
@@ -282,9 +282,8 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">{t('campaign:success.fields.status')}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    createdCampaign.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-2 py-1 rounded-full text-xs ${createdCampaign.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
                     {createdCampaign.status}
                   </span>
                 </div>
@@ -308,7 +307,7 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 )}
               </div>
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={onClose}
@@ -376,17 +375,15 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
           <div className="flex items-center justify-between">
             {[1, 2, 3, 4].map((step) => (
               <div key={step} className="flex items-center flex-1">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  step <= currentStep
-                    ? 'bg-primary border-primary text-white'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-400'
-                }`}>
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${step <= currentStep
+                  ? 'bg-primary border-primary text-white'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-400'
+                  }`}>
                   {step}
                 </div>
                 {step < 4 && (
-                  <div className={`flex-1 h-1 mx-2 ${
-                    step < currentStep ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-                  }`} />
+                  <div className={`flex-1 h-1 mx-2 ${step < currentStep ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+                    }`} />
                 )}
               </div>
             ))}
@@ -465,11 +462,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                           disabled={!isEditable}
                           aria-selected={formData.campaign_type === 'new_offer_announcement'}
                           title={!isEditable ? 'Campaign type cannot be changed in edit mode' : ''}
-                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${
-                            formData.campaign_type === 'new_offer_announcement'
-                              ? 'border-primary bg-primary/5 border-[3px]'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                          } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${formData.campaign_type === 'new_offer_announcement'
+                            ? 'border-primary bg-primary/5 border-[3px]'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                            } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           {formData.campaign_type === 'new_offer_announcement' && (
                             <div className="absolute top-2 right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
@@ -493,11 +489,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                           disabled={!isEditable}
                           aria-selected={formData.campaign_type === 'custom_promotion'}
                           title={!isEditable ? 'Campaign type cannot be changed in edit mode' : ''}
-                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${
-                            formData.campaign_type === 'custom_promotion'
-                              ? 'border-primary bg-primary/5 border-[3px]'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                          } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${formData.campaign_type === 'custom_promotion'
+                            ? 'border-primary bg-primary/5 border-[3px]'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                            } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           {formData.campaign_type === 'custom_promotion' && (
                             <div className="absolute top-2 right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
@@ -521,11 +516,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                           disabled={!isEditable}
                           aria-selected={formData.campaign_type === 'seasonal_campaign'}
                           title={!isEditable ? 'Campaign type cannot be changed in edit mode' : ''}
-                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${
-                            formData.campaign_type === 'seasonal_campaign'
-                              ? 'border-primary bg-primary/5 border-[3px]'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                          } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                          className={`relative p-4 border-2 rounded-xl text-left transition-all ${formData.campaign_type === 'seasonal_campaign'
+                            ? 'border-primary bg-primary/5 border-[3px]'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                            } ${!isEditable ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
                           {formData.campaign_type === 'seasonal_campaign' && (
                             <div className="absolute top-2 right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
@@ -589,11 +583,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                   {t('campaign:step2.targetLabel')} *
                 </label>
                 <div className="space-y-3">
-                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    formData.target_type === 'all_customers'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}>
+                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.target_type === 'all_customers'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}>
                     <input
                       type="radio"
                       name="target_type"
@@ -615,11 +608,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    formData.target_type === 'segment'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}>
+                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.target_type === 'segment'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}>
                     <input
                       type="radio"
                       name="target_type"
@@ -653,20 +645,57 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                             ))}
                           </select>
                           {segmentsEmpty && (
-                            <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-                              {t('campaign:errors.noActiveSegments')}
-                            </p>
+                            <div className="mt-3">
+                              <p className="text-sm text-amber-600 dark:text-amber-400 mb-2">
+                                {t('campaign:errors.noActiveSegments')}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setSeedingSegments(true)
+                                  setError('')
+                                  try {
+                                    const res = await secureApi.post(endpoints.segmentsPredefined, {})
+                                    const data = await res.json()
+                                    if (data.success) {
+                                      await loadSegments()
+                                    } else {
+                                      setError(data.message || t('campaign:errors.failedToCreateSegments', 'Failed to create default segments'))
+                                    }
+                                  } catch (err) {
+                                    setError(t('campaign:errors.failedToCreateSegments', 'Failed to create default segments'))
+                                  } finally {
+                                    setSeedingSegments(false)
+                                  }
+                                }}
+                                disabled={seedingSegments}
+                                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              >
+                                {seedingSegments ? (
+                                  <>
+                                    <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {t('campaign:actions.creatingSegments', 'Creating...')}
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>🪄</span> {t('campaign:actions.createDefaultSegments', 'Create Default Segments')}
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    formData.target_type === 'custom_filter'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}>
+                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.target_type === 'custom_filter'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}>
                     <input
                       type="radio"
                       name="target_type"
@@ -768,11 +797,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                   {t('campaign:step4.schedulingLabel')}
                 </label>
                 <div className="space-y-3">
-                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    formData.send_immediately
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 dark:border-gray-700'
-                  }`}>
+                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.send_immediately
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 dark:border-gray-700'
+                    }`}>
                     <input
                       type="radio"
                       name="send_immediately"
@@ -793,11 +821,10 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                     </div>
                   </label>
 
-                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    !formData.send_immediately
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 dark:border-gray-700'
-                  }`}>
+                  <label className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${!formData.send_immediately
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 dark:border-gray-700'
+                    }`}>
                     <input
                       type="radio"
                       name="send_immediately"
@@ -902,13 +929,13 @@ function CampaignBuilder({ onClose, onSuccess, initialData = null }) {
                 ) : (
                   <>
                     <span>
-                      {mode === 'edit' 
-                        ? (formData.send_immediately 
+                      {mode === 'edit'
+                        ? (formData.send_immediately
                           ? t('campaign:edit.updateAndSend', { defaultValue: 'Update & Send Campaign' })
                           : t('campaign:edit.updateCampaign', { defaultValue: 'Update Campaign' })
                         )
-                        : (formData.send_immediately 
-                          ? t('campaign:navigation.createAndSend') 
+                        : (formData.send_immediately
+                          ? t('campaign:navigation.createAndSend')
                           : t('campaign:navigation.createCampaign')
                         )
                       }

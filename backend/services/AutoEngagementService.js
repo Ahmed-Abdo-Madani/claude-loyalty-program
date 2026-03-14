@@ -10,7 +10,7 @@ class AutoEngagementService {
    */
   static async runDailyCheck() {
     logger.info('🔔 Starting daily auto-engagement check');
-    
+
     try {
       // Get all enabled configs that can run today
       const configs = await AutoEngagementConfig.findAll({
@@ -337,7 +337,12 @@ class AutoEngagementService {
         order: [['sent_at', 'DESC']],
         limit,
         offset,
-        attributes: ['id', 'customer_id', 'channel', 'status', 'sent_at', 'delivered_at', 'opened_at', 'subject', 'message_content', 'context_data']
+        attributes: ['id', 'customer_id', 'channel', 'status', 'sent_at', 'delivered_at', 'opened_at', 'subject', 'message_content', 'context_data'],
+        include: [{
+          model: Customer,
+          as: 'customer',
+          attributes: ['name', 'phone', 'email']
+        }]
       });
 
       return {
@@ -380,8 +385,8 @@ class AutoEngagementService {
         if (!configData.message_template.header || typeof configData.message_template.header !== 'string') {
           errors.push('message_template.header is required and must be a string');
         }
-        if (!configData.message_template.body || typeof configData.message_template.body !== 'string') {
-          errors.push('message_template.body is required and must be a string');
+        if (configData.message_template.body !== undefined && typeof configData.message_template.body !== 'string') {
+          errors.push('message_template.body must be a string if provided');
         }
       }
     }

@@ -143,6 +143,71 @@ router.get('/config', requireBusinessAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/auto-engagement/run
+ * Manually trigger auto-engagement for the authenticated business
+ */
+router.post('/run', requireBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.businessId;
+
+    const config = await AutoEngagementConfig.findOne({
+      where: { business_id: businessId }
+    });
+
+    if (!config) {
+      return res.status(404).json({
+        success: false,
+        message: 'No auto-engagement configuration found'
+      });
+    }
+
+    if (!config.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'Auto-engagement is disabled'
+      });
+    }
+
+    // Rate limiting: 1 hour cooldown for manual runs
+    if (config.last_manual_run_at) {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      if (config.last_manual_run_at > oneHourAgo) {
+        return res.status(429).json({
+          success: false,
+          message: 'Manual auto-engagement execution is rate-limited. Please wait 1 hour between manual runs.'
+        });
+      }
+    }
+
+    const notifiedCount = await AutoEngagementService.processBusinessAutoEngagement(config);
+
+    // Update last_manual_run_at
+    config.last_manual_run_at = new Date();
+    await config.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Auto-engagement manual run completed',
+      data: {
+        notified_count: notifiedCount
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error running manual auto-engagement', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to run auto-engagement manually',
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/auto-engagement/history
  * Get auto-engagement notification history for the authenticated business
  */

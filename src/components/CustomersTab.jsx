@@ -33,6 +33,8 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
   const [selectedSegment, setSelectedSegment] = useState(null)
   const [selectedSegmentData, setSelectedSegmentData] = useState(null)
   const [loadingSegments, setLoadingSegments] = useState(false)
+  const [segmentsEmpty, setSegmentsEmpty] = useState(false)
+  const [seedingSegments, setSeedingSegments] = useState(false)
   const [audienceMode, setAudienceMode] = useState('all') // 'all' | 'selected' | 'segment'
 
   // Campaign state
@@ -140,14 +142,17 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
         const segmentsArray = data.data.segments || []
         const activeSegments = segmentsArray.filter(s => s.is_active)
         setSegments(activeSegments)
+        setSegmentsEmpty(activeSegments.length === 0)
       } else {
         console.warn('⚠️ No segments data received from API')
         setSegments([])
+        setSegmentsEmpty(true)
       }
     } catch (err) {
       console.error('Failed to load segments:', err)
       // Don't block UI - segments are optional feature
       setSegments([])
+      setSegmentsEmpty(true)
     } finally {
       setLoadingSegments(false)
     }
@@ -294,7 +299,11 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
       customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.phone?.includes(searchTerm)
 
-    const matchesStatus = filterStatus === 'all' || customer.status === filterStatus
+    const matchesStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'active'
+        ? customer.status === 'active' || customer.status === 'new'
+        : customer.status === filterStatus)
 
     return matchesSearch && matchesStatus
   })
@@ -338,13 +347,27 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
       newSelected.add(customerId)
     }
     setSelectedCustomers(newSelected)
+
+    if (newSelected.size > 0 && audienceMode !== 'segment') {
+      setAudienceMode('selected')
+    } else if (newSelected.size === 0 && audienceMode === 'selected') {
+      setAudienceMode('all')
+    }
   }
 
   const selectAllCustomers = () => {
-    if (selectedCustomers.size === filteredCustomers.length) {
-      setSelectedCustomers(new Set())
+    let newSelected;
+    if (selectedCustomers.size === filteredCustomers.length && filteredCustomers.length > 0) {
+      newSelected = new Set()
     } else {
-      setSelectedCustomers(new Set(filteredCustomers.map(c => c.customer_id)))
+      newSelected = new Set(filteredCustomers.map(c => c.customer_id))
+    }
+    setSelectedCustomers(newSelected)
+
+    if (newSelected.size > 0 && audienceMode !== 'segment') {
+      setAudienceMode('selected')
+    } else if (newSelected.size === 0 && audienceMode === 'selected') {
+      setAudienceMode('all')
     }
   }
 
@@ -467,6 +490,15 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                     {t('customers.all')}
                   </button>
                   <button
+                    onClick={() => setFilterStatus('new')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${filterStatus === 'new'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                  >
+                    🌱 {t('customers.new', { defaultValue: 'New' })}
+                  </button>
+                  <button
                     onClick={() => setFilterStatus('active')}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap min-h-[36px] touch-manipulation ${filterStatus === 'active'
                       ? 'bg-green-500 text-white'
@@ -530,41 +562,82 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="all">
-                      {t('dashboard:customers.allCustomers')}
+                      {t('customers.allCustomers', 'All Customers')}
                     </option>
                     <option
                       value="selected"
-                      disabled={selectedCustomers.size === 0}
                     >
-                      {t('dashboard:customers.selectedCustomers', { count: selectedCustomers.size })}
+                      {t('customers.selectedCustomers', { count: selectedCustomers.size, defaultValue: `Selected Customers (${selectedCustomers.size})` })}
                     </option>
 
                     {/* Segments Section */}
                     {!loadingSegments && segments.length > 0 && (
                       <>
-                        <option disabled>{t('dashboard:customers.segmentSelector.segments')}</option>
+                        <option disabled>── {t('customers.segmentsTitle', 'Segments')} ──</option>
                         {segments.map(segment => (
                           <option key={segment.segment_id} value={segment.segment_id}>
-                            {segment.name} ({t('dashboard:customers.segmentSelector.customersCount', { count: segment.customer_count || 0 })})
+                            {segment.name} ({segment.customer_count || 0} {t('customers.customersCount', 'customers')})
                           </option>
                         ))}
                       </>
                     )}
                   </select>
+                  {segmentsEmpty && audienceMode === 'segment' && (
+                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <p className="text-sm text-amber-800 dark:text-amber-300 mb-2">
+                        {t('campaign:errors.noActiveSegments', { defaultValue: 'No active segments available. Create a segment first.' })}
+                      </p>
+                      <button
+                        onClick={async () => {
+                          setSeedingSegments(true)
+                          setError('')
+                          try {
+                            const res = await secureApi.post(endpoints.segmentsPredefined, {})
+                            const data = await res.json()
+                            if (data.success) {
+                              await loadSegments()
+                            } else {
+                              setError(data.message || t('campaign:errors.failedToCreateSegments', 'Failed to create default segments'))
+                            }
+                          } catch (err) {
+                            setError(t('campaign:errors.failedToCreateSegments', 'Failed to create default segments'))
+                          } finally {
+                            setSeedingSegments(false)
+                          }
+                        }}
+                        disabled={seedingSegments}
+                        className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/50 dark:hover:bg-amber-800 text-amber-800 dark:text-amber-200 text-sm font-medium rounded transition-colors flex items-center gap-2"
+                      >
+                        {seedingSegments ? (
+                          <>
+                            <svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {t('campaign:actions.creatingSegments', 'Creating...')}
+                          </>
+                        ) : (
+                          <>
+                            <span>🪄</span> {t('campaign:actions.createDefaultSegments', 'Create Default Segments')}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Button Row */}
                 <div className="flex justify-stretch sm:justify-end">
                   <button
                     onClick={audienceMode === 'segment' ? handleSendToSegment : handleSendNotificationClick}
-                    disabled={audienceMode === 'all' || (audienceMode === 'selected' && selectedCustomers.size === 0)}
+                    disabled={audienceMode !== 'segment' && selectedCustomers.size === 0}
                     className="w-full sm:w-auto px-4 py-2 min-h-[44px] bg-primary hover:bg-primary/90 active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 touch-target"
                   >
                     <span>📧</span>
                     <span>
                       {audienceMode === 'segment'
                         ? t('dashboard:customers.sendToSegment')
-                        : audienceMode === 'selected' && selectedCustomers.size > 0
+                        : selectedCustomers.size > 0
                           ? t('dashboard:customers.sendToSelected', { count: selectedCustomers.size })
                           : t('dashboard:customers.selectCustomersOrSegment')
                       }
@@ -601,9 +674,9 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                         {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-gray-900 dark:text-white truncate">{customer.name || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{customer.email || 'No email'}</div>
-                        <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone || 'No phone'}</div>
+                        <div className="font-semibold text-gray-900 dark:text-white truncate">{customer.name || t('customers.unknown', 'Unknown')}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{customer.email || t('customers.noEmail', 'No email')}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone || t('customers.noPhone', 'No phone')}</div>
                       </div>
                     </div>
                   </div>
@@ -619,15 +692,15 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
 
                   <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Visits:</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('customers.visits')}:</span>
                       <span className="ml-1 font-medium text-gray-900 dark:text-white">{customer.total_visits}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Stamps:</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('customers.stamps')}:</span>
                       <span className="ml-1 font-medium text-gray-900 dark:text-white">{customer.total_stamps_earned}</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-gray-500 dark:text-gray-400">Last activity:</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('customers.lastActivity')}:</span>
                       <span className="ml-1 font-medium text-gray-900 dark:text-white">{formatDate(customer.last_activity_date)}</span>
                     </div>
                   </div>
@@ -636,7 +709,7 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                     <div className="mb-2 space-y-1">
                       {customer.progress.slice(0, 1).map((prog, idx) => (
                         <div key={idx} className="text-xs">
-                          <span className="font-medium text-gray-900 dark:text-white">{prog.offer?.title || 'Unknown'}</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{prog.offer?.title || t('customers.unknown', 'Unknown')}</span>
                           <span className="ml-2 text-gray-500 dark:text-gray-400">
                             {prog.current_stamps}/{prog.max_stamps}
                             {prog.is_completed && <span className="ml-1 text-green-500">✓</span>}
@@ -645,7 +718,7 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                       ))}
                       {customer.progress.length > 1 && (
                         <div className="text-xs text-primary font-medium">
-                          +{customer.progress.length - 1} more
+                          {t('customers.moreOffers', { count: customer.progress.length - 1, defaultValue: `+{{count}} more` })}
                         </div>
                       )}
                     </div>
@@ -711,9 +784,9 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                             {customer.name ? customer.name.charAt(0).toUpperCase() : '?'}
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-white">{customer.name || 'Unknown Customer'}</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">{customer.email || 'No email'}</div>
-                            <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone || 'No phone'}</div>
+                            <div className="font-medium text-gray-900 dark:text-white">{customer.name || t('customers.unknownCustomer', 'Unknown Customer')}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{customer.email || t('customers.noEmail', 'No email')}</div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500">{customer.phone || t('customers.noPhone', 'No phone')}</div>
                           </div>
                         </div>
                       </td>
@@ -745,7 +818,7 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                                 <div key={idx} className="flex items-center gap-2">
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium text-gray-900 dark:text-white truncate text-xs">
-                                      {prog.offer?.title || 'Unknown Offer'}
+                                      {prog.offer?.title || t('customers.unknownOffer', 'Unknown Offer')}
                                     </div>
                                     <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                       <span>{prog.current_stamps}/{prog.max_stamps}</span>
@@ -756,12 +829,12 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                               ))}
                               {customer.progress.length > 1 && (
                                 <div className="text-xs text-primary font-medium">
-                                  +{customer.progress.length - 1} more
+                                  {t('customers.moreOffers', { count: customer.progress.length - 1, defaultValue: `+{{count}} more` })}
                                 </div>
                               )}
                             </>
                           ) : (
-                            <div className="text-xs text-gray-400 dark:text-gray-500">No active offers</div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500">{t('customers.noActiveOffers', 'No active offers')}</div>
                           )}
                         </div>
                       </td>
@@ -983,7 +1056,11 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
           onSuccess={(campaign) => {
             setShowCampaignBuilder(false)
             setCampaignToEdit(null)
-            setSuccessMessage(`Campaign "${campaign.name}" ${campaignToEdit ? 'updated' : 'created'} successfully!`)
+            setSuccessMessage(t('campaign:messages.saveSuccess', {
+              name: campaign.name,
+              action: campaignToEdit ? t('common:updated', 'updated') : t('common:created', 'created'),
+              defaultValue: `Campaign "${campaign.name}" ${campaignToEdit ? 'updated' : 'created'} successfully!`
+            }))
             setCampaignRefreshTrigger(prev => prev + 1)
             setActiveTab('campaigns')
             setTimeout(() => setSuccessMessage(''), 5000)

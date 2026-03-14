@@ -8,6 +8,7 @@ class CustomerSegmentationService {
    * Create a new customer segment
    */
   static async createSegment(businessId, segmentData, userId = null) {
+    const transaction = await sequelize.transaction();
     try {
       logger.info(`Creating new segment: ${segmentData.name}`, { businessId })
 
@@ -15,15 +16,24 @@ class CustomerSegmentationService {
         business_id: businessId,
         created_by: userId,
         ...segmentData
-      })
+      }, { transaction })
 
       // Calculate initial customer count
-      await this.calculateSegmentSize(segment.segment_id)
+      segment.calculation_status = 'calculating'
+      await segment.save({ transaction })
 
+      const customers = await this.evaluateSegmentCriteria(segment)
+      segment.customer_count = customers.length
+      segment.calculation_status = 'completed'
+      segment.last_calculated_at = new Date()
+      await segment.save({ transaction })
+
+      await transaction.commit();
       logger.info(`Segment created: ${segment.name} (${segment.segment_id})`)
       return segment
 
     } catch (error) {
+      await transaction.rollback();
       logger.error('Failed to create segment', { error: error.message })
       throw error
     }
@@ -239,7 +249,7 @@ class CustomerSegmentationService {
         customers = customers.filter(customer => {
           const score = customer.getEngagementScore()
           return score >= segment.engagement_score_range.min_score &&
-                 score <= segment.engagement_score_range.max_score
+            score <= segment.engagement_score_range.max_score
         })
       }
 
@@ -619,6 +629,17 @@ class CustomerSegmentationService {
   static async createPredefinedSegments(businessId, userId = null) {
     try {
       logger.info(`Creating predefined segments for business: ${businessId}`)
+
+      const existingSegments = await CustomerSegment.count({
+        where: { business_id: businessId, is_predefined: true }
+      })
+
+      if (existingSegments > 0) {
+        logger.warn(`Predefined segments already exist for business: ${businessId}. Skipping creation.`)
+        return await CustomerSegment.findAll({
+          where: { business_id: businessId, is_predefined: true }
+        })
+      }
 
       const segments = await CustomerSegment.createPredefinedSegments(businessId)
 

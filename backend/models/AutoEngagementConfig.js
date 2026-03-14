@@ -84,6 +84,10 @@ export default (sequelize) => {
       type: DataTypes.ENUM('success', 'failed', 'running'),
       allowNull: true
     },
+    last_manual_run_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     last_run_error: {
       type: DataTypes.TEXT,
       allowNull: true
@@ -116,47 +120,47 @@ export default (sequelize) => {
   });
 
   // Instance methods
-  AutoEngagementConfig.prototype.canRun = function() {
+  AutoEngagementConfig.prototype.canRun = function () {
     if (!this.enabled) return false;
     if (this.last_run_status === 'running') return false;
-    
+
     // Check if already run today
     if (this.last_run_at) {
       const lastRun = new Date(this.last_run_at);
       const now = new Date();
-      
+
       // Reset to start of day in UTC for comparison
       lastRun.setUTCHours(0, 0, 0, 0);
       now.setUTCHours(0, 0, 0, 0);
-      
+
       if (lastRun.getTime() === now.getTime()) {
         return false; // Already ran today
       }
     }
-    
+
     return true;
   };
 
-  AutoEngagementConfig.prototype.markAsRunning = async function() {
+  AutoEngagementConfig.prototype.markAsRunning = async function () {
     this.last_run_status = 'running';
     this.last_run_at = new Date();
     this.last_run_error = null;
     await this.save();
   };
 
-  AutoEngagementConfig.prototype.markAsCompleted = async function(customersNotified = 0) {
+  AutoEngagementConfig.prototype.markAsCompleted = async function (customersNotified = 0) {
     this.last_run_status = 'success';
     this.total_customers_notified += customersNotified;
     await this.save();
   };
 
-  AutoEngagementConfig.prototype.markAsFailed = async function(error) {
+  AutoEngagementConfig.prototype.markAsFailed = async function (error) {
     this.last_run_status = 'failed';
     this.last_run_error = error.message || String(error);
     await this.save();
   };
 
-  AutoEngagementConfig.prototype.getMessageTemplate = function() {
+  AutoEngagementConfig.prototype.getMessageTemplate = function () {
     return {
       header: this.message_template.header,
       body: this.message_template.body

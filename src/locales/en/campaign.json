@@ -2,7 +2,6 @@
   "title": "Create Promotional Campaign",
   "subtitle": "Step {{current}} of {{total}}",
   "close": "Close",
-  
   "edit": {
     "title": "Edit Campaign",
     "updateAndSend": "Update & Send Campaign",
@@ -11,14 +10,12 @@
     "failed": "Failed to update campaign",
     "typeCannotChange": "Campaign type cannot be changed after creation"
   },
-  
   "steps": {
     "type": "Type",
     "target": "Target",
     "message": "Message",
     "schedule": "Schedule"
   },
-  
   "step1": {
     "title": "Campaign Type",
     "nameLabel": "Campaign Name *",
@@ -50,7 +47,6 @@
     "noLinkedOffer": "No linked offer",
     "offerLinkHelper": "Link an offer to track conversions from this campaign"
   },
-  
   "step2": {
     "title": "Target Audience",
     "targetLabel": "Target Audience *",
@@ -75,7 +71,6 @@
       }
     }
   },
-  
   "step3": {
     "title": "Message Composition",
     "headerLabel": "Message Header * ({{current}}/{{max}})",
@@ -101,7 +96,6 @@
       }
     }
   },
-  
   "step4": {
     "title": "Schedule & Review",
     "schedulingLabel": "Scheduling Options",
@@ -123,7 +117,6 @@
       "schedule": "Schedule:"
     }
   },
-  
   "navigation": {
     "back": "Back",
     "next": "Next",
@@ -131,9 +124,9 @@
     "createCampaign": "Create Campaign",
     "creating": "Creating..."
   },
-  
   "success": {
     "title": "Campaign Created Successfully!",
+    "saveSuccess": "Campaign \"{{name}}\" {{action}} successfully!",
     "messageSent": "Your campaign has been created and is being sent to customers.",
     "messageScheduled": "Your campaign has been scheduled and will be sent at the specified time.",
     "detailsTitle": "Campaign Details",
@@ -149,7 +142,6 @@
     "closeButton": "Close",
     "createAnotherButton": "Create Another Campaign"
   },
-  
   "validation": {
     "nameRequired": "Campaign name is required",
     "typeRequired": "Campaign type is required",
@@ -163,7 +155,6 @@
     "scheduleRequired": "Please select a schedule date",
     "scheduleFuture": "Schedule date must be in the future"
   },
-  
   "errors": {
     "createFailed": "Failed to create campaign",
     "loadSegmentsFailed": "Failed to load segments",
@@ -172,7 +163,6 @@
     "noActiveOffers": "No active offers available. Create an offer first.",
     "noActiveSegments": "No active segments available. Create a segment first."
   },
-  
   "history": {
     "title": "Campaign History",
     "emptyState": {
@@ -224,7 +214,8 @@
       "draft": "Draft",
       "active": "Active",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "scheduled": "Scheduled"
     },
     "details": {
       "title": "Campaign Details",
@@ -241,6 +232,7 @@
       "campaignCreated": "Campaign Created",
       "campaignSent": "Campaign Sent",
       "campaignCompleted": "Campaign Completed",
+      "scheduledFor": "Scheduled for",
       "close": "Close",
       "noHeader": "No header",
       "noMessage": "No message body"

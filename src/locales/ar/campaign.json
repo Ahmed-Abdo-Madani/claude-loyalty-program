@@ -2,7 +2,6 @@
   "title": "إنشاء حملة ترويجية",
   "subtitle": "الخطوة {{current}} من {{total}}",
   "close": "إغلاق",
-  
   "edit": {
     "title": "تعديل الحملة",
     "updateAndSend": "تحديث وإرسال الحملة",
@@ -11,14 +10,12 @@
     "failed": "فشل تحديث الحملة",
     "typeCannotChange": "لا يمكن تغيير نوع الحملة بعد الإنشاء"
   },
-  
   "steps": {
     "type": "النوع",
     "target": "الجمهور",
     "message": "الرسالة",
     "schedule": "الجدولة"
   },
-  
   "step1": {
     "title": "نوع الحملة",
     "nameLabel": "اسم الحملة *",
@@ -50,7 +47,6 @@
     "noLinkedOffer": "لا يوجد عرض مرتبط",
     "offerLinkHelper": "اربط عرضاً لتتبع التحويلات من هذه الحملة"
   },
-  
   "step2": {
     "title": "الجمهور المستهدف",
     "targetLabel": "الجمهور المستهدف *",
@@ -75,7 +71,6 @@
       }
     }
   },
-  
   "step3": {
     "title": "كتابة الرسالة",
     "headerLabel": "عنوان الرسالة * ({{current}}/{{max}})",
@@ -101,7 +96,6 @@
       }
     }
   },
-  
   "step4": {
     "title": "الجدولة والمراجعة",
     "schedulingLabel": "خيارات الجدولة",
@@ -123,7 +117,6 @@
       "schedule": "الجدولة:"
     }
   },
-  
   "navigation": {
     "back": "رجوع",
     "next": "التالي",
@@ -131,9 +124,9 @@
     "createCampaign": "إنشاء الحملة",
     "creating": "جاري الإنشاء..."
   },
-  
   "success": {
     "title": "تم إنشاء الحملة بنجاح!",
+    "saveSuccess": "تم {{action}} الحملة \"{{name}}\" بنجاح!",
     "messageSent": "تم إنشاء حملتك ويتم إرسالها إلى العملاء.",
     "messageScheduled": "تم جدولة حملتك وسيتم إرسالها في الوقت المحدد.",
     "detailsTitle": "تفاصيل الحملة",
@@ -149,7 +142,6 @@
     "closeButton": "إغلاق",
     "createAnotherButton": "إنشاء حملة أخرى"
   },
-  
   "validation": {
     "nameRequired": "اسم الحملة مطلوب",
     "typeRequired": "نوع الحملة مطلوب",
@@ -163,7 +155,6 @@
     "scheduleRequired": "الرجاء اختيار تاريخ الجدولة",
     "scheduleFuture": "يجب أن يكون تاريخ الجدولة في المستقبل"
   },
-  
   "errors": {
     "createFailed": "فشل إنشاء الحملة",
     "loadSegmentsFailed": "فشل تحميل الشرائح",
@@ -172,7 +163,6 @@
     "noActiveOffers": "لا توجد عروض نشطة متاحة. أنشئ عرضاً أولاً.",
     "noActiveSegments": "لا توجد شرائح نشطة متاحة. أنشئ شريحة أولاً."
   },
-  
   "history": {
     "title": "سجل الحملات",
     "emptyState": {
@@ -224,7 +214,8 @@
       "draft": "مسودة",
       "active": "نشط",
       "completed": "مكتمل",
-      "cancelled": "ملغى"
+      "cancelled": "ملغى",
+      "scheduled": "مجدولة"
     },
     "details": {
       "title": "تفاصيل الحملة",
@@ -241,6 +232,7 @@
       "campaignCreated": "تم إنشاء الحملة",
       "campaignSent": "تم إرسال الحملة",
       "campaignCompleted": "اكتملت الحملة",
+      "scheduledFor": "مجدول لـ",
       "close": "إغلاق",
       "noHeader": "لا يوجد عنوان",
       "noMessage": "لا يوجد نص رسالة"
