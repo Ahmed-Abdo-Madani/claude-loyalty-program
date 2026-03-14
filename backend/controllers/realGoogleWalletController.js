@@ -634,7 +634,7 @@ class RealGoogleWalletController {
     }
 
     // Enable push notifications for field updates
-    loyaltyObject.notifyPreference = 'notifyOnUpdate'
+    loyaltyObject.notifyPreference = 'NOTIFY'
 
     // Add validTimeInterval if pass has scheduled expiration
     if (existingPass && existingPass.scheduled_expiration_at) {
@@ -1272,7 +1272,7 @@ class RealGoogleWalletController {
       console.log('📦 Complete update payload:', JSON.stringify(updateData, null, 2))
 
       // Update the loyalty object in Google Wallet via direct PATCH
-      // Adds notifyPreference: "NOTIFY_ON_UPDATE" so the user is notified of field changes,
+      // Adds notifyPreference: "NOTIFY" so the user is notified of field changes,
       // avoiding the strictly-limited addMessage API for stamp updates.
       const patchResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
         method: 'PATCH',
