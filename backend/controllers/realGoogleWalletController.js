@@ -886,10 +886,13 @@ class RealGoogleWalletController {
         }
       }
 
+      const safeHeader = String(header || 'Notification')
+      const safeBody = String(body || header || 'Notification')
+
       console.log('📨 Google Wallet: Sending custom message', {
         objectId,
-        header: header.substring(0, 50),
-        body: body.substring(0, 50)
+        header: safeHeader.substring(0, 50),
+        body: safeBody.substring(0, 50)
       })
 
       const authClient = await this.auth.getClient()
@@ -930,8 +933,8 @@ class RealGoogleWalletController {
         body: JSON.stringify({
           message: {
             message_type: 'TEXT_AND_NOTIFY',
-            header: header,
-            body: body,
+            header: safeHeader,
+            body: safeBody,
             actionUri: {
               uri: process.env.BASE_URL || 'https://api.madna.me'
             }
@@ -971,8 +974,8 @@ class RealGoogleWalletController {
         objectId,
         sent_at: new Date().toISOString(),
         message: {
-          header,
-          body
+          header: safeHeader,
+          body: safeBody
         }
       }
 

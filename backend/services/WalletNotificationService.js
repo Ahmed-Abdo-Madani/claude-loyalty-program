@@ -81,7 +81,7 @@ class WalletNotificationService {
         result = await googleWalletController.sendCustomMessage(
           walletPass.wallet_object_id,
           messageData.header,
-          messageData.body
+          messageData.body || messageData.header
         )
 
       } else if (walletPass.wallet_type === 'apple') {
