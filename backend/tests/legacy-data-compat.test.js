@@ -625,8 +625,8 @@ import assert from 'assert';
         WalletPass.prototype.save = originalWalletPassSave;
     });
 
-    runTest('appleWebService.js fallback gracefully checks pass_data_json if notification_history is omitted', () => {
-        // Simulating the appleWebService logic for parsing back_latest_message due to APNs races
+    runTest('appleWebService.js fallback gracefully checks pass_data_json for legacy back_latest_message if notification_history is omitted', () => {
+        // Simulating the appleWebService logic for parsing legacy back_latest_message due to APNs races
         const pass = {
             pass_data_json: {
                 backFields: [
@@ -641,18 +641,89 @@ import assert from 'assert';
 
         let lastCustomMessage = null;
         if (pass.pass_data_json && pass.pass_data_json.backFields) {
-            const latestMsgField = pass.pass_data_json.backFields.find(f => f.key === 'back_latest_message');
-            if (latestMsgField && latestMsgField.value) {
-                const str = latestMsgField.value;
-                const endBracket = str.indexOf('] ');
-                if (endBracket !== -1) {
-                    const rest = str.substring(endBracket + 2);
-                    const colon = rest.indexOf(': ');
-                    if (colon !== -1) {
-                        lastCustomMessage = {
-                            header: rest.substring(0, colon),
-                            body: rest.substring(colon + 2)
-                        };
+            const notificationTrigger = pass.pass_data_json.backFields.find(f => f.key === 'notification_trigger');
+            if (notificationTrigger && notificationTrigger.value) {
+                const str = notificationTrigger.value;
+                const colonIndex = str.indexOf(': ');
+                if (colonIndex !== -1) {
+                    lastCustomMessage = {
+                        header: str.substring(0, colonIndex),
+                        body: str.substring(colonIndex + 2)
+                    };
+                } else {
+                    lastCustomMessage = { header: str };
+                }
+            } else {
+                const latestMsgField = pass.pass_data_json.backFields.find(f => f.key === 'back_latest_message');
+                if (latestMsgField && latestMsgField.value) {
+                    const str = latestMsgField.value;
+                    const endBracket = str.indexOf('] ');
+                    if (endBracket !== -1) {
+                        const rest = str.substring(endBracket + 2);
+                        const colon = rest.indexOf(': ');
+                        if (colon !== -1) {
+                            lastCustomMessage = {
+                                header: rest.substring(0, colon),
+                                body: rest.substring(colon + 2)
+                            };
+                        } else {
+                            lastCustomMessage = { header: rest };
+                        }
+                    }
+                }
+            }
+        }
+
+        assert.deepStrictEqual(lastCustomMessage, {
+            header: 'Header Test',
+            body: 'Body Test'
+        });
+    });
+
+    runTest('appleWebService.js fallback gracefully checks pass_data_json for new notification_trigger if notification_history is omitted', () => {
+        // Simulating the appleWebService logic for parsing new notification_trigger due to APNs races
+        const pass = {
+            pass_data_json: {
+                backFields: [
+                    {
+                        key: 'notification_trigger',
+                        value: 'Header Test: Body Test'
+                    }
+                ]
+            },
+            notification_history: []
+        };
+
+        let lastCustomMessage = null;
+        if (pass.pass_data_json && pass.pass_data_json.backFields) {
+            const notificationTrigger = pass.pass_data_json.backFields.find(f => f.key === 'notification_trigger');
+            if (notificationTrigger && notificationTrigger.value) {
+                const str = notificationTrigger.value;
+                const colonIndex = str.indexOf(': ');
+                if (colonIndex !== -1) {
+                    lastCustomMessage = {
+                        header: str.substring(0, colonIndex),
+                        body: str.substring(colonIndex + 2)
+                    };
+                } else {
+                    lastCustomMessage = { header: str };
+                }
+            } else {
+                const latestMsgField = pass.pass_data_json.backFields.find(f => f.key === 'back_latest_message');
+                if (latestMsgField && latestMsgField.value) {
+                    const str = latestMsgField.value;
+                    const endBracket = str.indexOf('] ');
+                    if (endBracket !== -1) {
+                        const rest = str.substring(endBracket + 2);
+                        const colon = rest.indexOf(': ');
+                        if (colon !== -1) {
+                            lastCustomMessage = {
+                                header: rest.substring(0, colon),
+                                body: rest.substring(colon + 2)
+                            };
+                        } else {
+                            lastCustomMessage = { header: rest };
+                        }
                     }
                 }
             }

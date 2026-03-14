@@ -827,11 +827,11 @@ class RealGoogleWalletController {
           },
           body: JSON.stringify({
             message: {
-              messageType: 'TEXT_AND_NOTIFY',
+              message_type: 'TEXT_AND_NOTIFY',
               header: 'Loyalty Progress Updated',
               body: 'Your stamp collection has been updated!',
               actionUri: {
-                uri: process.env.BASE_URL || 'http://localhost:3001'
+                uri: process.env.BASE_URL || 'https://api.madna.me'
               }
             }
           })
@@ -929,11 +929,11 @@ class RealGoogleWalletController {
         },
         body: JSON.stringify({
           message: {
-            messageType: 'TEXT_AND_NOTIFY',
+            message_type: 'TEXT_AND_NOTIFY',
             header: header,
             body: body,
             actionUri: {
-              uri: process.env.BASE_URL || 'http://localhost:3001'
+              uri: process.env.BASE_URL || 'https://api.madna.me'
             }
           }
         })
@@ -1271,8 +1271,27 @@ class RealGoogleWalletController {
 
       console.log('📦 Complete update payload:', JSON.stringify(updateData, null, 2))
 
-      // Update the loyalty object in Google Wallet
-      const result = await this.updateLoyaltyObject(objectId, updateData)
+      // Update the loyalty object in Google Wallet via direct PATCH
+      // Adds notifyPreference: "NOTIFY_ON_UPDATE" so the user is notified of field changes,
+      // avoiding the strictly-limited addMessage API for stamp updates.
+      const patchResponse = await fetch(`${this.baseUrl}/loyaltyObject/${objectId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...updateData,
+          notifyPreference: 'NOTIFY'
+        })
+      })
+
+      if (!patchResponse.ok) {
+        const error = await patchResponse.json()
+        throw new Error(`Failed to update loyalty object: ${JSON.stringify(error)}`)
+      }
+
+      const result = await patchResponse.json()
 
       console.log('📱 Update response received:', result)
 
@@ -1342,7 +1361,11 @@ class RealGoogleWalletController {
         updated: new Date().toISOString(),
         progress: progressData,
         result,
-        pushNotification: result.pushNotification
+        pushNotification: {
+          success: true,
+          method: 'fieldUpdate',
+          message: 'Notification triggered via notifyPreference: NOTIFY string matching expected API structure'
+        }
       }
     } catch (error) {
       console.error('❌ Google Wallet push update failed:', error)

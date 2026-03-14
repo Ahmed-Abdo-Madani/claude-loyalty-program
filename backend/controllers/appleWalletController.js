@@ -605,6 +605,20 @@ class AppleWalletController {
 
     const backFields = []
 
+    if (customMessage && customMessage.header) {
+      const messageValue = customMessage.body
+        ? `${customMessage.header}: ${customMessage.body}`
+        : customMessage.header
+
+      backFields.push({
+        key: 'notification_trigger',
+        label: '',
+        value: messageValue,
+        changeMessage: '%@',
+        textAlignment: 'PKTextAlignmentLeft'
+      })
+    }
+
     // 1. Customer Tier (visible on back for both pass types)
     // Generic passes: tier on front (secondaryFields) AND back (backFields) for redundancy
     // StoreCard passes: tier as label on front (auxiliaryFields label) AND back (backFields)
@@ -702,33 +716,7 @@ class AppleWalletController {
       textAlignment: 'PKTextAlignmentLeft'
     })
 
-    // 8. Custom Message (if provided) - Dynamic field WITHOUT changeMessage (to avoid duplicate notifications)
-    // Full message on back (persistence) - allows users to view message after dismissing notification
-    // changeMessage is handled by primary/auxiliary field to avoid double notifications
-    if (customMessage && customMessage.header) {
-      const timestamp = new Date().toISOString()
-      const messageValue = customMessage.body
-        ? `[${timestamp}] ${customMessage.header}: ${customMessage.body}`
-        : `[${timestamp}] ${customMessage.header}`
 
-      backFields.push({
-        key: 'back_latest_message',
-        label: localizedStrings.latestMessage,
-        value: messageValue,
-        textAlignment: 'PKTextAlignmentLeft'
-        // NO changeMessage - handled by primary field to prevent duplicate notifications
-      })
-
-      const isArabic = passLanguage === 'ar'
-
-      logger.info('💬 Custom message field added to back fields:', {
-        timestamp,
-        header: customMessage.header.substring(0, 30),
-        body: customMessage.body?.substring(0, 30),
-        language: passLanguage,
-        isArabic
-      })
-    }
 
     // Log which fields are populated
     const populatedFields = backFields.map(f => f.key).join(', ')
@@ -874,11 +862,6 @@ class AppleWalletController {
         source: design?.apple_pass_type ? 'design' : 'offer'
       })
 
-      // Retrieve the historical notification trigger if available (prevents spurious notifications on pass rebuilds)
-      const oldGenericTrigger = existingPass?.pass_data_json?.generic?.auxiliaryFields?.find(f => f.key === 'notification_trigger')?.value;
-      const oldStoreCardTrigger = existingPass?.pass_data_json?.storeCard?.auxiliaryFields?.find(f => f.key === 'notification_trigger')?.value;
-      const triggerValue = customMessage?.triggerTimestamp || oldGenericTrigger || oldStoreCardTrigger;
-
       // Prepare pass data structure
       const passData = {
         formatVersion: 1,
@@ -955,14 +938,7 @@ class AppleWalletController {
               ),
               textAlignment: passLanguage === 'ar' ? 'PKTextAlignmentRight' : 'PKTextAlignmentLeft',
               value: ''
-            },
-            ...(triggerValue ? [{
-              key: 'notification_trigger',
-              label: '',
-              value: triggerValue,
-              changeMessage: localizedStrings.newMessage,
-              textAlignment: 'PKTextAlignmentLeft'
-            }] : [])
+            }
           ]
         } : {
           // STORECARD PASS STRUCTURE - Reduced field count for barcode compatibility
@@ -1015,14 +991,7 @@ class AppleWalletController {
                 return formattedName || `${localizedStrings.memberId}: ${customerData.customerId}`
               })(),
               textAlignment: 'PKTextAlignmentRight' // Right-aligned for storeCard
-            },
-            ...(triggerValue ? [{
-              key: 'notification_trigger',
-              label: '',
-              value: triggerValue,
-              changeMessage: localizedStrings.newMessage,
-              textAlignment: 'PKTextAlignmentLeft'
-            }] : [])
+            }
           ]
         },
 

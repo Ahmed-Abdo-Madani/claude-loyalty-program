@@ -385,27 +385,49 @@ router.get('/v1/passes/:passTypeId/:serialNumber', verifyAuthToken, async (req, 
 
     // First attempt: Check pass_data_json from database (wrote synchronously during sendCustomMessage before APNs)
     if (walletPass.pass_data_json && walletPass.pass_data_json.backFields) {
-      const latestMsgField = walletPass.pass_data_json.backFields.find(f => f.key === 'back_latest_message')
-      if (latestMsgField && latestMsgField.value) {
-        // Parse format: "[timestamp] Header: Body"
-        const str = latestMsgField.value
-        const endBracket = str.indexOf('] ')
-        if (endBracket !== -1) {
-          const rest = str.substring(endBracket + 2)
-          const colon = rest.indexOf(': ')
-          if (colon !== -1) {
-            lastCustomMessage = {
-              header: rest.substring(0, colon),
-              body: rest.substring(colon + 2)
-            }
-          } else {
-            lastCustomMessage = {
-              header: rest
-            }
+      // Look for new notification_trigger format first
+      const notificationTrigger = walletPass.pass_data_json.backFields.find(f => f.key === 'notification_trigger')
+      if (notificationTrigger && notificationTrigger.value) {
+        // Parse format: "Header: Body" or just "Header"
+        const str = notificationTrigger.value
+        const colonIndex = str.indexOf(': ')
+        if (colonIndex !== -1) {
+          lastCustomMessage = {
+            header: str.substring(0, colonIndex),
+            body: str.substring(colonIndex + 2)
           }
-          logger.info('📬 Retrieved last custom message from pass_data_json to prevent APNs drop:', {
-            header: lastCustomMessage.header.substring(0, 30)
-          })
+        } else {
+          lastCustomMessage = {
+            header: str
+          }
+        }
+        logger.info('📬 Retrieved last custom message from notification_trigger to prevent APNs drop:', {
+          header: lastCustomMessage.header.substring(0, 30)
+        })
+      } else {
+        // Fallback for legacy passes: Check back_latest_message
+        const latestMsgField = walletPass.pass_data_json.backFields.find(f => f.key === 'back_latest_message')
+        if (latestMsgField && latestMsgField.value) {
+          // Parse format: "[timestamp] Header: Body"
+          const str = latestMsgField.value
+          const endBracket = str.indexOf('] ')
+          if (endBracket !== -1) {
+            const rest = str.substring(endBracket + 2)
+            const colon = rest.indexOf(': ')
+            if (colon !== -1) {
+              lastCustomMessage = {
+                header: rest.substring(0, colon),
+                body: rest.substring(colon + 2)
+              }
+            } else {
+              lastCustomMessage = {
+                header: rest
+              }
+            }
+            logger.info('📬 Retrieved last custom message from legacy back_latest_message to prevent APNs drop:', {
+              header: lastCustomMessage.header.substring(0, 30)
+            })
+          }
         }
       }
     }
