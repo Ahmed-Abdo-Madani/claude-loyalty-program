@@ -251,7 +251,7 @@ class AutoEngagementService {
                   status: 'sent',
                   sent_at: new Date(),
                   subject: template.header,
-                  message_content: template.body,
+                  message_content: template.body || template.header || '',
                   context_data: {
                     config_id: config.config_id,
                     inactivity_days: config.inactivity_days,

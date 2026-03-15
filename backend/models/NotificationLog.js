@@ -46,7 +46,7 @@ const NotificationLog = sequelize.define('NotificationLog', {
   },
   message_content: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: true
   },
   message_template_id: {
     type: DataTypes.STRING(100),

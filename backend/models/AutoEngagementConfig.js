@@ -43,7 +43,7 @@ export default (sequelize) => {
       allowNull: false,
       defaultValue: {
         header: "We miss you!",
-        body: "Come back and earn rewards with us!"
+        body: ""
       },
       validate: {
         isValidTemplate(value) {
@@ -53,7 +53,7 @@ export default (sequelize) => {
           if (!value.header || typeof value.header !== 'string') {
             throw new Error('Message template must have a valid header');
           }
-          if (!value.body || typeof value.body !== 'string') {
+          if (value.body !== undefined && value.body !== null && typeof value.body !== 'string') {
             throw new Error('Message template must have a valid body');
           }
         }

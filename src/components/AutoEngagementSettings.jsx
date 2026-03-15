@@ -316,47 +316,50 @@ function AutoEngagementSettings() {
 
             {/* Status Card */}
             {status && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                            {t('dashboard:customers.autoEngagement.lastRunAt', 'Last Run')}
-                        </h4>
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                            {formatDate(status.last_run_at)}
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                {t('dashboard:customers.autoEngagement.lastRunAt', 'Last Run')}
+                            </h4>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                                {formatDate(status.last_run_at)}
+                            </div>
                         </div>
-                        {!status.last_run_at && config.enabled && (
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                {t('dashboard:customers.autoEngagement.lastRunStatus', 'Status')}
+                            </h4>
+                            <div className="mt-1">
+                                {getStatusBadge(status.last_run_status)}
+                            </div>
+                            {status.last_run_error && (
+                                <p className="text-xs text-red-500 mt-1 truncate" title={status.last_run_error}>
+                                    {status.last_run_error}
+                                </p>
+                            )}
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                {t('dashboard:customers.autoEngagement.totalNotified', 'Total Notified')}
+                            </h4>
+                            <div className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                                {status.total_customers_notified}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end items-center bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        {config.enabled ? (
                             <button
                                 onClick={handleRunNow}
                                 disabled={runningNow}
-                                className="mt-2 text-sm px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60 rounded flex items-center justify-center gap-1 w-auto disabled:opacity-50 transition-colors"
+                                className="text-sm px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/60 rounded flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
                             >
                                 {runningNow ? t('dashboard:customers.autoEngagement.runningNow', 'Running...') : t('dashboard:customers.autoEngagement.runNow', '🚀 Run Now')}
                             </button>
+                        ) : (
+                            <p className="text-sm text-gray-500">{t('dashboard:customers.autoEngagement.enableToRun', 'Enable to run manually')}</p>
                         )}
-                        {!status.last_run_at && !config.enabled && (
-                            <p className="mt-1 text-xs text-gray-500">{t('dashboard:customers.autoEngagement.enableToRun', 'Enable to run manually')}</p>
-                        )}
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                            {t('dashboard:customers.autoEngagement.lastRunStatus', 'Status')}
-                        </h4>
-                        <div className="mt-1">
-                            {getStatusBadge(status.last_run_status)}
-                        </div>
-                        {status.last_run_error && (
-                            <p className="text-xs text-red-500 mt-1 truncate" title={status.last_run_error}>
-                                {status.last_run_error}
-                            </p>
-                        )}
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 w-full overflow-hidden">
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                            {t('dashboard:customers.autoEngagement.totalNotified', 'Total Notified')}
-                        </h4>
-                        <div className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                            {status.total_customers_notified}
-                        </div>
                     </div>
                 </div>
             )}
@@ -377,7 +380,7 @@ function AutoEngagementSettings() {
                                     {t('dashboard:customers.autoEngagement.tableDate', 'Date Sent')}
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                                    {t('dashboard:customers.autoEngagement.tableCustomer', 'Customer ID')}
+                                    {t('dashboard:customers.autoEngagement.tableCustomer', 'Customer')}
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                                     {t('dashboard:customers.autoEngagement.tableChannel', 'Channel')}

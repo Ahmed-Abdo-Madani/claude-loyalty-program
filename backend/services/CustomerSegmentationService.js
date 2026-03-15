@@ -630,15 +630,25 @@ class CustomerSegmentationService {
     try {
       logger.info(`Creating predefined segments for business: ${businessId}`)
 
-      const existingSegments = await CustomerSegment.count({
+      const existingSegments = await CustomerSegment.findAll({
         where: { business_id: businessId, is_predefined: true }
       })
 
-      if (existingSegments > 0) {
-        logger.warn(`Predefined segments already exist for business: ${businessId}. Skipping creation.`)
-        return await CustomerSegment.findAll({
-          where: { business_id: businessId, is_predefined: true }
-        })
+      if (existingSegments.length > 0) {
+        const hasActive = existingSegments.some(s => s.is_active)
+
+        if (!hasActive) {
+          logger.info(`Predefined segments exist but are inactive. Reactivating them for business: ${businessId}`)
+          for (const segment of existingSegments) {
+            segment.is_active = true
+            await segment.save()
+            await this.calculateSegmentSize(segment.segment_id)
+          }
+          return existingSegments
+        }
+
+        logger.warn(`Active predefined segments already exist for business: ${businessId}. Skipping creation.`)
+        return existingSegments
       }
 
       const segments = await CustomerSegment.createPredefinedSegments(businessId)

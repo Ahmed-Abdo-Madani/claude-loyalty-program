@@ -157,6 +157,20 @@ NotificationLog.belongsTo(NotificationCampaign, {
   as: 'campaign'
 })
 
+// Customer to NotificationLog relationship
+Customer.hasMany(NotificationLog, {
+  foreignKey: 'customer_id',
+  sourceKey: 'customer_id',
+  as: 'notificationLogs',
+  onDelete: 'CASCADE'
+})
+
+NotificationLog.belongsTo(Customer, {
+  foreignKey: 'customer_id',
+  targetKey: 'customer_id',
+  as: 'customer'
+})
+
 // Customer Segment relationships
 Business.hasMany(CustomerSegment, {
   foreignKey: 'business_id',

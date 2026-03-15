@@ -350,8 +350,10 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
 
     if (newSelected.size > 0 && audienceMode !== 'segment') {
       setAudienceMode('selected')
+      setSelectedSegmentData(null)
     } else if (newSelected.size === 0 && audienceMode === 'selected') {
       setAudienceMode('all')
+      setSelectedSegmentData(null)
     }
   }
 
@@ -366,8 +368,10 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
 
     if (newSelected.size > 0 && audienceMode !== 'segment') {
       setAudienceMode('selected')
+      setSelectedSegmentData(null)
     } else if (newSelected.size === 0 && audienceMode === 'selected') {
       setAudienceMode('all')
+      setSelectedSegmentData(null)
     }
   }
 
@@ -548,10 +552,17 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                       if (value === 'all') {
                         setAudienceMode('all')
                         setSelectedSegment(null)
+                        setSelectedSegmentData(null)
                         setSelectedCustomers(new Set())
                       } else if (value === 'selected') {
                         setAudienceMode('selected')
                         setSelectedSegment(null)
+                        setSelectedSegmentData(null)
+                      } else if (value === 'empty_segment') {
+                        setAudienceMode('segment')
+                        setSelectedSegment(null)
+                        setSelectedSegmentData(null)
+                        setSelectedCustomers(new Set())
                       } else {
                         // It's a segment ID
                         setAudienceMode('segment')
@@ -571,14 +582,20 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                     </option>
 
                     {/* Segments Section */}
-                    {!loadingSegments && segments.length > 0 && (
+                    {!loadingSegments && (
                       <>
                         <option disabled>── {t('customers.segmentsTitle', 'Segments')} ──</option>
-                        {segments.map(segment => (
-                          <option key={segment.segment_id} value={segment.segment_id}>
-                            {segment.name} ({segment.customer_count || 0} {t('customers.customersCount', 'customers')})
+                        {segments.length > 0 ? (
+                          segments.map(segment => (
+                            <option key={segment.segment_id} value={segment.segment_id}>
+                              {segment.name} ({segment.customer_count || 0} {t('customers.customersCount', 'customers')})
+                            </option>
+                          ))
+                        ) : (
+                          <option value="empty_segment">
+                            {t('customers.noSegmentsMode', 'No Segments Available')}
                           </option>
-                        ))}
+                        )}
                       </>
                     )}
                   </select>
@@ -614,11 +631,11 @@ function CustomersTab({ analytics: globalAnalytics, initialSubTab = 'customers' 
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            {t('campaign:actions.creatingSegments', 'Creating...')}
+                            {t('campaign:actions.refreshingSegments', 'Refreshing...')}
                           </>
                         ) : (
                           <>
-                            <span>🪄</span> {t('campaign:actions.createDefaultSegments', 'Create Default Segments')}
+                            <span>🪄</span> {t('campaign:actions.refreshSegments', 'Refresh Segments')}
                           </>
                         )}
                       </button>
