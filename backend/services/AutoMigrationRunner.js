@@ -196,6 +196,12 @@ class AutoMigrationRunner {
             throw new Error(`Migration ${migrationName} does not export an 'up' function`)
           }
 
+          // Preflight validation: Reject incompatible migration signatures (e.g. Umzug style)
+          const upStr = upFunction.toString()
+          if (/^[^(]*\(\s*\{/.test(upStr)) {
+            throw new Error(`Migration ${file} uses an incompatible signature with object destructuring. Expected positional parameters like: export async function up(queryInterface, Sequelize)`)
+          }
+
           // Execute migration (it should handle its own transaction)
           // Pass both queryInterface and Sequelize for migrations that need Sequelize.literal() etc.
           await upFunction(sequelize.getQueryInterface(), sequelize.Sequelize)

@@ -541,7 +541,7 @@ export async function up(queryInterface, DataTypes) {
 
 **After (fixed):**
 ```javascript
-export async function up() {
+export async function up(queryInterface, Sequelize) {
   // Check if column exists
   const [columnExists] = await sequelize.query(`
     SELECT column_name 
@@ -566,7 +566,7 @@ export async function up() {
 ```
 
 **Key differences:**
-- Remove function parameters (`queryInterface`, `DataTypes`) - get them directly from sequelize
+- Use positional parameters: `up(queryInterface, Sequelize)` instead of Umzug-style destructured objects
 - Remove explicit transaction wrapping - each SQL query auto-commits
 - Remove `after` option - not supported in PostgreSQL
 - Use raw SQL for ENUM creation and column addition
@@ -626,11 +626,11 @@ node backend/run-migration.js 20250121-cleanup-old-apple-wallet-passes.js
 Each migration must export:
 
 ```javascript
-export async function up() {
+export async function up(queryInterface, Sequelize) {
   // Code to apply migration
 }
 
-export async function down() {
+export async function down(queryInterface, Sequelize) {
   // Code to rollback migration
 }
 
