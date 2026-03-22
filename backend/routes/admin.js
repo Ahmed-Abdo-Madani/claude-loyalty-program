@@ -137,6 +137,12 @@ router.get('/analytics/revenue',
   AdminAnalyticsController.getRevenueAnalytics
 )
 
+router.get('/analytics/page-views',
+  requireAdmin(),
+  logAdminAction('view_page_view_analytics', 'analytics'),
+  AdminAnalyticsController.getPageViewStats
+)
+
 // Support analytics
 router.get('/analytics/support',
   requireAdmin(),

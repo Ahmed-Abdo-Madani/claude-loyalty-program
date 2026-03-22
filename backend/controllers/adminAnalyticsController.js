@@ -2,6 +2,7 @@
 import BusinessService from '../services/BusinessService.js'
 import OfferService from '../services/OfferService.js'
 import CustomerService from '../services/CustomerService.js'
+import { PageView, sequelize } from '../models/index.js'
 
 // Real Saudi Arabia data for admin analytics
 const getSaudiBusinessData = async () => {
@@ -303,6 +304,100 @@ const mockAnalyticsDb = {
 }
 
 class AdminAnalyticsController {
+  // Get page view statistics
+  static async getPageViewStats(req, res) {
+    try {
+      // 1. Total visits
+      const total_visits = await PageView.count();
+
+      // 2. Unique sessions
+      const unique_sessions_query = await sequelize.query(
+        "SELECT COUNT(DISTINCT session_id) as count FROM page_views",
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      const unique_sessions = parseInt(unique_sessions_query[0]?.count || 0, 10);
+
+      // 3. Visits per page
+      const visits_per_page = await PageView.findAll({
+        attributes: [
+          'page_path',
+          'page_name',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'visit_count']
+        ],
+        group: ['page_path', 'page_name'],
+        order: [[sequelize.col('visit_count'), 'DESC']],
+        raw: true
+      });
+
+      // 4. Daily visits (last 30 days)
+      const daily_visits_query = await sequelize.query(`
+        SELECT DATE(visited_at) as date, COUNT(*) as count 
+        FROM page_views 
+        WHERE visited_at >= CURRENT_DATE - INTERVAL '30 days' 
+        GROUP BY DATE(visited_at) 
+        ORDER BY date ASC
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      // Fill in zeros for missing days
+      const daily_visits = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const record = daily_visits_query.find(r => {
+          // r.date might be a Date object depending on pg driver
+          const rDate = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+          return rDate === dateStr;
+        });
+        daily_visits.push({
+          date: dateStr,
+          count: record ? parseInt(record.count, 10) : 0
+        });
+      }
+
+      // 5. Top navigation paths
+      const top_paths = await sequelize.query(`
+        SELECT referrer_path, page_path, COUNT(*) as count 
+        FROM page_views 
+        WHERE referrer_path IS NOT NULL 
+        GROUP BY referrer_path, page_path 
+        ORDER BY count DESC 
+        LIMIT 10
+      `, { type: sequelize.QueryTypes.SELECT });
+
+      // 6. Bounce rate
+      const bounces_query = await sequelize.query(`
+        SELECT COUNT(*) as bounce_count 
+        FROM (
+          SELECT session_id 
+          FROM page_views 
+          GROUP BY session_id 
+          HAVING COUNT(*) = 1
+        ) as single_page_sessions
+      `, { type: sequelize.QueryTypes.SELECT });
+      const bounce_count = parseInt(bounces_query[0]?.bounce_count || 0, 10);
+      const bounce_rate = unique_sessions > 0 ? (bounce_count / unique_sessions) * 100 : 0;
+
+      res.json({
+        success: true,
+        data: {
+          total_visits,
+          unique_sessions,
+          visits_per_page: visits_per_page.map(v => ({...v, visit_count: parseInt(v.visit_count, 10)})),
+          daily_visits,
+          top_paths: top_paths.map(p => ({...p, count: parseInt(p.count, 10)})),
+          bounce_rate: parseFloat(bounce_rate.toFixed(1))
+        }
+      });
+    } catch (error) {
+      console.error('Get page view stats error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve page view statistics'
+      });
+    }
+  }
+
   // Get platform overview dashboard
   static async getPlatformOverview(req, res) {
     try {

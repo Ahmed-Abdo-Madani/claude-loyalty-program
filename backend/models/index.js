@@ -33,6 +33,7 @@ import Message from './Message.js'
 import Conversation from './Conversation.js'
 import MessageTemplate from './MessageTemplate.js'
 import PlatformAdmin from './PlatformAdmin.js'
+import PageView from './PageView.js'
 
 const AutoEngagementConfig = AutoEngagementConfigModel(sequelize)
 
@@ -720,7 +721,8 @@ export {
   Message,
   Conversation,
   MessageTemplate,
-  PlatformAdmin
+  PlatformAdmin,
+  PageView
 }
 
 // Sync database (create tables) - SECURE VERSION
@@ -856,6 +858,7 @@ export default {
   Conversation,
   MessageTemplate,
   PlatformAdmin,
+  PageView,
   syncDatabase,
   seedDatabase
 }

@@ -103,9 +103,10 @@ export default function CheckoutModal({
 
       // 🔄 REUSE BRANCH SCANNER LOGIC: Call scan endpoint to add stamp and update passes
       // Construct URL based on whether offerHash is present (new format) or null (legacy format)
+      const encodedToken = encodeURIComponent(customerToken)
       const scanUrl = offerHash
-        ? `${endpoints.branchManagerScan}/${customerToken}/${offerHash}`
-        : `${endpoints.branchManagerScan}/${customerToken}`
+        ? `${endpoints.branchManagerScan}/${encodedToken}/${encodeURIComponent(offerHash)}`
+        : `${endpoints.branchManagerScan}/${encodedToken}`
 
       console.log(`🔗 POS calling scan API with format: ${offerHash ? 'new (token:hash)' : 'legacy (token-only)'}`)
 

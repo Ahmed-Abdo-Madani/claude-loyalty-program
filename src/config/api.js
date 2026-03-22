@@ -45,6 +45,9 @@ export const endpoints = {
   googleWallet: `${API_BASE_URL}/api/wallet/google/generate`,
   health: `${API_BASE_URL}/health`,
 
+  // Public Analytics
+  analyticsPageView: `${API_BASE_URL}/api/analytics/page-view`,
+
   // Business Authentication APIs
   businessLogin: `${API_BASE_URL}/api/business/login`,
   businessRegister: `${API_BASE_URL}/api/business/register`,

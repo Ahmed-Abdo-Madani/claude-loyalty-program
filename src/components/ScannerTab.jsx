@@ -84,7 +84,8 @@ function ScannerTab({ analytics: globalAnalytics }) {
   // Handle scan errors
   const handleScanError = (error) => {
     console.error('❌ QR Scan failed:', error)
-    setError(error.message)
+    const errorMsg = error?.message || (typeof error === 'string' ? error : 'An unknown scanning error occurred')
+    setError(errorMsg)
   }
 
   const simulateScan = async () => {
@@ -142,7 +143,12 @@ function ScannerTab({ analytics: globalAnalytics }) {
       console.log('🔍 Processing scan:', { customerToken, offerHash })
 
       // First verify the scan
-      const verifyResponse = await secureApi.get(`${endpoints.scanVerify}/${customerToken}/${offerHash}`)
+      const encodedToken = encodeURIComponent(customerToken)
+      const verifyUrl = offerHash 
+        ? `${endpoints.scanVerify}/${encodedToken}/${encodeURIComponent(offerHash)}`
+        : `${endpoints.scanVerify}/${encodedToken}`
+
+      const verifyResponse = await secureApi.get(verifyUrl)
       const verifyData = await verifyResponse.json()
 
       if (!verifyData.success) {
@@ -154,7 +160,11 @@ function ScannerTab({ analytics: globalAnalytics }) {
       // Comment 1 & 2: Auto-award without showing verification step
       // If customer can be scanned, proceed with progress update immediately
       if (data.canScan) {
-        const scanResponse = await secureApi.post(`${endpoints.scanProgress}/${customerToken}/${offerHash}`)
+        const scanUrl = offerHash
+          ? `${endpoints.scanProgress}/${encodedToken}/${encodeURIComponent(offerHash)}`
+          : `${endpoints.scanProgress}/${encodedToken}`
+          
+        const scanResponse = await secureApi.post(scanUrl)
         const scanData = await scanResponse.json()
 
         if (scanData.success) {

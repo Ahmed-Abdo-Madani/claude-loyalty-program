@@ -305,6 +305,26 @@
       "closed": "مغلق",
       "archived": "مؤرشف"
     },
+    "pageVisits": {
+      "title": "تحليلات زيارات الصفحات",
+      "totalVisits": "إجمالي الزيارات",
+      "uniqueSessions": "الجلسات الفريدة",
+      "landingPageVisits": "زيارات الصفحة الرئيسية",
+      "bounceRate": "معدل الارتداد",
+      "dailyVisits": "الزيارات اليومية (آخر 30 يوم)",
+      "visitsPerPage": "الزيارات لكل صفحة",
+      "topJourneys": "أبرز مسارات المستخدمين",
+      "topJourneysSubtitle": "أكثر مسارات التنقل شيوعاً",
+      "page": "الصفحة",
+      "path": "المسار",
+      "visits": "الزيارات",
+      "noData": "لا توجد بيانات زيارات بعد",
+      "errorLoading": "فشل تحميل تحليلات زيارات الصفحات",
+      "retry": "إعادة المحاولة",
+      "refresh": "تحديث",
+      "direct": "(مباشر)",
+      "dailyVisitsTooltip": "{{date}}: {{count}} زيارة"
+    },
     "moreAnalytics": "المزيد من التحليلات قريباً",
     "additionalAnalyticsComingSoon": "سيتم إضافة أقسام تحليلات إضافية هنا"
   },

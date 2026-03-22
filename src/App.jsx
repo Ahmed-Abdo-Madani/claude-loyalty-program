@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { ThemeProvider } from './contexts/ThemeContext'
+import PageTracker from './components/PageTracker'
 
 // Pages loaded immediately (landing page and auth - critical for first visit)
 import LandingPage from './pages/LandingPage'
@@ -51,6 +52,7 @@ function App() {
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+        <PageTracker />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Critical pages - loaded immediately */}

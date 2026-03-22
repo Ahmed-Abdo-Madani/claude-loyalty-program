@@ -305,6 +305,26 @@
       "closed": "Closed",
       "archived": "Archived"
     },
+    "pageVisits": {
+      "title": "Page Visit Analytics",
+      "totalVisits": "Total Visits",
+      "uniqueSessions": "Unique Sessions",
+      "landingPageVisits": "Landing Page Visits",
+      "bounceRate": "Bounce Rate",
+      "dailyVisits": "Daily Visits (Last 30 Days)",
+      "visitsPerPage": "Visits per Page",
+      "topJourneys": "Top User Journeys",
+      "topJourneysSubtitle": "Most common navigation paths",
+      "page": "Page",
+      "path": "Path",
+      "visits": "Visits",
+      "noData": "No visit data available yet",
+      "errorLoading": "Failed to load page visit analytics",
+      "retry": "Retry",
+      "refresh": "Refresh",
+      "direct": "(Direct)",
+      "dailyVisitsTooltip": "{{date}}: {{count}} visits"
+    },
     "moreAnalytics": "More Analytics Coming Soon",
     "additionalAnalyticsComingSoon": "Additional analytics sections will be added here"
   },

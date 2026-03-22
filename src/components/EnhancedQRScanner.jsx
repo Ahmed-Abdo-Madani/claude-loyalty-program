@@ -435,11 +435,9 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, is
           document.body.classList.remove('scanner-active')
         }
 
-        // Only set state if still mounted/active
-        if (isRunningRef.current) {
-          setScanStatus('error')
-          setErrorMessage(error.message)
-        }
+        // Always set state even if detection loop hasn't started
+        setScanStatus('error')
+        setErrorMessage(error.message)
 
         let errorMsg = 'Failed to start camera: ' + error.message
 
@@ -455,9 +453,7 @@ function EnhancedQRScanner({ onScanSuccess, onScanError, onClose = () => { }, is
           errorMsg = 'Camera access blocked by browser security. Please enable camera permissions.'
         }
 
-        if (isRunningRef.current) {
-          setErrorMessage(errorMsg)
-        }
+        setErrorMessage(errorMsg)
 
         if (onScanError) {
           onScanError(errorMsg)

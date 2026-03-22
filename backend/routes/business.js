@@ -3802,6 +3802,11 @@ router.get('/scan/verify/:customerToken/:offerHash?', requireBusinessAuth, async
       // OLD FORMAT: separate parameters
       customerToken = firstParam
       offerHash = secondParam
+    } else if (!secondParam && !firstParam.includes(':')) {
+      // LEGACY TOKEN-ONLY FORMAT (pre-enhanced passes)
+      console.log('🔍 Detected LEGACY token-only QR format for verification')
+      customerToken = firstParam
+      offerHash = null
     } else {
       return res.status(400).json({
         success: false,
@@ -3829,19 +3834,37 @@ router.get('/scan/verify/:customerToken/:offerHash?', requireBusinessAuth, async
 
     const { customerId } = tokenData
 
-    // Find the offer by hash
+    // Find the offer by hash (or auto-detect for legacy QRs)
     const businessOffers = await OfferService.findByBusinessId(businessId)
     let targetOffer = null
 
-    console.log(`🔍 Scanning for offer hash: ${offerHash}`)
+    if (offerHash === null) {
+      // Legacy token-only format: Auto-detect offer
+      console.log('🔍 Legacy QR detected - attempting auto-offer selection')
+      const activeOffers = businessOffers.filter(offer => offer.status === 'active')
 
-    for (const offer of businessOffers) {
-      const expectedHash = CustomerService.generateOfferHash(offer.public_id, businessId)
-
-      if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
-        targetOffer = offer
-        console.log(`✅ Found matching offer: ${offer.public_id}`)
-        break
+      if (activeOffers.length === 1) {
+        targetOffer = activeOffers[0]
+        console.log(`✅ Auto-selected single active offer for legacy QR verification: ${targetOffer.public_id}`)
+      } else if (activeOffers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Legacy QR code detected. No active offers found. Please regenerate pass or contact support.'
+        })
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Legacy QR code detected. Multiple active offers found. Please regenerate pass to specify which offer to use.'
+        })
+      }
+    } else {
+      console.log(`🔍 Scanning for offer hash: ${offerHash}`)
+      for (const offer of businessOffers) {
+        if (CustomerService.verifyOfferHash(offer.public_id, businessId, offerHash)) {
+          targetOffer = offer
+          console.log(`✅ Found matching offer: ${offer.public_id}`)
+          break
+        }
       }
     }
 

@@ -8,6 +8,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import SEO from '../components/SEO'
 import MessagingInbox from '../components/admin/MessagingInbox'
 import MessagingAnalytics from '../components/admin/MessagingAnalytics'
+import PageVisitAnalytics from '../components/admin/PageVisitAnalytics'
 import MigrationHealthTab from '../components/MigrationHealthTab'
 
 function AdminDashboard() {
@@ -345,15 +346,9 @@ function AdminDashboard() {
               <MessagingAnalytics />
             </div>
 
-            {/* Placeholder for other analytics */}
-            <div className="text-center py-12 mt-8 border-t border-gray-200">
-              <div className="text-6xl mb-4">📊</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {t('analytics.moreAnalytics')}
-              </h3>
-              <p className="text-gray-600">
-                {t('analytics.additionalAnalyticsComingSoon')}
-              </p>
+            {/* Page Visit Analytics */}
+            <div className="mt-8 border-t border-gray-200 pt-8">
+              <PageVisitAnalytics />
             </div>
           </div>
         )}

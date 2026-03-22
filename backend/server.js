@@ -26,6 +26,7 @@ import posRoutes from './routes/pos.js'
 import receiptsRoutes from './routes/receipts.js'
 import subscriptionRoutes from './routes/subscriptionRoutes.js'
 import migrationRoutes from './routes/migration.js'
+import analyticsRoutes from './routes/analytics.js'
 
 import webhookRoutes from './routes/webhooks.js'
 import contactRoutes from './routes/contact.js'
@@ -390,6 +391,7 @@ app.use('/api/pos', posRoutes)
 app.use('/api/receipts', receiptsRoutes)
 app.use('/api/subscriptions', subscriptionRoutes)
 app.use('/api/migration', migrationRoutes)
+app.use('/api/analytics', analyticsRoutes)
 app.use('/api/contact', contactRoutes)
 app.use('/api/unsubscribe', unsubscribeRoutes)
 
