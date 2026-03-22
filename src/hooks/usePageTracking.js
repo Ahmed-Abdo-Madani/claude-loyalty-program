@@ -5,7 +5,6 @@ import { endpoints, publicApi } from '../config/api';
 const routeNames = {
   '/': 'Landing',
   '/auth': 'Auth',
-  '/admin/login': 'Admin Login',
   '/forgot-password': 'Forgot Password',
   '/reset-password': 'Reset Password',
   '/branch-manager-login': 'Branch Manager Login',
@@ -13,7 +12,6 @@ const routeNames = {
   '/branch-pos': 'Branch POS',
   '/dashboard': 'Dashboard',
   '/demo': 'Demo Dashboard',
-  '/admin/dashboard': 'Admin Dashboard',
   '/test': 'Test',
   '/business/register': 'Business Registration',
   '/subscription/checkout': 'Subscription Checkout',
@@ -49,6 +47,8 @@ export const usePageTracking = () => {
   }, []);
 
   useEffect(() => {
+    if (location.pathname.startsWith('/admin')) return;
+
     const sessionId = sessionStorage.getItem('pv_session_id');
     if (!sessionId) return; // Should be set by the other effect
 
