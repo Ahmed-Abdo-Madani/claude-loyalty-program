@@ -155,8 +155,8 @@
     "navigation": {
       "previous": "Previous",
       "next": "Next",
-      "submitting": "Submitting...",
-      "submitApplication": "Submit Application"
+      "submitting": "Registering...",
+      "submitApplication": "Register"
     },
     "footer": {
       "alreadyHaveAccount": "Already have an account?",

@@ -5,6 +5,15 @@ import { endpoints, secureApi } from '../config/api'
 import DarkModeToggle from '../components/DarkModeToggle'
 import SEO from '../components/SEO'
 
+// Saudi business categories
+const businessCategories = [
+  { id: 1, name: "مطاعم وكافيهات - Restaurants & Cafes", nameEn: "Restaurants & Cafes" },
+  { id: 2, name: "صالونات وحلاقة - Salons & Barbershops", nameEn: "Salons & Barbershops" },
+  { id: 3, name: "عطور ومستحضرات - Perfumes & Cosmetics", nameEn: "Perfumes & Cosmetics" },
+  { id: 4, name: "ملابس وأزياء - Fashion & Clothing", nameEn: "Fashion & Clothing" },
+  { id: 5, name: "صحة ولياقة - Health & Fitness", nameEn: "Health & Fitness" }
+]
+
 function CompleteProfilePage() {
     const navigate = useNavigate()
     const { t, i18n } = useTranslation()
@@ -17,6 +26,7 @@ function CompleteProfilePage() {
         business_name: '',
         license_number: '',
         owner_id: '',
+        owner_name: '',
         phone: '',
         address: '',
         city: '',
@@ -35,6 +45,7 @@ function CompleteProfilePage() {
                         business_name: result.data.business_name || '',
                         license_number: result.data.license_number || '',
                         owner_id: result.data.owner_id || '',
+                        owner_name: result.data.owner_name || '',
                         phone: result.data.phone || '',
                         address: result.data.address || '',
                         city: result.data.city || '',
@@ -63,7 +74,10 @@ function CompleteProfilePage() {
         setError('')
 
         try {
-            const response = await secureApi.put(endpoints.businessUpdateProfile, formData)
+            const payload = {
+                ...formData
+            }
+            const response = await secureApi.put(endpoints.businessUpdateProfile, payload)
             const result = await response.json()
 
             if (result.success) {
@@ -119,9 +133,53 @@ function CompleteProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4 md:col-span-2">
                                 <h3 className="font-semibold text-gray-900 dark:text-white border-b pb-2">
-                                    {i18n.language === 'ar' ? 'المعلومات القانونية' : 'Legal Information'}
+                                    {i18n.language === 'ar' ? 'تفاصيل النشاط التجاري' : 'Business Details'}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {i18n.language === 'ar' ? 'نوع النشاط التجاري' : 'Business Type'}
+                                        </label>
+                                        <select
+                                            name="business_type"
+                                            value={formData.business_type}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                        >
+                                            <option value="">{i18n.language === 'ar' ? 'اختر نوع النشاط...' : 'Select Business Type...'}</option>
+                                            {businessCategories.map(category => (
+                                                <option key={category.id} value={category.nameEn}>
+                                                    {i18n.language === 'ar' ? category.name : category.nameEn}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {i18n.language === 'ar' ? 'اسم المالك' : 'Owner Name'}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="owner_name"
+                                            value={formData.owner_name}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            placeholder={i18n.language === 'ar' ? 'الاسم الكامل للمالك' : 'Full Owner Name'}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {i18n.language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            placeholder="+966XXXXXXXXX"
+                                        />
+                                    </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             {i18n.language === 'ar' ? 'رقم السجل التجاري' : 'Commercial Registration (CR) Number'}
@@ -135,6 +193,27 @@ function CompleteProfilePage() {
                                             placeholder="10XXXXXXXX"
                                         />
                                     </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {i18n.language === 'ar' ? 'وصف النشاط التجاري' : 'Business Description'}
+                                        </label>
+                                        <textarea
+                                            name="description"
+                                            value={formData.description}
+                                            onChange={handleInputChange}
+                                            rows="3"
+                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            placeholder={i18n.language === 'ar' ? 'وصف مختصر يقدم نشاطك التجاري للعملاء...' : 'A brief description introducing your business to customers...'}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 md:col-span-2">
+                                <h3 className="font-semibold text-gray-900 dark:text-white border-b pb-2">
+                                    {i18n.language === 'ar' ? 'المعلومات القانونية' : 'Legal Information'}
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             {i18n.language === 'ar' ? 'الهوية الوطنية للمالك' : 'Owner National ID'}
@@ -156,19 +235,6 @@ function CompleteProfilePage() {
                                     {i18n.language === 'ar' ? 'معلومات التواصل والموقع' : 'Contact & Location'}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            {i18n.language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                            placeholder="+966XXXXXXXXX"
-                                        />
-                                    </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             {i18n.language === 'ar' ? 'المنطقة' : 'Region'}

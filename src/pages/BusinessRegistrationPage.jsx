@@ -6,14 +6,6 @@ import DarkModeToggle from '../components/DarkModeToggle'
 import SEO from '../components/SEO'
 import { setAuthData } from '../utils/secureAuth'
 
-// Saudi business categories
-const businessCategories = [
-  { id: 1, name: "مطاعم وكافيهات - Restaurants & Cafes", nameEn: "Restaurants & Cafes" },
-  { id: 2, name: "صالونات وحلاقة - Salons & Barbershops", nameEn: "Salons & Barbershops" },
-  { id: 3, name: "عطور ومستحضرات - Perfumes & Cosmetics", nameEn: "Perfumes & Cosmetics" },
-  { id: 4, name: "ملابس وأزياء - Fashion & Clothing", nameEn: "Fashion & Clothing" },
-  { id: 5, name: "صحة ولياقة - Health & Fitness", nameEn: "Health & Fitness" }
-]
 
 function BusinessRegistrationPage() {
   const navigate = useNavigate()
@@ -27,15 +19,6 @@ function BusinessRegistrationPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-    owner_name: '',
-    business_type: '',
-    license_number: '',
-    description: '',
-    city: '',
-    region: '',
-    address: '',
-    location_data: null,
     termsAccepted: false
   })
 
@@ -74,8 +57,7 @@ function BusinessRegistrationPage() {
 
     try {
       const payload = {
-        ...formData,
-        business_type: businessCategories.find(cat => cat.id === parseInt(formData.business_type))?.nameEn || formData.business_type
+        ...formData
       }
 
       const response = await fetch(endpoints.businessRegister, {
@@ -197,89 +179,6 @@ function BusinessRegistrationPage() {
               </div>
             </div>
 
-            {/* Business Details Section - Integrated */}
-            <div className="pt-6 border-t border-gray-100 dark:border-gray-700 mt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('registration.businessInfo.businessDetails')}
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('registration.businessInfo.businessType')}
-                  </label>
-                  <select
-                    name="business_type"
-                    value={formData.business_type}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">{t('registration.businessInfo.businessTypePlaceholder')}</option>
-                    {businessCategories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {i18n.language === 'ar' ? category.name : category.nameEn}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('registration.businessInfo.phone')}
-                  </label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="05xxxxxxxx"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('registration.ownerInfo.ownerFullName')}
-                  </label>
-                  <input
-                    type="text"
-                    name="owner_name"
-                    value={formData.owner_name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder={t('registration.ownerInfo.ownerNamePlaceholder')}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('registration.businessInfo.crNumber')}
-                  </label>
-                  <input
-                    type="text"
-                    name="license_number"
-                    value={formData.license_number}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="1010xxxxxx"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('registration.businessInfo.businessDescription')}
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder={t('registration.businessInfo.businessDescriptionPlaceholder')}
-                />
-              </div>
-            </div>
 
             {/* Terms and Submit */}
             <div className="pt-6 space-y-4">

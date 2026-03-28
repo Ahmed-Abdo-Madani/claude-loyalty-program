@@ -155,8 +155,8 @@
     "navigation": {
       "previous": "السابق",
       "next": "التالي",
-      "submitting": "جاري التقديم",
-      "submitApplication": "تقديم الطلب"
+      "submitting": "جاري التسجيل...",
+      "submitApplication": "تسجيل"
     },
     "footer": {
       "alreadyHaveAccount": "لديك حساب؟",
