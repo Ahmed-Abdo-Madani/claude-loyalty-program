@@ -201,7 +201,7 @@ class AdminMessagingController {
      */
     static async sendMessage(req, res) {
         try {
-            const { business_id, conversation_id, subject, message_body, attachments = [] } = req.body
+            const { business_id, conversation_id, subject, message_body, attachments = [], from_email } = req.body
             const adminId = req.admin.adminId
 
             if (!message_body) {
@@ -210,6 +210,20 @@ class AdminMessagingController {
                     message: 'Message body is required'
                 })
             }
+
+            // Validate from_email - MUST be provided and in allowlist
+            const ALLOWED_FROM_EMAILS = ['noreply@madna.me', 'support@updates.madna.me']
+            if (!from_email || !ALLOWED_FROM_EMAILS.includes(from_email)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid or missing from_email address. Authorized values: ' + ALLOWED_FROM_EMAILS.join(', ')
+                })
+            }
+
+            const effectiveFrom = from_email
+            const supportEmail = from_email === 'support@updates.madna.me' 
+                ? 'support@updates.madna.me' 
+                : (process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM)
 
             let conversation;
             let targetBusinessId = business_id;
@@ -280,9 +294,6 @@ class AdminMessagingController {
                 // Generate unsubscribe token
                 const unsubscribeToken = crypto.createHash('sha256').update(business.public_id + Date.now().toString()).digest('hex');
 
-                // Use configured support email or sender
-                const supportEmail = process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM;
-
                 try {
                     await EmailService.sendMessageNotification(
                         business.email,
@@ -298,6 +309,7 @@ class AdminMessagingController {
                             language: business.preferred_language || 'ar',
                             unsubscribeToken,
                             replyTo: supportEmail,
+                            from: effectiveFrom,
                             messageId: message.message_id // Track with Resend if possible
                         }
                     );

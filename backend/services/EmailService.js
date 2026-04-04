@@ -266,6 +266,7 @@ class EmailService {
       html,
       text,
       priority: 'normal',
+      from: options.from, // Pass from if provided
       replyTo: replyTo, // Pass replyTo if provided
       externalId: options.messageId || undefined // Use message ID for tracking if provided
     });
@@ -308,6 +309,7 @@ class EmailService {
       text,
       attachments = [],
       priority,
+      from: fromOverride,
       replyTo
     } = emailData;
 
@@ -331,7 +333,7 @@ class EmailService {
       }
 
       const client = this.getResendClient();
-      const from = process.env.EMAIL_FROM;
+      const from = fromOverride || process.env.EMAIL_FROM;
       const defaultReplyTo = process.env.EMAIL_REPLY_TO || from;
       const finalReplyTo = replyTo || defaultReplyTo;
 

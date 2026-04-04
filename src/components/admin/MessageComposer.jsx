@@ -6,6 +6,7 @@ const MessageComposer = ({ isOpen, onClose, onSuccess, businesses, selectedBusin
     const { t } = useTranslation('admin')
     const [formData, setFormData] = useState({
         business_id: selectedBusinessId || '',
+        from_email: 'noreply@madna.me',
         subject: '',
         message_body: ''
     })
@@ -16,6 +17,7 @@ const MessageComposer = ({ isOpen, onClose, onSuccess, businesses, selectedBusin
         if (isOpen) {
             setFormData({
                 business_id: selectedBusinessId || '',
+                from_email: 'noreply@madna.me',
                 subject: '',
                 message_body: ''
             })
@@ -111,6 +113,21 @@ const MessageComposer = ({ isOpen, onClose, onSuccess, businesses, selectedBusin
                         ))}
                     </select>
                     {errors.business_id && <p className="text-red-500 text-xs mt-1">{errors.business_id}</p>}
+                </div>
+
+                {/* Sender */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        From
+                    </label>
+                    <select
+                        value={formData.from_email}
+                        onChange={(e) => setFormData({ ...formData, from_email: e.target.value })}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option value="noreply@madna.me">No-Reply (noreply@madna.me)</option>
+                        <option value="support@updates.madna.me">Support (support@updates.madna.me)</option>
+                    </select>
                 </div>
 
                 {/* Subject */}
