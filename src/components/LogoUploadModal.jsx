@@ -54,6 +54,7 @@ function LogoUploadModal({ isOpen, onClose, onLogoUpdate }) {
                                         onLogoUpdate={(logoData) => {
                                             if (onLogoUpdate) onLogoUpdate(logoData)
                                         }}
+                                        onClose={onClose}
                                     />
                                 </div>
 

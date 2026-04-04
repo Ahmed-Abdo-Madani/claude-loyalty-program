@@ -788,8 +788,17 @@ router.get('/public/menu-pdf/:businessId', async (req, res) => {
       })
     }
 
-    // Redirect to the stored public R2 URL
-    res.redirect(302, business.menu_pdf_url)
+    // Proxy the PDF to avoid CORS issues with react-pdf
+    const response = await fetch(business.menu_pdf_url)
+    if (!response.ok) throw new Error(`Failed to fetch from storage: ${response.statusText}`)
+    
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    res.set('Content-Type', 'application/pdf')
+    res.set('Content-Disposition', 'inline; filename="menu.pdf"')
+    res.set('Cache-Control', 'public, max-age=3600')
+    res.send(buffer)
 
   } catch (error) {
     console.error('❌ Public menu PDF serve error:', error)
@@ -1112,7 +1121,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         region: business.region,
         address: business.address,
         menu_display_mode: business.menu_display_mode,
-        menu_pdf_url: business.menu_pdf_url,
+        menu_pdf_url: business.menu_pdf_url ? `/api/business/public/menu-pdf/${business.public_id}` : null,
         menu_pdf_filename: business.menu_pdf_filename,
         facebook_url: normalizeUrl(business.facebook_url),
         instagram_url: normalizeUrl(business.instagram_url),
@@ -3001,8 +3010,17 @@ router.get('/my/menu-pdf', requireBusinessAuth, async (req, res) => {
             })
         }
 
-        // Redirect to the public R2 URL
-        res.redirect(302, business.menu_pdf_url)
+        // Proxy the PDF to avoid CORS issues with react-pdf
+        const response = await fetch(business.menu_pdf_url)
+        if (!response.ok) throw new Error(`Failed to fetch from storage: ${response.statusText}`)
+        
+        const arrayBuffer = await response.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        res.set('Content-Type', 'application/pdf')
+        res.set('Content-Disposition', 'inline; filename="menu.pdf"')
+        res.set('Cache-Control', 'public, max-age=3600')
+        res.send(buffer)
 
     } catch (error) {
         console.error('❌ Menu PDF serve error:', error)

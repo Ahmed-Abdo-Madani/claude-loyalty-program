@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { getSecureAuthHeaders } from '../utils/secureAuth'
 import { endpoints, apiBaseUrl, secureApi } from '../config/api'
 
-function LogoUpload({ onLogoUpdate }) {
+function LogoUpload({ onLogoUpdate, onClose }) {
   const { t } = useTranslation('dashboard')
   const [logoInfo, setLogoInfo] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -128,12 +128,13 @@ function LogoUpload({ onLogoUpdate }) {
 
         // Notify parent component
         if (onLogoUpdate) {
-          onLogoUpdate(result.data)
+          onLogoUpdate({ ...result.data, has_logo: true })
         }
 
         setUploadProgress(100)
         setTimeout(() => {
           setUploadProgress(0)
+          if (onClose) onClose()
         }, 1000)
       } else {
         throw new Error(result.message || 'Upload failed')
