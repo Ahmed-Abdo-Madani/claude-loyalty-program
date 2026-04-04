@@ -8,14 +8,6 @@ import logger from '../config/logger.js'
 
 class RealGoogleWalletController {
   constructor() {
-    // Load Google Cloud credentials from environment variables or file
-    this.isGoogleWalletEnabled = this.initializeGoogleWallet()
-
-    if (!this.isGoogleWalletEnabled) {
-      console.log('⚠️ Google Wallet: Service disabled - credentials not available')
-      return
-    }
-
     this.issuerId = process.env.GOOGLE_ISSUER_ID || '3388000000023017940'
     this.projectId = process.env.GOOGLE_PROJECT_ID || 'madna-platform'
 
@@ -26,6 +18,16 @@ class RealGoogleWalletController {
     this.generatePass = this.generatePass.bind(this)
     this.savePass = this.savePass.bind(this)
     this.pushProgressUpdate = this.pushProgressUpdate.bind(this)
+    // Notification Constants
+    this.NOTIFY_ON_UPDATE = 'NOTIFY_ON_UPDATE'
+
+    // Load Google Cloud credentials from environment variables or file
+    this.isGoogleWalletEnabled = this.initializeGoogleWallet()
+
+    if (!this.isGoogleWalletEnabled) {
+      console.log('⚠️ Google Wallet: Service disabled - credentials not available')
+      return
+    }
   }
 
   initializeGoogleWallet() {
@@ -634,7 +636,10 @@ class RealGoogleWalletController {
     }
 
     // Enable push notifications for field updates
-    loyaltyObject.notifyPreference = 'NOTIFY'
+    loyaltyObject.notifyPreference = this.NOTIFY_ON_UPDATE
+
+    // Pre-flight validation
+    this.validateLoyaltyObject(loyaltyObject)
 
     // Add validTimeInterval if pass has scheduled expiration
     if (existingPass && existingPass.scheduled_expiration_at) {
@@ -772,6 +777,20 @@ class RealGoogleWalletController {
         message: error.message
       })
     }
+  }
+
+  /**
+   * Validate loyalty object payload before sending to Google APIs
+   * @param {Object} payload - The loyalty object or update payload
+   * @throws {Error} If validation fails
+   */
+  validateLoyaltyObject(payload) {
+    if (payload.notifyPreference && payload.notifyPreference !== this.NOTIFY_ON_UPDATE && payload.notifyPreference !== 'DO_NOT_NOTIFY') {
+      const errorMsg = `Invalid notifyPreference: "${payload.notifyPreference}". Must be "${this.NOTIFY_ON_UPDATE}" or "DO_NOT_NOTIFY".`
+      logger.error(`❌ Google Wallet Validation Error: ${errorMsg}`)
+      throw new Error(errorMsg)
+    }
+    return true
   }
 
   async updateLoyaltyObject(objectId, updateData) {
@@ -1285,9 +1304,13 @@ class RealGoogleWalletController {
         },
         body: JSON.stringify({
           ...updateData,
-          notifyPreference: 'NOTIFY'
+          notifyPreference: this.NOTIFY_ON_UPDATE
         })
       })
+
+      // Note: validation is implicit here as we're using the constant, 
+      // but let's be explicit for consistency if updateData had it
+      this.validateLoyaltyObject({ notifyPreference: this.NOTIFY_ON_UPDATE })
 
       if (!patchResponse.ok) {
         const error = await patchResponse.json()
@@ -1367,7 +1390,7 @@ class RealGoogleWalletController {
         pushNotification: {
           success: true,
           method: 'fieldUpdate',
-          message: 'Notification triggered via notifyPreference: NOTIFY string matching expected API structure'
+          message: 'Notification triggered via notifyPreference: NOTIFY_ON_UPDATE string matching expected API structure'
         }
       }
     } catch (error) {
