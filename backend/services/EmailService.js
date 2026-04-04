@@ -126,6 +126,13 @@ class EmailService {
       throw error;
     }
 
+    const optionalVars = ['EMAIL_REPLY_TO', 'RESEND_WEBHOOK_SECRET'];
+    optionalVars.forEach(v => {
+      if (!process.env[v]) {
+        logger.warn('Optional email config missing', { var: v });
+      }
+    });
+
     return true;
   }
 

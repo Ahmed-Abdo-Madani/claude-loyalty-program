@@ -295,6 +295,39 @@ class AdminEmailStatsController {
             res.status(500).json({ success: false, error: 'Failed to calculate email health' })
         }
     }
+
+    /**
+     * Test email connectivity by sending a test email to the admin
+     * GET /api/admin/email/test
+     */
+    static async testEmailConnectivity(req, res) {
+        try {
+            const adminEmail = process.env.ADMIN_EMAIL;
+            
+            const result = await EmailService.sendTransactional({
+                to: adminEmail,
+                subject: "[Madna] Email Connectivity Test",
+                html: "<p>This is a test email to confirm the service is reachable.</p>",
+                text: "This is a test email to confirm the service is reachable."
+            });
+            
+            logger.info('Test email sent successfully', { messageId: result.externalId });
+            
+            res.json({
+                success: true,
+                messageId: result.externalId,
+                provider: 'resend',
+                sentTo: adminEmail
+            });
+        } catch (error) {
+            logger.error('Test email failed', { error: error.message, code: error.code });
+            res.status(502).json({
+                success: false,
+                error: error.message,
+                code: error.code
+            });
+        }
+    }
 }
 
 export default AdminEmailStatsController

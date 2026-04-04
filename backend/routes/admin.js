@@ -183,6 +183,12 @@ router.get('/analytics/email/health',
   AdminEmailStatsController.getEmailHealth
 )
 
+router.get('/email/test',
+  requireAdmin(),
+  logAdminAction('test_email_connectivity', 'system'),
+  AdminEmailStatsController.testEmailConnectivity
+)
+
 // =================
 // MESSAGING ROUTES
 // =================
@@ -277,6 +283,18 @@ router.get('/messages/analytics/export',
 router.get('/messages/unread-count',
   requireAdminOrSuper,
   AdminMessagingController.getUnreadCount
+)
+
+router.get('/messages/resend-logs',
+  requireAdminOrSuper,
+  logAdminAction('view_resend_logs', 'messaging'),
+  AdminMessagingController.getResendLogs
+)
+
+router.get('/messages/resend-received',
+  requireAdminOrSuper,
+  logAdminAction('view_resend_received', 'messaging'),
+  AdminMessagingController.getResendReceived
 )
 
 // =================
@@ -478,7 +496,8 @@ router.use('*', (req, res) => {
       'PUT /api/admin/icons/:id',
       'DELETE /api/admin/icons/:id',
       'GET /api/admin/health',
-      'GET /api/admin/migrations'
+      'GET /api/admin/migrations',
+      'GET /api/admin/email/test'
     ]
   })
 })

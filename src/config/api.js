@@ -153,6 +153,8 @@ export const endpoints = {
   adminMessagesTemplates: `${API_BASE_URL}/api/admin/messages/templates`,
   adminMessagesTemplateDetail: (templateId) => `${API_BASE_URL}/api/admin/messages/templates/${templateId}`,
   adminMessagesConversationStatus: (conversationId) => `${API_BASE_URL}/api/admin/messages/conversations/${conversationId}/status`,
+  adminMessagesResendLogs: `${API_BASE_URL}/api/admin/messages/resend-logs`,
+  adminMessagesResendReceived: `${API_BASE_URL}/api/admin/messages/resend-received`,
 
   // Business Messaging APIs
   businessMessagesConversations: `${API_BASE_URL}/api/business/messages/conversations`,

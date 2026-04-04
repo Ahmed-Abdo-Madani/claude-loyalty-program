@@ -520,6 +520,42 @@ class AdminMessagingController {
             })
         }
     }
+    // Get Resend Logs
+    static async getResendLogs(req, res) {
+        try {
+            const { data, error } = await EmailService.getResendClient().emails.list({ limit: 50 })
+            if (error) {
+                return res.status(500).json({ success: false, error: error.message })
+            }
+            res.json({ success: true, data: { emails: data.data, has_more: data.has_more } })
+        } catch (error) {
+            logger.error('Get Resend logs error:', error)
+            res.status(500).json({ success: false, error: error.message })
+        }
+    }
+
+    // Get Resend Received Logs
+    static async getResendReceived(req, res) {
+        try {
+            const resendClient = EmailService.getResendClient()
+            if (!resendClient.emails?.receiving?.list) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Receiving logs feature is not available in the current SDK version or plan.',
+                    supported: false
+                })
+            }
+
+            const { data, error } = await resendClient.emails.receiving.list({ limit: 50 })
+            if (error) {
+                return res.status(500).json({ success: false, error: error.message })
+            }
+            res.json({ success: true, data: { emails: data.data, has_more: data.has_more } })
+        } catch (error) {
+            logger.error('Get Resend received error:', error)
+            res.status(500).json({ success: false, error: error.message })
+        }
+    }
 }
 
 export default AdminMessagingController
