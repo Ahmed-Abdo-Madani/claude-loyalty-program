@@ -468,11 +468,6 @@ function OffersTab({ analytics, demoData, onAddOffer, user }) {
                     return
                   }
 
-                  // Verification required check
-                  if (data.code === 'VERIFICATION_REQUIRED') {
-                    setError(t('offers.verificationRequired', 'Please complete your business profile to create offers'))
-                    return
-                  }
 
                   throw new Error(data.message || t('offers.saveFailed'))
                 }

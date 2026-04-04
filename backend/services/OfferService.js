@@ -33,16 +33,6 @@ class OfferService {
       throw new Error(`Business with ID ${offerData.business_id} not found`)
     }
 
-    // Business verification check - Relaxed for development
-    const isProduction = process.env.NODE_ENV === 'production'
-    const isProfileComplete = business.is_verified && business.profile_completion >= 100
-
-    if (isProduction && !isProfileComplete) {
-      const error = new Error('Business must be verified and profile 100% complete to create offers')
-      error.status = 403
-      error.code = 'VERIFICATION_REQUIRED'
-      throw error
-    }
 
     // Ensure reward_description is present (mandatory in DB)
     if (!offerData.reward_description) {
@@ -125,15 +115,6 @@ class OfferService {
 
     const newStatus = offer.status === 'active' ? 'paused' : 'active'
 
-    // Business verification check when activating (publishing) an offer
-    if (newStatus === 'active' && offer.business) {
-      if (!offer.business.is_verified || offer.business.profile_completion < 100) {
-        const error = new Error('Business must be verified and profile 100% complete to activate offers')
-        error.status = 403
-        error.code = 'VERIFICATION_REQUIRED'
-        throw error
-      }
-    }
 
     await offer.update({ status: newStatus })
 

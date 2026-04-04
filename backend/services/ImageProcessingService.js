@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import logger from '../config/logger.js'
 import crypto from 'crypto'
+import R2StorageService from './R2StorageService.js'
 
 /**
  * Image Processing Service
@@ -28,7 +29,6 @@ class ImageProcessingService {
     this.uploadDir = path.join(uploadsRoot, 'designs')
     this.logoDir = path.join(this.uploadDir, 'logos')
     this.heroDir = path.join(this.uploadDir, 'heroes')
-    this.productsDir = path.join(this.uploadDir, 'products')
     this.processedDir = path.join(this.uploadDir, 'processed')
 
     // Base URL for absolute image URLs (Phase 4: Wallet Integration Fix)
@@ -47,7 +47,6 @@ class ImageProcessingService {
       await fs.mkdir(this.uploadDir, { recursive: true })
       await fs.mkdir(this.logoDir, { recursive: true })
       await fs.mkdir(this.heroDir, { recursive: true })
-      await fs.mkdir(this.productsDir, { recursive: true })
       await fs.mkdir(this.processedDir, { recursive: true })
       logger.info('✅ Image upload directories initialized')
     } catch (error) {
@@ -500,59 +499,73 @@ class ImageProcessingService {
       const filenameLarge = `${baseFilename}_large${ext}`
       const filenameThumbnail = `${baseFilename}_thumb${ext}`
 
-      // Define paths
-      const pathOriginal = path.join(this.productsDir, filenameOriginal)
-      const pathLarge = path.join(this.productsDir, filenameLarge)
-      const pathThumbnail = path.join(this.productsDir, filenameThumbnail)
+      // Define R2 Keys
+      const keyOriginal = `products/${filenameOriginal}`
+      const keyLarge = `products/${filenameLarge}`
+      const keyThumbnail = `products/${filenameThumbnail}`
 
-      // 1. Process Original (WebP, Quality 90, Effort 6)
-      // explicit .withMetadata(false) to ensure stripping (default behavior but enforcing as per plan)
-      const infoOriginal = await sharp(imageBuffer)
-        .rotate()
-        .withMetadata(false)
-        .webp({ quality: 90, effort: 6, smartSubsample: true })
-        .toFile(pathOriginal)
+      // Process and Upload in parallel using buffer
+      const [originalResult, largeResult, thumbResult] = await Promise.all([
+        // 1. Process Original
+        sharp(imageBuffer)
+          .rotate()
+          .withMetadata(false)
+          .webp({ quality: 90, effort: 6, smartSubsample: true })
+          .toBuffer({ resolveWithObject: true })
+          .then(async ({ data, info }) => ({
+            url: await R2StorageService.uploadFile(data, keyOriginal, 'image/webp'),
+            info
+          })),
 
-      // 2. Process Large (WebP, Quality 82, Effort 6, Resize 800px width max)
-      const infoLarge = await sharp(imageBuffer)
-        .rotate()
-        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-        .withMetadata(false)
-        .webp({ quality: 82, effort: 6, smartSubsample: true })
-        .toFile(pathLarge)
+        // 2. Process Large
+        sharp(imageBuffer)
+          .rotate()
+          .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+          .withMetadata(false)
+          .webp({ quality: 82, effort: 6, smartSubsample: true })
+          .toBuffer({ resolveWithObject: true })
+          .then(async ({ data, info }) => ({
+            url: await R2StorageService.uploadFile(data, keyLarge, 'image/webp'),
+            info
+          })),
 
-      // 3. Process Thumbnail (WebP, Quality 75, Effort 6, Resize 200px width max)
-      const infoThumbnail = await sharp(imageBuffer)
-        .rotate()
-        .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
-        .withMetadata(false)
-        .webp({ quality: 75, effort: 6, smartSubsample: true })
-        .toFile(pathThumbnail)
+        // 3. Process Thumbnail
+        sharp(imageBuffer)
+          .rotate()
+          .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
+          .withMetadata(false)
+          .webp({ quality: 75, effort: 6, smartSubsample: true })
+          .toBuffer({ resolveWithObject: true })
+          .then(async ({ data, info }) => ({
+            url: await R2StorageService.uploadFile(data, keyThumbnail, 'image/webp'),
+            info
+          }))
+      ])
 
-      logger.info(`✅ Product images processed for ${productId}`)
+      logger.info(`✅ Product images processed and uploaded to R2 for ${productId}`)
 
       return {
         original: {
-          url: `${this.baseUrl}/designs/products/${filenameOriginal}`,
+          url: originalResult.url,
           filename: filenameOriginal,
-          size: infoOriginal.size,
-          width: infoOriginal.width,
-          height: infoOriginal.height,
+          size: originalResult.info.size,
+          width: originalResult.info.width,
+          height: originalResult.info.height,
           uploaded_at: new Date().toISOString()
         },
         large: {
-          url: `${this.baseUrl}/designs/products/${filenameLarge}`,
+          url: largeResult.url,
           filename: filenameLarge,
-          size: infoLarge.size,
-          width: infoLarge.width,
-          height: infoLarge.height
+          size: largeResult.info.size,
+          width: largeResult.info.width,
+          height: largeResult.info.height
         },
         thumbnail: {
-          url: `${this.baseUrl}/designs/products/${filenameThumbnail}`,
+          url: thumbResult.url,
           filename: filenameThumbnail,
-          size: infoThumbnail.size,
-          width: infoThumbnail.width,
-          height: infoThumbnail.height
+          size: thumbResult.info.size,
+          width: thumbResult.info.width,
+          height: thumbResult.info.height
         }
       }
 
@@ -640,19 +653,31 @@ class ImageProcessingService {
         filenames = [filenames]
       }
 
-      logger.info(`🗑️ Deleting product images: ${filenames.join(', ')}`)
+      // Filter and extract R2 keys from URLs
+      const keys = filenames
+        .filter(Boolean)
+        .map(entry => {
+          try {
+            // key is everything after public url - e.g. "products/..."
+            const key = new URL(entry).pathname.slice(1);
+            // Ensure no leading slash remains (pathname on Windows/some environments might behave differently)
+            return key.startsWith('/') ? key.slice(1) : key;
+          } catch (e) {
+            // Fallback for relative paths or non-URL entries
+            return entry.startsWith('/') ? entry.slice(1) : entry
+          }
+        })
 
-      const results = await Promise.all(filenames.map(async (filename) => {
-        if (!filename) return false
-        // Handle full URL or just filename
-        const name = path.basename(filename)
-        const filePath = path.join(this.productsDir, name)
-        return this.deleteImage(filePath)
-      }))
+      if (keys.length === 0) return true
 
+      logger.info(`🗑️ Deleting product images from R2: ${keys.join(', ')}`)
+
+      // Delete from R2 in parallel
+      const results = await R2StorageService.deleteFiles(keys)
+      
       return results.every(r => r === true)
     } catch (error) {
-      logger.error('❌ Failed to delete product images:', error)
+      logger.error('❌ Failed to delete product images from R2:', error)
       return false
     }
   }

@@ -360,16 +360,22 @@ app.use((req, res, next) => {
   next()
 })
 
-// Static file serving for images
-// Production: Uses UPLOADS_DIR env var pointing to persistent disk mount
-// Development: Falls back to ./uploads directory
+// Serve legacy /uploads path by redirecting to R2 if configured
+// If R2_PUBLIC_URL is not set (local dev without R2), fall back to express.static(uploadsPath)
 const uploadsPath = process.env.UPLOADS_DIR || './uploads'
 app.use('/static', express.static('public'))
-app.use('/uploads', express.static(uploadsPath))
+app.use('/uploads', (req, res, next) => {
+  if (process.env.R2_PUBLIC_URL) {
+    // Pattern: /uploads/logos/abc.png -> logos/abc.png (req.path is /logos/abc.png here)
+    const r2Key = req.path.startsWith('/') ? req.path.substring(1) : req.path
+    return res.redirect(301, `${process.env.R2_PUBLIC_URL}/${r2Key}`)
+  }
+  next()
+}, express.static(uploadsPath))
 
 // Warn if uploads are ephemeral in production
-if (!process.env.UPLOADS_DIR && process.env.NODE_ENV === 'production') {
-  logger.warn('⚠️ UPLOADS_DIR not set in production - uploads will be ephemeral and lost on redeploy!')
+if (!process.env.UPLOADS_DIR && !process.env.R2_PUBLIC_URL && process.env.NODE_ENV === 'production') {
+  logger.warn('⚠️ UPLOADS_DIR and R2_PUBLIC_URL not set in production - uploads will be ephemeral!')
 }
 
 // API Routes

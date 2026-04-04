@@ -2,7 +2,6 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import path from 'path'
-import fs from 'fs'
 import logger from '../config/logger.js'
 import sequelize from '../config/database.js'
 import BusinessService from '../services/BusinessService.js'
@@ -14,6 +13,7 @@ import InvoiceService from '../services/InvoiceService.js'
 import LemonSqueezyService from '../services/LemonSqueezyService.js'
 import EmailService from '../services/EmailService.js'
 import CustomerSegmentationService from '../services/CustomerSegmentationService.js'
+import R2StorageService from '../services/R2StorageService.js'
 import { Business, Offer, CustomerProgress, Branch, OfferCardDesign, Customer, BusinessSession, Payment, Subscription, Invoice, Sale } from '../models/index.js'
 import { Op } from 'sequelize'
 import { requireBusinessAuth, checkTrialExpiration, checkSubscriptionLimit } from '../middleware/hybridBusinessAuth.js'
@@ -22,6 +22,7 @@ import appleWalletController from '../controllers/appleWalletController.js'
 import BusinessSettingsController from '../controllers/businessSettingsController.js'
 import googleWalletController from '../controllers/realGoogleWalletController.js'
 import { upload, handleUploadError } from '../middleware/logoUpload.js'
+import { upload as menuUpload, handleUploadError as handleMenuUploadError } from '../middleware/menuPdfUpload.js'
 import { getLocalizedMessage } from '../middleware/languageMiddleware.js'
 import { getTemplateById } from '../constants/cardDesignTemplates.js'
 
@@ -739,50 +740,25 @@ router.get('/analytics/activity', (req, res) => {
 // ===============================
 
 // Public endpoint to serve business logos for customer-facing pages
-router.get('/public/logo/:businessId/:filename', async (req, res) => {
+router.get('/public/logo/:businessId/:filename(*)', async (req, res) => {
   try {
     const { businessId, filename } = req.params
 
-    // Find business by secure public_id and verify they own this logo file
-    const business = await Business.findOne({
-      where: { public_id: businessId },
-      attributes: ['logo_filename', 'logo_url']
-    })
+    // Forward to R2 public URL
+    // Ensure we don't double the prefix if filename already includes 'logos/'
+    const key = filename.startsWith('logos/') ? filename : `logos/${filename}`
 
-    if (!business || business.logo_filename !== filename) {
-      return res.status(404).json({
+    // Strict ownership check: ensure the file belongs to this business
+    // Files are stored as logos/publicId_timestamp.ext
+    if (!key.startsWith(`logos/${businessId}_`)) {
+      console.error(`❌ Security: Logo access mismatch for ${key} and business ${businessId}`)
+      return res.status(403).json({
         success: false,
-        message: 'Logo not found'
+        message: 'Unauthorized: Logo does not belong to this business'
       })
     }
 
-    const filePath = path.join('./uploads/logos', filename)
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Logo file not found'
-      })
-    }
-
-    // Set appropriate headers
-    const ext = path.extname(filename).toLowerCase()
-    const mimeTypes = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp'
-    }
-
-    const mimeType = mimeTypes[ext] || 'application/octet-stream'
-    res.setHeader('Content-Type', mimeType)
-    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
-    res.setHeader('Access-Control-Allow-Origin', '*') // Allow cross-origin access for customer pages
-
-    // Send file
-    res.sendFile(path.resolve(filePath))
+    res.redirect(301, `${process.env.R2_PUBLIC_URL}/${key}`)
 
   } catch (error) {
     console.error('❌ Public logo serve error:', error)
@@ -799,37 +775,21 @@ router.get('/public/menu-pdf/:businessId', async (req, res) => {
   try {
     const { businessId } = req.params
 
-    // Find business by secure public_id
+    // Find business by secure public_id to get its PDF URL
     const business = await Business.findOne({
       where: { public_id: businessId },
-      attributes: ['menu_pdf_filename', 'public_id']
+      attributes: ['menu_pdf_url', 'public_id']
     })
 
-    if (!business || !business.menu_pdf_filename) {
+    if (!business || !business.menu_pdf_url) {
       return res.status(404).json({
         success: false,
         message: 'Menu PDF not found'
       })
     }
 
-    const filePath = path.join('./uploads/menus', business.menu_pdf_filename)
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Menu PDF file not found'
-      })
-    }
-
-    // Set appropriate headers
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
-    res.setHeader('Access-Control-Allow-Origin', '*') // Allow cross-origin access for customer pages
-    res.setHeader('Content-Disposition', `inline; filename="menu_${business.public_id}.pdf"`)
-
-    // Send file
-    res.sendFile(path.resolve(filePath))
+    // Redirect to the stored public R2 URL
+    res.redirect(302, business.menu_pdf_url)
 
   } catch (error) {
     console.error('❌ Public menu PDF serve error:', error)
@@ -919,7 +879,7 @@ router.get('/public/offer/:id', async (req, res) => {
       location_hierarchy: offer.business?.location_hierarchy,
       // Business logo information for customer-facing display
       businessLogo: offer.business?.logo_url ? {
-        url: `/api/business/public/logo/${offer.business_id}/${offer.business.logo_filename}`,
+        url: offer.business.logo_url, // Return absolute R2 URL directly
         filename: offer.business.logo_filename
       } : null,
       // Card design logo (fallback option)
@@ -1143,7 +1103,7 @@ router.get('/public/menu/:identifier', async (req, res) => {
         id: business.public_id,
         name: business.business_name,
         name_ar: business.business_name_ar,
-        logo_url: business.logo_url ? `/api/business/public/logo/${business.public_id}/${business.logo_filename}` : null,
+        logo_url: business.logo_url, // Return absolute R2 URL directly
         description: business.description,
         phone: business.phone,
         menu_phone: business.menu_phone,
@@ -2798,27 +2758,29 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
 
     const business = req.business
     const file = req.file
+    const ext = path.extname(file.originalname)
+    const businessId = business.public_id
 
-    // Delete old logo file if it exists
-    if (business.logo_filename && business.logo_url) {
-      const oldFilePath = path.join('./uploads/logos', business.logo_filename)
-      if (fs.existsSync(oldFilePath)) {
-        try {
-          fs.unlinkSync(oldFilePath)
-          console.log(`🗑️ Deleted old logo file: ${business.logo_filename}`)
-        } catch (deleteError) {
-          console.warn(`⚠️ Failed to delete old logo file: ${deleteError.message}`)
-        }
+    // Generate R2 key
+    const r2Key = `logos/${businessId}_${Date.now()}${ext}`
+
+    // Delete old logo from R2 if it exists
+    if (business.logo_filename) {
+      // If it includes '/', it's an R2 key
+      if (business.logo_filename.includes('/')) {
+        await R2StorageService.deleteFile(business.logo_filename)
+      } else {
+        console.log(`ℹ️ Skipping R2 delete for legacy filename: ${business.logo_filename}`)
       }
     }
 
-    // Generate accessible URL path
-    const logoUrl = `/api/business/public/logo/${file.filename}`
+    // Upload to R2
+    const r2Url = await R2StorageService.uploadFile(file.buffer, r2Key, file.mimetype)
 
     // Update business with logo information
     await business.update({
-      logo_filename: file.filename,
-      logo_url: logoUrl,
+      logo_filename: r2Key,
+      logo_url: r2Url,
       logo_uploaded_at: new Date(),
       logo_file_size: file.size
     })
@@ -2831,19 +2793,19 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
     if (business.address) completion += 10;
     if (business.city) completion += 10;
     if (business.region) completion += 5;
-    if (business.logo_filename) completion += 5; // Now explicitly has logo
+    if (business.logo_filename) completion += 5; 
 
     const profileCompletion = Math.min(completion, 100)
     await business.update({ profile_completion: profileCompletion })
 
-    console.log(`✅ Logo uploaded for business ${business.public_id}: ${file.filename}`)
+    console.log(`✅ Logo uploaded to R2 for business ${businessId}: ${r2Key}`)
 
     res.json({
       success: true,
       message: 'Logo uploaded successfully',
       data: {
-        logo_url: logoUrl,
-        logo_filename: file.filename,
+        logo_url: r2Url,
+        logo_filename: r2Key,
         logo_file_size: file.size,
         logo_uploaded_at: business.logo_uploaded_at
       }
@@ -2851,16 +2813,6 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
 
   } catch (error) {
     console.error('❌ Logo upload error:', error)
-
-    // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path)
-      } catch (cleanupError) {
-        console.warn(`⚠️ Failed to cleanup uploaded file: ${cleanupError.message}`)
-      }
-    }
-
     res.status(500).json({
       success: false,
       message: 'Failed to upload logo',
@@ -2869,99 +2821,18 @@ router.post('/my/logo', requireBusinessAuth, upload.single('logo'), handleUpload
   }
 })
 
-// Get business logo (public access)
-router.get('/public/logo/:filename', (req, res) => {
-  try {
-    const filename = req.params.filename
-
-    // Sanitize filename to prevent directory traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid filename'
-      })
-    }
-
-    const filePath = path.join('./uploads/logos', filename)
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Logo file not found'
-      })
-    }
-
-    // Determine content type
-    const ext = path.extname(filename).toLowerCase()
-    let contentType = 'image/png' // default
-    if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg'
-    if (ext === '.gif') contentType = 'image/gif'
-    if (ext === '.webp') contentType = 'image/webp'
-
-    res.setHeader('Content-Type', contentType)
-    res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 1 day
-
-    const fileStream = fs.createReadStream(filePath)
-    fileStream.pipe(res)
-  } catch (error) {
-    console.error('Error serving logo:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to serve logo'
-    })
-  }
+// Get business logo (public access) - Redirect to R2
+router.get('/public/logo/:filename(*)', (req, res) => {
+  const filename = req.params.filename
+  const key = filename.startsWith('logos/') ? filename : `logos/${filename}`
+  res.redirect(301, `${process.env.R2_PUBLIC_URL}/${key}`)
 })
 
-// Get business logo (serve logo file)
-router.get('/my/logo/:filename', requireBusinessAuth, (req, res) => {
-  try {
-    const filename = req.params.filename
-    const business = req.business
-
-    // Security check: verify this business owns this logo file
-    if (business.logo_filename !== filename) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied to this logo file'
-      })
-    }
-
-    const filePath = path.join('./uploads/logos', filename)
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Logo file not found'
-      })
-    }
-
-    // Set appropriate headers
-    const ext = path.extname(filename).toLowerCase()
-    const mimeTypes = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp'
-    }
-
-    const mimeType = mimeTypes[ext] || 'application/octet-stream'
-    res.setHeader('Content-Type', mimeType)
-    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
-
-    // Send file
-    res.sendFile(path.resolve(filePath))
-
-  } catch (error) {
-    console.error('❌ Logo serve error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to serve logo',
-      error: error.message
-    })
-  }
+// Get business logo (serve logo file) - Redirect to R2
+router.get('/my/logo/:filename(*)', requireBusinessAuth, (req, res) => {
+  const filename = req.params.filename
+  const key = filename.startsWith('logos/') ? filename : `logos/${filename}`
+  res.redirect(301, `${process.env.R2_PUBLIC_URL}/${key}`)
 })
 
 // Delete business logo
@@ -2976,15 +2847,9 @@ router.delete('/my/logo', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    // Delete file from filesystem
-    const filePath = path.join('./uploads/logos', business.logo_filename)
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath)
-        console.log(`🗑️ Deleted logo file: ${business.logo_filename}`)
-      } catch (deleteError) {
-        console.warn(`⚠️ Failed to delete logo file: ${deleteError.message}`)
-      }
+    // Delete from R2
+    if (business.logo_filename.includes('/')) {
+      await R2StorageService.deleteFile(business.logo_filename)
     }
 
     // Clear logo information from database
@@ -3003,7 +2868,6 @@ router.delete('/my/logo', requireBusinessAuth, async (req, res) => {
     if (business.address) completion += 10;
     if (business.city) completion += 10;
     if (business.region) completion += 5;
-    // Logo removed, so no +5
 
     const profileCompletion = Math.min(completion, 100)
     await business.update({ profile_completion: profileCompletion })
@@ -3065,151 +2929,95 @@ router.get('/my/logo-info', requireBusinessAuth, (req, res) => {
 // ===============================
 // BUSINESS PDF MENU ROUTES
 // ===============================
-import { upload as menuPdfUpload, handleUploadError as handleMenuPdfUploadError } from '../middleware/menuPdfUpload.js'
 
-// Upload PDF menu
-router.post('/my/menu-pdf', requireBusinessAuth, menuPdfUpload.single('menu'), handleMenuPdfUploadError, async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No PDF file provided'
-      })
-    }
-
-    const business = req.business
-    const file = req.file
-
-    // Delete old PDF file if it exists
-    if (business.menu_pdf_filename && business.menu_pdf_url) {
-      const oldFilePath = path.join('./uploads/menus', business.menu_pdf_filename)
-      if (fs.existsSync(oldFilePath)) {
-        try {
-          fs.unlinkSync(oldFilePath)
-          console.log(`🗑️ Deleted old menu PDF: ${business.menu_pdf_filename}`)
-        } catch (deleteError) {
-          console.warn(`⚠️ Failed to delete old menu PDF: ${deleteError.message}`)
+// Upload business menu PDF
+router.post('/my/menu-pdf', requireBusinessAuth, menuUpload.single('menu'), handleMenuUploadError, async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No PDF file provided'
+            })
         }
-      }
+
+        const business = req.business
+        const file = req.file
+        const businessId = business.public_id
+
+        // Generate R2 key
+        const r2Key = `menus/${businessId}_menu_${Date.now()}.pdf`
+
+        // Delete old menu PDF from R2 if it exists
+        if (business.menu_pdf_filename) {
+            // If it includes '/', it's an R2 key
+            if (business.menu_pdf_filename.includes('/')) {
+                await R2StorageService.deleteFile(business.menu_pdf_filename)
+            } else {
+                console.log(`ℹ️ Skipping R2 delete for legacy filename: ${business.menu_pdf_filename}`)
+            }
+        }
+
+        // Upload to R2
+        const r2Url = await R2StorageService.uploadFile(file.buffer, r2Key, 'application/pdf')
+
+        // Update business with menu PDF information
+        await business.update({
+            menu_pdf_filename: r2Key,
+            menu_pdf_url: r2Url,
+            menu_pdf_uploaded_at: new Date()
+        })
+
+        console.log(`✅ Menu PDF uploaded to R2 for business ${businessId}: ${r2Key}`)
+
+        res.json({
+            success: true,
+            message: 'Menu PDF uploaded successfully',
+            data: {
+                menu_pdf_url: r2Url,
+                menu_pdf_filename: r2Key,
+                menu_pdf_uploaded_at: business.menu_pdf_uploaded_at
+            }
+        })
+
+    } catch (error) {
+        console.error('❌ Menu PDF upload error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload menu PDF',
+            error: error.message
+        })
     }
-
-    // Generate accessible URL paths
-    // 1. Authenticated shortcut: /api/business/my/menu-pdf
-    // 2. Public stable URL: /api/business/public/menu-pdf/${business.public_id}
-    const publicPdfUrl = `/api/business/public/menu-pdf/${business.public_id}`
-
-    // Update business with PDF information
-    await business.update({
-      menu_pdf_filename: file.filename,
-      menu_pdf_url: publicPdfUrl,
-      menu_pdf_uploaded_at: new Date()
-    })
-
-    console.log(`✅ Menu PDF uploaded for business ${business.public_id}: ${file.filename}`)
-    console.log(`🔗 Public PDF URL: ${publicPdfUrl}`)
-
-    res.json({
-      success: true,
-      message: 'Menu PDF uploaded successfully',
-      data: {
-        menu_pdf_url: publicPdfUrl,
-        menu_pdf_filename: file.filename,
-        menu_pdf_uploaded_at: business.menu_pdf_uploaded_at
-      }
-    })
-
-  } catch (error) {
-    console.error('❌ Menu PDF upload error:', error)
-
-    // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path)
-      } catch (cleanupError) {
-        console.warn(`⚠️ Failed to cleanup uploaded file: ${cleanupError.message}`)
-      }
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Failed to upload menu PDF',
-      error: error.message
-    })
-  }
 })
 
-// Get current business menu PDF
-router.get('/my/menu-pdf', requireBusinessAuth, (req, res) => {
-  try {
-    const business = req.business
+// Get business menu PDF (authenticated route) - Redirect to R2
+router.get('/my/menu-pdf', requireBusinessAuth, async (req, res) => {
+    try {
+        const business = req.business
 
-    if (!business.menu_pdf_filename) {
-      return res.status(404).json({
-        success: false,
-        message: 'No menu PDF found for this business'
-      })
+        if (!business.menu_pdf_url) {
+            return res.status(404).json({
+                success: false,
+                message: 'Menu PDF not found'
+            })
+        }
+
+        // Redirect to the public R2 URL
+        res.redirect(302, business.menu_pdf_url)
+
+    } catch (error) {
+        console.error('❌ Menu PDF serve error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Failed to serve menu PDF',
+            error: error.message
+        })
     }
-
-    const filePath = path.join('./uploads/menus', business.menu_pdf_filename)
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Menu PDF file not found on disk'
-      })
-    }
-
-    // Set headers
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.setHeader('Content-Disposition', `inline; filename="${business.menu_pdf_filename}"`)
-
-    // Send file
-    res.sendFile(path.resolve(filePath))
-
-  } catch (error) {
-    console.error('❌ Menu PDF fetch error:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch menu PDF',
-      error: error.message
-    })
-  }
 })
 
-// Serve PDF file by filename (Legacy support)
+// Serve menu PDF file by filename (legacy compatibility) - Redirect to R2
 router.get('/my/menu-pdf/:filename', requireBusinessAuth, (req, res) => {
   try {
-    const filename = req.params.filename
-    const business = req.business
-
-    // Security check: verify this business owns this PDF file
-    if (business.menu_pdf_filename !== filename) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied to this PDF file'
-      })
-    }
-
-    const filePath = path.join('./uploads/menus', filename)
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Menu PDF not found'
-      })
-    }
-
-    // Set headers
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Cache-Control', 'public, max-age=31536000') // 1 year cache
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`)
-
-    // Send file
-    res.sendFile(path.resolve(filePath))
-
+    res.redirect(301, `${process.env.R2_PUBLIC_URL}/menus/${req.params.filename}`)
   } catch (error) {
     console.error('❌ Menu PDF serve error:', error)
     res.status(500).json({
@@ -3220,7 +3028,7 @@ router.get('/my/menu-pdf/:filename', requireBusinessAuth, (req, res) => {
   }
 })
 
-// Delete PDF menu
+// Delete business menu PDF
 router.delete('/my/menu-pdf', requireBusinessAuth, async (req, res) => {
   try {
     const business = req.business
@@ -3232,18 +3040,12 @@ router.delete('/my/menu-pdf', requireBusinessAuth, async (req, res) => {
       })
     }
 
-    // Delete file from filesystem
-    const filePath = path.join('./uploads/menus', business.menu_pdf_filename)
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath)
-        console.log(`🗑️ Deleted menu PDF: ${business.menu_pdf_filename}`)
-      } catch (deleteError) {
-        console.warn(`⚠️ Failed to delete menu PDF: ${deleteError.message}`)
-      }
+    // Delete from R2
+    if (business.menu_pdf_filename.includes('/')) {
+      await R2StorageService.deleteFile(business.menu_pdf_filename)
     }
 
-    // Clear PDF information from database
+    // Clear menu PDF information from database
     await business.update({
       menu_pdf_filename: null,
       menu_pdf_url: null,

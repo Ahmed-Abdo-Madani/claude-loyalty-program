@@ -1,30 +1,7 @@
 import multer from 'multer'
-import path from 'path'
-import fs from 'fs'
 
-// Ensure uploads directory exists
-// Production: Uses UPLOADS_DIR env var pointing to persistent disk mount
-// Development: Falls back to ./uploads directory
-const uploadsRoot = process.env.UPLOADS_DIR || './uploads'
-const uploadsDir = path.join(uploadsRoot, 'logos')
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true })
-}
-
-// Configure multer for logo uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir)
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename: businessId_timestamp.ext
-    const businessId = req.business?.public_id || 'unknown'
-    const timestamp = Date.now()
-    const ext = path.extname(file.originalname)
-    const filename = `${businessId}_${timestamp}${ext}`
-    cb(null, filename)
-  }
-})
+// Configure multer for logo uploads using memory storage for R2 streaming
+const storage = multer.memoryStorage()
 
 // File filter for images only
 const fileFilter = (req, file, cb) => {
