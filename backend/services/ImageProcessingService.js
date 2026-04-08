@@ -148,22 +148,27 @@ class ImageProcessingService {
       const filename = this.generateUniqueFilename(originalFilename, 'google')
       const outputPath = path.join(this.processedDir, filename)
 
-      await sharp(imageBuffer)
+      const buffer = await sharp(imageBuffer)
         .resize(660, 660, {
           fit: 'cover',  // Crop to fill square
           position: 'center'
         })
         .png({ quality: 90, compressionLevel: 9 })  // High quality PNG
-        .toFile(outputPath)
+        .toBuffer()
 
-      const stats = await fs.stat(outputPath)
+      let url = `${this.baseUrl}/designs/processed/${filename}`
+      if (process.env.R2_PUBLIC_URL) {
+        url = await R2StorageService.uploadFile(buffer, `designs/processed/${filename}`, 'image/png')
+      } else {
+        await fs.writeFile(outputPath, buffer)
+      }
 
-      logger.info(`✅ Google Wallet logo processed: ${filename} (${(stats.size / 1024).toFixed(2)}KB)`)
+      logger.info(`✅ Google Wallet logo processed: ${filename} (${(buffer.length / 1024).toFixed(2)}KB)`)
 
       return {
         path: outputPath,
-        url: `${this.baseUrl}/designs/processed/${filename}`,
-        size: stats.size,
+        url,
+        size: buffer.length,
         dimensions: { width: 660, height: 660 }
       }
 
@@ -197,22 +202,27 @@ class ImageProcessingService {
       const filename = this.generateUniqueFilename(originalFilename, 'apple')
       const outputPath = path.join(this.processedDir, filename)
 
-      await sharp(imageBuffer)
+      const buffer = await sharp(imageBuffer)
         .resize(320, 100, {
           fit: 'inside',  // Maintain aspect ratio, fit within bounds
           background: { r: 255, g: 255, b: 255, alpha: 0 }  // Transparent background
         })
         .png({ quality: 90, compressionLevel: 9 })
-        .toFile(outputPath)
+        .toBuffer()
 
-      const stats = await fs.stat(outputPath)
+      let url = `${this.baseUrl}/designs/processed/${filename}`
+      if (process.env.R2_PUBLIC_URL) {
+        url = await R2StorageService.uploadFile(buffer, `designs/processed/${filename}`, 'image/png')
+      } else {
+        await fs.writeFile(outputPath, buffer)
+      }
 
-      logger.info(`✅ Apple Wallet logo processed: ${filename} (${(stats.size / 1024).toFixed(2)}KB)`)
+      logger.info(`✅ Apple Wallet logo processed: ${filename} (${(buffer.length / 1024).toFixed(2)}KB)`)
 
       return {
         path: outputPath,
-        url: `${this.baseUrl}/designs/processed/${filename}`,
-        size: stats.size,
+        url,
+        size: buffer.length,
         dimensions: { width: 320, height: 100 }
       }
 
@@ -247,22 +257,27 @@ class ImageProcessingService {
       const filename = this.generateUniqueFilename(originalFilename, 'hero')
       const outputPath = path.join(this.processedDir, filename)
 
-      await sharp(imageBuffer)
+      const buffer = await sharp(imageBuffer)
         .resize(1032, 336, {
           fit: 'cover',  // Crop to fill dimensions
           position: 'center'
         })
         .jpeg({ quality: 85, progressive: true })  // Progressive JPEG for web
-        .toFile(outputPath)
+        .toBuffer()
 
-      const stats = await fs.stat(outputPath)
+      let url = `${this.baseUrl}/designs/processed/${filename}`
+      if (process.env.R2_PUBLIC_URL) {
+        url = await R2StorageService.uploadFile(buffer, `designs/processed/${filename}`, 'image/jpeg')
+      } else {
+        await fs.writeFile(outputPath, buffer)
+      }
 
-      logger.info(`✅ Hero image processed: ${filename} (${(stats.size / 1024).toFixed(2)}KB)`)
+      logger.info(`✅ Hero image processed: ${filename} (${(buffer.length / 1024).toFixed(2)}KB)`)
 
       return {
         path: outputPath,
-        url: `${this.baseUrl}/designs/processed/${filename}`,
-        size: stats.size,
+        url,
+        size: buffer.length,
         dimensions: { width: 1032, height: 336 }
       }
 
@@ -285,9 +300,19 @@ class ImageProcessingService {
       // Save original
       const originalFile = this.generateUniqueFilename(originalFilename, 'original')
       const originalPath = path.join(this.logoDir, originalFile)
-      await fs.writeFile(originalPath, imageBuffer)
-
-      const originalStats = await fs.stat(originalPath)
+      
+      let originalUrl = `${this.baseUrl}/designs/logos/${originalFile}`;
+      if (process.env.R2_PUBLIC_URL) {
+        const ext = path.extname(originalFilename).toLowerCase();
+        let contentType = 'application/octet-stream';
+        if (ext === '.png') contentType = 'image/png';
+        else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+        else if (ext === '.webp') contentType = 'image/webp';
+        
+        originalUrl = await R2StorageService.uploadFile(imageBuffer, `designs/logos/${originalFile}`, contentType);
+      } else {
+        await fs.writeFile(originalPath, imageBuffer)
+      }
 
       // Process for Google Wallet
       const googleLogo = await this.processLogoForGoogle(imageBuffer, originalFilename)
@@ -300,8 +325,8 @@ class ImageProcessingService {
       return {
         original: {
           path: originalPath,
-          url: `${this.baseUrl}/designs/logos/${originalFile}`,
-          size: originalStats.size
+          url: originalUrl,
+          size: imageBuffer.length
         },
         google: googleLogo,
         apple: appleLogo

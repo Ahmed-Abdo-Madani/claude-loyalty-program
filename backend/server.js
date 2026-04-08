@@ -366,6 +366,10 @@ const uploadsPath = process.env.UPLOADS_DIR || './uploads'
 app.use('/static', express.static('public'))
 app.use('/uploads', (req, res, next) => {
   if (process.env.R2_PUBLIC_URL) {
+    // Exclude card-design assets from the unconditional R2 redirect until they are fully migrated
+    if (req.path.startsWith('/designs/')) {
+      return next()
+    }
     // Pattern: /uploads/logos/abc.png -> logos/abc.png (req.path is /logos/abc.png here)
     const r2Key = req.path.startsWith('/') ? req.path.substring(1) : req.path
     return res.redirect(301, `${process.env.R2_PUBLIC_URL}/${r2Key}`)

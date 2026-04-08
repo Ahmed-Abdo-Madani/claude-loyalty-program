@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { Op } from 'sequelize';
-import { sequelize, Business, Product } from '../models/index.js';
+import { sequelize, Business, Product, OfferCardDesign } from '../models/index.js';
 import R2StorageService from '../services/R2StorageService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +23,14 @@ const MIGRATION_TARGETS = [
   {
     localSubdir: 'uploads/designs/products/',
     r2Prefix: 'products/',
+  },
+  {
+    localSubdir: 'uploads/designs/logos/',
+    r2Prefix: 'designs/logos/',
+  },
+  {
+    localSubdir: 'uploads/designs/processed/',
+    r2Prefix: 'designs/processed/',
   }
 ];
 
@@ -42,6 +50,7 @@ const stats = {
   logos: { migrated: 0, skipped: 0, failed: 0 },
   menus: { migrated: 0, skipped: 0, failed: 0 },
   products: { migrated: 0, skipped: 0, failed: 0 },
+  cardDesigns: { migrated: 0, skipped: 0, failed: 0 },
 };
 
 async function migrateLogos(isDryRun) {
@@ -211,6 +220,74 @@ function padStat(stat) {
   return stat.toString().padEnd(4);
 }
 
+async function migrateCardDesigns(isDryRun) {
+  const dirs = [
+    { localDir: 'designs/logos', prefix: 'designs/logos/' },
+    { localDir: 'designs/processed', prefix: 'designs/processed/' }
+  ];
+
+  for (const { localDir, prefix } of dirs) {
+    const dirPath = path.join(uploadsBaseDir, localDir);
+    try {
+      await fs.access(dirPath);
+    } catch (error) {
+      console.log(`Directory ${dirPath} not found. Skipping.`);
+      continue;
+    }
+
+    const files = await fs.readdir(dirPath);
+    for (const filename of files) {
+      const filePath = path.join(dirPath, filename);
+      const key = `${prefix}${filename}`;
+      
+      let fieldName = null;
+      if (filename.includes('_original')) fieldName = 'logo_url';
+      else if (filename.includes('_apple')) fieldName = 'logo_apple_url';
+      else if (filename.includes('_google')) fieldName = 'logo_google_url';
+      else if (filename.includes('_hero')) fieldName = 'hero_image_url';
+      else {
+        if (prefix === 'designs/logos/') fieldName = 'logo_url';
+        else continue;
+      }
+
+      try {
+        const designs = await OfferCardDesign.findAll({
+          where: { [fieldName]: { [Op.like]: '%' + filename + '%' } }
+        });
+
+        if (designs.length === 0) {
+          if (isDryRun) console.log(`[DRY RUN] Would skip card design asset ${filename} - no DB record matched.`);
+          stats.cardDesigns.skipped++;
+          continue;
+        }
+        
+        if (designs.length > 1) {
+          console.log(`Ambiguous match for card design asset ${filename} - matched ${designs.length} records. Skipping.`);
+          stats.cardDesigns.skipped++;
+          continue;
+        }
+
+        const design = designs[0];
+
+        if (isDryRun) {
+          console.log(`[DRY RUN] Would upload card design asset ${filename} and update OfferCardDesign ${design.id} field ${fieldName}`);
+          stats.cardDesigns.migrated++;
+        } else {
+          const buffer = await fs.readFile(filePath);
+          const contentType = getContentType(filename);
+          const r2Url = await R2StorageService.uploadFile(buffer, key, contentType);
+          await design.update({ [fieldName]: r2Url });
+          console.log(`Successfully migrated card design asset ${filename}`);
+          stats.cardDesigns.migrated++;
+        }
+      } catch (error) {
+        console.error(`Failed to migrate card design asset ${filename}:`, error);
+        stats.cardDesigns.failed++;
+      }
+    }
+  }
+}
+
 async function main() {
   try {
     await sequelize.authenticate();
@@ -226,6 +303,7 @@ async function main() {
     await migrateLogos(isDryRun);
     await migrateMenuPdfs(isDryRun);
     await migrateProductImages(isDryRun);
+    await migrateCardDesigns(isDryRun);
 
     console.log('');
     console.log('╔════════════════════════════════════════════════════════════════╗');
@@ -234,6 +312,7 @@ async function main() {
     console.log(`║  Logos      │ migrated: ${padStat(stats.logos.migrated)} │ skipped: ${padStat(stats.logos.skipped)} │ failed: ${padStat(stats.logos.failed)} ║`);
     console.log(`║  Menus      │ migrated: ${padStat(stats.menus.migrated)} │ skipped: ${padStat(stats.menus.skipped)} │ failed: ${padStat(stats.menus.failed)} ║`);
     console.log(`║  Products   │ migrated: ${padStat(stats.products.migrated)} │ skipped: ${padStat(stats.products.skipped)} │ failed: ${padStat(stats.products.failed)} ║`);
+    console.log(`║  Designs    │ migrated: ${padStat(stats.cardDesigns.migrated)} │ skipped: ${padStat(stats.cardDesigns.skipped)} │ failed: ${padStat(stats.cardDesigns.failed)} ║`);
     console.log('╚════════════════════════════════════════════════════════════════╝');
 
     await sequelize.close();
