@@ -101,7 +101,14 @@ function LogoUpload({ onLogoUpdate, onClose }) {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(JSON.parse(xhr.responseText))
           } else {
-            reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`))
+            let serverMessage = xhr.statusText
+            try {
+              const responseData = JSON.parse(xhr.responseText)
+              serverMessage = responseData.error || responseData.message || serverMessage
+            } catch (e) {
+              // ignore parse errors
+            }
+            reject(new Error(serverMessage))
           }
         })
 

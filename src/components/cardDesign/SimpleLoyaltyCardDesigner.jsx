@@ -92,7 +92,7 @@ function SimpleLoyaltyCardDesigner({ offer, onClose, onSave, businessName }) {
                 updateDesignField('background_color', result.suggestedColor)
             }
         } catch (err) {
-            setError(t('designer.errors.uploadLogo'))
+            setError(err.message || t('designer.errors.uploadLogo'))
         } finally {
             setUploading(false)
         }

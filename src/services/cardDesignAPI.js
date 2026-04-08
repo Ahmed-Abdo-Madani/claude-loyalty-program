@@ -127,7 +127,7 @@ export const cardDesignAPI = {
       if (data.success) {
         console.log('✅ Logo uploaded and processed:', data.data)
       } else {
-        throw new Error(data.error || 'Upload failed')
+        throw new Error(data.details?.join('. ') || data.error || 'Upload failed')
       }
 
       return data
@@ -166,7 +166,7 @@ export const cardDesignAPI = {
       if (data.success) {
         console.log('✅ Hero image uploaded:', data.data)
       } else {
-        throw new Error(data.error || 'Upload failed')
+        throw new Error(data.details?.join('. ') || data.error || 'Upload failed')
       }
 
       return data

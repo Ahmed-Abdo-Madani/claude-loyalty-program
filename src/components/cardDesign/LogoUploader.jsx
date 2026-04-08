@@ -84,7 +84,7 @@ function LogoUploader({
         setSuggestedColor(result.suggestedColor)
       }
     } catch (err) {
-      setError(err.message || 'Upload failed. Please try again.')
+      setError(err.message || t('upload.uploadFailed'))
       setPreview(null)
     }
   }

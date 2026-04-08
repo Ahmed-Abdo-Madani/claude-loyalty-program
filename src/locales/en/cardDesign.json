@@ -353,6 +353,10 @@
       "unsaved": "Unsaved"
     },
     "errors": {
+      "invalidFileType": "Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.",
+      "fileTooLarge": "File is too large. Maximum allowed size is 5MB.",
+      "imageTooSmall": "Image is too small. Minimum size is 200×200 pixels.",
+      "uploadFailed": "Upload failed. Please try again.",
       "uploadLogo": "Failed to upload logo. Please try again.",
       "saveFailed": "Failed to save. Please try again."
     }
