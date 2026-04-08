@@ -1204,16 +1204,23 @@ class AppleWalletController {
         logger.info('🎨 Fetching custom logo for Apple Wallet from:', design.logo_url)
 
         // Use SafeImageFetcher with 5s timeout and 3MB size cap
-        baseImageBuffer = await SafeImageFetcher.fetchImage(design.logo_url, {
+        const fetchResult = await SafeImageFetcher.fetchImage(design.logo_url, {
           timeoutMs: 5000,
           maxSizeBytes: 3 * 1024 * 1024,
           allowedContentTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
         })
 
-        if (baseImageBuffer) {
+        if (fetchResult.success) {
+          baseImageBuffer = fetchResult.buffer
           logger.info('✅ Custom logo fetched successfully:', baseImageBuffer.length, 'bytes')
         } else {
-          throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
+          // Log specific reason for failure to help diagnosis
+          logger.warn('⚠️ Custom logo fetch failed:', {
+            url: design.logo_url,
+            reason: fetchResult.reason,
+            status: fetchResult.status
+          })
+          throw new Error(fetchResult.reason || 'Unknown fetch error')
         }
       } catch (error) {
         logger.error('❌ Failed to fetch custom logo:', {

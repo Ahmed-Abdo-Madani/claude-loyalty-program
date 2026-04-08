@@ -618,6 +618,7 @@ router.get('/public/:offerId', async (req, res) => {
 
 // Error handler for multer errors
 router.use((error, req, res, next) => {
+  // Handle Multer specific errors
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
@@ -625,7 +626,31 @@ router.use((error, req, res, next) => {
         error: 'File too large. Maximum size is 5MB for logos, 10MB for hero images.'
       })
     }
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        error: `Unexpected field: ${error.field}`
+      })
+    }
+    return res.status(400).json({
+      success: false,
+      error: error.message
+    })
   }
+
+  // Handle validation errors from fileFilter (which are regular Error objects)
+  // These are raised by Multer but are not instances of MulterError
+  if (error.message && (
+    error.message.includes('Invalid file type') ||
+    error.message.includes('Only JPEG, PNG, and WebP are allowed')
+  )) {
+    return res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+
+  // Fallback to global error handler for true server faults
   next(error)
 })
 

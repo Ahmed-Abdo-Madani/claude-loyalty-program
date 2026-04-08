@@ -133,6 +133,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
       return result
     } catch (err) {
       console.error('Logo upload failed:', err)
+      throw err
     } finally {
       setUploading(false)
     }
@@ -156,6 +157,7 @@ function CardDesignEditor({ offer, onClose, onSave }) {
       await uploadHeroImage(file)
     } catch (err) {
       console.error('Hero image upload failed:', err)
+      throw err
     } finally {
       setUploading(false)
     }

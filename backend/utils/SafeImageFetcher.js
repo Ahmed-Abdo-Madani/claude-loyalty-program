@@ -19,14 +19,13 @@ class SafeImageFetcher {
    * Fetch image with safety constraints
    * @param {string} url - Image URL to fetch
    * @param {object} options - Configuration options
-   * @returns {Promise<Buffer|null>} - Image buffer or null on failure
+   * @returns {Promise<{success: boolean, buffer: Buffer|null, reason?: string, status?: number}>} - Fetch result
    */
   static async fetchImage(url, options = {}) {
     const {
       timeoutMs = DEFAULT_TIMEOUT_MS,
       maxSizeBytes = MAX_IMAGE_SIZE_BYTES,
-      allowedContentTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
-      fallbackOnError = true
+      allowedContentTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
     } = options
 
     const controller = new AbortController()
@@ -57,7 +56,12 @@ class SafeImageFetcher {
           status: response.status,
           statusText: response.statusText
         })
-        return null
+        return {
+          success: false,
+          buffer: null,
+          status: response.status,
+          reason: `HTTP ${response.status}: ${response.statusText}`
+        }
       }
 
       // Check Content-Type
@@ -68,7 +72,12 @@ class SafeImageFetcher {
           contentType,
           allowed: allowedContentTypes
         })
-        return null
+        return {
+          success: false,
+          buffer: null,
+          status: response.status,
+          reason: `Invalid Content-Type: ${contentType}. Expected one of: ${allowedContentTypes.join(', ')}`
+        }
       }
 
       // Check Content-Length (if provided)
@@ -82,7 +91,12 @@ class SafeImageFetcher {
             maxSizeBytes,
             sizeMB: (size / 1024 / 1024).toFixed(2)
           })
-          return null
+          return {
+            success: false,
+            buffer: null,
+            status: response.status,
+            reason: `File too large (${(size / 1024 / 1024).toFixed(2)}MB exceeds ${maxSizeBytes / 1024 / 1024}MB limit)`
+          }
         }
         logger.info('📊 Image size check passed', {
           url,
@@ -114,7 +128,12 @@ class SafeImageFetcher {
             maxSizeBytes,
             sizeMB: (totalSize / 1024 / 1024).toFixed(2)
           })
-          return null
+          return {
+            success: false,
+            buffer: null,
+            status: response.status,
+            reason: `File too large during streaming (exceeded ${maxSizeBytes / 1024 / 1024}MB limit)`
+          }
         }
         
         chunks.push(value)
@@ -128,16 +147,22 @@ class SafeImageFetcher {
         sizeMB: (buffer.length / 1024 / 1024).toFixed(2)
       })
 
-      return buffer
+      return {
+        success: true,
+        buffer,
+        status: response.status
+      }
 
     } catch (error) {
       clearTimeout(timeoutId)
 
+      let reason = error.message
       if (error.name === 'AbortError') {
+        reason = `Request timed out after ${timeoutMs}ms`
         logger.warn('⏱️ Image fetch timeout', {
           url,
           timeoutMs,
-          error: 'Request exceeded timeout limit'
+          error: reason
         })
       } else {
         logger.error('❌ Image fetch error', {
@@ -148,7 +173,11 @@ class SafeImageFetcher {
         })
       }
 
-      return null
+      return {
+        success: false,
+        buffer: null,
+        reason: reason
+      }
     }
   }
 
@@ -156,7 +185,7 @@ class SafeImageFetcher {
    * Fetch multiple images in parallel with safety constraints
    * @param {Array<string>} urls - Array of image URLs
    * @param {object} options - Configuration options
-   * @returns {Promise<Array<Buffer|null>>} - Array of buffers (null for failures)
+   * @returns {Promise<Array<{success: boolean, buffer: Buffer|null, reason?: string, status?: number}>>} - Array of fetch results
    */
   static async fetchMultiple(urls, options = {}) {
     const promises = urls.map(url => this.fetchImage(url, options))
@@ -168,18 +197,22 @@ class SafeImageFetcher {
    * @param {string} url - Image URL to fetch
    * @param {number} maxRetries - Maximum retry attempts
    * @param {object} options - Configuration options
-   * @returns {Promise<Buffer|null>} - Image buffer or null on failure
+   * @returns {Promise<{success: boolean, buffer: Buffer|null, reason?: string, status?: number}>} - Fetch result
    */
   static async fetchWithRetry(url, maxRetries = 2, options = {}) {
+    let lastResult = { success: false, buffer: null, reason: 'No attempts made' }
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       logger.info(`🔄 Fetch attempt ${attempt}/${maxRetries}`, { url })
       
       const result = await this.fetchImage(url, options)
       
-      if (result) {
+      if (result.success) {
         return result
       }
       
+      lastResult = result
+
       if (attempt < maxRetries) {
         const delay = attempt * 1000 // Exponential backoff
         logger.info(`⏳ Retrying in ${delay}ms...`, { url })
@@ -187,8 +220,8 @@ class SafeImageFetcher {
       }
     }
 
-    logger.error('❌ All fetch attempts failed', { url, maxRetries })
-    return null
+    logger.error('❌ All fetch attempts failed', { url, maxRetries, reason: lastResult.reason })
+    return lastResult
   }
 }
 

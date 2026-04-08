@@ -453,13 +453,14 @@ class StampImageGenerator {
         logger.info('📥 Loading hero image from:', heroImageUrl)
         
         // Use SafeImageFetcher with 5s timeout and 3MB size cap
-        const imageBuffer = await SafeImageFetcher.fetchImage(heroImageUrl, {
+        const fetchResult = await SafeImageFetcher.fetchImage(heroImageUrl, {
           timeoutMs: 5000,
           maxSizeBytes: 3 * 1024 * 1024,
           allowedContentTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
         })
 
-        if (imageBuffer) {
+        if (fetchResult.success) {
+          const imageBuffer = fetchResult.buffer
           // Resize to dynamic dimensions based on pass type
           const resized = await sharp(imageBuffer)
             .resize(dimensions.width, dimensions.height, { fit: 'cover' })
@@ -473,7 +474,7 @@ class StampImageGenerator {
           })
           return resized
         } else {
-          throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
+          throw new Error(fetchResult.reason || 'SafeImageFetcher failed')
         }
       } catch (error) {
         logger.warn('⚠️ Failed to load hero image, using solid color:', error.message)
@@ -993,15 +994,17 @@ class StampImageGenerator {
       logger.info('📥 Loading logo for stamps from:', logoUrl)
 
       // Load logo using SafeImageFetcher
-      const imageBuffer = await SafeImageFetcher.fetchImage(logoUrl, {
+      const fetchResult = await SafeImageFetcher.fetchImage(logoUrl, {
         timeoutMs: 5000,
         maxSizeBytes: 3 * 1024 * 1024,
         allowedContentTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
       })
 
-      if (!imageBuffer) {
-        throw new Error('SafeImageFetcher returned null (timeout or size limit exceeded)')
+      if (!fetchResult.success) {
+        throw new Error(fetchResult.reason || 'SafeImageFetcher failed')
       }
+
+      const imageBuffer = fetchResult.buffer
 
       // Resize logo to fit stamp size (90% of stamp area for padding)
       const logoSize = Math.floor(stampSize * 0.9)
